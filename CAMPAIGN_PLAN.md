@@ -91,6 +91,4 @@ Deze afleveringen zijn optionele zijverhalen. Ze veranderen de hoofdroute niet i
 
 ## Wat de huidige prototypewereld nog nodig heeft
 
-De bestaande oefenwereld is ongeveer 6.200 spelpixels lang en heeft nu een paar vaste vijandposities. Dat is een bewegingsproef, geen level van 2½–3½ minuut. Voor level 1 moet de speelruimte groeien tot ongeveer 18.000–22.000 spelpixels, met verspreide ontmoetingen, rustige stukken, een echte baasfase en een duidelijke afloop. Alleen de achtergrond herhalen om die lengte te vullen is geen oplossing: de route moet herkenbare landschapszones en eigen landmarks krijgen.
-
-De huidige speciale-afleveringenkaarten zijn informatief. Ze zijn nog geen speelbare afleveringen. Deze campagneopzet beschrijft dus de beoogde inhoud en de regels voor de bouw; hij mag pas “speelbaar” heten zodra een level daadwerkelijk een begin, midden, baas, afloop en herstart heeft.
+Level 1 is nu in de app gebouwd als een speelbare Riftvallei-route van ongeveer 18.000 spelpixels, met verspreide vijanden, landschapsdetails, een grotere hyena-eindbaas en een voltooiingsscherm. De eerste versie gebruikt de bestaande savannekunst en bediening. De overige hoofdlevels en speciale afleveringen zijn nog ontwerp; die worden niet als speelbaar aangeduid voordat ze hun eigen landschap, vijandritme, baas en afloop hebben.
