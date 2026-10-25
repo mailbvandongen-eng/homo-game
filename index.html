@@ -153,7 +153,7 @@ function update(dt){if(mode!=='play')return;elapsed+=dt;const touchMove=(cv.matc
  persist();
 }
 function frame(t){const dt=Math.min(.035,(t-last)/1000||.016);last=t;update(dt);drawWorld();requestAnimationFrame(frame)}
-$('introGo').addEventListener('click',()=>{mode='play';hide('intro');$('jump').style.display='block';show('help');mode='help'});
+$('introGo').addEventListener('click',()=>{mode='play';hide('intro');$('jump').style.display='block'});
 $('helpGo').onclick=()=>{hide('help');mode='play'};
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 renderTree();$('sensorHelp').textContent='Kantelen werkt als de bewegingssensor toestemming krijgt. De knop kalibreert de neutrale stand.';
