@@ -190,12 +190,12 @@ function drawCrocodiles(){
   c.strokeStyle='#b8e2d366';c.lineWidth=2;c.beginPath();c.moveTo(left+78,surface+11);c.quadraticCurveTo(left+108,surface+7,left+140,surface+11);c.moveTo(right-120,surface+18);c.quadraticCurveTo(right-91,surface+15,right-63,surface+18);c.stroke();
  }
  for(const croc of crocodiles){const x=croc.x-cam,y=surface;if(x<-90||x>W+90)continue;
-  if(time<croc.submergedUntil){c.strokeStyle='#c0e9d288';c.lineWidth=2;c.beginPath();c.ellipse(x,y+3,25+Math.sin(time*5)*5,5,0,0,Math.PI*2);c.stroke();continue}
+  const biting=time<croc.biteUntil;if(!biting&&time<croc.submergedUntil){c.strokeStyle='#c0e9d288';c.lineWidth=2;c.beginPath();c.ellipse(x,y+3,25+Math.sin(time*5)*5,5,0,0,Math.PI*2);c.stroke();continue}
   // Only the nostril ridge and eyes break the water surface; the skull stays submerged.
   c.fillStyle='#526b43';c.beginPath();c.ellipse(x,y-1,28,4,0,Math.PI,Math.PI*2);c.fill();
   c.fillStyle='#7a8c52';for(const ex of [-14,13]){c.beginPath();c.ellipse(x+ex,y-4,5,3.5,0,0,Math.PI*2);c.fill();c.fillStyle='#25291c';c.beginPath();c.arc(x+ex+1,y-5,1.5,0,Math.PI*2);c.fill();c.fillStyle='#7a8c52'}
   c.fillStyle='#24281d';c.beginPath();c.ellipse(x-7,y-2,1.7,1,0,0,Math.PI*2);c.ellipse(x+7,y-2,1.7,1,0,0,Math.PI*2);c.fill();
-  if(time<croc.biteUntil){const open=4+Math.sin((croc.biteUntil-time)/.24*Math.PI)*4;c.strokeStyle='#d7c580';c.lineWidth=2;c.beginPath();c.moveTo(x-20,y+1);c.quadraticCurveTo(x,y+open,x+20,y+1);c.stroke()}
+  if(biting){const open=4+Math.sin((croc.biteUntil-time)/.24*Math.PI)*4;c.strokeStyle='#d7c580';c.lineWidth=2;c.beginPath();c.moveTo(x-20,y+1);c.quadraticCurveTo(x,y+open,x+20,y+1);c.stroke()}
  }
 }
 function drawCats(){
@@ -304,7 +304,7 @@ function update(dt){time+=dt;controls();hero.hurt=Math.max(0,hero.hurt-dt);const
  for(const e of enemies){if(e.hp>0&&stompAt(e.x,groundAt(e.x)-38,42,previousBottom)){e.hp=0;e.fleeDir=hero.x+hero.w*.5<e.x?1:-1;e.gone=false;say('De hyena vlucht voor je!',1.5)}}
  for(const cat of cats){if(cat.hp>0&&stompAt(cat.x,groundAt(cat.x)-35,40,previousBottom)){cat.hp=0;cat.face=hero.x+hero.w*.5<cat.x?1:-1;cat.gone=false;say('De grote kat slaat op de vlucht!',1.7)}}
  for(const b of birds){const by=groundAt(b.x)-b.altitude;if(!b.gone&&b.hp>0&&stompAt(b.x,by-8,30,previousBottom)){b.hp=0;b.face=hero.x+hero.w*.5<b.x?1:-1;say('De roofvogel vliegt weg!',1.5)}}
- for(const croc of crocodiles){if(time>=croc.submergedUntil&&stompAt(croc.x,groundAt(croc.x)-15,64,previousBottom)){croc.submergedUntil=time+2.8;say('Plons! De krokodil duikt onder.',1.6)}}
+ for(const croc of crocodiles){if(time>=croc.submergedUntil&&stompAt(croc.x,baseY+26,64,previousBottom)){croc.submergedUntil=time+2.8;say('Plons! De krokodil duikt onder.',1.6)}}
  let floorY=inGap(hero.x+hero.w*.5)?null:groundAt(hero.x+hero.w*.5);
  if(floorY!==null&&hero.y+hero.h>=floorY&&hero.vy>=0){hero.y=floorY-hero.h;hero.vy=0;hero.ground=true}else hero.ground=false;
  if(inGap(hero.x+hero.w*.5)&&hero.y>baseY+95){hero.x=GAP_A-hero.w-34;hero.y=groundAt(hero.x)-hero.h;hero.vx=0;hero.vy=0;hero.ground=true;say('Rechts + omhoog, dan springen',2.3)}
