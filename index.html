@@ -94,33 +94,70 @@ $('jump').addEventListener('pointerdown',e=>{e.preventDefault();jumpQueued=true}
 window.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='a'){keyL=true;e.preventDefault()}if(e.key==='ArrowRight'||e.key==='d'){keyR=true;e.preventDefault()}if(e.key===' '||e.key==='ArrowUp'){jumpQueued=true;e.preventDefault()}if(e.key==='Escape'&&mode==='play')$('pauseBtn').click()});
 window.addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key==='a')keyL=false;if(e.key==='ArrowRight'||e.key==='d')keyR=false});
 function pixelRect(x,y,w,h,color){c.fillStyle=color;c.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h))}
-function drawBackground(){const sky=c.createLinearGradient(0,0,0,270);sky.addColorStop(0,level===0?'#75b3bb':'#6a96ad');sky.addColorStop(1,level===0?'#d6b66d':'#e0a66e');c.fillStyle=sky;c.fillRect(0,0,viewW,270);
- pixelRect(0,0,viewW,90,level===0?'#7bb8bd':'#779fba');
- // blocky clouds
- for(let i=0;i<Math.ceil(viewW/137)+3;i++){let x=(i*137-camera*.12%620+620)%620-60;pixelRect(x,43+(i%2)*19,48,8,'#f1d9a5');pixelRect(x+10,35+(i%2)*19,27,9,'#f1d9a5')}
- // far ridges
- for(let i=-1;i<Math.ceil(viewW/104)+2;i++){let x=i*104-(camera*.22%104);pixelRect(x,111,54,31,level===0?'#6b9883':'#597e84');pixelRect(x+23,94,61,48,level===0?'#6b9883':'#597e84');pixelRect(x+56,119,48,23,level===0?'#6b9883':'#597e84')}
- // nearer mesas
- for(let i=-1;i<Math.ceil(viewW/137)+2;i++){let x=i*137-(camera*.42%137);pixelRect(x,156,91,18,level===0?'#957b53':'#86745b');pixelRect(x+19,144,76,30,level===0?'#957b53':'#86745b');pixelRect(x+53,135,44,12,level===0?'#957b53':'#86745b')}
- // sun
- c.fillStyle=level===0?'#ffe3a0':'#ffe5b3';c.fillRect(390,43,24,24);c.fillRect(384,49,36,12);
- // grass floor
- pixelRect(0,floor,480,52,level===0?'#76533c':'#615248');pixelRect(0,floor,480,8,level===0?'#a58a4f':'#8a815c');for(let i=0;i<Math.ceil(viewW/27)+1;i++){let span=Math.ceil(viewW/27)*27;let x=(i*27-camera%27+span)%span;pixelRect(x,220,5,3,level===0?'#d1b36a':'#b6a46b')}
- // scattered plant silhouettes
- for(let i=0;i<Math.ceil(viewW/97)+3;i++){let x=(i*97-camera*.7%600+600)%600-30;pixelRect(x,191,4,28,'#554733');pixelRect(x-9,183,22,7,level===0?'#577250':'#4d705d');pixelRect(x-4,177,14,7,level===0?'#577250':'#4d705d')}
+function drawBackground(){
+ const cool=level===1,sky=c.createLinearGradient(0,0,0,270);
+ sky.addColorStop(0,cool?'#5687b1':'#49b7df');sky.addColorStop(.48,cool?'#9ac8c7':'#a8e1cf');sky.addColorStop(1,cool?'#f0c58c':'#ffcf73');c.fillStyle=sky;c.fillRect(0,0,viewW,270);
+ const poly=(pts,color)=>{c.fillStyle=color;c.beginPath();c.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)c.lineTo(pts[i][0],pts[i][1]);c.closePath();c.fill()};
+ // glowing sun and soft pixel clouds
+ c.fillStyle=cool?'#ffe3b0':'#fff0a8';c.beginPath();c.arc(viewW*.80-camera*.035%viewW,58,23,0,Math.PI*2);c.fill();
+ c.fillStyle='#fff2bd55';c.beginPath();c.arc(viewW*.80-camera*.035%viewW,58,34,0,Math.PI*2);c.fill();
+ for(let i=0;i<Math.ceil(viewW/150)+3;i++){let x=(i*150-camera*.11-elapsed*4+viewW*3)%(viewW+180)-90,y=35+(i%3)*17;
+  c.fillStyle='#fff1d4';c.fillRect(x+12,y,43,9);c.fillRect(x+4,y+8,63,8);c.fillRect(x+21,y-7,26,8);c.fillStyle='#ffffff88';c.fillRect(x+19,y+2,31,3)}
+ // distant volcanic ridges, changing shade by era
+ for(let i=-1;i<Math.ceil(viewW/150)+2;i++){let x=i*150-(camera*.14%150);poly([[x,151],[x+30,111],[x+48,126],[x+78,82],[x+102,119],[x+122,101],[x+157,151]],cool?'#748ca0':'#799b91');poly([[x+78,82],[x+102,119],[x+122,101],[x+157,151],[x+78,151]],cool?'#617e91':'#638d82')}
+ // broad green valley and distant water
+ for(let i=-1;i<Math.ceil(viewW/180)+2;i++){let x=i*180-(camera*.29%180);c.fillStyle=cool?'#688d73':'#78a45f';c.beginPath();c.ellipse(x+92,174,116,31,0,0,Math.PI*2);c.fill();c.fillStyle=cool?'#87a06d':'#a3b85e';c.beginPath();c.ellipse(x+90,174,79,17,0,0,Math.PI*2);c.fill()}
+ c.fillStyle=cool?'#57aeb5':'#43c4c4';c.beginPath();c.ellipse(viewW*.48-camera*.34%viewW,194,58,8,-.04,0,Math.PI*2);c.fill();c.fillStyle='#c3f1d5';for(let i=0;i<9;i++)c.fillRect((i*41-camera*.34%41+viewW)%viewW,192+(i%3)*3,8,1);
+ // acacia silhouettes with layered green canopies
+ for(let i=-1;i<Math.ceil(viewW/170)+3;i++){let x=i*170-(camera*.55%170),base=218,top=151+(i%3)*8;
+  c.fillStyle='#704a35';c.beginPath();c.moveTo(x+68,base);c.lineTo(x+73,top+13);c.lineTo(x+66,top+7);c.lineTo(x+77,top-3);c.lineTo(x+83,top+8);c.lineTo(x+81,base);c.closePath();c.fill();
+  c.strokeStyle='#704a35';c.lineWidth=4;c.beginPath();c.moveTo(x+75,top+12);c.lineTo(x+57,top-1);c.moveTo(x+78,top+10);c.lineTo(x+98,top-2);c.stroke();
+  c.fillStyle=cool?'#456e50':'#457c46';c.beginPath();c.ellipse(x+49,top,29,9,0,0,Math.PI*2);c.ellipse(x+79,top-5,34,12,0,0,Math.PI*2);c.ellipse(x+108,top+1,26,8,0,0,Math.PI*2);c.fill();
+  c.fillStyle=cool?'#78a65c':'#94b84e';c.fillRect(x+58,top-8,33,4);c.fillRect(x+93,top-3,18,3)}
+ // rich earth, grassy lip and texture
+ const earth=c.createLinearGradient(0,218,0,270);earth.addColorStop(0,cool?'#658048':'#709343');earth.addColorStop(.14,cool?'#806044':'#9b7045');earth.addColorStop(1,cool?'#634b3e':'#82543a');c.fillStyle=earth;c.fillRect(0,218,viewW,52);
+ c.fillStyle=cool?'#a9b45c':'#bed25f';c.fillRect(0,218,viewW,5);
+ for(let i=0;i<Math.ceil(viewW/24)+2;i++){let x=(i*24-camera*.91%24+viewW)%viewW,h=2+(i*7%5);c.fillStyle=i%3?'#4e8a4c':'#e2cc62';c.fillRect(x,216-h,2,h+2);c.fillRect(x+3,218-h,2,h)}
+ for(let i=0;i<Math.ceil(viewW/74)+2;i++){let x=(i*74-camera*.92%74+viewW)%viewW;c.fillStyle='#d6a854';c.fillRect(x,234+(i%3)*8,9,2);c.fillStyle='#644a39';c.fillRect(x+28,251+(i%2)*5,13,3)}
+ // flowers and low bushes in the foreground
+ for(let i=0;i<Math.ceil(viewW/112)+2;i++){let x=(i*112-camera*.98%112+viewW)%viewW,wiggle=Math.sin(elapsed*2+i)*2;c.fillStyle=cool?'#355f43':'#54813e';c.beginPath();c.ellipse(x+12,214,12,5,0,0,Math.PI*2);c.ellipse(x+22,212,11,6,0,0,Math.PI*2);c.fill();c.fillStyle=i%2?'#f0d26c':'#e98f64';c.fillRect(x+15+wiggle,205,3,3);c.fillStyle='#426b3d';c.fillRect(x+17,208,2,8)}
+ // birds move independently of the camera
+ c.strokeStyle='#355764';c.lineWidth=1.5;for(let i=0;i<3;i++){let x=(viewW*.63+i*25+elapsed*(9+i*2))%(viewW+10),y=92+(i%2)*13+Math.sin(elapsed*2+i)*2;c.beginPath();c.moveTo(x-5,y);c.lineTo(x,y-3);c.lineTo(x+5,y);c.stroke()}
 }
-function drawHero(x,y,blink=false){if(blink&&Math.floor(elapsed*12)%2===0)return;const X=Math.round(x),Y=Math.round(y);
- // pixel shadow
- pixelRect(X-4,Y+27,34,4,'#3a3025');
- // legs
- pixelRect(X+5,Y+20,7,9,'#48352b');pixelRect(X+20,Y+20,7,9,'#48352b');pixelRect(X+2,Y+27,12,3,'#302822');pixelRect(X+18,Y+27,12,3,'#302822');
- // body
- pixelRect(X+5,Y+9,20,15,level===0?'#87533a':'#596044');pixelRect(X+1,Y+13,6,9,'#a36e4b');pixelRect(X+24,Y+12,5,10,'#a36e4b');
- // head, brow and hair
- pixelRect(X+7,Y,16,13,'#b77d53');pixelRect(X+18,Y+5,10,6,'#b77d53');pixelRect(X+5,Y-2,17,6,'#3c3029');pixelRect(X+8,Y+6,4,3,'#34251f');
- pixelRect(X+22,Y+6,2,2,'#201a19');
- // small travel wrap
- pixelRect(X+6,Y+11,17,4,'#d1a654');pixelRect(X+13,Y+10,5,6,'#e9c66a');
+function drawHero(x,y,blink=false){
+ if(blink&&Math.floor(elapsed*12)%2===0)return;
+ const faceLeft=keyL&&!keyR,gait=(keyL||keyR)?Math.sin(elapsed*13):Math.sin(elapsed*2)*.12,bob=(keyL||keyR)?Math.abs(Math.sin(elapsed*13))*1.3:Math.sin(elapsed*2)*.35;
+ c.save();c.translate(Math.round(x)+(faceLeft?30:0),Math.round(y+bob));if(faceLeft)c.scale(-1,1);
+ // grounded shadow
+ c.fillStyle='#34402e88';c.beginPath();c.ellipse(15,37,18,3,0,0,Math.PI*2);c.fill();
+ const stroke=(color,width,pts)=>{c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.beginPath();c.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)c.lineTo(pts[i][0],pts[i][1]);c.stroke()};
+ const leg=player.ground?gait:1;
+ // long legs and broad feet
+ stroke('#583c2d',6,[[12,24],[11+leg*4,30],[7+leg*6,35]]);
+ stroke('#754832',5,[[20,24],[22-leg*4,30],[27-leg*5,35]]);
+ c.fillStyle='#382a23';c.fillRect(2+leg*5,34,10,3);c.fillRect(23-leg*5,34,11,3);
+ // far arm hangs low, with a knuckle hand
+ stroke('#593a2d',6,[[10,12],[5-leg*3,20],[7-leg*5,28],[4-leg*5,31]]);
+ c.fillStyle='#87543a';c.beginPath();c.ellipse(4-leg*5,31,4,3,.2,0,Math.PI*2);c.fill();
+ // hunched, broad torso with shaggy coat
+ c.fillStyle='#593a2c';c.beginPath();c.moveTo(9,9);c.lineTo(17,7);c.lineTo(25,12);c.lineTo(27,23);c.lineTo(21,28);c.lineTo(10,25);c.lineTo(5,17);c.closePath();c.fill();
+ c.fillStyle='#805239';c.beginPath();c.moveTo(8,13);c.lineTo(14,9);c.lineTo(22,12);c.lineTo(24,23);c.lineTo(17,25);c.lineTo(10,22);c.closePath();c.fill();
+ // fur tufts catch the light
+ c.fillStyle='#b17a48';c.fillRect(8,16,3,3);c.fillRect(12,23,3,2);c.fillRect(20,17,3,3);c.fillRect(18,25,3,2);c.fillRect(6,20,3,2);
+ // near arm swings; forearm longer than upper arm
+ stroke('#82523a',5,[[22,13],[27,18],[24+leg*3,26],[28+leg*4,30]]);
+ stroke('#a66e49',3,[[25,18],[23+leg*3,26]]);
+ c.fillStyle='#9a6442';c.fillRect(26+leg*4,29,7,4);c.fillRect(30+leg*4,31,3,3);
+ // neck and head
+ c.fillStyle='#a66d49';c.fillRect(15,5,9,8);
+ c.fillStyle='#392c27';c.beginPath();c.moveTo(10,7);c.lineTo(9,2);c.lineTo(13,-1);c.lineTo(21,0);c.lineTo(25,5);c.lineTo(22,10);c.lineTo(14,10);c.closePath();c.fill();
+ c.fillStyle='#b77b52';c.beginPath();c.moveTo(13,3);c.lineTo(22,3);c.lineTo(24,8);c.lineTo(29,10);c.lineTo(27,14);c.lineTo(20,15);c.lineTo(15,12);c.lineTo(11,8);c.closePath();c.fill();
+ // low brow, strong muzzle, eye and nostril
+ c.fillStyle='#6a432f';c.fillRect(20,6,8,3);c.fillStyle='#d39967';c.fillRect(23,9,8,5);c.fillStyle='#362820';c.fillRect(27,10,2,2);c.fillRect(30,12,2,1);c.fillStyle='#f5d88c';c.fillRect(20,7,2,2);c.fillStyle='#211d19';c.fillRect(21,7,1,1);
+ // rough hair and cheek
+ c.fillStyle='#302823';c.fillRect(11,1,4,6);c.fillRect(14,-2,5,4);c.fillRect(19,-1,5,3);c.fillRect(24,3,3,3);c.fillRect(12,7,3,5);
+ c.fillStyle='#d79b61';c.fillRect(16,11,3,2);
+ c.restore();
 }
 function drawItem(it){const x=Math.round(it.x-camera),y=Math.round(it.y);if(x<-10||x>490)return;pixelRect(x+3,y,9,11,'#777d7b');pixelRect(x,y+6,12,7,'#b4b1a2');pixelRect(x+5,y+2,5,3,'#e1d7bb');pixelRect(x+2,y+13,12,3,'#443d34')}
 function drawEnemy(){let x=boss.x-camera;if(x<-50||x>viewW+30)return;const y=floor-24;pixelRect(x-12,y+14,37,7,'#44312a');pixelRect(x-7,y,29,17,level===0?'#79523b':'#665d50');pixelRect(x+11,y-10,16,15,level===0?'#80593d':'#766857');pixelRect(x+19,y-7,8,6,'#bf8155');pixelRect(x+21,y-6,3,3,'#ffe49b');pixelRect(x-5,y+14,7,8,'#3f312b');pixelRect(x+13,y+14,7,8,'#3f312b');
