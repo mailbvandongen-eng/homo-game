@@ -140,42 +140,60 @@ function drawBackground(){const sky=c.createLinearGradient(0,0,0,H);sky.addColor
 }
 function stroke(points,color,width){c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.beginPath();c.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)c.lineTo(points[i][0],points[i][1]);c.stroke()}
 function drawHero(){
- const phase=hero.walk,air=!hero.ground,art=hero.h/82,pace=Math.abs(hero.vx);
+ const art=hero.h/82,air=!hero.ground,pace=Math.abs(hero.vx),moving=pace>14;
  const screenX=hero.x-cam,contactY=groundAt(hero.x+hero.w*.5),heightAbove=Math.max(0,contactY-(hero.y+hero.h));
- // Shadow stays on the ground plane and fades as the character rises.
- const shadow=c.createRadialGradient(screenX,contactY+1,1,screenX,contactY+1,25*art);shadow.addColorStop(0,'#282d2460');shadow.addColorStop(1,'#282d2400');c.save();c.globalAlpha=1-clamp(heightAbove/180,0,.82);c.fillStyle=shadow;c.beginPath();c.ellipse(screenX,contactY+2,27*art,5*art,0,0,Math.PI*2);c.fill();c.restore();
+ // A quiet, ground-anchored shadow gives a clear contact point without a floating look.
+ c.save();c.globalAlpha=1-clamp(heightAbove/155,0,.86);const sh=c.createRadialGradient(screenX,contactY+1,1,screenX,contactY+1,23*art);sh.addColorStop(0,'#292d2360');sh.addColorStop(1,'#292d2300');c.fillStyle=sh;c.beginPath();c.ellipse(screenX,contactY+2,24*art,4*art,0,0,Math.PI*2);c.fill();c.restore();
  c.save();c.translate(screenX,hero.y);c.scale((hero.face<0?-1:1)*art,art);
- // A forward stoop is part of every stance; the feet remain planted.
- c.translate(0,82);c.rotate(air?-0.015:(running?0.24:0.18));c.translate(0,-82);
- const stride=air?0:Math.sin(phase)*(running?16:9),lift=air?0:Math.max(0,Math.cos(phase))*(running?7:3);
- // long, bent legs
- stroke([[-8,48],[-12+stride*.42,61-lift],[-14+stride,77-lift]],'#49352a',10);stroke([[-8,48],[-12+stride*.42,61-lift],[-14+stride,77-lift]],'#936744',6);
- stroke([[7,47],[12-stride*.42,61-lift*.25],[12-stride,77-lift*.25]],'#3d3027',11);stroke([[7,47],[12-stride*.42,61-lift*.25],[12-stride,77-lift*.25]],'#a16e47',7);
- // broad bare feet, aligned to the ground when standing
- c.fillStyle='#33271f';c.beginPath();c.ellipse(-14+stride,78-lift,10,4,.08,0,Math.PI*2);c.ellipse(12-stride,78-lift*.25,11,4,-.04,0,Math.PI*2);c.fill();
- // hunched torso, sloping forward from shoulder to hip
- const torso=c.createLinearGradient(-22,28,20,63);torso.addColorStop(0,'#c08a58');torso.addColorStop(.42,'#98613e');torso.addColorStop(1,'#62422e');c.fillStyle=torso;c.beginPath();c.moveTo(-15,28);c.quadraticCurveTo(-24,35,-19,47);c.quadraticCurveTo(-14,62,-4,65);c.quadraticCurveTo(8,67,17,57);c.quadraticCurveTo(22,47,15,35);c.quadraticCurveTo(7,27,-5,25);c.quadraticCurveTo(-11,24,-15,28);c.fill();
- // lighter chest and coarse hair along the back
- c.fillStyle='#d3a06b';c.beginPath();c.moveTo(-12,33);c.quadraticCurveTo(-4,28,5,33);c.quadraticCurveTo(9,41,3,52);c.quadraticCurveTo(-4,54,-12,47);c.closePath();c.fill();
- c.strokeStyle='#61432f';c.lineWidth=3;c.beginPath();c.moveTo(-18,36);c.lineTo(-23,40);c.moveTo(-18,43);c.lineTo(-22,47);c.moveTo(-14,51);c.lineTo(-18,55);c.stroke();
- // simple hide wrap at the hips
- c.fillStyle='#4f3b2a';c.beginPath();c.moveTo(-13,56);c.quadraticCurveTo(0,61,17,53);c.lineTo(21,67);c.quadraticCurveTo(3,74,-12,67);c.closePath();c.fill();c.fillStyle='#a17a4c';c.beginPath();c.moveTo(-8,60);c.quadraticCurveTo(3,64,14,58);c.lineTo(16,64);c.quadraticCurveTo(4,69,-7,65);c.fill();
- // arms swing opposite to the legs; throw arm reaches forward
- const swing=air?0:Math.sin(phase+Math.PI)*(running?13:8);
- stroke([[-14,34],[-24-swing*.35,44],[-23-swing,57]],'#543a2d',11);stroke([[-14,34],[-24-swing*.35,44],[-23-swing,57]],'#b27b50',7);
- if(hero.throw>0){const q=1-hero.throw/.28;stroke([[12,34],[20+q*10,39-q*8],[31+q*13,28-q*4]],'#50382a',11);stroke([[12,34],[20+q*10,39-q*8],[31+q*13,28-q*4]],'#c08754',7)}
- else{const armLift=air?-13:0;stroke([[12,34],[21+swing*.35,43+armLift],[20+swing,55+armLift]],'#50372a',11);stroke([[12,34],[21+swing*.35,43+armLift],[20+swing,55+armLift]],'#c28b57',7)}
- c.fillStyle='#b77d50';c.beginPath();c.ellipse(-23-swing,58,6,5,.2,0,Math.PI*2);c.ellipse(hero.throw>0?31:20+swing,56,6,5,.2,0,Math.PI*2);c.fill();
- // neck and expressive ape-human profile
- c.fillStyle='#a66f49';c.beginPath();c.roundRect(1,18,12,17,5);c.fill();
- const skin=c.createLinearGradient(-8,-2,28,27);skin.addColorStop(0,'#c28a5b');skin.addColorStop(.7,'#ad744b');skin.addColorStop(1,'#795039');c.fillStyle=skin;c.beginPath();c.moveTo(-13,13);c.quadraticCurveTo(-16,2,-7,-4);c.quadraticCurveTo(5,-10,16,-2);c.quadraticCurveTo(23,3,19,11);c.lineTo(29,16);c.quadraticCurveTo(31,20,23,23);c.lineTo(8,25);c.quadraticCurveTo(-5,23,-13,13);c.fill();
- c.fillStyle='#d7a174';c.beginPath();c.ellipse(16,17,12,6,.08,0,Math.PI*2);c.fill();c.fillStyle='#704a33';c.beginPath();c.ellipse(27,16,2.2,1.5,0,0,Math.PI*2);c.fill();
- // prominent brow, eye, cheek and dark swept hair
- c.fillStyle='#302822';c.beginPath();c.moveTo(-15,8);c.quadraticCurveTo(-18,-4,-8,-10);c.quadraticCurveTo(-1,-16,6,-10);c.quadraticCurveTo(13,-13,19,-6);c.lineTo(20,1);c.quadraticCurveTo(8,-3,-2,1);c.lineTo(-6,12);c.closePath();c.fill();
- c.fillStyle='#51392d';c.beginPath();c.moveTo(2,5);c.quadraticCurveTo(10,2,18,6);c.lineTo(17,9);c.quadraticCurveTo(9,7,2,9);c.fill();
- c.fillStyle='#f8dfb0';c.beginPath();c.ellipse(11,8,2.8,2.3,0,0,Math.PI*2);c.fill();c.fillStyle='#211b17';c.beginPath();c.arc(12,8,1.2,0,Math.PI*2);c.fill();
- c.fillStyle='#8e5c3e';c.beginPath();c.ellipse(-8,12,4.3,6,0,0,Math.PI*2);c.fill();c.fillStyle='#c38a5c';c.beginPath();c.ellipse(-8,12,2,3,0,0,Math.PI*2);c.fill();
- c.restore();
+ const rate=running?9.2:6.2,phase=hero.walk, bob=air?0:(moving?Math.abs(Math.sin(phase*2))*(running?1.7:.8):0);
+ c.translate(0,bob);
+ // Each foot has a planted half-step and a lifted recovery step. This avoids the skating shuffle.
+ const drawLeg=(offset,color,outline)=>{
+  const p=((phase/Math.PI+offset)%2+2)%2,stance=p<1;
+  let fx,fy;
+  if(air){fx=offset===0?-7:8;fy=68}
+  else if(stance){const q=p;fx=13-q*25;fy=78}
+  else{const q=p-1;fx=-12+q*25;fy=78-Math.sin(q*Math.PI)*9}
+  const kneeX=(fx+(offset===0?-3:3))*.52,kneeY=61-(stance?0:Math.sin((p-1)*Math.PI)*3);
+  stroke([[offset===0?-7:7,52],[kneeX,kneeY],[fx,fy-3]],outline,10);
+  stroke([[offset===0?-7:7,52],[kneeX,kneeY],[fx,fy-3]],color,6);
+  c.fillStyle='#30251e';c.beginPath();c.ellipse(fx+4,fy,9,3.8,0,0,Math.PI*2);c.fill();
+  c.fillStyle='#b47b50';c.beginPath();c.arc(fx,fy-4,3,0,Math.PI*2);c.fill()
+ };
+ drawLeg(0,'#966441','#49352a');drawLeg(1,'#a16e47','#3d3027');
+ // Long arms and a forward-leaning, broad torso; only the upper body rocks slightly.
+ c.save();c.translate(0,53);c.rotate((hero.face<0?-1:1)*(.045+(running?.035:0))*Math.sin(phase));c.translate(0,-53);
+ const torso=c.createLinearGradient(-21,25,19,63);torso.addColorStop(0,'#b47b4e');torso.addColorStop(.43,'#98613e');torso.addColorStop(1,'#68452f');
+ c.fillStyle=torso;c.beginPath();c.moveTo(-15,27);c.quadraticCurveTo(-24,34,-20,46);c.quadraticCurveTo(-17,58,-6,64);c.quadraticCurveTo(7,69,17,57);c.quadraticCurveTo(22,47,15,35);c.quadraticCurveTo(8,27,-3,24);c.quadraticCurveTo(-10,23,-15,27);c.fill();
+ // Chest highlight and rough back fur keep the silhouette closer to an early hominin.
+ c.fillStyle='#d2a06c';c.beginPath();c.moveTo(-11,32);c.quadraticCurveTo(-3,28,5,33);c.quadraticCurveTo(10,41,4,51);c.quadraticCurveTo(-3,54,-11,47);c.closePath();c.fill();
+ c.strokeStyle='#65442f';c.lineWidth=2.5;c.lineCap='round';c.beginPath();c.moveTo(-18,34);c.lineTo(-23,39);c.moveTo(-19,42);c.lineTo(-24,47);c.moveTo(-15,49);c.lineTo(-20,54);c.moveTo(-11,55);c.lineTo(-16,59);c.stroke();
+ // A small hide wrap sits on the hips and flutters with the stride; no bib or apron shape.
+ const flap=Math.sin(phase)* (running?2.6:1.3);
+ c.fillStyle='#443327';c.beginPath();c.moveTo(-13,55);c.quadraticCurveTo(0,60,16,53);c.lineTo(18,63);c.quadraticCurveTo(2,70,-12,64);c.closePath();c.fill();
+ c.fillStyle='#947047';c.beginPath();c.moveTo(-11,57);c.quadraticCurveTo(1,62,15,56);c.lineTo(16,61);c.quadraticCurveTo(3,67,-10,62);c.closePath();c.fill();
+ c.fillStyle='#b18a58';c.beginPath();c.moveTo(-1,62);c.quadraticCurveTo(5,63+flap,11,62);c.lineTo(9,70+flap);c.quadraticCurveTo(4,72+flap,0,68);c.closePath();c.fill();
+ c.strokeStyle='#d2b079';c.lineWidth=1;c.beginPath();c.moveTo(-8,58);c.quadraticCurveTo(2,62,12,57);c.stroke();
+ const swing=moving?Math.sin(phase+Math.PI)*(running?12:7):0;
+ const drawArm=(side,throwing=false)=>{
+  const shoulder=side<0?-14:13,elbowX=side<0?-22-swing*.4:21+swing*.4,handX=side<0?-23-swing:20+swing;
+  if(throwing&&hero.throw>0){stroke([[shoulder,34],[22,38],[31,27]],'#50382a',10);stroke([[shoulder,34],[22,38],[31,27]],'#bd8553',6);c.fillStyle='#b77d50';c.beginPath();c.ellipse(32,27,5.3,4.4,.3,0,Math.PI*2);c.fill();return}
+  const armY=air?-10:0;
+  stroke([[shoulder,34],[elbowX,43+armY],[handX,56+armY]],'#50372a',10);
+  stroke([[shoulder,34],[elbowX,43+armY],[handX,56+armY]],side<0?'#b27b50':'#c08754',6);
+  c.fillStyle='#b77d50';c.beginPath();c.ellipse(handX,57+armY,5.6,4.7,.2,0,Math.PI*2);c.fill()
+ };
+ drawArm(-1);drawArm(1,true);
+ // Neck, compact muzzle, strong brow, alert eye and swept dark hair.
+ c.fillStyle='#9f6844';c.beginPath();c.roundRect(0,17,12,18,5);c.fill();
+ const skin=c.createLinearGradient(-7,-4,26,25);skin.addColorStop(0,'#bd8557');skin.addColorStop(.7,'#a86e47');skin.addColorStop(1,'#80523a');c.fillStyle=skin;
+ c.beginPath();c.moveTo(-12,12);c.quadraticCurveTo(-16,2,-8,-5);c.quadraticCurveTo(1,-11,12,-5);c.quadraticCurveTo(20,0,18,9);c.lineTo(25,14);c.quadraticCurveTo(28,18,21,21);c.lineTo(7,24);c.quadraticCurveTo(-4,22,-12,12);c.fill();
+ c.fillStyle='#d09a6b';c.beginPath();c.ellipse(15,17,9,4.8,.08,0,Math.PI*2);c.fill();
+ c.fillStyle='#352821';c.beginPath();c.moveTo(-14,7);c.quadraticCurveTo(-17,-4,-8,-10);c.quadraticCurveTo(0,-16,7,-10);c.quadraticCurveTo(15,-12,19,-5);c.lineTo(19,1);c.quadraticCurveTo(8,-3,-2,1);c.lineTo(-5,11);c.closePath();c.fill();
+ c.fillStyle='#493329';c.beginPath();c.moveTo(1,5);c.quadraticCurveTo(9,2,17,5);c.lineTo(16,8);c.quadraticCurveTo(8,7,1,9);c.fill();
+ c.fillStyle='#f4dba8';c.beginPath();c.ellipse(10,8,2.5,2,0,0,Math.PI*2);c.fill();c.fillStyle='#211b17';c.beginPath();c.arc(11,8,1.1,0,Math.PI*2);c.fill();
+ c.fillStyle='#86583c';c.beginPath();c.ellipse(-8,12,3.8,5.3,0,0,Math.PI*2);c.fill();c.fillStyle='#c0875b';c.beginPath();c.ellipse(-8,12,1.7,2.6,0,0,Math.PI*2);c.fill();
+ c.restore();c.restore();
 }
 function throwStone(){const direction=hero.face,launchX=hero.x+direction*28,launchY=hero.y+34;stones.push({x:launchX,y:launchY,vx:direction*(running?560:470),vy:-250,spin:0,life:3});hero.throw=.28;sfx('throw')}
 function update(dt){time+=dt;controls();
