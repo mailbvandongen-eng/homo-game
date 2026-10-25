@@ -47,25 +47,24 @@ h1{margin:7px 0 3px;font-size:clamp(44px,11vh,78px);line-height:.92;letter-spaci
 const cv=document.getElementById('game'),c=cv.getContext('2d',{alpha:false});
 const title=document.getElementById('title'),startButton=document.getElementById('startButton'),skipButton=document.getElementById('skip'),throwButton=document.getElementById('throw'),hint=document.getElementById('hint'),scoreDisplay=document.getElementById('score');
 let W=innerWidth,H=innerHeight,DPR=1,baseY=0,cam=0,time=0,last=0,mode='title',leftId=null,rightId=null,keys={},axis=0,running=false,jumpQueued=false,throwQueued=false,stepIndex=0,stepTimer=0,leftDone=false,rightDone=false,runDone=false,jumpDone=false,runJumpDone=false,throwDone=false,showHintUntil=0;
-const WORLD=6200,GAP_A=1850,GAP_B=2040,WATER_A=2170,WATER_B=2820;
+const WORLD=6200,GAP_A=1850,GAP_B=2040;
 const hero={x:165,y:0,w:54,h:82,vx:0,vy:0,ground:true,swimming:false,swimJump:0,face:1,walk:0,run:0,throw:0,hurt:0,jumpFromRun:false,dead:false,deathTimer:0};
 const enemies=[{anchor:980,x:980,hp:2,stun:0,flee:0,fleeDir:1,face:-1,phase:0,gait:0,gone:false},{anchor:3020,x:3020,hp:2,stun:0,flee:0,fleeDir:1,phase:1.8,gait:0,gone:false},{anchor:4770,x:4770,hp:2,stun:0,flee:0,fleeDir:1,phase:3.4,gait:0,gone:false}];
 const birds=[{anchor:1580,x:1580,hp:1,phase:.3,cooldown:.8,diveT:0,diving:false,diveFrom:1580,diveTo:1580,altitude:150,face:-1,gone:false},{anchor:3560,x:3560,hp:1,phase:2.1,cooldown:1.6,diveT:0,diving:false,diveFrom:3560,diveTo:3560,altitude:155,face:-1,gone:false},{anchor:5160,x:5160,hp:1,phase:4.2,cooldown:.4,diveT:0,diving:false,diveFrom:5160,diveTo:5160,altitude:145,face:-1,gone:false}];
-const cats=[{anchor:4020,x:4020,hp:1,gone:false,face:-1,phase:1.1,cooldown:1.5,pounce:0}];
-const crocodiles=[{x:2495,submergedUntil:0,biteUntil:0,attackStart:0,cooldownUntil:0,face:1}];
+const cats=[{anchor:1320,x:1320,hp:1,gone:false,face:1,phase:.8,cooldown:1.4,pounce:0,windup:0},{anchor:3560,x:3560,hp:1,gone:false,face:-1,phase:2.6,cooldown:1.8,pounce:0,windup:0},{anchor:5200,x:5200,hp:1,gone:false,face:-1,phase:4.1,cooldown:1.2,pounce:0,windup:0}];
 const fruitTrees=[{x:510,dropped:false},{x:3240,dropped:false},{x:4520,dropped:false}];
 let score=0,fruitDrops=[];
 let throwPointerId=null,throwStartY=0,throwAim=0;
 let stones=[],dust=[],audio=null,lastFoot=0;
 function resize(){W=innerWidth;H=innerHeight;DPR=Math.min(2,devicePixelRatio||1);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);c.setTransform(DPR,0,0,DPR,0,0);baseY=H*.79;hero.h=clamp(H*.20,70,94);hero.w=hero.h*.66;if(hero.ground)hero.y=groundAt(hero.x)-hero.h}
 addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,120));if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);resize();
-function groundAt(x){const natural=baseY+Math.sin(x*.0025)*4+Math.sin(x*.0062+1)*2,depth=82,ramp=168;let t=0;if(x>WATER_A&&x<WATER_A+ramp)t=(x-WATER_A)/ramp;else if(x>=WATER_A+ramp&&x<=WATER_B-ramp)t=1;else if(x>WATER_B-ramp&&x<WATER_B)t=(WATER_B-x)/ramp;if(t>0){const eased=t*t*(3-2*t);return natural+depth*eased}return natural}
+function groundAt(x){return baseY+Math.sin(x*.0025)*4+Math.sin(x*.0062+1)*2}
 function inGap(x){return x>GAP_A&&x<GAP_B}
 function clamp(n,a,b){return Math.max(a,Math.min(b,n))}
 function changeScore(amount){score=Math.max(0,score+amount);scoreDisplay.textContent='◆ '+score}
 function sfx(kind){try{if(!audio){audio=new(window.AudioContext||window.webkitAudioContext)()}if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;o.connect(g);g.connect(audio.destination);o.type=kind==='throw'?'triangle':'sine';let f=kind==='jump'?270:kind==='throw'?540:kind==='hit'?170:110;o.frequency.setValueAtTime(f,now);o.frequency.exponentialRampToValueAtTime(Math.max(60,f*(kind==='throw'?1.45:.58)),now+.12);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(kind==='step'?.035:.055,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.17);o.start(now);o.stop(now+.18)}catch{}}
 function say(){hint.classList.remove('show')}
-function begin(){title.classList.add('off');mode='intro';scoreDisplay.style.display='block';skipButton.style.display='grid';throwButton.style.display='grid';time=0;last=performance.now();hero.x=165;hero.y=groundAt(hero.x)-hero.h;hero.vx=0;hero.vy=0;hero.hurt=0;hero.ground=true;hero.swimming=false;hero.swimJump=0;cam=0;stepIndex=0;leftDone=rightDone=runDone=jumpDone=runJumpDone=throwDone=false;stones=[];fruitDrops=[];score=0;changeScore(0);for(const q of fruitTrees)q.dropped=false;for(const e of enemies){e.x=e.anchor;e.hp=2;e.stun=0;e.flee=0;e.gait=0;e.gone=false}for(const b of birds){b.x=b.anchor;b.hp=1;b.gone=false;b.diving=false;b.diveT=0;b.altitude=150;b.cooldown=1.2;b.diveFrom=b.anchor;b.diveTo=b.anchor;b.phase=b.phase}for(const cat of cats){cat.x=cat.anchor;cat.hp=1;cat.gone=false;cat.pounce=0;cat.cooldown=1.5}for(const croc of crocodiles){croc.submergedUntil=0;croc.biteUntil=0;croc.attackStart=0;croc.cooldownUntil=0;croc.face=1}hero.dead=false;hero.deathTimer=0;say('Sleep links en rechts',3);sfx('jump')}
+function begin(){title.classList.add('off');mode='intro';scoreDisplay.style.display='block';skipButton.style.display='grid';throwButton.style.display='grid';time=0;last=performance.now();hero.x=165;hero.y=groundAt(hero.x)-hero.h;hero.vx=0;hero.vy=0;hero.hurt=0;hero.ground=true;hero.swimming=false;hero.swimJump=0;cam=0;stepIndex=0;leftDone=rightDone=runDone=jumpDone=runJumpDone=throwDone=false;stones=[];fruitDrops=[];score=0;changeScore(0);for(const q of fruitTrees)q.dropped=false;for(const e of enemies){e.x=e.anchor;e.hp=2;e.stun=0;e.flee=0;e.gait=0;e.gone=false}for(const b of birds){b.x=b.anchor;b.hp=1;b.gone=false;b.diving=false;b.diveT=0;b.altitude=150;b.cooldown=1.2;b.diveFrom=b.anchor;b.diveTo=b.anchor;b.phase=b.phase}for(const cat of cats){cat.x=cat.anchor;cat.hp=1;cat.gone=false;cat.pounce=0;cat.windup=0;cat.cooldown=1.5}say('Sleep links en rechts',3);sfx('jump')}
 startButton.addEventListener('pointerdown',e=>{e.preventDefault();begin()});
 skipButton.addEventListener('pointerdown',e=>{e.preventDefault();mode='free';skipButton.style.display='none';hint.classList.remove('show')});
 throwButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();throwPointerId=e.pointerId;throwStartY=e.clientY;throwAim=0;try{throwButton.setPointerCapture(e.pointerId)}catch{}});
@@ -138,10 +137,10 @@ function drawBackground(){const sky=c.createLinearGradient(0,0,0,H);sky.addColor
  c.fillStyle='#91ad76';c.beginPath();c.moveTo(0,H*.68);for(let x=0;x<=W+8;x+=22)c.lineTo(x,H*.68+Math.sin((x+cam*.19)*.005)*H*.025+Math.sin((x+cam*.19)*.014)*H*.009);c.lineTo(W,H);c.lineTo(0,H);c.closePath();c.fill();
  c.fillStyle='#c0bc6d';c.beginPath();c.moveTo(0,H*.76);for(let x=0;x<=W+8;x+=20)c.lineTo(x,H*.76+Math.sin((x+cam*.29)*.007+1)*H*.014);c.lineTo(W,H);c.lineTo(0,H);c.closePath();c.fill();
  // Low distant shrubs and seasonal water occupy different, non-repeating places
- const waterX=1240-cam*.31;if(waterX>-280&&waterX<W+300){c.fillStyle='#65b7bcaa';c.beginPath();c.ellipse(waterX,H*.735,190,H*.018,-.015,0,Math.PI*2);c.fill();c.fillStyle='#d4eee0aa';c.beginPath();c.ellipse(waterX-20,H*.729,47,2,0,0,Math.PI*2);c.fill()}
+ 
  for(const t of trees.filter(t=>t.d<.4))drawTree(t.x,t.d,t.s*.92,t.v);
  for(const a of herd)drawAntelope(a);
- for(const t of trees.filter(t=>t.d>=.4&&!fruitTrees.some(f=>f.x===t.x)&&!(t.x>WATER_A&&t.x<WATER_B)))drawTree(t.x,t.d,t.s,t.v);
+ for(const t of trees.filter(t=>t.d>=.4&&!fruitTrees.some(f=>f.x===t.x)&&true))drawTree(t.x,t.d,t.s,t.v);
  // Foreground grasses, moving in the wind, anchored to the world
  for(let i=0;i<155;i++){const wx=i*47+(i*37%31),x=wx-cam*.87;if(x<-8||x>W+8)continue;const gy=groundAt(wx),height=(8+(i*19%20))*(H/410),wind=Math.sin(time*2.3+i*.7)*3;c.strokeStyle=i%5===0?'#dfc761':'#778f43';c.lineWidth=i%4===0?1.7:1.1;c.beginPath();c.moveTo(x,gy+1);c.quadraticCurveTo(x-3+wind,gy-height*.55,x+wind,gy-height);c.stroke()}
  // A few close leaves frame the foreground without covering the player
@@ -187,69 +186,38 @@ function drawFruitTree(t){const x=t.x-cam,gy=groundAt(t.x),u=H/410,top=gy-140*u;
 }
 function drawFood(){for(const f of fruitDrops){const x=f.x-cam;c.save();c.translate(x,f.y);c.rotate(f.spin);c.fillStyle='#763449';c.beginPath();c.ellipse(0,0,8,6,.2,0,Math.PI*2);c.fill();c.fillStyle='#c98272';c.beginPath();c.ellipse(-2,-2,2.5,1.7,0,0,Math.PI*2);c.fill();c.fillStyle='#708644';c.beginPath();c.ellipse(6,-6,4,2,-.5,0,Math.PI*2);c.fill();c.restore()}}
 
-function drawCrocodiles(){
- const left=WATER_A+48-cam,right=WATER_B-48-cam,surface=baseY+14;
- if(right>-30&&left<W+30){
-  // Water fills the shallow basin and follows its gradual banks instead of making a vertical wall.
-  const wave=(wx)=>surface+Math.sin(time*3.1-wx*.025)*1.4+Math.sin(time*1.7+wx*.011)*.8;
-  c.beginPath();for(let wx=WATER_A+48;wx<=WATER_B-48;wx+=8){const sx=wx-cam,sy=wave(wx);if(wx===WATER_A+48)c.moveTo(sx,sy);else c.lineTo(sx,sy)}
-  for(let wx=WATER_B-48;wx>=WATER_A+48;wx-=8)c.lineTo(wx-cam,groundAt(wx));c.closePath();
-  const water=c.createLinearGradient(0,surface,0,H);water.addColorStop(0,'#55adb0e8');water.addColorStop(.12,'#368f98ed');water.addColorStop(1,'#246a78f2');c.fillStyle=water;c.fill();
-  c.strokeStyle='#b5ded0';c.lineWidth=2;c.beginPath();for(let wx=WATER_A+48;wx<=WATER_B-48;wx+=8){const sx=wx-cam,sy=wave(wx);if(wx===WATER_A+48)c.moveTo(sx,sy);else c.lineTo(sx,sy)}c.stroke();
-  c.strokeStyle='#b8e2d388';c.lineWidth=2;for(let i=0;i<7;i++){const wx=WATER_A+110+((i*137+time*(25+i*3))%(WATER_B-WATER_A-220)),sx=wx-cam,sy=wave(wx)+7+i%3*5;c.beginPath();c.moveTo(sx,sy);c.quadraticCurveTo(sx+12,sy-2,sx+27,sy);c.stroke()}
- }
- for(const croc of crocodiles){const biting=time<croc.biteUntil,windup=croc.attackStart>0?clamp((time-croc.attackStart)/.5,0,1):0;
-  if(!biting&&time<croc.submergedUntil){const x=croc.x-cam;c.strokeStyle='#c0e9d288';c.lineWidth=2;c.beginPath();c.ellipse(x,surface+3,25+Math.sin(time*5)*5,5,0,0,Math.PI*2);c.stroke();continue}
-  const biteProgress=biting?clamp(1-(croc.biteUntil-time)/.7,0,1):0;
-  const opening=biting?22*(1-biteProgress):22*(windup*windup*(3-2*windup));
-  const lift=biting?10:windup*10,x=croc.x-cam,y=surface-lift;
-  if(x<-100||x>W+100)continue;
-  c.save();c.translate(x,y);c.scale(croc.face<0?-1:1,1);
-  const head=c.createLinearGradient(-22,-23,50,8);head.addColorStop(0,'#819052');head.addColorStop(.55,'#667d48');head.addColorStop(1,'#405b3b');
-  // The upper snout, eyes and separate hinged lower jaw rise clearly above the water.
-  c.fillStyle=head;c.beginPath();c.moveTo(-27,4);c.quadraticCurveTo(-25,-16,-8,-22);c.quadraticCurveTo(9,-28,24,-19);c.lineTo(42,-15);c.quadraticCurveTo(56,-12,61,-5);c.lineTo(56,0);c.quadraticCurveTo(32,2,8,1);c.lineTo(-15,9);c.closePath();c.fill();
-  c.fillStyle='#a2ad65';c.beginPath();c.ellipse(28,-13,5.5,4.2,0,0,Math.PI*2);c.fill();c.fillStyle='#24271d';c.beginPath();c.arc(30,-14,1.7,0,Math.PI*2);c.fill();
-  c.fillStyle='#2d3b2b';c.beginPath();c.ellipse(47,-7,2,1.4,0,0,Math.PI*2);c.ellipse(54,-6,2,1.4,0,0,Math.PI*2);c.fill();
-  if(opening>1){
-   c.fillStyle='#39402e';c.beginPath();c.moveTo(-15,5);c.quadraticCurveTo(12,opening*.22,58,1+opening*.18);c.quadraticCurveTo(43,opening*.75,15,opening);c.quadraticCurveTo(-4,opening*.8,-15,5);c.closePath();c.fill();
-   c.fillStyle='#667d48';c.beginPath();c.moveTo(-15,5);c.quadraticCurveTo(7,opening*.52,57,1+opening*.18);c.lineTo(50,opening*.45);c.quadraticCurveTo(20,opening*.85,-12,9);c.closePath();c.fill();
-   c.fillStyle='#ead9a0';for(let tooth=0;tooth<5;tooth++){const tx=-2+tooth*11;c.beginPath();c.moveTo(tx,6+tooth%2);c.lineTo(tx+3,Math.min(opening*.48,12));c.lineTo(tx+6,7+tooth%2);c.closePath();c.fill()}
-   c.strokeStyle='#b4c47c';c.lineWidth=2;c.beginPath();c.moveTo(-18,5);c.quadraticCurveTo(10,opening+3,51,opening*.53);c.stroke();
-  }else{
-   c.fillStyle='#35432f';c.beginPath();c.moveTo(-17,6);c.quadraticCurveTo(15,9,58,-3);c.lineTo(53,2);c.quadraticCurveTo(15,13,-17,9);c.closePath();c.fill();
-  }
-  c.restore();
-  if(windup>.08){c.strokeStyle='#d4f1d099';c.lineWidth=1.5;c.beginPath();c.ellipse(x,y+5,32+windup*14,4+windup*2,0,0,Math.PI*2);c.stroke()}
- }}
 function drawCats(){
- for(const cat of cats){if(cat.gone)continue;const x=cat.x-cam,y=groundAt(cat.x),scale=clamp(H/520,.72,1.15);if(x<-100||x>W+100)continue;c.save();c.translate(x,y-leap);c.scale((cat.face<0?-1:1)*scale,scale);
-  const leap=cat.pounce>0?Math.sin((.52-cat.pounce)/.52*Math.PI)*22:0,crouch=cat.pounce>0?0:2+Math.sin(time*2+cat.phase)*1.2,gait=Math.sin(time*12+cat.phase);
-  c.fillStyle='#28261f55';c.beginPath();c.ellipse(0,2,39,5,0,0,Math.PI*2);c.fill();
-  c.strokeStyle='#59402b';c.lineWidth=5;c.lineCap='round';c.beginPath();c.moveTo(-27,-15);c.quadraticCurveTo(-43,-24,-42,-35);c.quadraticCurveTo(-40,-44,-31,-42);c.stroke();
-  c.strokeStyle='#b47b45';c.lineWidth=2;c.beginPath();c.moveTo(-27,-15);c.quadraticCurveTo(-43,-24,-42,-35);c.quadraticCurveTo(-40,-44,-31,-42);c.stroke();
-  const fur=c.createLinearGradient(-30,-35,28,-4);fur.addColorStop(0,'#d0a365');fur.addColorStop(.6,'#a77443');fur.addColorStop(1,'#765034');c.fillStyle=fur;c.beginPath();c.moveTo(-34,-13-crouch);c.quadraticCurveTo(-28,-31-crouch,-9,-34-crouch);c.quadraticCurveTo(10,-35-crouch,25,-22);c.lineTo(18,-10);c.quadraticCurveTo(-2,-6,-22,-8);c.closePath();c.fill();
-  for(let i=0;i<4;i++){const lx=-22+i*14,swing=gait*(i%2?1:-1)*3;c.strokeStyle='#523a2a';c.lineWidth=6;c.beginPath();c.moveTo(lx,-17);c.lineTo(lx+swing,-8);c.lineTo(lx+swing,0);c.stroke();c.strokeStyle='#bd8852';c.lineWidth=3;c.beginPath();c.moveTo(lx,-17);c.lineTo(lx+swing,-8);c.lineTo(lx+swing,0);c.stroke()}
-  c.fillStyle='#b78750';c.beginPath();c.ellipse(25,-24,12,10,-.15,0,Math.PI*2);c.fill();c.fillStyle='#69472f';c.beginPath();c.moveTo(17,-30);c.lineTo(17,-42);c.lineTo(26,-33);c.closePath();c.moveTo(27,-32);c.lineTo(34,-43);c.lineTo(35,-27);c.closePath();c.fill();
-  c.fillStyle='#e9c980';c.beginPath();c.ellipse(29,-25,2.2,2.8,0,0,Math.PI*2);c.fill();c.fillStyle='#211a15';c.beginPath();c.arc(30,-25,1,0,Math.PI*2);c.fill();
-  c.fillStyle='#51402f';for(const [sx,sy] of [[-18,-24],[-8,-28],[3,-22],[12,-27],[-1,-14]]){c.beginPath();c.ellipse(sx,sy,2,1.5,-.3,0,Math.PI*2);c.fill()}
-  if(cat.pounce>0){c.fillStyle='#d7b65e';c.beginPath();c.moveTo(28,-21);c.lineTo(39,-18);c.lineTo(29,-15);c.fill()}
-  c.restore()
+ for(const cat of cats){if(cat.gone)continue;
+  const x=cat.x-cam,y=groundAt(cat.x),scale=clamp(H/520,.72,1.15),leap=cat.pounce>0?Math.sin((.54-cat.pounce)/.54*Math.PI)*24:0,crouch=cat.windup>0?8+Math.sin(time*20)*1.3:0,gait=Math.sin(time*11+cat.phase);
+  if(x<-100||x>W+100)continue;c.save();c.translate(x,y-leap);c.scale((cat.face<0?-1:1)*scale,scale);
+  c.fillStyle='#28261f55';c.beginPath();c.ellipse(0,2+leap,38,5,0,0,Math.PI*2);c.fill();
+  c.strokeStyle='#503a2b';c.lineWidth=5;c.lineCap='round';c.beginPath();c.moveTo(-28,-17);c.quadraticCurveTo(-43,-26+Math.sin(time*5+cat.phase)*4,-40,-38);c.quadraticCurveTo(-37,-45,-31,-40);c.stroke();
+  c.strokeStyle='#b47b45';c.lineWidth=2;c.beginPath();c.moveTo(-28,-17);c.quadraticCurveTo(-43,-26+Math.sin(time*5+cat.phase)*4,-40,-38);c.stroke();
+  const body=c.createLinearGradient(-34,-36,27,-5);body.addColorStop(0,'#d5ad70');body.addColorStop(.55,'#a97645');body.addColorStop(1,'#704c34');
+  c.fillStyle=body;c.beginPath();c.moveTo(-34,-14+crouch);c.quadraticCurveTo(-30,-34+crouch,-10,-36+crouch);c.quadraticCurveTo(10,-38+crouch,27,-23);c.quadraticCurveTo(33,-14,20,-9);c.quadraticCurveTo(-5,-5,-28,-9);c.closePath();c.fill();
+  for(let leg=0;leg<4;leg++){const lx=[-24,-12,10,22][leg],swing=cat.pounce>0?(leg<2?-4:5):gait*(leg%2?1:-1)*3.5,raise=cat.pounce>0?6:0;c.strokeStyle='#50382a';c.lineWidth=6;c.lineCap='round';c.beginPath();c.moveTo(lx,-16+crouch);c.lineTo(lx+swing,-8+raise);c.lineTo(lx+swing*1.35,0+raise);c.stroke();c.strokeStyle='#b17c4d';c.lineWidth=3.2;c.beginPath();c.moveTo(lx,-16+crouch);c.lineTo(lx+swing,-8+raise);c.lineTo(lx+swing*1.35,0+raise);c.stroke()}
+  c.fillStyle='#b78750';c.beginPath();c.ellipse(24,-25,11,9,-.12,0,Math.PI*2);c.fill();
+  c.fillStyle='#62432f';c.beginPath();c.moveTo(17,-30);c.lineTo(15,-43);c.lineTo(25,-34);c.closePath();c.moveTo(26,-32);c.lineTo(33,-43);c.lineTo(34,-27);c.closePath();c.fill();
+  c.fillStyle='#e9c980';c.beginPath();c.ellipse(29,-25,2.4,2.8,0,0,Math.PI*2);c.fill();c.fillStyle='#211a15';c.beginPath();c.arc(30,-25,1.1,0,Math.PI*2);c.fill();
+  c.fillStyle='#d0a66c';c.beginPath();c.ellipse(32,-19,6,3.2,0,0,Math.PI*2);c.fill();
+  c.strokeStyle='#ead7b0';c.lineWidth=.8;c.beginPath();c.moveTo(35,-19);c.lineTo(43,-21);c.moveTo(35,-18);c.lineTo(43,-17);c.stroke();
+  c.fillStyle='#51382b';for(const [sx,sy] of [[-19,-26],[-8,-30],[2,-23],[12,-29],[-3,-15]]){c.beginPath();c.ellipse(sx,sy,2.3,1.4,-.25,0,Math.PI*2);c.fill()}
+  c.restore();
  }
 }
-
 function drawHero(){
  const art=hero.h/82,air=!hero.ground,pace=Math.abs(hero.vx),moving=pace>14;
- const screenX=hero.x-cam,contactY=hero.swimming?baseY+14:groundAt(hero.x+hero.w*.5),heightAbove=Math.max(0,contactY-(hero.y+hero.h));
+ const screenX=hero.x-cam,contactY=groundAt(hero.x+hero.w*.5),heightAbove=Math.max(0,contactY-(hero.y+hero.h));
  // A quiet, ground-anchored shadow gives a clear contact point without a floating look.
- c.save();c.globalAlpha=(hero.swimming?.18:1)*(1-clamp(heightAbove/155,0,.86));const sh=c.createRadialGradient(screenX,contactY+1,1,screenX,contactY+1,23*art);sh.addColorStop(0,'#292d2360');sh.addColorStop(1,'#292d2300');c.fillStyle=sh;c.beginPath();c.ellipse(screenX,contactY+2,24*art,4*art,0,0,Math.PI*2);c.fill();c.restore();
+ c.save();c.globalAlpha=1-clamp(heightAbove/155,0,.86);const sh=c.createRadialGradient(screenX,contactY+1,1,screenX,contactY+1,23*art);sh.addColorStop(0,'#292d2360');sh.addColorStop(1,'#292d2300');c.fillStyle=sh;c.beginPath();c.ellipse(screenX,contactY+2,24*art,4*art,0,0,Math.PI*2);c.fill();c.restore();
  c.save();c.translate(screenX,hero.y);c.scale((hero.face<0?-1:1)*art,art);
- const rate=hero.swimming?4.5:(running?9.2:6.2),phase=hero.walk,bob=hero.swimming?Math.sin(time*4.5)*1.8:(air?0:(moving?Math.abs(Math.sin(phase*2))*(running?1.7:.8):0));
+ const rate=running?9.2:6.2,phase=hero.walk,bob=air?0:(moving?Math.abs(Math.sin(phase*2))*(running?1.7:.8):0);
  c.translate(0,bob);
  // Each foot has a planted half-step and a lifted recovery step. This avoids the skating shuffle.
  const drawLeg=(offset,color,outline)=>{
   const p=((phase/Math.PI+offset)%2+2)%2,stance=p<1;
   let fx,fy;
-  if(hero.swimming){const kick=Math.sin(phase*1.8+offset*Math.PI);fx=(offset===0?-9:8)+kick*7;fy=68+Math.abs(kick)*3}else if(air){fx=offset===0?-7:8;fy=68}
+  if(air){fx=offset===0?-7:8;fy=68}
   else if(stance){const q=p;fx=13-q*25;fy=78}
   else{const q=p-1;fx=-12+q*25;fy=78-Math.sin(q*Math.PI)*9}
   const kneeX=(fx+(offset===0?-3:3))*.52,kneeY=61-(stance?0:Math.sin((p-1)*Math.PI)*3);
@@ -291,7 +259,7 @@ function drawHero(){
  c.fillStyle='#493329';c.beginPath();c.moveTo(1,5);c.quadraticCurveTo(9,2,17,5);c.lineTo(16,8);c.quadraticCurveTo(8,7,1,9);c.fill();
  c.fillStyle='#f4dba8';c.beginPath();c.ellipse(10,8,2.5,2,0,0,Math.PI*2);c.fill();c.fillStyle='#211b17';c.beginPath();c.arc(11,8,1.1,0,Math.PI*2);c.fill();
  c.fillStyle='#86583c';c.beginPath();c.ellipse(-8,12,3.8,5.3,0,0,Math.PI*2);c.fill();c.fillStyle='#c0875b';c.beginPath();c.ellipse(-8,12,1.7,2.6,0,0,Math.PI*2);c.fill();
- c.restore();c.restore();if(hero.swimming){const waterY=baseY+14;c.save();c.fillStyle='#368f98a8';c.fillRect(screenX-hero.w*.54,waterY,hero.w*1.12,H-waterY);c.strokeStyle='#c4e8d8';c.lineWidth=1.5;c.beginPath();c.moveTo(screenX-hero.w*.58,waterY);c.quadraticCurveTo(screenX,waterY+2,screenX+hero.w*.58,waterY);c.stroke();c.restore()}
+ c.restore();c.restore();
 }
 function throwStone(){const direction=hero.face,launchX=hero.x+direction*28,launchY=hero.y+34,speedLimit=running?230:164,motion=clamp(Math.abs(hero.vx)/speedLimit,0,1),walkMotion=running?0:motion,runMotion=running?motion:0,aim=throwAim,horizontal=(340+walkMotion*100+runMotion*190)*(1-aim*.42),lift=65+walkMotion*35+runMotion*80+aim*590;stones.push({x:launchX,y:launchY,vx:direction*horizontal,vy:-lift,spin:0,life:3});throwAim=0;hero.throw=.28;sfx('throw')}
 function stompAt(x,topY,reach,previousBottom){const bottom=hero.y+hero.h;if(hero.vy>0&&previousBottom<=topY+5&&bottom>=topY&&Math.abs(hero.x+hero.w*.5-x)<reach){hero.y=topY-hero.h;hero.vy=-390;hero.ground=false;sfx('jump');return true}return false}
@@ -317,37 +285,39 @@ function drawEnemies(){
  }
 }
 function update(dt){time+=dt;if(hero.dead){hero.deathTimer-=dt;hero.y+=190*dt;hero.vx=0;hero.vy=0;if(hero.deathTimer<=0){begin();mode='free';skipButton.style.display='none'}return}controls();hero.hurt=Math.max(0,hero.hurt-dt);const previousBottom=hero.y+hero.h;
- const maxSpeed=hero.swimming?(running?84:58):(running?(axis<0?182:230):(axis<0?118:164)),targetV=axis*maxSpeed,accel=hero.swimming?250:(Math.abs(targetV)>Math.abs(hero.vx)?820:1350);
- hero.vx+=clamp(targetV-hero.vx,-accel*dt,accel*dt);if(hero.swimming&&Math.abs(axis)<.01)hero.vx*=Math.exp(-3.6*dt);if(Math.abs(hero.vx)<7)hero.vx=0;
+ const maxSpeed=running?(axis<0?182:230):(axis<0?118:164),targetV=axis*maxSpeed,accel=Math.abs(targetV)>Math.abs(hero.vx)?820:1350;
+ hero.vx+=clamp(targetV-hero.vx,-accel*dt,accel*dt);if(Math.abs(axis)<.01&&Math.abs(hero.vx)<7)hero.vx=0;
  hero.x+=hero.vx*dt;hero.x=clamp(hero.x,60,WORLD-100);if(hero.vx>10)hero.face=1;if(hero.vx< -10)hero.face=-1;
- hero.walk+=dt*(hero.swimming?4.5:(running?10:6))*Math.min(1,Math.abs(hero.vx)/(hero.swimming?120:170));hero.run=running&&!hero.swimming?1:0;
- const insideWater=hero.x+hero.w*.5>WATER_A+48&&hero.x+hero.w*.5<WATER_B-48,waterSurface=baseY+14;
- if(insideWater&&hero.y+hero.h>waterSurface-2&&!hero.swimming&&hero.vy>=0){const nearCroc=crocodiles.some(c=>Math.abs(hero.x+hero.w*.5-c.x)<68);if(!(hero.vy>0&&nearCroc&&previousBottom<waterSurface+46)){hero.swimming=true;hero.swimJump=0;hero.y=waterSurface-hero.h*.62;hero.vy=0;hero.ground=false}}
- if(hero.swimming&&!insideWater){hero.swimming=false;hero.swimJump=0;const shore=groundAt(hero.x+hero.w*.5);if(hero.y+hero.h>shore-2){hero.y=shore-hero.h;hero.vy=0;hero.ground=true}}
- if(jumpQueued&&(hero.ground||hero.swimming)){hero.jumpFromRun=running;hero.vy=hero.swimming?-250:(running?-650:-455);hero.swimJump=hero.swimming?.44:0;hero.ground=false;sfx('jump');jumpDone=true;if(running&&!hero.swimming)runJumpDone=true}jumpQueued=false;
+ hero.walk+=dt*(running?10:6)*Math.min(1,Math.abs(hero.vx)/170);hero.run=running?1:0;
+ if(jumpQueued&&hero.ground){hero.jumpFromRun=running;hero.vy=running?-650:-455;hero.ground=false;sfx('jump');jumpDone=true;if(running&&!hero.swimming)runJumpDone=true}jumpQueued=false;
  if(throwQueued){throwStone();throwDone=true}throwQueued=false;
- if(hero.swimming){if(hero.swimJump>0){hero.swimJump=Math.max(0,hero.swimJump-dt);hero.vy+=1040*dt;hero.y+=hero.vy*dt}else{const floatY=waterSurface-hero.h*.58;hero.y+=(floatY-hero.y)*Math.min(1,dt*2.7);hero.vy=0}}else{hero.vy+=1420*dt;hero.y+=hero.vy*dt}
+ hero.vy+=1420*dt;hero.y+=hero.vy*dt;
  for(const e of enemies){if(e.hp>0&&stompAt(e.x,groundAt(e.x)-38,42,previousBottom)){e.hp=0;e.fleeDir=hero.x+hero.w*.5<e.x?1:-1;e.gone=false;say('De hyena vlucht voor je!',1.5)}}
  for(const cat of cats){if(cat.hp>0&&stompAt(cat.x,groundAt(cat.x)-35,40,previousBottom)){cat.hp=0;cat.face=hero.x+hero.w*.5<cat.x?1:-1;cat.gone=false;say('De grote kat slaat op de vlucht!',1.7)}}
  for(const b of birds){const by=groundAt(b.x)-b.altitude;if(!b.gone&&b.hp>0&&stompAt(b.x,by-8,30,previousBottom)){b.hp=0;b.face=hero.x+hero.w*.5<b.x?1:-1;say('De roofvogel vliegt weg!',1.5)}}
- for(const croc of crocodiles){if(!hero.swimming&&time>=croc.submergedUntil&&stompAt(croc.x,baseY+24,64,previousBottom)){croc.submergedUntil=time+2.8;croc.attackStart=0;croc.cooldownUntil=time+2.8}}
- let floorY=(inGap(hero.x+hero.w*.5)||hero.swimming)?null:groundAt(hero.x+hero.w*.5);
+ let floorY=inGap(hero.x+hero.w*.5)?null:groundAt(hero.x+hero.w*.5);
  if(floorY!==null&&hero.y+hero.h>=floorY&&(hero.vy>=0||hero.y+hero.h>floorY+3)){hero.y=floorY-hero.h;hero.vy=0;hero.ground=true}else hero.ground=false;
  if(inGap(hero.x+hero.w*.5)&&hero.y>baseY+95){hero.x=GAP_A-hero.w-34;hero.y=groundAt(hero.x)-hero.h;hero.vx=0;hero.vy=0;hero.ground=true;say('Rechts + omhoog, dan springen',2.3)}
- for(const e of enemies){if(e.hp<=0){if(!e.gone){e.x+=e.fleeDir*390*dt;e.gait+=dt*11;const sx=e.x-cam;if(sx<-85||sx>W+85||e.x<-85||e.x>WORLD+85)e.gone=true}continue}e.stun=Math.max(0,e.stun-dt);let dx=hero.x+hero.w*.5-e.x;const oldX=e.x;if(e.stun<=0){if(Math.abs(dx)<430){e.face=dx<0?-1:1;const gap=Math.abs(dx);if(gap>38)e.x+=e.face*Math.min(105*dt,gap-38)}else{const patrol=e.anchor+Math.sin(time*.75+e.phase)*58,d=patrol-e.x;e.face=d<0?-1:1;e.x+=clamp(d,-34*dt,34*dt);e.x=clamp(e.x,e.anchor-165,e.anchor+165)}}if(e.x>WATER_A-42&&e.x<WATER_B+42)e.x=(e.x-(WATER_A+WATER_B)/2<0?WATER_A-42:WATER_B+42);if(Math.abs(e.x-oldX)>.01)e.gait+=dt*11;if(hero.ground&&hero.hurt<=0&&Math.abs(hero.x+hero.w*.5-e.x)<44){hero.hurt=.95;changeScore(-50);hero.vx=(hero.x+hero.w*.5<e.x?-1:1)*205;hero.vy=-165;hero.ground=false;say('Hyena! Spring erop of gooi een steen.',2.1);sfx('hit')}}
+ for(const e of enemies){if(e.hp<=0){if(!e.gone){e.x+=e.fleeDir*390*dt;e.gait+=dt*11;const sx=e.x-cam;if(sx<-85||sx>W+85||e.x<-85||e.x>WORLD+85)e.gone=true}continue}e.stun=Math.max(0,e.stun-dt);let dx=hero.x+hero.w*.5-e.x;const oldX=e.x;if(e.stun<=0){if(Math.abs(dx)<430){e.face=dx<0?-1:1;const gap=Math.abs(dx);if(gap>38)e.x+=e.face*Math.min(105*dt,gap-38)}else{const patrol=e.anchor+Math.sin(time*.75+e.phase)*58,d=patrol-e.x;e.face=d<0?-1:1;e.x+=clamp(d,-34*dt,34*dt);e.x=clamp(e.x,e.anchor-165,e.anchor+165)}}if(Math.abs(e.x-oldX)>.01)e.gait+=dt*11;if(hero.ground&&hero.hurt<=0&&Math.abs(hero.x+hero.w*.5-e.x)<44){hero.hurt=.95;changeScore(-50);hero.vx=(hero.x+hero.w*.5<e.x?-1:1)*205;hero.vy=-165;hero.ground=false;say('Hyena! Spring erop of gooi een steen.',2.1);sfx('hit')}}
  for(const b of birds){if(b.gone)continue;if(b.hp<=0){b.x+=b.face*360*dt;b.altitude+=170*dt;const sx=b.x-cam,sy=groundAt(b.x)-b.altitude;if(sx<-85||sx>W+85||sy<-60)b.gone=true;continue}b.cooldown=Math.max(0,b.cooldown-dt);const dx=hero.x+hero.w*.5-b.x;if(!b.diving){b.x=b.anchor+Math.sin((time+b.phase)*.52)*78;b.altitude=151+Math.sin((time+b.phase)*1.05)*10;if(Math.abs(dx)<390&&b.cooldown<=0){b.diving=true;b.diveT=0;b.diveFrom=b.x;b.diveFromAltitude=b.altitude;b.diveTo=clamp(hero.x+hero.w*.5,b.x-190,b.x+190);b.face=b.diveTo<b.x?-1:1}}else{b.diveT+=dt;const p=clamp(b.diveT/1.35,0,1),ease=p*p*(3-2*p);b.x=b.diveFrom+(b.diveTo-b.diveFrom)*ease;b.altitude=b.diveFromAltitude+(151-b.diveFromAltitude)*ease-112*Math.sin(p*Math.PI);if(p>=1){b.diving=false;b.cooldown=2.6;b.anchor=b.x;b.phase=-time;b.altitude=151}}const by=groundAt(b.x)-b.altitude;if(hero.ground&&hero.hurt<=0&&b.diving&&Math.abs(hero.x+hero.w*.5-b.x)<35&&Math.abs((hero.y+hero.h*.2)-by)<48){hero.hurt=.95;changeScore(-50);hero.vx=(hero.x+hero.w*.5<b.x?-1:1)*190;hero.vy=-155;hero.ground=false;b.cooldown=2.7;say('Roofvogel! Spring weg of gooi omhoog.',2);sfx('hit')}}
-for(const cat of cats){if(cat.gone)continue;if(cat.hp<=0){cat.x+=cat.face*390*dt;const sx=cat.x-cam;if(sx<-85||sx>W+85)cat.gone=true;continue}cat.cooldown=Math.max(0,cat.cooldown-dt);let d=hero.x+hero.w*.5-cat.x;if(cat.pounce>0){cat.x+=cat.face*245*dt;cat.pounce=Math.max(0,cat.pounce-dt)}else if(Math.abs(d)<430){cat.face=d<0?-1:1;if(Math.abs(d)<190&&cat.cooldown<=0){cat.pounce=.52;cat.cooldown=2.2}else cat.x+=cat.face*44*dt}else{const pat=cat.anchor+Math.sin(time*.55+cat.phase)*50;cat.face=pat<cat.x?-1:1;cat.x+=clamp(pat-cat.x,-28*dt,28*dt)}if(hero.ground&&hero.hurt<=0&&Math.abs(hero.x+hero.w*.5-cat.x)<43){hero.hurt=.95;changeScore(-50);hero.vx=(hero.x+hero.w*.5<cat.x?-1:1)*220;hero.vy=-175;hero.ground=false;say('De grote kat springt! Spring erop of ontwijk hem.',2);sfx('hit')}}
- for(const croc of crocodiles){if(time<croc.submergedUntil)continue;const d=Math.abs(hero.x+hero.w*.5-croc.x);croc.face=hero.x+hero.w*.5<croc.x?-1:1;if(time>=croc.cooldownUntil&&croc.attackStart===0&&d<260&&(hero.swimming||hero.ground)){croc.attackStart=time||.001;sfx('hit')}if(croc.attackStart>0&&time-croc.attackStart>.5){croc.attackStart=0;croc.biteUntil=time+.7;croc.cooldownUntil=time+(d<205?1.8:.45);if(d<205){hero.dead=true;hero.deathTimer=.92;hero.swimming=true;hero.ground=false;hero.vx=0;hero.vy=0;sfx('hit')}}}
+for(const cat of cats){if(cat.gone)continue;if(cat.hp<=0){cat.x+=cat.face*390*dt;const sx=cat.x-cam;if(sx<-85||sx>W+85||cat.x<0||cat.x>WORLD)cat.gone=true;continue}
+ cat.cooldown=Math.max(0,cat.cooldown-dt);const d=hero.x+hero.w*.5-cat.x,oldX=cat.x;
+ if(cat.pounce>0){cat.x+=cat.face*275*dt;cat.pounce=Math.max(0,cat.pounce-dt)}
+ else if(cat.windup>0){cat.windup=Math.max(0,cat.windup-dt);if(cat.windup===0)cat.pounce=.54}
+ else if(Math.abs(d)<440){cat.face=d<0?-1:1;if(Math.abs(d)<170&&cat.cooldown<=0){cat.windup=.36;cat.cooldown=2.5}else if(Math.abs(d)>90)cat.x+=cat.face*Math.min(56*dt,Math.abs(d)-90)}
+ else{const patrol=cat.anchor+Math.sin(time*.55+cat.phase)*48;cat.face=patrol<cat.x?-1:1;cat.x+=clamp(patrol-cat.x,-30*dt,30*dt)}
+ if(Math.abs(cat.x-oldX)>.01)cat.phase+=dt*11;
+ if(cat.pounce>0&&hero.ground&&hero.hurt<=0&&Math.abs(hero.x+hero.w*.5-cat.x)<46){hero.hurt=.95;changeScore(-50);hero.vx=(hero.x+hero.w*.5<cat.x?-1:1)*220;hero.vy=-175;hero.ground=false;cat.pounce=0;cat.cooldown=2.5;say('De sluipkat springt! Spring over hem of gooi een steen.',2);sfx('hit')}}
  for(const f of fruitDrops){if(!f.landed){f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=680*dt;f.spin+=dt*5;const floor=groundAt(f.x)-8;if(f.y>=floor){f.y=floor;f.vy=0;f.vx=0;f.landed=true}}if(f.landed&&hero.ground&&Math.abs(hero.x+hero.w*.5-f.x)<31){f.collected=true;changeScore(100);say('+100 · wilde vijg',1.1)}}fruitDrops=fruitDrops.filter(f=>!f.collected);
  hero.throw=Math.max(0,hero.throw-dt);
  if(Math.abs(hero.vx)>60&&hero.ground&&time-lastFoot>(running ? 0.27 : 0.38)){sfx('step');lastFoot=time}
- for(const s of stones){s.x+=s.vx*dt;s.y+=s.vy*dt;s.vy+=760*dt;s.spin+=dt*9;s.life-=dt;for(const croc of crocodiles){if(s.life>0&&time>=croc.submergedUntil&&Math.abs(s.x-croc.x)<52&&Math.abs(s.y-(baseY+14))<54){croc.submergedUntil=time+3.2;croc.attackStart=0;croc.cooldownUntil=time+3.2;s.life=0;sfx('hit');break}}if(s.life>0)for(const b of birds){const by=groundAt(b.x)-b.altitude;if(!b.gone&&b.hp>0&&Math.abs(s.x-b.x)<31&&Math.abs(s.y-by)<25){b.hp=0;b.face=hero.x<b.x?1:-1;s.life=0;say('Raak! De roofvogel vliegt weg.',1.7);sfx('hit');break}}if(s.life>0)for(const t of fruitTrees){const ty=figY(t);if(!t.dropped&&Math.abs(s.x-t.x)<74&&Math.abs(s.y-ty)<47){t.dropped=true;for(let i=0;i<4;i++)fruitDrops.push({x:t.x+(i-1.5)*12,y:ty+8,vx:(i-1.5)*27,vy:-25-i*5,spin:i*.5,landed:false,collected:false});s.life=0;say('De vijgen vallen! Raap ze op.',1.7);sfx('hit');break}}if(s.life>0)for(const e of enemies){if(e.hp>0&&e.stun<=0&&Math.abs(s.x-e.x)<34&&s.y>groundAt(e.x)-72&&s.y<groundAt(e.x)+4){e.hp--;e.stun=.95;e.face=hero.x<e.x?1:-1;s.life=0;if(e.hp<=0){e.fleeDir=e.face;e.gone=false;say('De hyena rent weg!',1.8)}else say('Raak! Nog een steen om hem af te weren.',1.5);sfx('hit');break}}if(s.life>0)for(const cat of cats){if(cat.hp>0&&Math.abs(s.x-cat.x)<36&&s.y>groundAt(cat.x)-72&&s.y<groundAt(cat.x)+4){cat.hp=0;cat.face=hero.x<cat.x?1:-1;s.life=0;say('De grote kat schrikt en vlucht!',1.7);sfx('hit');break}}if(s.life<=0)continue;let gy=groundAt(s.x);if(s.y>gy-8){s.y=gy-8;s.vy*=-.32;s.vx*=.7;if(Math.abs(s.vy)<55)s.life=0;for(let k=0;k<3;k++)dust.push({x:s.x,y:gy-4,vx:(Math.random()-.5)*45,vy:-Math.random()*35,life:.35,color:k%2?'#d8c37f':'#f1dea0'});sfx('hit')}}stones=stones.filter(s=>s.life>0);
+ for(const s of stones){s.x+=s.vx*dt;s.y+=s.vy*dt;s.vy+=760*dt;s.spin+=dt*9;s.life-=dt;if(s.life>0)for(const b of birds){const by=groundAt(b.x)-b.altitude;if(!b.gone&&b.hp>0&&Math.abs(s.x-b.x)<31&&Math.abs(s.y-by)<25){b.hp=0;b.face=hero.x<b.x?1:-1;s.life=0;say('Raak! De roofvogel vliegt weg.',1.7);sfx('hit');break}}if(s.life>0)for(const t of fruitTrees){const ty=figY(t);if(!t.dropped&&Math.abs(s.x-t.x)<74&&Math.abs(s.y-ty)<47){t.dropped=true;for(let i=0;i<4;i++)fruitDrops.push({x:t.x+(i-1.5)*12,y:ty+8,vx:(i-1.5)*27,vy:-25-i*5,spin:i*.5,landed:false,collected:false});s.life=0;say('De vijgen vallen! Raap ze op.',1.7);sfx('hit');break}}if(s.life>0)for(const e of enemies){if(e.hp>0&&e.stun<=0&&Math.abs(s.x-e.x)<34&&s.y>groundAt(e.x)-72&&s.y<groundAt(e.x)+4){e.hp--;e.stun=.95;e.face=hero.x<e.x?1:-1;s.life=0;if(e.hp<=0){e.fleeDir=e.face;e.gone=false;say('De hyena rent weg!',1.8)}else say('Raak! Nog een steen om hem af te weren.',1.5);sfx('hit');break}}if(s.life>0)for(const cat of cats){if(cat.hp>0&&Math.abs(s.x-cat.x)<36&&s.y>groundAt(cat.x)-72&&s.y<groundAt(cat.x)+4){cat.hp=0;cat.face=hero.x<cat.x?1:-1;s.life=0;say('De grote kat schrikt en vlucht!',1.7);sfx('hit');break}}if(s.life<=0)continue;let gy=groundAt(s.x);if(s.y>gy-8){s.y=gy-8;s.vy*=-.32;s.vx*=.7;if(Math.abs(s.vy)<55)s.life=0;for(let k=0;k<3;k++)dust.push({x:s.x,y:gy-4,vx:(Math.random()-.5)*45,vy:-Math.random()*35,life:.35,color:k%2?'#d8c37f':'#f1dea0'});sfx('hit')}}stones=stones.filter(s=>s.life>0);
  for(const p of dust){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=90*dt;p.life-=dt}dust=dust.filter(p=>p.life>0);
  if(mode==='intro'){if(stepIndex===0&&leftDone&&rightDone){say('Rechts + omhoog = rennen',2.3);stepIndex=1;leftDone=rightDone=false}else if(stepIndex===1&&runDone){say('Tik rechts om te springen',2.2);stepIndex=2}else if(stepIndex===2&&jumpDone){say('Ren naar de kloof',2.2);stepIndex=3;jumpDone=false;runJumpDone=false}else if(stepIndex===3&&hero.x>GAP_A-400){say('Ren + spring over de kloof',2.4);stepIndex=4}else if(stepIndex===4&&runJumpDone&&hero.x>GAP_B+hero.w){say('Gooi omhoog tegen de vijgen; raap ze op voor punten.',2.7);stepIndex=5}else if(stepIndex===5&&throwDone){say('Vrij oefenen',2.4);stepIndex=6;mode='free';skipButton.style.display='none'}}
  const target=clamp(hero.x-W*.39,0,WORLD-W);cam+=(target-cam)*Math.min(1,dt*6);
 }
 function drawStone(s){const x=s.x-cam;c.save();c.translate(x,s.y);c.rotate(s.spin);const g=c.createLinearGradient(-8,-7,8,8);g.addColorStop(0,'#ebddb8');g.addColorStop(.4,'#b9a37b');g.addColorStop(1,'#716248');c.fillStyle=g;c.beginPath();c.moveTo(-9,2);c.lineTo(-6,-6);c.lineTo(0,-8);c.lineTo(7,-4);c.lineTo(9,3);c.lineTo(4,7);c.lineTo(-5,6);c.closePath();c.fill();c.strokeStyle='#f6e8c2aa';c.lineWidth=1;c.stroke();c.restore()}
-function draw(){drawBackground();for(const t of fruitTrees)drawFruitTree(t);drawFood();drawCrocodiles();for(const s of stones)drawStone(s);for(const p of dust){c.globalAlpha=clamp(p.life/.35,0,1);c.fillStyle=p.color;c.beginPath();c.arc(p.x-cam,p.y,2.1,0,Math.PI*2);c.fill()}c.globalAlpha=1;drawBirds();drawEnemies();drawCats();drawHero();if(hint.classList.contains('show')&&time>showHintUntil)hint.classList.remove('show')}
+function draw(){drawBackground();for(const t of fruitTrees)drawFruitTree(t);drawFood();for(const s of stones)drawStone(s);for(const p of dust){c.globalAlpha=clamp(p.life/.35,0,1);c.fillStyle=p.color;c.beginPath();c.arc(p.x-cam,p.y,2.1,0,Math.PI*2);c.fill()}c.globalAlpha=1;drawBirds();drawEnemies();drawCats();drawHero();if(hint.classList.contains('show')&&time>showHintUntil)hint.classList.remove('show')}
 function frame(now){const dt=Math.min(.032,(now-last)/1000||.016);last=now;if(mode!=='title')update(dt);else{time+=dt;drawIdle()}draw();requestAnimationFrame(frame)}
 function drawIdle(){for(const a of herd){}}
 document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});document.addEventListener('contextmenu',e=>e.preventDefault());
