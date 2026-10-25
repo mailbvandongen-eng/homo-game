@@ -65,7 +65,7 @@ const stages=[
 ];
 const storeKey='homoPlatform_v1';let saved={level:0,unlocked:0,checkpoint:0};
 try{saved={...saved,...JSON.parse(localStorage.getItem(storeKey)||'{}')}}catch{}
-let level=Math.min(saved.level||0,stages.length-1),mode='title',player={x:38,y:0,vy:0,ground:false,life:3,inv:0},camera=0,tilt=0,zero=0,sensor=false,items=[],particles=[],boss={x:0,hp:3,dir:-1},flash=0,last=0,elapsed=0;
+let level=Math.min(saved.level||0,stages.length-1),mode='title',player={x:38,y:0,vy:0,ground:false,life:3,inv:0},camera=0,tilt=0,zero=0,sensor=false,items=[],particles=[],boss={x:0,hp:3,dir:-1},flash=0,last=0,elapsed=0,lastSave=0;
 const floor=218,grav=.39,world=[];
 function persist(){saved.level=level;try{localStorage.setItem(storeKey,JSON.stringify(saved))}catch{}}
 const show=id=>$(id).style.display='grid',hide=id=>$(id).style.display='none';
@@ -145,7 +145,7 @@ function update(dt){if(mode!=='play')return;elapsed+=dt;const touchMove=(cv.matc
  for(const o of world){if(o.type==='pit')continue;if(player.x+25>o.x&&player.x+3<o.x+o.w&&player.y+28>floor-12){if(player.vy>1&&player.y+28<floor+2){player.y=floor-30;player.vy=-5;continue}hurt();player.x=Math.max(30,player.x-35)}}
  for(const it of items){if(!it.got&&Math.abs(player.x+13-it.x)<17&&Math.abs(player.y+12-it.y)<21){it.got=true;let n=items.filter(i=>i.got).length;$('stones').textContent='◆ '+n+'/3';particles.push({x:it.x,y:it.y,vy:-1.2,life:18,color:'#f5cf6e'});if(n===3)message('Werktuig compleet! Zoek de eindbaas.');persist()}}
  boss.x+=boss.dir*.55;if(boss.x<stages[level].length-245||boss.x>stages[level].length-85)boss.dir*=-1;
- if(Math.abs(player.x-boss.x)<25&&Math.abs(player.y+28-floor)<15){if(player.vy>0){boss.hp--;boss.flash=.2;player.vy=-6;player.inv=.8;message(boss.hp?'Raak! Nog een keer!':'Eindbaas verslagen!');if(boss.hp<=0&&items.every(i=>i.got)){win()}}else hurt()}
+ if(Math.abs(player.x-boss.x)<25&&Math.abs(player.y+28-floor)<15){if(!items.every(i=>i.got)){message('Verzamel eerst de drie stenen!')}else if(player.vy>0){boss.hp--;boss.flash=.2;player.vy=-6;player.inv=.8;message(boss.hp?'Raak! Nog een keer!':'Eindbaas verslagen!');if(boss.hp<=0){win()}}else hurt()}
  if(player.y>300){hurt();player.y=floor-30;player.vy=0}
  camera=Math.max(0,Math.min(stages[level].length-480,player.x-140));player.inv=Math.max(0,player.inv-dt);
  if(player.x>stages[level].length-40){if(items.every(i=>i.got)&&boss.hp<=0)win();else if(!items.every(i=>i.got))message('Eerst de drie stenen!');else message('Spring op de eindbaas!')}
