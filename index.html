@@ -18,12 +18,29 @@ html,body{position:fixed;inset:0;width:100%;height:100%;margin:0;overflow:hidden
 #game{position:fixed;inset:0;width:100vw;height:100dvh;display:block;touch-action:none}
 #title{position:fixed;inset:0;display:grid;place-items:center;z-index:3;background:linear-gradient(90deg,#10232955,#10232912 60%,#10232940);transition:opacity .55s ease}
 #title.off{opacity:0;pointer-events:none}
-.titleCard{width:min(440px,86vw);padding:20px 26px;text-align:center;background:linear-gradient(145deg,#10272bc9,#19322ca8);border:1px solid #f5dc9a99;border-radius:22px;box-shadow:0 18px 65px #10232955;backdrop-filter:blur(7px)}
+.titleCard{width:min(500px,88vw);padding:20px 26px;text-align:center;background:linear-gradient(145deg,#10272bc9,#19322ca8);border:1px solid #f5dc9a99;border-radius:22px;box-shadow:0 18px 65px #10232955;backdrop-filter:blur(7px)}
 .eyebrow{font-size:clamp(10px,1.8vh,13px);font-weight:850;letter-spacing:.22em;color:#f6cf75;text-transform:uppercase}
 h1{margin:7px 0 3px;font-size:clamp(44px,11vh,78px);line-height:.92;letter-spacing:.04em;color:#fff0bb;text-shadow:0 4px #a45038,0 8px #352328}
 .sub{margin:8px 0 14px;color:#e6e1c9;font-size:clamp(12px,2.1vh,15px)}
 #startButton{width:54px;height:54px;border-radius:50%;border:1px solid #fff3c2;background:#f8c64cdd;color:#26302c;display:grid;place-items:center;margin:auto;box-shadow:0 6px 18px #0c171955;touch-action:none}
 #startButton svg{width:22px;height:22px;margin-left:3px}
+#specialsButton{display:block;margin:13px auto 0;padding:7px 12px;border:0;background:transparent;color:#d9d0ad;font:750 11px system-ui;letter-spacing:.13em;text-transform:uppercase;opacity:.86;touch-action:manipulation}
+#specialsButton:active{color:#f6cf75;transform:scale(.97)}
+#specials{position:fixed;inset:0;z-index:8;display:none;place-items:center;padding:max(10px,env(safe-area-inset-top)) max(12px,var(--safeL)) max(10px,var(--safeB)) max(12px,var(--safeR));background:#0c191ee8;backdrop-filter:blur(8px)}
+#specials.open{display:grid}
+.specialPanel{width:min(100%,1040px);height:min(100%,680px);display:flex;flex-direction:column;gap:10px;padding:clamp(12px,2vh,20px);border:1px solid #e6bb5e;border-radius:18px;background:linear-gradient(145deg,#10272bf2,#19322cee);box-shadow:0 16px 55px #0008}
+.specialHead{display:flex;align-items:center;justify-content:space-between;gap:14px;flex:0 0 auto}
+.specialTitle{color:#fff0bb;font-size:clamp(17px,3vh,25px);font-weight:900;letter-spacing:.08em}
+.specialIntro{margin-top:3px;color:#c5d2c4;font-size:clamp(10px,1.55vh,13px)}
+#specialsClose{width:38px;height:38px;flex:0 0 38px;border:1px solid #fff7;border-radius:50%;background:#273b3590;color:#fff0c8;font-size:25px;line-height:1}
+.specialGrid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:9px}
+.specialCard{min-width:0;overflow:hidden;padding:clamp(9px,1.6vh,15px);border:1px solid #d5cb9870;border-radius:13px;background:linear-gradient(145deg,#39553dba,#1d393bbd);color:#f1ead0}
+.specialNo{color:#f0c461;font-size:10px;font-weight:900;letter-spacing:.16em}
+.specialCard h2{margin:3px 0 4px;color:#fff0bb;font-size:clamp(12px,1.9vh,16px);line-height:1.1}
+.specialCard p{margin:3px 0;color:#dddcc7;font-size:clamp(9px,1.42vh,12px);line-height:1.3}
+.specialCard .taxa{color:#b9dcc8;font-weight:720}
+@media(max-height:440px) and (orientation:landscape){.titleCard{padding:13px 22px;width:min(440px,80vw)}#specialsButton{margin-top:7px;padding:5px 9px;font-size:10px}.specialPanel{gap:7px;padding:9px}.specialGrid{gap:6px}.specialCard{padding:7px 9px}.specialCard p{font-size:9px}.specialCard h2{font-size:12px}}
+
 #skip{position:fixed;z-index:4;top:max(12px,env(safe-area-inset-top));right:max(14px,env(safe-area-inset-right));display:none;width:38px;height:38px;border-radius:50%;border:1px solid #fff8;background:#15272555;color:#fff0c8;font-size:23px;line-height:1;touch-action:none;backdrop-filter:blur(5px)}
 #hint{position:fixed;z-index:2;top:max(15px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);padding:7px 13px;border-radius:20px;background:#17282455;color:#fff2d3;text-shadow:0 1px 5px #243024;font-weight:750;font-size:clamp(11px,1.8vh,14px);letter-spacing:.04em;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 #hint.show{opacity:1}
@@ -37,7 +54,15 @@ h1{margin:7px 0 3px;font-size:clamp(44px,11vh,78px);line-height:.92;letter-spaci
 </head>
 <body>
 <canvas id="game"></canvas>
-<div id="title"><div class="titleCard"><div class="eyebrow">Een bewegingsoefening in de Riftvallei</div><h1>HOMO</h1><div class="sub">Lopen · rennen · springen · werpen</div><button id="startButton" aria-label="Start intro"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4.8c0-.8.9-1.3 1.6-.9l11 6.8a1.5 1.5 0 0 1 0 2.6l-11 6.8c-.7.4-1.6-.1-1.6-.9z"/></svg></button></div></div>
+<div id="title"><div class="titleCard"><div class="eyebrow">Een bewegingsoefening in de Riftvallei</div><h1>HOMO</h1><div class="sub">Lopen · rennen · springen · werpen</div><button id="startButton" aria-label="Start intro"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4.8c0-.8.9-1.3 1.6-.9l11 6.8a1.5 1.5 0 0 1 0 2.6l-11 6.8c-.7.4-1.6-.1-1.6-.9z"/></svg></button><button id="specialsButton" aria-label="Open speciale afleveringen">Speciale afleveringen</button></div></div>
+<div id="specials" aria-hidden="true"><section class="specialPanel" aria-label="Speciale afleveringen"><header class="specialHead"><div><div class="specialTitle">BUITEN DE HOOFDROUTE</div><div class="specialIntro">De menselijke stamboom is vertakt. Soortaantallen en verwantschappen blijven onderwerp van onderzoek.</div></div><button id="specialsClose" aria-label="Sluiten">×</button></header><div class="specialGrid">
+<article class="specialCard"><div class="specialNo">AFLEVERING 01</div><h2>Vóór Homo</h2><p class="taxa">Sahelanthropus · Orrorin · Ardipithecus kadabba en ramidus</p><p>Van vroege rechtoplopers tot de voorouders rond vier miljoen jaar geleden.</p></article>
+<article class="specialCard"><div class="specialNo">AFLEVERING 02</div><h2>Lucy en haar verwanten</h2><p class="taxa">Australopithecus anamensis, afarensis, africanus, garhi en sediba · Kenyanthropus platyops</p><p>Meerdere mensachtigen leefden naast elkaar in Afrika.</p></article>
+<article class="specialCard"><div class="specialNo">AFLEVERING 03</div><h2>De robuuste zijtak</h2><p class="taxa">Paranthropus aethiopicus, boisei en robustus</p><p>Een andere evolutionaire richting, met sterke kaken en grote kiezen.</p></article>
+<article class="specialCard"><div class="specialNo">AFLEVERING 04</div><h2>Wie was Homo?</h2><p class="taxa">H. rudolfensis · H. ergaster · H. georgicus · H. antecessor · H. gautengensis</p><p>Sommige namen zijn omstreden; ergaster wordt vaak bij erectus gerekend.</p></article>
+<article class="specialCard"><div class="specialNo">AFLEVERING 05</div><h2>Mens op eilanden</h2><p class="taxa">Homo floresiensis · Homo luzonensis</p><p>Afzonderlijke eilandwerelden en kleine fossielreeksen maken hun oorsprong tot een puzzel.</p></article>
+<article class="specialCard"><div class="specialNo">AFLEVERING 06</div><h2>Gelijktijdige mensentakken</h2><p class="taxa">Neanderthalers · Denisovanen · H. naledi</p><p>Bonusdossier: H. rhodesiensis, bodoensis, cepranensis, longi en juluensis zijn voorgestelde of betwiste indelingen.</p></article>
+</div></section></div>
 <button id="skip" aria-label="Intro overslaan">»</button>
 <div id="hint" aria-live="polite"></div><div id="score" aria-live="polite">◆ 0</div>
 <button id="throw" aria-label="Gooi steen"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 23c3-1 4-6 8-8 3-2 7-7 10-5l5 7-2 7-9 3-9-1z" fill="#c7ae7b" stroke="#f7e7bd" stroke-width="1.5" stroke-linejoin="round"/><path d="m10 22 7-7m-1 8 8-8" stroke="#907954" stroke-width="1.3" stroke-linecap="round"/><path d="M3 9c4-3 8-4 12-3" fill="none" stroke="#fff0be" stroke-width="1.5" stroke-linecap="round"/></svg></button>
@@ -45,7 +70,7 @@ h1{margin:7px 0 3px;font-size:clamp(44px,11vh,78px);line-height:.92;letter-spaci
 <script>
 (()=> {
 const cv=document.getElementById('game'),c=cv.getContext('2d',{alpha:false});
-const title=document.getElementById('title'),startButton=document.getElementById('startButton'),skipButton=document.getElementById('skip'),throwButton=document.getElementById('throw'),hint=document.getElementById('hint'),scoreDisplay=document.getElementById('score');
+const title=document.getElementById('title'),startButton=document.getElementById('startButton'),specials=document.getElementById('specials'),specialsButton=document.getElementById('specialsButton'),specialsClose=document.getElementById('specialsClose'),skipButton=document.getElementById('skip'),throwButton=document.getElementById('throw'),hint=document.getElementById('hint'),scoreDisplay=document.getElementById('score');
 let W=innerWidth,H=innerHeight,DPR=1,baseY=0,cam=0,time=0,last=0,mode='title',leftId=null,rightId=null,keys={},axis=0,running=false,jumpQueued=false,throwQueued=false,stepIndex=0,stepTimer=0,leftDone=false,rightDone=false,runDone=false,jumpDone=false,runJumpDone=false,throwDone=false,showHintUntil=0;
 const WORLD=6200,GAP_A=1850,GAP_B=2040;
 const hero={x:165,y:0,w:54,h:82,vx:0,vy:0,ground:true,face:1,walk:0,run:0,throw:0,hurt:0,jumpFromRun:false};
@@ -67,6 +92,10 @@ function changeScore(amount){score=Math.max(0,score+amount);scoreDisplay.textCon
 function sfx(kind){try{if(!audio){audio=new(window.AudioContext||window.webkitAudioContext)()}if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;o.connect(g);g.connect(audio.destination);o.type=kind==='throw'?'triangle':'sine';let f=kind==='jump'?270:kind==='throw'?540:kind==='hit'?170:110;o.frequency.setValueAtTime(f,now);o.frequency.exponentialRampToValueAtTime(Math.max(60,f*(kind==='throw'?1.45:.58)),now+.12);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(kind==='step'?.035:.055,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.17);o.start(now);o.stop(now+.18)}catch{}}
 function say(){hint.classList.remove('show')}
 function begin(){title.classList.add('off');mode='intro';scoreDisplay.style.display='block';skipButton.style.display='grid';throwButton.style.display='grid';time=0;last=performance.now();hero.x=165;hero.y=groundAt(hero.x)-hero.h;hero.vx=0;hero.vy=0;hero.hurt=0;hero.ground=true;cam=0;stepIndex=0;leftDone=rightDone=runDone=jumpDone=runJumpDone=throwDone=false;stones=[];fruitDrops=[];score=0;changeScore(0);for(const q of fruitTrees)q.dropped=false;for(const e of enemies){e.x=e.anchor;e.hp=2;e.stun=0;e.flee=0;e.gait=0;e.gone=false}for(const b of birds){b.x=b.anchor;b.hp=1;b.gone=false;b.diving=false;b.diveT=0;b.altitude=150;b.cooldown=1.2;b.diveFrom=b.anchor;b.diveTo=b.anchor;b.phase=b.phase}for(const cat of cats){cat.x=cat.anchor;cat.hp=1;cat.gone=false;cat.pounce=0;cat.windup=0;cat.cooldown=1.5}for(const b of baboons){b.x=b.anchor;b.hp=1;b.gone=false;b.face=-1;b.state='patrol';b.timer=0;b.cooldown=1.5;b.gait=0}for(const w of warthogs){w.x=w.anchor;w.hp=1;w.gone=false;w.face=-1;w.state='patrol';w.timer=0;w.cooldown=2;w.gait=0}say('Sleep links en rechts',3);sfx('jump')}
+function openSpecials(e){if(e)e.preventDefault();specials.classList.add('open');specials.setAttribute('aria-hidden','false')}
+function closeSpecials(e){if(e)e.preventDefault();specials.classList.remove('open');specials.setAttribute('aria-hidden','true')}
+specialsButton.addEventListener('pointerdown',openSpecials);specialsClose.addEventListener('pointerdown',closeSpecials);
+specials.addEventListener('pointerdown',e=>{if(e.target===specials)closeSpecials(e)});
 startButton.addEventListener('pointerdown',e=>{e.preventDefault();begin()});
 skipButton.addEventListener('pointerdown',e=>{e.preventDefault();mode='free';skipButton.style.display='none';hint.classList.remove('show')});
 throwButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();throwPointerId=e.pointerId;throwStartY=e.clientY;throwAim=0;try{throwButton.setPointerCapture(e.pointerId)}catch{}});
