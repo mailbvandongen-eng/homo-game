@@ -299,7 +299,7 @@ function update(dt){time+=dt;controls();hero.hurt=Math.max(0,hero.hurt-dt);const
  hero.x+=hero.vx*dt;hero.x=clamp(hero.x,60,WORLD-100);if(hero.vx>10)hero.face=1;if(hero.vx< -10)hero.face=-1;
  hero.walk+=dt*(hero.swimming?4.5:(running?10:6))*Math.min(1,Math.abs(hero.vx)/(hero.swimming?120:170));hero.run=running&&!hero.swimming?1:0;
  const insideWater=hero.x+hero.w*.5>WATER_A+12&&hero.x+hero.w*.5<WATER_B-12,waterSurface=baseY+31;
- if(insideWater&&hero.y+hero.h>waterSurface-2&&!hero.swimming){hero.swimming=true;hero.swimJump=0;hero.y=waterSurface-hero.h*.62;hero.vy=0;hero.ground=false}
+ if(insideWater&&hero.y+hero.h>waterSurface-2&&!hero.swimming&&hero.vy>=0){const nearCroc=crocodiles.some(c=>Math.abs(hero.x+hero.w*.5-c.x)<68);if(!(hero.vy>0&&nearCroc&&previousBottom<waterSurface+46)){hero.swimming=true;hero.swimJump=0;hero.y=waterSurface-hero.h*.62;hero.vy=0;hero.ground=false}}
  if(hero.swimming&&!insideWater){hero.swimming=false;hero.swimJump=0}
  if(jumpQueued&&(hero.ground||hero.swimming)){hero.jumpFromRun=running;hero.vy=hero.swimming?-250:(running?-650:-455);hero.swimJump=hero.swimming?.44:0;hero.ground=false;sfx('jump');jumpDone=true;if(running&&!hero.swimming)runJumpDone=true}jumpQueued=false;
  if(throwQueued){throwStone();throwDone=true}throwQueued=false;
@@ -307,7 +307,7 @@ function update(dt){time+=dt;controls();hero.hurt=Math.max(0,hero.hurt-dt);const
  for(const e of enemies){if(e.hp>0&&stompAt(e.x,groundAt(e.x)-38,42,previousBottom)){e.hp=0;e.fleeDir=hero.x+hero.w*.5<e.x?1:-1;e.gone=false;say('De hyena vlucht voor je!',1.5)}}
  for(const cat of cats){if(cat.hp>0&&stompAt(cat.x,groundAt(cat.x)-35,40,previousBottom)){cat.hp=0;cat.face=hero.x+hero.w*.5<cat.x?1:-1;cat.gone=false;say('De grote kat slaat op de vlucht!',1.7)}}
  for(const b of birds){const by=groundAt(b.x)-b.altitude;if(!b.gone&&b.hp>0&&stompAt(b.x,by-8,30,previousBottom)){b.hp=0;b.face=hero.x+hero.w*.5<b.x?1:-1;say('De roofvogel vliegt weg!',1.5)}}
- for(const croc of crocodiles){if(!hero.swimming&&time>=croc.submergedUntil&&stompAt(croc.x,baseY+26,64,previousBottom)){croc.submergedUntil=time+2.8;say('Plons! De krokodil duikt onder.',1.6)}}
+ for(const croc of crocodiles){if(!hero.swimming&&time>=croc.submergedUntil&&stompAt(croc.x,baseY+63,64,previousBottom)){croc.submergedUntil=time+2.8;say('Plons! De krokodil duikt onder.',1.6)}}
  let floorY=(inGap(hero.x+hero.w*.5)||hero.swimming)?null:groundAt(hero.x+hero.w*.5);
  if(floorY!==null&&hero.y+hero.h>=floorY&&hero.vy>=0){hero.y=floorY-hero.h;hero.vy=0;hero.ground=true}else hero.ground=false;
  if(inGap(hero.x+hero.w*.5)&&hero.y>baseY+95){hero.x=GAP_A-hero.w-34;hero.y=groundAt(hero.x)-hero.h;hero.vx=0;hero.vy=0;hero.ground=true;say('Rechts + omhoog, dan springen',2.3)}
