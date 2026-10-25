@@ -196,7 +196,7 @@ function drawHero(){
  c.fillStyle='#86583c';c.beginPath();c.ellipse(-8,12,3.8,5.3,0,0,Math.PI*2);c.fill();c.fillStyle='#c0875b';c.beginPath();c.ellipse(-8,12,1.7,2.6,0,0,Math.PI*2);c.fill();
  c.restore();c.restore();
 }
-function throwStone(){const direction=hero.face,launchX=hero.x+direction*28,launchY=hero.y+34;stones.push({x:launchX,y:launchY,vx:direction*(running?560:470),vy:-250,spin:0,life:3});hero.throw=.28;sfx('throw')}
+function throwStone(){const direction=hero.face,launchX=hero.x+direction*28,launchY=hero.y+34,speedLimit=running?230:164,motion=clamp(Math.abs(hero.vx)/speedLimit,0,1),walkMotion=running?0:motion,runMotion=running?motion:0,horizontal=340+walkMotion*100+runMotion*190,lift=65+walkMotion*35+runMotion*80;stones.push({x:launchX,y:launchY,vx:direction*horizontal,vy:-lift,spin:0,life:3});hero.throw=.28;sfx('throw')}
 function drawEnemies(){
  for(const e of enemies){if(e.hp<=0&&e.flee<=0)continue;const x=e.x-cam,y=groundAt(e.x),scale=clamp(H/520,.72,1.25);if(x<-100||x>W+100)continue;
   c.save();c.translate(x,y);c.scale((e.face<0?-1:1)*scale,scale);
