@@ -48,13 +48,13 @@ button:active{transform:translateY(3px);box-shadow:0 2px #a55e36}
 <div id="hud"><div class="hudbox"><span id="species">HOMO HABILIS</span><br><span id="mission">RIFTVALLEI · 2,4 MILJOEN JAAR</span></div><div style="display:flex;gap:7px;align-items:center"><div class="hudbox"><span id="hearts">♥♥♥</span>　<span id="stones">◆ 0/3</span></div><button id="pauseBtn" class="secondary">Ⅱ</button></div></div>
 <div id="message"></div><div id="moveControls"><button id="left" class="direction" aria-label="Loop naar links">◀</button><button id="right" class="direction" aria-label="Loop naar rechts">▶</button></div><button id="jump">SPRING</button>
 <div class="overlay" id="start">
-<div class="card"><div class="kicker">Een pixel-avontuur door onze familiegeschiedenis</div><h1>HOMO<br>GAME</h1><p>Vier miljoen jaar. Een familie vol zijtakken. Ren, spring en ontdek wie er tegelijk leefde.</p><div id="tiltLabel">BESTURING · houd ◀ of ▶ ingedrukt · tik op SPRING</div><div class="row"><button id="play">START DE REIS</button><button id="chapterOpen" class="secondary">TIJDLIJN</button></div><p class="small">Liggend spelen · houd ◀ / ▶ vast om te lopen · tik op SPRING<br>Voeg de game via Safari → Deel → Zet op beginscherm toe voor schermvullend spelen.</p></div>
+<div class="card"><div class="kicker">Een pixel-avontuur door onze familiegeschiedenis</div><h1>HOMO<br>GAME</h1><p>Vier miljoen jaar. Een familie vol zijtakken. Ren, spring en ontdek wie er tegelijk leefde.</p><div id="controlLabel">BESTURING · houd ◀ of ▶ ingedrukt · tik op SPRING</div><div class="row"><button id="play">START DE REIS</button><button id="chapterOpen" class="secondary">TIJDLIJN</button></div><p class="small">Liggend spelen · houd ◀ / ▶ vast om te lopen · tik op SPRING<br>Voeg de game via Safari → Deel → Zet op beginscherm toe voor schermvullend spelen.</p></div>
 </div>
 <div class="overlay" id="intro"><div class="card"><div class="kicker" id="introDate"></div><h2 id="introTitle"></h2><p id="introText"></p><div class="row"><button id="introGo">SLA INTRO OVER</button></div></div></div>
 <div class="overlay" id="pause"><div class="card"><div class="kicker">EVEN OP ADEM KOMEN</div><h2>De tijd staat stil</h2><p>Houd ◀ of ▶ vast om te lopen. Tik op SPRING om over rotsen, kloven en dieren te komen.</p><div class="row"><button id="resume">VERDER SPELEN</button><button id="pauseTimeline" class="secondary">TIJDLIJN</button></div></div></div>
 <div class="overlay" id="finish"><div class="card"><div class="kicker">EINDbaas verslagen</div><h2 id="finishTitle"></h2><p id="finishText"></p><div class="row"><button id="next">VOLG DE TIJDLIJN</button><button id="finishTimeline" class="secondary">BEKIJK STAMBOOM</button></div></div></div>
 <div class="overlay" id="chapters"><div class="card"><div class="kicker">GEEN RECHTE LADDER</div><h2>De menselijke stamboom</h2><p>Soorten overlapten en sommige families kregen samen kinderen. Tik op een vrijgespeeld hoofdstuk.</p><div class="timeline" id="tree"></div><div class="row"><button id="closeChapters" class="secondary">TERUG</button></div></div></div>
-<div class="overlay" id="help"><div class="card"><div class="kicker">KANTEL EN SPRING</div><h2>Zo speel je</h2><p>Kantel het toestel rustig naar links of rechts. Tik op <b>SPRING</b> om hindernissen en de eindbaas te passeren. Verzamel drie stenen werktuigstukken en bereik dan de eindbaas.</p><p id="sensorHelp" class="small"></p><div class="row"><button id="helpGo">BEGREPEN</button></div></div></div>
+<div class="overlay" id="help"><div class="card"><div class="kicker">KNOPPEN EN SPRING</div><h2>Zo speel je</h2><p>Houd ◀ of ▶ vast om te lopen. Tik op <b>SPRING</b> om hindernissen en de eindbaas te passeren. Verzamel drie stenen werktuigstukken en bereik dan de eindbaas.</p><p id="sensorHelp" class="small"></p><div class="row"><button id="helpGo">BEGREPEN</button></div></div></div>
 <div id="rotate">DRAAI JE TELEFOON<br><span class="small">Deze game speel je het lekkerst liggend.</span></div>
 <script>
 (()=> {
@@ -184,7 +184,7 @@ function update(dt){if(mode!=='play')return;elapsed+=dt;let move=(keyR?1:0)-(key
  if(player.y>300){hurt();player.y=floor-player.h;player.vy=0}
  const targetCamera=Math.max(0,Math.min(stages[level].length-viewW,player.x-viewW*.30));camera+=(targetCamera-camera)*Math.min(1,dt*10);player.inv=Math.max(0,player.inv-dt);
  if(player.x>stages[level].length-40){if(items.every(i=>i.got)&&boss.hp<=0)win();else if(!items.every(i=>i.got))message('Eerst de drie stenen!');else message('Spring op de eindbaas!')}
- persist();
+ if(elapsed-lastSave>1){persist();lastSave=elapsed}
 }
 function frame(t){const dt=Math.min(.035,(t-last)/1000||.016);last=t;update(dt);drawWorld();requestAnimationFrame(frame)}
 $('introGo').addEventListener('click',()=>{mode='play';hide('intro');$('jump').style.display='block'});
