@@ -52,7 +52,7 @@ const hero={x:165,y:0,w:54,h:82,vx:0,vy:0,ground:true,swimming:false,swimJump:0,
 const enemies=[{anchor:980,x:980,hp:2,stun:0,flee:0,fleeDir:1,face:-1,phase:0,gait:0,gone:false},{anchor:3020,x:3020,hp:2,stun:0,flee:0,fleeDir:1,phase:1.8,gait:0,gone:false},{anchor:4770,x:4770,hp:2,stun:0,flee:0,fleeDir:1,phase:3.4,gait:0,gone:false}];
 const birds=[{anchor:1580,x:1580,hp:1,phase:.3,cooldown:.8,diveT:0,diving:false,diveFrom:1580,diveTo:1580,altitude:150,face:-1,gone:false},{anchor:3560,x:3560,hp:1,phase:2.1,cooldown:1.6,diveT:0,diving:false,diveFrom:3560,diveTo:3560,altitude:155,face:-1,gone:false},{anchor:5160,x:5160,hp:1,phase:4.2,cooldown:.4,diveT:0,diving:false,diveFrom:5160,diveTo:5160,altitude:145,face:-1,gone:false}];
 const cats=[{anchor:4020,x:4020,hp:1,gone:false,face:-1,phase:1.1,cooldown:1.5,pounce:0}];
-const crocodiles=[{x:2495,submergedUntil:0,biteUntil:0,attackStart:0,cooldownUntil:0}];
+const crocodiles=[{x:2495,submergedUntil:0,biteUntil:0,attackStart:0,cooldownUntil:0,face:1}];
 const fruitTrees=[{x:510,dropped:false},{x:3240,dropped:false},{x:4520,dropped:false}];
 let score=0,fruitDrops=[];
 let throwPointerId=null,throwStartY=0,throwAim=0;
@@ -65,7 +65,7 @@ function clamp(n,a,b){return Math.max(a,Math.min(b,n))}
 function changeScore(amount){score=Math.max(0,score+amount);scoreDisplay.textContent='◆ '+score}
 function sfx(kind){try{if(!audio){audio=new(window.AudioContext||window.webkitAudioContext)()}if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;o.connect(g);g.connect(audio.destination);o.type=kind==='throw'?'triangle':'sine';let f=kind==='jump'?270:kind==='throw'?540:kind==='hit'?170:110;o.frequency.setValueAtTime(f,now);o.frequency.exponentialRampToValueAtTime(Math.max(60,f*(kind==='throw'?1.45:.58)),now+.12);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(kind==='step'?.035:.055,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.17);o.start(now);o.stop(now+.18)}catch{}}
 function say(){hint.classList.remove('show')}
-function begin(){title.classList.add('off');mode='intro';scoreDisplay.style.display='block';skipButton.style.display='grid';throwButton.style.display='grid';time=0;last=performance.now();hero.x=165;hero.y=groundAt(hero.x)-hero.h;hero.vx=0;hero.vy=0;hero.hurt=0;hero.ground=true;hero.swimming=false;hero.swimJump=0;cam=0;stepIndex=0;leftDone=rightDone=runDone=jumpDone=runJumpDone=throwDone=false;stones=[];fruitDrops=[];score=0;changeScore(0);for(const q of fruitTrees)q.dropped=false;for(const e of enemies){e.x=e.anchor;e.hp=2;e.stun=0;e.flee=0;e.gait=0;e.gone=false}for(const b of birds){b.x=b.anchor;b.hp=1;b.gone=false;b.diving=false;b.diveT=0;b.altitude=150;b.cooldown=1.2;b.diveFrom=b.anchor;b.diveTo=b.anchor;b.phase=b.phase}for(const cat of cats){cat.x=cat.anchor;cat.hp=1;cat.gone=false;cat.pounce=0;cat.cooldown=1.5}for(const croc of crocodiles){croc.submergedUntil=0;croc.biteUntil=0;croc.attackStart=0;croc.cooldownUntil=0}hero.dead=false;hero.deathTimer=0;say('Sleep links en rechts',3);sfx('jump')}
+function begin(){title.classList.add('off');mode='intro';scoreDisplay.style.display='block';skipButton.style.display='grid';throwButton.style.display='grid';time=0;last=performance.now();hero.x=165;hero.y=groundAt(hero.x)-hero.h;hero.vx=0;hero.vy=0;hero.hurt=0;hero.ground=true;hero.swimming=false;hero.swimJump=0;cam=0;stepIndex=0;leftDone=rightDone=runDone=jumpDone=runJumpDone=throwDone=false;stones=[];fruitDrops=[];score=0;changeScore(0);for(const q of fruitTrees)q.dropped=false;for(const e of enemies){e.x=e.anchor;e.hp=2;e.stun=0;e.flee=0;e.gait=0;e.gone=false}for(const b of birds){b.x=b.anchor;b.hp=1;b.gone=false;b.diving=false;b.diveT=0;b.altitude=150;b.cooldown=1.2;b.diveFrom=b.anchor;b.diveTo=b.anchor;b.phase=b.phase}for(const cat of cats){cat.x=cat.anchor;cat.hp=1;cat.gone=false;cat.pounce=0;cat.cooldown=1.5}for(const croc of crocodiles){croc.submergedUntil=0;croc.biteUntil=0;croc.attackStart=0;croc.cooldownUntil=0;croc.face=1}hero.dead=false;hero.deathTimer=0;say('Sleep links en rechts',3);sfx('jump')}
 startButton.addEventListener('pointerdown',e=>{e.preventDefault();begin()});
 skipButton.addEventListener('pointerdown',e=>{e.preventDefault();mode='free';skipButton.style.display='none';hint.classList.remove('show')});
 throwButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();throwPointerId=e.pointerId;throwStartY=e.clientY;throwAim=0;try{throwButton.setPointerCapture(e.pointerId)}catch{}});
@@ -198,15 +198,29 @@ function drawCrocodiles(){
   c.strokeStyle='#b5ded0';c.lineWidth=2;c.beginPath();for(let wx=WATER_A+48;wx<=WATER_B-48;wx+=8){const sx=wx-cam,sy=wave(wx);if(wx===WATER_A+48)c.moveTo(sx,sy);else c.lineTo(sx,sy)}c.stroke();
   c.strokeStyle='#b8e2d388';c.lineWidth=2;for(let i=0;i<7;i++){const wx=WATER_A+110+((i*137+time*(25+i*3))%(WATER_B-WATER_A-220)),sx=wx-cam,sy=wave(wx)+7+i%3*5;c.beginPath();c.moveTo(sx,sy);c.quadraticCurveTo(sx+12,sy-2,sx+27,sy);c.stroke()}
  }
- for(const croc of crocodiles){const x=croc.x-cam,y=surface+(croc.attackStart>0?Math.sin(Math.min(1,(time-croc.attackStart)/.48)*Math.PI)*3:0);if(x<-90||x>W+90)continue;
-  const biting=time<croc.biteUntil;if(!biting&&time<croc.submergedUntil){c.strokeStyle='#c0e9d288';c.lineWidth=2;c.beginPath();c.ellipse(x,y+3,25+Math.sin(time*5)*5,5,0,0,Math.PI*2);c.stroke();continue}
-  // Only the nostril ridge and eyes break the water surface; the skull stays submerged.
-  c.fillStyle='#526b43';c.beginPath();c.ellipse(x,y-1,28,4,0,Math.PI,Math.PI*2);c.fill();
-  c.fillStyle='#7a8c52';for(const ex of [-14,13]){c.beginPath();c.ellipse(x+ex,y-4,5,3.5,0,0,Math.PI*2);c.fill();c.fillStyle='#25291c';c.beginPath();c.arc(x+ex+1,y-5,1.5,0,Math.PI*2);c.fill();c.fillStyle='#7a8c52'}
-  c.fillStyle='#24281d';c.beginPath();c.ellipse(x-7,y-2,1.7,1,0,0,Math.PI*2);c.ellipse(x+7,y-2,1.7,1,0,0,Math.PI*2);c.fill();
-  if(biting){const open=4+Math.sin((croc.biteUntil-time)/.24*Math.PI)*4;c.strokeStyle='#d7c580';c.lineWidth=2;c.beginPath();c.moveTo(x-20,y+1);c.quadraticCurveTo(x,y+open,x+20,y+1);c.stroke()}
- }
-}
+ for(const croc of crocodiles){const biting=time<croc.biteUntil,windup=croc.attackStart>0?clamp((time-croc.attackStart)/.5,0,1):0;
+  if(!biting&&time<croc.submergedUntil){const x=croc.x-cam;c.strokeStyle='#c0e9d288';c.lineWidth=2;c.beginPath();c.ellipse(x,surface+3,25+Math.sin(time*5)*5,5,0,0,Math.PI*2);c.stroke();continue}
+  const biteProgress=biting?clamp(1-(croc.biteUntil-time)/.7,0,1):0;
+  const opening=biting?22*(1-biteProgress):22*(windup*windup*(3-2*windup));
+  const lift=biting?10:windup*10,x=croc.x-cam,y=surface-lift;
+  if(x<-100||x>W+100)continue;
+  c.save();c.translate(x,y);c.scale(croc.face<0?-1:1,1);
+  const head=c.createLinearGradient(-22,-23,50,8);head.addColorStop(0,'#819052');head.addColorStop(.55,'#667d48');head.addColorStop(1,'#405b3b');
+  // The upper snout, eyes and separate hinged lower jaw rise clearly above the water.
+  c.fillStyle=head;c.beginPath();c.moveTo(-27,4);c.quadraticCurveTo(-25,-16,-8,-22);c.quadraticCurveTo(9,-28,24,-19);c.lineTo(42,-15);c.quadraticCurveTo(56,-12,61,-5);c.lineTo(56,0);c.quadraticCurveTo(32,2,8,1);c.lineTo(-15,9);c.closePath();c.fill();
+  c.fillStyle='#a2ad65';c.beginPath();c.ellipse(28,-13,5.5,4.2,0,0,Math.PI*2);c.fill();c.fillStyle='#24271d';c.beginPath();c.arc(30,-14,1.7,0,Math.PI*2);c.fill();
+  c.fillStyle='#2d3b2b';c.beginPath();c.ellipse(47,-7,2,1.4,0,0,Math.PI*2);c.ellipse(54,-6,2,1.4,0,0,Math.PI*2);c.fill();
+  if(opening>1){
+   c.fillStyle='#39402e';c.beginPath();c.moveTo(-15,5);c.quadraticCurveTo(12,opening*.22,58,1+opening*.18);c.quadraticCurveTo(43,opening*.75,15,opening);c.quadraticCurveTo(-4,opening*.8,-15,5);c.closePath();c.fill();
+   c.fillStyle='#667d48';c.beginPath();c.moveTo(-15,5);c.quadraticCurveTo(7,opening*.52,57,1+opening*.18);c.lineTo(50,opening*.45);c.quadraticCurveTo(20,opening*.85,-12,9);c.closePath();c.fill();
+   c.fillStyle='#ead9a0';for(let tooth=0;tooth<5;tooth++){const tx=-2+tooth*11;c.beginPath();c.moveTo(tx,6+tooth%2);c.lineTo(tx+3,Math.min(opening*.48,12));c.lineTo(tx+6,7+tooth%2);c.closePath();c.fill()}
+   c.strokeStyle='#b4c47c';c.lineWidth=2;c.beginPath();c.moveTo(-18,5);c.quadraticCurveTo(10,opening+3,51,opening*.53);c.stroke();
+  }else{
+   c.fillStyle='#35432f';c.beginPath();c.moveTo(-17,6);c.quadraticCurveTo(15,9,58,-3);c.lineTo(53,2);c.quadraticCurveTo(15,13,-17,9);c.closePath();c.fill();
+  }
+  c.restore();
+  if(windup>.08){c.strokeStyle='#d4f1d099';c.lineWidth=1.5;c.beginPath();c.ellipse(x,y+5,32+windup*14,4+windup*2,0,0,Math.PI*2);c.stroke()}
+ }}
 function drawCats(){
  for(const cat of cats){if(cat.gone)continue;const x=cat.x-cam,y=groundAt(cat.x),scale=clamp(H/520,.72,1.15);if(x<-100||x>W+100)continue;c.save();c.translate(x,y-leap);c.scale((cat.face<0?-1:1)*scale,scale);
   const leap=cat.pounce>0?Math.sin((.52-cat.pounce)/.52*Math.PI)*22:0,crouch=cat.pounce>0?0:2+Math.sin(time*2+cat.phase)*1.2,gait=Math.sin(time*12+cat.phase);
@@ -309,7 +323,7 @@ function update(dt){time+=dt;if(hero.dead){hero.deathTimer-=dt;hero.y+=190*dt;he
  hero.walk+=dt*(hero.swimming?4.5:(running?10:6))*Math.min(1,Math.abs(hero.vx)/(hero.swimming?120:170));hero.run=running&&!hero.swimming?1:0;
  const insideWater=hero.x+hero.w*.5>WATER_A+48&&hero.x+hero.w*.5<WATER_B-48,waterSurface=baseY+14;
  if(insideWater&&hero.y+hero.h>waterSurface-2&&!hero.swimming&&hero.vy>=0){const nearCroc=crocodiles.some(c=>Math.abs(hero.x+hero.w*.5-c.x)<68);if(!(hero.vy>0&&nearCroc&&previousBottom<waterSurface+46)){hero.swimming=true;hero.swimJump=0;hero.y=waterSurface-hero.h*.62;hero.vy=0;hero.ground=false}}
- if(hero.swimming&&!insideWater){hero.swimming=false;hero.swimJump=0}
+ if(hero.swimming&&!insideWater){hero.swimming=false;hero.swimJump=0;const shore=groundAt(hero.x+hero.w*.5);if(hero.y+hero.h>shore-2){hero.y=shore-hero.h;hero.vy=0;hero.ground=true}}
  if(jumpQueued&&(hero.ground||hero.swimming)){hero.jumpFromRun=running;hero.vy=hero.swimming?-250:(running?-650:-455);hero.swimJump=hero.swimming?.44:0;hero.ground=false;sfx('jump');jumpDone=true;if(running&&!hero.swimming)runJumpDone=true}jumpQueued=false;
  if(throwQueued){throwStone();throwDone=true}throwQueued=false;
  if(hero.swimming){if(hero.swimJump>0){hero.swimJump=Math.max(0,hero.swimJump-dt);hero.vy+=1040*dt;hero.y+=hero.vy*dt}else{const floatY=waterSurface-hero.h*.58;hero.y+=(floatY-hero.y)*Math.min(1,dt*2.7);hero.vy=0}}else{hero.vy+=1420*dt;hero.y+=hero.vy*dt}
@@ -318,12 +332,12 @@ function update(dt){time+=dt;if(hero.dead){hero.deathTimer-=dt;hero.y+=190*dt;he
  for(const b of birds){const by=groundAt(b.x)-b.altitude;if(!b.gone&&b.hp>0&&stompAt(b.x,by-8,30,previousBottom)){b.hp=0;b.face=hero.x+hero.w*.5<b.x?1:-1;say('De roofvogel vliegt weg!',1.5)}}
  for(const croc of crocodiles){if(!hero.swimming&&time>=croc.submergedUntil&&stompAt(croc.x,baseY+24,64,previousBottom)){croc.submergedUntil=time+2.8;croc.attackStart=0;croc.cooldownUntil=time+2.8}}
  let floorY=(inGap(hero.x+hero.w*.5)||hero.swimming)?null:groundAt(hero.x+hero.w*.5);
- if(floorY!==null&&hero.y+hero.h>=floorY&&hero.vy>=0){hero.y=floorY-hero.h;hero.vy=0;hero.ground=true}else hero.ground=false;
+ if(floorY!==null&&hero.y+hero.h>=floorY&&(hero.vy>=0||hero.y+hero.h>floorY+3)){hero.y=floorY-hero.h;hero.vy=0;hero.ground=true}else hero.ground=false;
  if(inGap(hero.x+hero.w*.5)&&hero.y>baseY+95){hero.x=GAP_A-hero.w-34;hero.y=groundAt(hero.x)-hero.h;hero.vx=0;hero.vy=0;hero.ground=true;say('Rechts + omhoog, dan springen',2.3)}
  for(const e of enemies){if(e.hp<=0){if(!e.gone){e.x+=e.fleeDir*390*dt;e.gait+=dt*11;const sx=e.x-cam;if(sx<-85||sx>W+85||e.x<-85||e.x>WORLD+85)e.gone=true}continue}e.stun=Math.max(0,e.stun-dt);let dx=hero.x+hero.w*.5-e.x;const oldX=e.x;if(e.stun<=0){if(Math.abs(dx)<430){e.face=dx<0?-1:1;const gap=Math.abs(dx);if(gap>38)e.x+=e.face*Math.min(105*dt,gap-38)}else{const patrol=e.anchor+Math.sin(time*.75+e.phase)*58,d=patrol-e.x;e.face=d<0?-1:1;e.x+=clamp(d,-34*dt,34*dt);e.x=clamp(e.x,e.anchor-165,e.anchor+165)}}if(e.x>WATER_A-42&&e.x<WATER_B+42)e.x=(e.x-(WATER_A+WATER_B)/2<0?WATER_A-42:WATER_B+42);if(Math.abs(e.x-oldX)>.01)e.gait+=dt*11;if(hero.ground&&hero.hurt<=0&&Math.abs(hero.x+hero.w*.5-e.x)<44){hero.hurt=.95;changeScore(-50);hero.vx=(hero.x+hero.w*.5<e.x?-1:1)*205;hero.vy=-165;hero.ground=false;say('Hyena! Spring erop of gooi een steen.',2.1);sfx('hit')}}
  for(const b of birds){if(b.gone)continue;if(b.hp<=0){b.x+=b.face*360*dt;b.altitude+=170*dt;const sx=b.x-cam,sy=groundAt(b.x)-b.altitude;if(sx<-85||sx>W+85||sy<-60)b.gone=true;continue}b.cooldown=Math.max(0,b.cooldown-dt);const dx=hero.x+hero.w*.5-b.x;if(!b.diving){b.x=b.anchor+Math.sin((time+b.phase)*.52)*78;b.altitude=151+Math.sin((time+b.phase)*1.05)*10;if(Math.abs(dx)<390&&b.cooldown<=0){b.diving=true;b.diveT=0;b.diveFrom=b.x;b.diveFromAltitude=b.altitude;b.diveTo=clamp(hero.x+hero.w*.5,b.x-190,b.x+190);b.face=b.diveTo<b.x?-1:1}}else{b.diveT+=dt;const p=clamp(b.diveT/1.35,0,1),ease=p*p*(3-2*p);b.x=b.diveFrom+(b.diveTo-b.diveFrom)*ease;b.altitude=b.diveFromAltitude+(151-b.diveFromAltitude)*ease-112*Math.sin(p*Math.PI);if(p>=1){b.diving=false;b.cooldown=2.6;b.anchor=b.x;b.phase=-time;b.altitude=151}}const by=groundAt(b.x)-b.altitude;if(hero.ground&&hero.hurt<=0&&b.diving&&Math.abs(hero.x+hero.w*.5-b.x)<35&&Math.abs((hero.y+hero.h*.2)-by)<48){hero.hurt=.95;changeScore(-50);hero.vx=(hero.x+hero.w*.5<b.x?-1:1)*190;hero.vy=-155;hero.ground=false;b.cooldown=2.7;say('Roofvogel! Spring weg of gooi omhoog.',2);sfx('hit')}}
 for(const cat of cats){if(cat.gone)continue;if(cat.hp<=0){cat.x+=cat.face*390*dt;const sx=cat.x-cam;if(sx<-85||sx>W+85)cat.gone=true;continue}cat.cooldown=Math.max(0,cat.cooldown-dt);let d=hero.x+hero.w*.5-cat.x;if(cat.pounce>0){cat.x+=cat.face*245*dt;cat.pounce=Math.max(0,cat.pounce-dt)}else if(Math.abs(d)<430){cat.face=d<0?-1:1;if(Math.abs(d)<190&&cat.cooldown<=0){cat.pounce=.52;cat.cooldown=2.2}else cat.x+=cat.face*44*dt}else{const pat=cat.anchor+Math.sin(time*.55+cat.phase)*50;cat.face=pat<cat.x?-1:1;cat.x+=clamp(pat-cat.x,-28*dt,28*dt)}if(hero.ground&&hero.hurt<=0&&Math.abs(hero.x+hero.w*.5-cat.x)<43){hero.hurt=.95;changeScore(-50);hero.vx=(hero.x+hero.w*.5<cat.x?-1:1)*220;hero.vy=-175;hero.ground=false;say('De grote kat springt! Spring erop of ontwijk hem.',2);sfx('hit')}}
- for(const croc of crocodiles){if(time<croc.submergedUntil)continue;const d=Math.abs(hero.x+hero.w*.5-croc.x);if(time>=croc.cooldownUntil&&croc.attackStart===0&&d<245&&(hero.swimming||hero.ground)){croc.attackStart=time||.001;sfx('hit')}if(croc.attackStart>0&&time-croc.attackStart>.52){croc.attackStart=0;croc.biteUntil=time+.52;croc.cooldownUntil=time+2.4;if(d<155){hero.dead=true;hero.deathTimer=.92;hero.swimming=true;hero.ground=false;hero.vx=0;hero.vy=0;sfx('hit')}}}
+ for(const croc of crocodiles){if(time<croc.submergedUntil)continue;const d=Math.abs(hero.x+hero.w*.5-croc.x);croc.face=hero.x+hero.w*.5<croc.x?-1:1;if(time>=croc.cooldownUntil&&croc.attackStart===0&&d<260&&(hero.swimming||hero.ground)){croc.attackStart=time||.001;sfx('hit')}if(croc.attackStart>0&&time-croc.attackStart>.5){croc.attackStart=0;croc.biteUntil=time+.7;croc.cooldownUntil=time+(d<205?1.8:.45);if(d<205){hero.dead=true;hero.deathTimer=.92;hero.swimming=true;hero.ground=false;hero.vx=0;hero.vy=0;sfx('hit')}}}
  for(const f of fruitDrops){if(!f.landed){f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=680*dt;f.spin+=dt*5;const floor=groundAt(f.x)-8;if(f.y>=floor){f.y=floor;f.vy=0;f.vx=0;f.landed=true}}if(f.landed&&hero.ground&&Math.abs(hero.x+hero.w*.5-f.x)<31){f.collected=true;changeScore(100);say('+100 · wilde vijg',1.1)}}fruitDrops=fruitDrops.filter(f=>!f.collected);
  hero.throw=Math.max(0,hero.throw-dt);
  if(Math.abs(hero.vx)>60&&hero.ground&&time-lastFoot>(running ? 0.27 : 0.38)){sfx('step');lastFoot=time}
