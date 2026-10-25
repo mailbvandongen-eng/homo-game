@@ -181,14 +181,14 @@ function drawFruitTree(t){const x=t.x-cam,gy=groundAt(t.x),u=H/410,top=gy-140*u;
 function drawFood(){for(const f of fruitDrops){const x=f.x-cam;c.save();c.translate(x,f.y);c.rotate(f.spin);c.fillStyle='#763449';c.beginPath();c.ellipse(0,0,8,6,.2,0,Math.PI*2);c.fill();c.fillStyle='#c98272';c.beginPath();c.ellipse(-2,-2,2.5,1.7,0,0,Math.PI*2);c.fill();c.fillStyle='#708644';c.beginPath();c.ellipse(6,-6,4,2,-.5,0,Math.PI*2);c.fill();c.restore()}}
 
 function drawCrocodiles(){
- const left=WATER_A+58-cam,right=WATER_B-58-cam,surface=baseY+14;
+ const left=WATER_A+48-cam,right=WATER_B-48-cam,surface=baseY+14;
  if(right>-30&&left<W+30){
   // Water fills the shallow basin and follows its gradual banks instead of making a vertical wall.
   const wave=(wx)=>surface+Math.sin(time*3.1-wx*.025)*1.4+Math.sin(time*1.7+wx*.011)*.8;
-  c.beginPath();for(let wx=WATER_A+58;wx<=WATER_B-58;wx+=8){const sx=wx-cam,sy=wave(wx);if(wx===WATER_A+58)c.moveTo(sx,sy);else c.lineTo(sx,sy)}
-  for(let wx=WATER_B-58;wx>=WATER_A+58;wx-=8)c.lineTo(wx-cam,groundAt(wx));c.closePath();
+  c.beginPath();for(let wx=WATER_A+48;wx<=WATER_B-48;wx+=8){const sx=wx-cam,sy=wave(wx);if(wx===WATER_A+48)c.moveTo(sx,sy);else c.lineTo(sx,sy)}
+  for(let wx=WATER_B-48;wx>=WATER_A+48;wx-=8)c.lineTo(wx-cam,groundAt(wx));c.closePath();
   const water=c.createLinearGradient(0,surface,0,H);water.addColorStop(0,'#55adb0e8');water.addColorStop(.12,'#368f98ed');water.addColorStop(1,'#246a78f2');c.fillStyle=water;c.fill();
-  c.strokeStyle='#b5ded0';c.lineWidth=2;c.beginPath();for(let wx=WATER_A+58;wx<=WATER_B-58;wx+=8){const sx=wx-cam,sy=wave(wx);if(wx===WATER_A+58)c.moveTo(sx,sy);else c.lineTo(sx,sy)}c.stroke();
+  c.strokeStyle='#b5ded0';c.lineWidth=2;c.beginPath();for(let wx=WATER_A+48;wx<=WATER_B-48;wx+=8){const sx=wx-cam,sy=wave(wx);if(wx===WATER_A+48)c.moveTo(sx,sy);else c.lineTo(sx,sy)}c.stroke();
   c.strokeStyle='#b8e2d388';c.lineWidth=2;for(let i=0;i<7;i++){const wx=WATER_A+110+((i*137+time*(25+i*3))%(WATER_B-WATER_A-220)),sx=wx-cam,sy=wave(wx)+7+i%3*5;c.beginPath();c.moveTo(sx,sy);c.quadraticCurveTo(sx+12,sy-2,sx+27,sy);c.stroke()}
  }
  for(const croc of crocodiles){const x=croc.x-cam,y=surface+(croc.attackStart>0?Math.sin(Math.min(1,(time-croc.attackStart)/.48)*Math.PI)*3:0);if(x<-90||x>W+90)continue;
@@ -300,7 +300,7 @@ function update(dt){time+=dt;if(hero.dead){hero.deathTimer-=dt;hero.y+=190*dt;he
  hero.vx+=clamp(targetV-hero.vx,-accel*dt,accel*dt);if(hero.swimming&&Math.abs(axis)<.01)hero.vx*=Math.exp(-3.6*dt);if(Math.abs(hero.vx)<7)hero.vx=0;
  hero.x+=hero.vx*dt;hero.x=clamp(hero.x,60,WORLD-100);if(hero.vx>10)hero.face=1;if(hero.vx< -10)hero.face=-1;
  hero.walk+=dt*(hero.swimming?4.5:(running?10:6))*Math.min(1,Math.abs(hero.vx)/(hero.swimming?120:170));hero.run=running&&!hero.swimming?1:0;
- const insideWater=hero.x+hero.w*.5>WATER_A+58&&hero.x+hero.w*.5<WATER_B-58,waterSurface=baseY+14;
+ const insideWater=hero.x+hero.w*.5>WATER_A+48&&hero.x+hero.w*.5<WATER_B-48,waterSurface=baseY+14;
  if(insideWater&&hero.y+hero.h>waterSurface-2&&!hero.swimming&&hero.vy>=0){const nearCroc=crocodiles.some(c=>Math.abs(hero.x+hero.w*.5-c.x)<68);if(!(hero.vy>0&&nearCroc&&previousBottom<waterSurface+46)){hero.swimming=true;hero.swimJump=0;hero.y=waterSurface-hero.h*.62;hero.vy=0;hero.ground=false}}
  if(hero.swimming&&!insideWater){hero.swimming=false;hero.swimJump=0}
  if(jumpQueued&&(hero.ground||hero.swimming)){hero.jumpFromRun=running;hero.vy=hero.swimming?-250:(running?-650:-455);hero.swimJump=hero.swimming?.44:0;hero.ground=false;sfx('jump');jumpDone=true;if(running&&!hero.swimming)runJumpDone=true}jumpQueued=false;
