@@ -47,7 +47,8 @@ const cv=document.getElementById('game'),c=cv.getContext('2d',{alpha:false});
 const title=document.getElementById('title'),startButton=document.getElementById('startButton'),skipButton=document.getElementById('skip'),throwButton=document.getElementById('throw'),hint=document.getElementById('hint');
 let W=innerWidth,H=innerHeight,DPR=1,baseY=0,cam=0,time=0,last=0,mode='title',leftId=null,rightId=null,keys={},axis=0,running=false,jumpQueued=false,throwQueued=false,stepIndex=0,stepTimer=0,leftDone=false,rightDone=false,runDone=false,jumpDone=false,runJumpDone=false,throwDone=false,showHintUntil=0;
 const WORLD=6200,GAP_A=1850,GAP_B=2040;
-const hero={x:165,y:0,w:54,h:82,vx:0,vy:0,ground:true,face:1,walk:0,run:0,throw:0,jumpFromRun:false};
+const hero={x:165,y:0,w:54,h:82,vx:0,vy:0,ground:true,face:1,walk:0,run:0,throw:0,hurt:0,jumpFromRun:false};
+const enemies=[{anchor:980,x:980,hp:2,stun:0,flee:0,fleeDir:1,face:-1,phase:0},{anchor:2920,x:2920,hp:2,stun:0,flee:0,fleeDir:1,face:-1,phase:1.8},{anchor:4770,x:4770,hp:2,stun:0,flee:0,fleeDir:1,face:-1,phase:3.4}];
 let stones=[],dust=[],audio=null,lastFoot=0;
 function resize(){W=innerWidth;H=innerHeight;DPR=Math.min(2,devicePixelRatio||1);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);c.setTransform(DPR,0,0,DPR,0,0);baseY=H*.79;hero.h=clamp(H*.20,70,94);hero.w=hero.h*.66;if(hero.ground)hero.y=groundAt(hero.x)-hero.h}
 addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,120));if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);resize();
@@ -56,7 +57,7 @@ function inGap(x){return x>GAP_A&&x<GAP_B}
 function clamp(n,a,b){return Math.max(a,Math.min(b,n))}
 function sfx(kind){try{if(!audio){audio=new(window.AudioContext||window.webkitAudioContext)()}if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),g=audio.createGain(),now=audio.currentTime;o.connect(g);g.connect(audio.destination);o.type=kind==='throw'?'triangle':'sine';let f=kind==='jump'?270:kind==='throw'?540:kind==='hit'?170:110;o.frequency.setValueAtTime(f,now);o.frequency.exponentialRampToValueAtTime(Math.max(60,f*(kind==='throw'?1.45:.58)),now+.12);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(kind==='step'?.035:.055,now+.012);g.gain.exponentialRampToValueAtTime(.0001,now+.17);o.start(now);o.stop(now+.18)}catch{}}
 function say(text,seconds=1.8){hint.textContent=text;hint.classList.add('show');showHintUntil=time+seconds}
-function begin(){title.classList.add('off');mode='intro';skipButton.style.display='grid';throwButton.style.display='grid';time=0;last=performance.now();hero.x=165;hero.y=groundAt(hero.x)-hero.h;hero.vx=0;hero.vy=0;hero.ground=true;cam=0;stepIndex=0;leftDone=rightDone=runDone=jumpDone=runJumpDone=throwDone=false;stones=[];say('Sleep links en rechts',3);sfx('jump')}
+function begin(){title.classList.add('off');mode='intro';skipButton.style.display='grid';throwButton.style.display='grid';time=0;last=performance.now();hero.x=165;hero.y=groundAt(hero.x)-hero.h;hero.vx=0;hero.vy=0;hero.hurt=0;hero.ground=true;cam=0;stepIndex=0;leftDone=rightDone=runDone=jumpDone=runJumpDone=throwDone=false;stones=[];for(const e of enemies){e.x=e.anchor;e.hp=2;e.stun=0;e.flee=0}say('Sleep links en rechts',3);sfx('jump')}
 startButton.addEventListener('pointerdown',e=>{e.preventDefault();begin()});
 skipButton.addEventListener('pointerdown',e=>{e.preventDefault();mode='free';skipButton.style.display='none';hint.classList.remove('show')});
 throwButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();throwQueued=true;sfx('throw')});
@@ -196,7 +197,28 @@ function drawHero(){
  c.restore();c.restore();
 }
 function throwStone(){const direction=hero.face,launchX=hero.x+direction*28,launchY=hero.y+34;stones.push({x:launchX,y:launchY,vx:direction*(running?560:470),vy:-250,spin:0,life:3});hero.throw=.28;sfx('throw')}
-function update(dt){time+=dt;controls();
+function drawEnemies(){
+ for(const e of enemies){if(e.hp<=0&&e.flee<=0)continue;const x=e.x-cam,y=groundAt(e.x),scale=clamp(H/520,.72,1.25);if(x<-100||x>W+100)continue;
+  c.save();c.translate(x,y);c.scale((e.face<0?-1:1)*scale,scale);
+  c.fillStyle='#302a2455';c.beginPath();c.ellipse(0,2,34,5,0,0,Math.PI*2);c.fill();
+  const gait=Math.sin(time*10+e.phase),body=c.createLinearGradient(-24,-38,25,-5);body.addColorStop(0,'#d2a36a');body.addColorStop(.45,'#aa754a');body.addColorStop(1,'#704b35');
+  // Low, sloping back, deep chest and narrow waist make the silhouette read as a hyena.
+  c.fillStyle=body;c.beginPath();c.moveTo(-31,-17);c.quadraticCurveTo(-28,-34,-10,-37);c.quadraticCurveTo(5,-40,18,-30);c.quadraticCurveTo(27,-27,30,-17);c.lineTo(22,-10);c.quadraticCurveTo(4,-7,-15,-10);c.quadraticCurveTo(-29,-9,-31,-17);c.fill();
+  c.fillStyle='#5d4636';c.beginPath();c.moveTo(-22,-34);c.quadraticCurveTo(-9,-45,6,-37);c.lineTo(10,-30);c.quadraticCurveTo(-3,-33,-17,-27);c.closePath();c.fill();
+  // Four separate legs with a visible alternating gait.
+  for(let i=0;i<4;i++){const lx=[-23,-12,12,23][i],swing=gait*(i%2?1:-1)*4,leg='#765237';c.strokeStyle='#4c382b';c.lineWidth=6;c.lineCap='round';c.beginPath();c.moveTo(lx,-16);c.lineTo(lx+swing,-7);c.lineTo(lx+swing*1.5,0);c.stroke();c.strokeStyle=leg;c.lineWidth=3.6;c.beginPath();c.moveTo(lx,-16);c.lineTo(lx+swing,-7);c.lineTo(lx+swing*1.5,0);c.stroke();c.fillStyle='#49372c';c.beginPath();c.ellipse(lx+swing*1.5+2,0,5,2.4,0,0,Math.PI*2);c.fill()}
+  // Neck, alert ears and wedge-shaped muzzle.
+  c.fillStyle='#997047';c.beginPath();c.moveTo(12,-31);c.quadraticCurveTo(24,-34,27,-24);c.lineTo(37,-19);c.quadraticCurveTo(39,-16,34,-14);c.lineTo(22,-14);c.quadraticCurveTo(14,-18,12,-31);c.fill();
+  c.fillStyle='#62452f';c.beginPath();c.moveTo(17,-31);c.lineTo(15,-43);c.lineTo(24,-34);c.closePath();c.moveTo(25,-29);c.lineTo(30,-40);c.lineTo(32,-26);c.closePath();c.fill();
+  c.fillStyle='#d8b078';c.beginPath();c.ellipse(35,-18,6,3.4,0,0,Math.PI*2);c.fill();c.fillStyle='#29231f';c.beginPath();c.arc(25,-27,1.8,0,Math.PI*2);c.fill();c.beginPath();c.arc(40,-18,1.6,0,Math.PI*2);c.fill();
+  // Irregular spots and shoulder mane, individually drawn rather than a pack-shaped blob.
+  c.fillStyle='#543b2c99';for(const [sx,sy,r] of [[-17,-29,2.2],[-8,-21,2],[-2,-32,2.4],[7,-18,2],[14,-26,1.8],[-20,-18,1.7]]){c.beginPath();c.arc(sx,sy,r,0,Math.PI*2);c.fill()}
+  if(e.hp<2&&e.hp>0){c.fillStyle='#302b2599';c.fillRect(-16,-52,32,4);c.fillStyle='#efb849';c.fillRect(-15,-51,15,2)}
+  if(e.stun>0){c.fillStyle='#fff2bd';c.font='bold 12px system-ui';c.fillText('✦',-4,-49);c.fillText('✦',8,-44)}
+  c.restore();
+ }
+}
+function update(dt){time+=dt;controls();hero.hurt=Math.max(0,hero.hurt-dt);
  const maxSpeed=running?(axis<0?182:230):(axis<0?118:164),targetV=axis*maxSpeed,accel=Math.abs(targetV)>Math.abs(hero.vx)?820:1350;
  hero.vx+=clamp(targetV-hero.vx,-accel*dt,accel*dt);if(Math.abs(axis)<.01&&Math.abs(hero.vx)<7)hero.vx=0;
  hero.x+=hero.vx*dt;hero.x=clamp(hero.x,60,WORLD-100);if(hero.vx>10)hero.face=1;if(hero.vx< -10)hero.face=-1;
@@ -207,15 +229,16 @@ function update(dt){time+=dt;controls();
  let floorY=inGap(hero.x+hero.w*.5)?null:groundAt(hero.x+hero.w*.5);
  if(floorY!==null&&hero.y+hero.h>=floorY&&hero.vy>=0){hero.y=floorY-hero.h;hero.vy=0;hero.ground=true}else hero.ground=false;
  if(inGap(hero.x+hero.w*.5)&&hero.y>baseY+95){hero.x=GAP_A-hero.w-34;hero.y=groundAt(hero.x)-hero.h;hero.vx=0;hero.vy=0;hero.ground=true;say('Rechts + omhoog, dan springen',2.3)}
+ for(const e of enemies){if(e.hp<=0){if(e.flee>0){e.x+=e.fleeDir*150*dt;e.flee=Math.max(0,e.flee-dt)}continue}e.phase+=dt*(e.stun>0?0:1);e.stun=Math.max(0,e.stun-dt);let dx=hero.x+hero.w*.5-e.x;if(e.stun<=0){if(Math.abs(dx)<430){e.face=dx<0?-1:1;e.x+=e.face*105*dt}else{const patrol=e.anchor+Math.sin(time*.75+e.phase)*58,d=patrol-e.x;e.face=d<0?-1:1;e.x+=clamp(d,-34*dt,34*dt)}}e.x=clamp(e.x,e.anchor-165,e.anchor+165);if(hero.ground&&hero.hurt<=0&&Math.abs(hero.x+hero.w*.5-e.x)<44){hero.hurt=.95;hero.vx=(hero.x+hero.w*.5<e.x?-1:1)*205;hero.vy=-165;hero.ground=false;say('Hyena! Gooi een steen of spring eroverheen',2.1);sfx('hit')}}
  hero.throw=Math.max(0,hero.throw-dt);
  if(Math.abs(hero.vx)>60&&hero.ground&&time-lastFoot>(running ? 0.27 : 0.38)){sfx('step');lastFoot=time}
- for(const s of stones){s.x+=s.vx*dt;s.y+=s.vy*dt;s.vy+=760*dt;s.spin+=dt*9;s.life-=dt;let gy=groundAt(s.x);if(s.y>gy-8){s.y=gy-8;s.vy*=-.32;s.vx*=.7;if(Math.abs(s.vy)<55)s.life=0;for(let k=0;k<3;k++)dust.push({x:s.x,y:gy-4,vx:(Math.random()-.5)*45,vy:-Math.random()*35,life:.35,color:k%2?'#d8c37f':'#f1dea0'});sfx('hit')}}stones=stones.filter(s=>s.life>0);
+ for(const s of stones){s.x+=s.vx*dt;s.y+=s.vy*dt;s.vy+=760*dt;s.spin+=dt*9;s.life-=dt;for(const e of enemies){if(e.hp>0&&e.stun<=0&&Math.abs(s.x-e.x)<34&&s.y>groundAt(e.x)-72&&s.y<groundAt(e.x)+4){e.hp--;e.stun=.95;e.face=hero.x<e.x?1:-1;s.life=0;if(e.hp<=0){e.flee=1.8;e.fleeDir=e.face;say('De hyena vlucht! Goed gegooid.',1.8)}else say('Raak! Nog een steen om hem af te weren.',1.5);sfx('hit');break}}if(s.life<=0)continue;let gy=groundAt(s.x);if(s.y>gy-8){s.y=gy-8;s.vy*=-.32;s.vx*=.7;if(Math.abs(s.vy)<55)s.life=0;for(let k=0;k<3;k++)dust.push({x:s.x,y:gy-4,vx:(Math.random()-.5)*45,vy:-Math.random()*35,life:.35,color:k%2?'#d8c37f':'#f1dea0'});sfx('hit')}}stones=stones.filter(s=>s.life>0);
  for(const p of dust){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=90*dt;p.life-=dt}dust=dust.filter(p=>p.life>0);
  if(mode==='intro'){if(stepIndex===0&&leftDone&&rightDone){say('Rechts + omhoog = rennen',2.3);stepIndex=1;leftDone=rightDone=false}else if(stepIndex===1&&runDone){say('Tik rechts om te springen',2.2);stepIndex=2}else if(stepIndex===2&&jumpDone){say('Ren naar de kloof',2.2);stepIndex=3;jumpDone=false;runJumpDone=false}else if(stepIndex===3&&hero.x>GAP_A-400){say('Ren + spring over de kloof',2.4);stepIndex=4}else if(stepIndex===4&&runJumpDone&&hero.x>GAP_B+hero.w){say('Werpen kan met het kleine icoon',2.4);stepIndex=5}else if(stepIndex===5&&throwDone){say('Vrij oefenen',2.4);stepIndex=6;mode='free';skipButton.style.display='none'}}
  const target=clamp(hero.x-W*.39,0,WORLD-W);cam+=(target-cam)*Math.min(1,dt*6);
 }
 function drawStone(s){const x=s.x-cam;c.save();c.translate(x,s.y);c.rotate(s.spin);const g=c.createLinearGradient(-8,-7,8,8);g.addColorStop(0,'#ebddb8');g.addColorStop(.4,'#b9a37b');g.addColorStop(1,'#716248');c.fillStyle=g;c.beginPath();c.moveTo(-9,2);c.lineTo(-6,-6);c.lineTo(0,-8);c.lineTo(7,-4);c.lineTo(9,3);c.lineTo(4,7);c.lineTo(-5,6);c.closePath();c.fill();c.strokeStyle='#f6e8c2aa';c.lineWidth=1;c.stroke();c.restore()}
-function draw(){drawBackground();for(const s of stones)drawStone(s);for(const p of dust){c.globalAlpha=clamp(p.life/.35,0,1);c.fillStyle=p.color;c.beginPath();c.arc(p.x-cam,p.y,2.1,0,Math.PI*2);c.fill()}c.globalAlpha=1;drawHero();if(hint.classList.contains('show')&&time>showHintUntil)hint.classList.remove('show')}
+function draw(){drawBackground();for(const s of stones)drawStone(s);for(const p of dust){c.globalAlpha=clamp(p.life/.35,0,1);c.fillStyle=p.color;c.beginPath();c.arc(p.x-cam,p.y,2.1,0,Math.PI*2);c.fill()}c.globalAlpha=1;drawEnemies();drawHero();if(hint.classList.contains('show')&&time>showHintUntil)hint.classList.remove('show')}
 function frame(now){const dt=Math.min(.032,(now-last)/1000||.016);last=now;if(mode!=='title')update(dt);else{time+=dt;drawIdle()}draw();requestAnimationFrame(frame)}
 function drawIdle(){for(const a of herd){}}
 document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});document.addEventListener('contextmenu',e=>e.preventDefault());
