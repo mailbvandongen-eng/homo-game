@@ -1,167 +1,162 @@
 <!doctype html>
 <html lang="nl">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#18251f">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#14242a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Homo Game">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
 <title>HOMO — de lange reis</title>
 <style>
-:root{--ink:#f5f0df;--muted:#b9c3ad;--gold:#f4c766;--green:#83b59b;--panel:#202e28;--line:#46554a}
-*{box-sizing:border-box}body{margin:0;background:#121a17;color:var(--ink);font:15px/1.4 system-ui,-apple-system,Segoe UI,sans-serif}
-button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line);background:#2a3931;border-radius:12px;padding:10px 14px}button:hover,button:focus-visible{border-color:var(--gold);outline:none;background:#35483d}
-header{max-width:1200px;margin:auto;padding:16px 20px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.brand{font-weight:900;letter-spacing:.14em;font-size:19px}.brand small{display:block;color:var(--muted);font-size:11px;letter-spacing:.08em;font-weight:600}
-.shell{max-width:1200px;margin:auto;padding:0 16px 24px;display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:14px}
-main{min-width:0}.gameframe{position:relative;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#9dc1b0;box-shadow:0 18px 60px #0005}
-canvas{display:block;width:100%;aspect-ratio:16/9;touch-action:none}
-.hud{position:absolute;inset:12px 12px auto;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none;gap:8px}
-.pill{background:#18251fdf;border:1px solid #ffffff2c;border-radius:99px;padding:7px 11px;font-size:12px;font-weight:700}
-#toast{position:absolute;left:50%;top:18%;transform:translateX(-50%);padding:12px 16px;background:#15221eeF;border:1px solid var(--gold);border-radius:14px;font-weight:700;display:none;text-align:center;max-width:90%}
-#intro{position:absolute;inset:0;background:linear-gradient(90deg,#14211fee,#14211eaa 70%,#14211e55);display:flex;align-items:center;padding:clamp(18px,5vw,58px)}
-.introbox{max-width:500px}.eyebrow{color:var(--gold);text-transform:uppercase;letter-spacing:.15em;font-weight:800;font-size:11px}
-h1{font-size:clamp(30px,5vw,58px);line-height:1.02;margin:10px 0}.introbox p{max-width:440px;color:#e0e5d9}
-.cta{background:var(--gold);color:#21251e;border:0;font-weight:900;padding:12px 20px;margin-top:7px}
-aside{border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:16px;display:flex;flex-direction:column;gap:14px}
-h2{font-size:17px;margin:0}.subtle{color:var(--muted);font-size:12px}
-.progress{height:7px;background:#101814;border-radius:8px;overflow:hidden;margin-top:8px}.progress i{display:block;height:100%;width:0;background:var(--gold);transition:width .3s}
-#tasks{display:grid;gap:8px}.task{border:1px solid var(--line);padding:9px 10px;border-radius:11px;font-size:13px;display:flex;justify-content:space-between;gap:8px}.task.done{color:#b2d4b4;border-color:#557960}.task b{color:var(--gold)}
-.timeline{display:grid;gap:6px}.node{display:flex;gap:10px;align-items:center;border:1px solid transparent;border-radius:10px;padding:7px;font-size:12px;color:var(--muted)}.node.active{background:#34463a;border-color:#728a68;color:var(--ink)}.node.locked{opacity:.45}.dot{width:10px;height:10px;border-radius:50%;background:#82907c;flex:none}.active .dot{background:var(--gold);box-shadow:0 0 10px var(--gold)}
-.lesson{padding:12px;border-left:3px solid var(--gold);background:#18231e;border-radius:0 10px 10px 0;font-size:12px;color:#d5ddcf}.lesson strong{color:var(--gold)}
-.controls{display:flex;justify-content:space-between;align-items:center;gap:8px}.help{color:var(--muted);font-size:11px}
-.touch{display:none;position:absolute;inset:auto 12px 12px;justify-content:space-between;pointer-events:none}.cluster{display:flex;gap:9px}.touch button{pointer-events:auto;width:52px;height:52px;padding:0;border-radius:50%;background:#18251fd9;font-size:20px;border-color:#ffffff55;touch-action:none}.touch .act{width:62px;height:62px;color:var(--gold);font-size:12px;font-weight:900}
-.foot{max-width:1200px;margin:8px auto 0;padding:0 20px;color:#91a092;font-size:11px}
-#chapterModal{position:fixed;inset:0;background:#0009;display:none;place-items:center;padding:18px;z-index:5}
-.modal{max-width:540px;width:100%;background:#202e28;border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 20px 80px #0009}.modal h2{font-size:23px}.modal p{color:#d5ddcf}.modalActions{display:flex;gap:8px;flex-wrap:wrap}
-@media(max-width:850px){.shell{grid-template-columns:1fr}aside{display:grid;grid-template-columns:1fr 1fr}.lesson{grid-column:1/-1}.touch{display:flex}.help{display:none}}
-@media(max-width:520px){header{padding:12px}.shell{padding:0 9px 16px;gap:9px}.gameframe{border-radius:12px}aside{padding:12px;gap:10px}.timeline{grid-column:1/-1}.controls{grid-column:1/-1}#intro{background:linear-gradient(90deg,#14211ff2,#14211fb5)}.introbox p{font-size:13px}}
+:root{color-scheme:dark;--cream:#f8e6b0;--gold:#ffc94f;--panel:#132329}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101b21;color:var(--cream);font-family:system-ui,-apple-system,Segoe UI,sans-serif;touch-action:none}
+#game{position:fixed;inset:0;width:100vw;height:100dvh;display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+#grain{position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,#0000 0 3px,#0000000b 3px 4px);mix-blend-mode:multiply}
+.overlay{position:fixed;inset:0;display:grid;place-items:center;padding:22px;background:linear-gradient(180deg,#0c1722b8,#0b141bdc);z-index:3}
+.card{width:min(650px,94vw);max-height:90dvh;overflow:auto;background:#15252beF;border:3px solid #e2aa52;box-shadow:0 0 0 5px #381f24,8px 10px 0 #071014;border-radius:3px;padding:clamp(18px,4vw,34px);text-align:center}
+.kicker{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#e8a95c;font-weight:900}
+h1{font-size:clamp(34px,8vw,70px);line-height:.92;margin:10px 0 8px;color:#fff0bd;text-shadow:4px 4px #8e493b,7px 7px #311f29;letter-spacing:.03em}
+h2{margin:5px 0 12px;font-size:clamp(22px,5vw,34px);color:#fff0bd}
+p{line-height:1.5;color:#d4d6c6;margin:12px auto;max-width:510px}
+button{font:900 15px system-ui;color:#212020;background:#ffc94f;border:0;border-radius:2px;padding:13px 19px;box-shadow:0 5px #a55e36;cursor:pointer;touch-action:manipulation}
+button:active{transform:translateY(3px);box-shadow:0 2px #a55e36}
+.secondary{color:#f5e5b8;background:#30434a;box-shadow:0 4px #17252a;border:1px solid #617077}
+.row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+.small{font-size:12px;color:#aeb9b4}
+#intro,#pause,#finish,#chapters,#help{display:none}
+#hud{position:fixed;z-index:2;top:max(8px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));display:none;align-items:flex-start;justify-content:space-between;pointer-events:none}
+.hudbox{font-size:11px;font-weight:900;letter-spacing:.08em;background:#142329d9;border:2px solid #e2aa52;padding:6px 9px;color:#fff0bd;text-shadow:1px 1px #38212a}
+#hearts{color:#ff7764;font-size:16px;letter-spacing:2px}
+#pauseBtn{pointer-events:auto;padding:6px 10px;font-size:12px;box-shadow:none}
+#message{position:fixed;z-index:2;top:18%;left:50%;transform:translateX(-50%);background:#16282eeF;color:#fff0bd;padding:8px 12px;border:2px solid #e2aa52;font-weight:900;text-align:center;font-size:12px;display:none;max-width:88vw}
+#jump{position:fixed;z-index:2;right:max(20px,env(safe-area-inset-right));bottom:max(24px,env(safe-area-inset-bottom));width:84px;height:84px;border-radius:50%;font-size:12px;display:none;background:#ffc94fdd;border:4px solid #fff0bd;box-shadow:0 5px #a55e36;touch-action:none}
+#tiltLabel{color:#9ed7c1;font-size:12px;font-weight:800}
+.timeline{display:grid;grid-template-columns:1fr 1fr;gap:7px;text-align:left;margin:14px 0}
+.node{padding:9px;background:#21353a;border-left:3px solid #718975;font-size:12px}.node b{display:block;color:#ffcb61}.node.lock{opacity:.45}
+#rotate{display:none;position:fixed;inset:0;z-index:10;background:#101b21;place-items:center;text-align:center;padding:30px;font-size:20px;font-weight:900}
+@media(orientation:portrait){#rotate{display:grid}}
+@media(max-width:540px){.timeline{grid-template-columns:1fr 1fr}.card{padding:18px}.small{font-size:11px}}
 </style>
 </head>
 <body>
-<header><div class="brand">HOMO <small>DE LANGE REIS · SPEELBARE DEMO</small></div><button id="menuBtn">☰ Tijdlijn</button></header>
-<div class="shell">
-<main>
-<div class="gameframe">
-<canvas id="game" width="960" height="540" aria-label="Platformspel Homo: de lange reis"></canvas>
-<div class="hud"><span class="pill" id="era">RIFTVALLEI · 2,4 MILJOEN JAAR GELEDEN</span><span class="pill" id="species">HOMO HABILIS</span></div>
-<div id="toast"></div>
-<div id="intro"><div class="introbox"><div class="eyebrow">Een platformgame over onze familiegeschiedenis</div><h1>Geen rechte lijn.<br>Een hele familie.</h1><p>Verzamel materiaal, maak een werktuig en kom veilig langs de hyena. Daarna gaat de tijdreis verder. Je voortgang wordt op dit apparaat bewaard.</p><button class="cta" id="startBtn">BEGIN DE REIS</button><p class="help">Bewegen: ← → of A / D · springen: spatie · gebruiken: E</p></div></div>
-<div class="touch"><div class="cluster"><button data-key="left">◀</button><button data-key="right">▶</button></div><div class="cluster"><button data-key="jump">⬆</button><button class="act" data-key="action">DOE</button></div></div>
+<canvas id="game" width="480" height="270"></canvas><div id="grain"></div>
+<div id="hud"><div class="hudbox"><span id="species">HOMO HABILIS</span><br><span id="mission">RIFTVALLEI · 2,4 MILJOEN JAAR</span></div><div style="display:flex;gap:7px;align-items:center"><div class="hudbox"><span id="hearts">♥♥♥</span>　<span id="stones">◆ 0/3</span></div><button id="pauseBtn" class="secondary">Ⅱ</button></div></div>
+<div id="message"></div><button id="jump">SPRING</button>
+<div class="overlay" id="start">
+<div class="card"><div class="kicker">Een pixel-avontuur door onze familiegeschiedenis</div><h1>HOMO<br>GAME</h1><p>Vier miljoen jaar. Een familie vol zijtakken. Ren, spring en ontdek wie er tegelijk leefde.</p><div id="tiltLabel">KANTELBESTURING · tik op start om de bewegingssensor aan te zetten</div><div class="row"><button id="play">START DE REIS</button><button id="chapterOpen" class="secondary">TIJDLIJN</button></div><p class="small">iPhone: liggend spelen · kantel om te lopen · tik op SPRING<br>Voeg de game via Safari → Deel → Zet op beginscherm toe voor schermvullend spelen.</p></div>
 </div>
-<div class="controls" style="padding:9px 3px"><span class="help">← → lopen · spatie springen · E gebruiken</span><span class="help" id="saveStatus">Voortgang wordt automatisch bewaard</span><button id="resetBtn" style="padding:6px 10px;font-size:11px">Wis spelvoortgang</button></div>
-</main>
-<aside>
-<section><h2>Jouw missie</h2><div class="subtle" id="missionName">De eerste werktuigen</div><div class="progress"><i id="bar"></i></div></section>
-<section id="tasks"></section>
-<section><h2>Menselijke stamboom</h2><div class="subtle">Soorten overlapten; dit is geen ladder.</div><div class="timeline" id="timeline"></div></section>
-<div class="lesson" id="lesson"></div>
-</aside>
-</div>
-<div class="foot">Gebaseerd op wetenschappelijke tijdvakken; grenzen en verwantschappen zijn soms onzeker. De gebeurtenissen en personages in de demo zijn fictief.</div>
-<div id="chapterModal"><div class="modal"><div class="eyebrow">Hoofdstuk voltooid</div><h2 id="modalTitle"></h2><p id="modalText"></p><div class="modalActions"><button class="cta" id="continueBtn">VERDER IN DE TIJD</button><button id="stayBtn">Nog even hier</button></div></div></div>
+<div class="overlay" id="intro"><div class="card"><div class="kicker" id="introDate"></div><h2 id="introTitle"></h2><p id="introText"></p><div class="row"><button id="introGo">DOOR HET LANDSCHAP</button></div></div></div>
+<div class="overlay" id="pause"><div class="card"><div class="kicker">EVEN OP ADEM KOMEN</div><h2>De tijd staat stil</h2><p>Kantel je iPhone om te lopen. Tik op SPRING om over rotsen, kloven en dieren te komen.</p><div class="row"><button id="resume">VERDER SPELEN</button><button id="pauseTimeline" class="secondary">TIJDLIJN</button><button id="recalibrate" class="secondary">KALIBREER</button></div></div></div>
+<div class="overlay" id="finish"><div class="card"><div class="kicker">EINDbaas verslagen</div><h2 id="finishTitle"></h2><p id="finishText"></p><div class="row"><button id="next">VOLG DE TIJDLIJN</button><button id="finishTimeline" class="secondary">BEKIJK STAMBOOM</button></div></div></div>
+<div class="overlay" id="chapters"><div class="card"><div class="kicker">GEEN RECHTE LADDER</div><h2>De menselijke stamboom</h2><p>Soorten overlapten en sommige families kregen samen kinderen. Tik op een vrijgespeeld hoofdstuk.</p><div class="timeline" id="tree"></div><div class="row"><button id="closeChapters" class="secondary">TERUG</button></div></div></div>
+<div class="overlay" id="help"><div class="card"><div class="kicker">KANTEL EN SPRING</div><h2>Zo speel je</h2><p>Kantel het toestel rustig naar links of rechts. Tik op <b>SPRING</b> om hindernissen en de eindbaas te passeren. Verzamel drie stenen werktuigstukken en bereik dan de eindbaas.</p><p id="sensorHelp" class="small"></p><div class="row"><button id="helpGo">BEGREPEN</button><button id="helpCalibrate" class="secondary">KALIBREER</button></div></div></div>
+<div id="rotate">DRAAI JE TELEFOON<br><span class="small">Deze game speel je het lekkerst liggend.</span></div>
 <script>
-(() => {
-const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d');
+(()=> {
+const cv=document.querySelector('#game'),c=cv.getContext('2d',{alpha:false});
+const $=id=>document.getElementById(id);
 const stages=[
- {id:'habilis',species:'HOMO HABILIS',era:'RIFTVALLEI · 2,4 MILJOEN JAAR GELEDEN',date:'2,4 miljoen jaar geleden',title:'De eerste werktuigen',desc:'Maak een scherpe steen en gebruik die om voedsel te bereiken. De hyena bewaakt de doorgang: spring over haar heen zodra ze aanvalt.',tasks:[['stone','Verzamel 3 geschikte stenen',3],['fruit','Pak 2 vruchten',2],['craft','Maak een scherpe steen',1]],lesson:'Oude stenen werktuigen zijn minstens <strong>3,3 miljoen jaar</strong> oud. Ze zijn dus ouder dan de oudste bekende fossielen van het geslacht <em>Homo</em>. De naam <em>Homo habilis</em> betekent “handige mens”, maar wie de eerste werktuigen maakte, weten we niet zeker.',boss:'HYENA',end:'Homo erectus leefde vanaf ongeveer 1,9 miljoen jaar geleden en verspreidde zich ver buiten Afrika.'},
- {id:'erectus',species:'HOMO ERECTUS',era:'OOST-AFRIKA · 1,9 MILJOEN JAAR GELEDEN',date:'1,9 miljoen jaar geleden',title:'Verder dan de horizon',desc:'De wereld wordt groter. Verzamel water en bereik de overkant. Houd de omgeving in de gaten; de uitdaging is de lange tocht, niet een gevecht.',tasks:[['water','Verzamel 2 waterzakken',2],['stone','Vind 2 reisstenen',2],['exit','Bereik de overkant',1]],lesson:'<em>Homo erectus</em> had lichaamsverhoudingen die geschikt waren voor lange wandelingen. Fossielen laten zien dat vroege mensen zich al rond 1,8 miljoen jaar geleden buiten Afrika verspreidden.',boss:'ZANDSTORM',end:'In latere tijden leefden verschillende mensgroepen naast elkaar. Soms ontmoetten en mengden hun families zich.'}
+ {id:'habilis',name:'HOMO HABILIS',era:'RIFTVALLEI · 2,4 MILJOEN JAAR',date:'2,4 miljoen jaar geleden',intro:'De Riftvallei, Oost-Afrika',story:'Zoek stenen die goed splijten. Verzamel drie stukken en bereik daarna de hyena die de doorgang bewaakt.',end:'Je maakte het werktuig en kwam langs de hyena. Volgende halte: een wereld die verder reikt dan Afrika.',theme:0,length:2550,boss:'GROTE HYENA',fact:'Stenen werktuigen zijn ouder dan de oudste bekende fossielen van het geslacht Homo. Wie ze als eerste maakte, weten we niet zeker.'},
+ {id:'erectus',name:'HOMO ERECTUS',era:'OOST-AFRIKA · 1,8 MILJOEN JAAR',date:'1,8 miljoen jaar geleden',intro:'Verder dan de horizon',story:'De tocht is lang. Verzamel drie stenen voor onderweg en spring over de kloven naar de eindbaas.',end:'Je reis bracht je ver. Veel later leefden Homo sapiens en Neanderthalers tegelijk en kregen samen kinderen.',theme:1,length:2850,boss:'ROTSWACHTER',fact:'Homo erectus verspreidde zich buiten Afrika. Andere mensgroepen leefden later naast elkaar; de stamboom vertakt én kent vermenging.'}
 ];
-const tree=[
- ['Vroege mensachtigen','ca. 4 miljoen jaar'],['Homo habilis','ca. 2,4–1,4 miljoen'],['Homo erectus','ca. 1,9 miljoen–110.000'],['Neanderthalers','ca. 400.000–40.000'],['Homo floresiensis','ca. 100.000–50.000'],['Homo sapiens','ca. 300.000–nu']
-];
-const key='homoGameSave_v1';let saved={unlocked:0,cleared:[],selected:0};
-try{saved={...saved,...JSON.parse(localStorage.getItem(key)||'{}')}}catch{}
-let stage=Math.min(saved.selected||0,stages.length-1),started=false,done=false,toastTimer=0,bossMode=false,bossTimer=0;
-const progress={stone:0,fruit:0,craft:0,water:0,exit:0};let crafted=false;
-let player={x:100,y:390,vx:0,vy:0,w:42,h:66,on:false,invuln:0};
-let camera=0,keys={},items=[],particles=[],boss={x:740,y:0,dir:-1,t:0,hp:3};
-const ground=444,worldW=1720;
-function save(){saved.selected=stage;try{localStorage.setItem(key,JSON.stringify(saved));document.querySelector('#saveStatus').textContent='Bewaard op dit apparaat ✓'}catch{}}
-function makeItems(){items=[];const s=stages[stage];
- if(stage===0){[['stone',270],['stone',420],['stone',600],['fruit',350],['fruit',520]].forEach(([type,x],i)=>items.push({type,x,y:type==='fruit'?335:ground-13,w:24,h:24,taken:false}));}
- else{[['water',260],['stone',410],['water',620],['stone',790]].forEach(([type,x])=>items.push({type,x,y:type==='water'?350:ground-13,w:24,h:24,taken:false}));}
- boss={x:stage===0?760:1310,y:ground-58,dir:-1,t:0,hp:3};bossMode=false;bossTimer=0;
+const storeKey='homoPlatform_v1';let saved={level:0,unlocked:0,checkpoint:0};
+try{saved={...saved,...JSON.parse(localStorage.getItem(storeKey)||'{}')}}catch{}
+let level=Math.min(saved.level||0,stages.length-1),mode='title',player={x:38,y:0,vy:0,ground:false,life:3,inv:0},camera=0,tilt=0,zero=0,sensor=false,items=[],particles=[],boss={x:0,hp:3,dir:-1},flash=0,last=0,elapsed=0;
+const floor=218,grav=.39,world=[];
+function persist(){saved.level=level;try{localStorage.setItem(storeKey,JSON.stringify(saved))}catch{}}
+const show=id=>$(id).style.display='grid',hide=id=>$(id).style.display='none';
+function message(t){$('message').textContent=t;$('message').style.display='block';setTimeout(()=>{$('message').style.display='none'},1800)}
+function randomWorld(){const s=stages[level];world.length=0;items=[];let seed=31+level*127;const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280};let x=230;while(x<s.length-280){let kind=rnd();if(kind<.30){world.push({type:'pit',x,w:38+Math.floor(rnd()*26)})}else if(kind<.67){world.push({type:'rock',x,w:14+Math.floor(rnd()*11),h:10+Math.floor(rnd()*12)})}else if(kind<.78){world.push({type:'log',x,w:26,h:13})}x+=100+Math.floor(rnd()*105)}
+ for(let i=0;i<3;i++){let ix=330+i*(s.length-620)/2;items.push({x:ix,y:floor-26,type:'stone',got:false})}
+ boss={x:s.length-150,hp:3,dir:-1,flash:0};}
+function beginLevel(n){level=n;persist();player={x:38,y:floor-27,vy:0,ground:true,life:3,inv:0};camera=0;elapsed=0;randomWorld();$('species').textContent=stages[level].name;$('mission').textContent=stages[level].era;$('stones').textContent='◆ 0/3';$('hearts').textContent='♥♥♥';hide('start');hide('intro');hide('pause');hide('finish');hide('chapters');hide('help');$('hud').style.display='flex';$('jump').style.display='block';mode='intro';$('introDate').textContent=stages[level].date.toUpperCase();$('introTitle').textContent=stages[level].intro;$('introText').textContent=stages[level].story;show('intro');}
+function requestMotion(){let D=window.DeviceOrientationEvent;if(D&&typeof D.requestPermission==='function'){D.requestPermission().then(v=>{sensor=v==='granted';$('tiltLabel').textContent=sensor?'KANTELBESTURING AAN · kantel om te lopen':'Sensor niet toegestaan · gebruik toetsen of raak links/rechts aan';}).catch(()=>{$('tiltLabel').textContent='Sensor niet beschikbaar · gebruik aanraking of toetsen'})}else if(D){sensor=true;$('tiltLabel').textContent='KANTELBESTURING AAN · kantel om te lopen'}else{$('tiltLabel').textContent='Geen bewegingssensor · gebruik aanraking of toetsen'}}
+function orientation(e){if(!sensor)return;const angle=screen.orientation?.angle??window.orientation??0;let v=(Math.abs(angle)===90)?e.beta:e.gamma;if(typeof v==='number')tilt=v-zero}
+function calibrate(){zero=tilt+zero;tilt=0;message('Kanteling ingesteld. Houd je iPhone recht.')}
+window.addEventListener('deviceorientation',orientation);
+$('play').onclick=()=>{requestMotion();mode='intro';beginLevel(level)};
+$('introGo').onclick=()=>{hide('intro');mode='play'};
+$('pauseBtn').onclick=()=>{if(mode==='play'){mode='pause';show('pause')}};
+$('resume').onclick=()=>{hide('pause');mode='play'};
+$('chapterOpen').onclick=$('pauseTimeline').onclick=$('finishTimeline').onclick=()=>{renderTree();show('chapters')};
+$('closeChapters').onclick=()=>{hide('chapters');if(mode==='title')show('start');else if(mode==='pause')show('pause');else if(mode==='finish')show('finish')};
+$('next').onclick=()=>{hide('finish');if(level===0&&saved.unlocked>=1)beginLevel(1);else{renderTree();show('chapters')}};
+$('recalibrate').onclick=$('helpCalibrate').onclick=calibrate;
+$('helpGo').onclick=()=>{hide('help');mode='play'};
+$('closeChapters').addEventListener('click',()=>{});
+function renderTree(){const names=[['Vroege mensachtigen','ca. 4 miljoen jaar'],['Homo habilis','ca. 2,4–1,4 miljoen'],['Homo erectus','ca. 1,9 miljoen–110.000'],['Neanderthalers','ca. 400.000–40.000'],['Homo floresiensis','ca. 100.000–50.000'],['Homo sapiens','ca. 300.000–nu']];$('tree').innerHTML=names.map((a,i)=>'<div class="node '+(i>saved.unlocked+1?'lock':'')+'"><b>'+a[0]+'</b>'+a[1]+'</div>').join('')+'<div class="node" style="grid-column:1/-1;border-color:#c98459"><b>Neanderthaler × sapiens</b>Families ontmoetten elkaar en kregen kinderen. Bij veel mensen met voorouders buiten Afrika is ongeveer 1–2% van het DNA Neanderthaler-afkomstig.</div>'}
+let leftTouch=false,rightTouch=false,jumpQueued=false;
+$('jump').addEventListener('pointerdown',e=>{e.preventDefault();jumpQueued=true});
+cv.addEventListener('pointerdown',e=>{if(mode!=='play')return;const x=e.clientX/window.innerWidth;if(x<.3)leftTouch=true;else if(x>.72)jumpQueued=true});
+cv.addEventListener('pointerup',()=>leftTouch=rightTouch=false);cv.addEventListener('pointercancel',()=>leftTouch=rightTouch=false);
+let keyL=false,keyR=false;window.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='a')keyL=true;if(e.key==='ArrowRight'||e.key==='d')keyR=true;if(e.key===' '||e.key==='ArrowUp')jumpQueued=true;if(e.key==='Escape'&&mode==='play')$('pauseBtn').click()});
+window.addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key==='a')keyL=false;if(e.key==='ArrowRight'||e.key==='d')keyR=false});
+function pixelRect(x,y,w,h,color){c.fillStyle=color;c.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h))}
+function drawBackground(){const sky=c.createLinearGradient(0,0,0,270);sky.addColorStop(0,level===0?'#75b3bb':'#6a96ad');sky.addColorStop(1,level===0?'#d6b66d':'#e0a66e');c.fillStyle=sky;c.fillRect(0,0,480,270);
+ pixelRect(0,0,480,90,level===0?'#7bb8bd':'#779fba');
+ // blocky clouds
+ for(let i=0;i<5;i++){let x=(i*137-camera*.12%620+620)%620-60;pixelRect(x,43+(i%2)*19,48,8,'#f1d9a5');pixelRect(x+10,35+(i%2)*19,27,9,'#f1d9a5')}
+ // far ridges
+ for(let i=-1;i<7;i++){let x=i*104-(camera*.22%104);pixelRect(x,111,54,31,level===0?'#6b9883':'#597e84');pixelRect(x+23,94,61,48,level===0?'#6b9883':'#597e84');pixelRect(x+56,119,48,23,level===0?'#6b9883':'#597e84')}
+ // nearer mesas
+ for(let i=-1;i<6;i++){let x=i*137-(camera*.42%137);pixelRect(x,156,91,18,level===0?'#957b53':'#86745b');pixelRect(x+19,144,76,30,level===0?'#957b53':'#86745b');pixelRect(x+53,135,44,12,level===0?'#957b53':'#86745b')}
+ // sun
+ c.fillStyle=level===0?'#ffe3a0':'#ffe5b3';c.fillRect(390,43,24,24);c.fillRect(384,49,36,12);
+ // grass floor
+ pixelRect(0,floor,480,52,level===0?'#76533c':'#615248');pixelRect(0,floor,480,8,level===0?'#a58a4f':'#8a815c');for(let i=0;i<23;i++){let x=(i*27-camera%27+27)%480;pixelRect(x,220,5,3,level===0?'#d1b36a':'#b6a46b')}
+ // scattered plant silhouettes
+ for(let i=0;i<7;i++){let x=(i*97-camera*.7%600+600)%600-30;pixelRect(x,191,4,28,'#554733');pixelRect(x-9,183,22,7,level===0?'#577250':'#4d705d');pixelRect(x-4,177,14,7,level===0?'#577250':'#4d705d')}
 }
-function loadStage(n){stage=n;started=true;done=false;crafted=false;camera=0;player={x:100,y:390,vx:0,vy:0,w:42,h:66,on:false,invuln:0};Object.keys(progress).forEach(k=>progress[k]=0);makeItems();updateUI();save();document.querySelector('#intro').style.display='none';document.querySelector('#chapterModal').style.display='none';}
-function updateUI(){const s=stages[stage];document.querySelector('#species').textContent=s.species;document.querySelector('#era').textContent=s.era;document.querySelector('#missionName').textContent=s.title;document.querySelector('#lesson').innerHTML=s.lesson;
- const tasks=document.querySelector('#tasks');tasks.innerHTML=s.tasks.map(([id,label,target])=>'<div class="task '+(progress[id]>=target?'done':'')+'"><span>'+label+'</span><b>'+Math.min(progress[id],target)+'/'+target+'</b></div>').join('');
- const sum=s.tasks.reduce((n,[id,,target])=>n+Math.min(progress[id],target),0),total=s.tasks.reduce((n,[, ,target])=>n+target,0);document.querySelector('#bar').style.width=(sum/total*100)+'%';
- document.querySelector('#timeline').innerHTML=tree.map(([name,when],i)=>{let active=(stage===0&&i===1)||(stage===1&&i===2);let unlock=(i<=1||(i===2&&saved.unlocked>=1));return '<div class="node '+(active?'active':'')+(!unlock?' locked':'')+'"><i class="dot"></i><span><strong>'+name+'</strong><br>'+when+'</span></div>'}).join('');
-}
-function say(text){const el=document.querySelector('#toast');el.textContent=text;el.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.style.display='none',2100)}
-function at(id){return stages[stage].tasks.find(([key])=>key===id)}
-function completed(){return stages[stage].tasks.every(([id,,n])=>progress[id]>=n)}
-function action(){if(!started||done)return;
- if(stage===0&&!crafted&&progress.stone>=3){crafted=true;progress.craft=1;updateUI();say('Scherpe steen gemaakt! De hyena komt eraan.');bossMode=true;return}
- if(stage===1&&progress.water>=2&&progress.stone>=2){say('Alles ingepakt. Naar de overkant!');}
- if(stage===0&&crafted&&Math.abs(player.x-boss.x)<115&&boss.hp>0){boss.hp--;boss.x+=90;player.invuln=1;say(boss.hp?'Goed getimed! De hyena wijkt terug.':'Doorgang vrij — missie gehaald!');if(boss.hp<=0){progress.craft=1;win();}}
- else if(stage===1&&player.x>worldW-170&&progress.water>=2&&progress.stone>=2){progress.exit=1;updateUI();win()}
-}
-function win(){if(done)return;done=true;saved.unlocked=Math.max(saved.unlocked,stage+1);saved.cleared=[...new Set([...(saved.cleared||[]),stage])];save();const next=stage+1;document.querySelector('#modalTitle').textContent=stage===0?'Je hebt Homo habilis vrijgespeeld':'Eerste demo voltooid';document.querySelector('#modalText').innerHTML=stage===0?stages[0].end+'<br><br>Je volgende level is nu speelbaar.':'Je staat nu op het kruispunt van de menselijke familie. <strong>Neanderthalers en Homo sapiens leefden tegelijk</strong> en kregen samen kinderen. Veel mensen met voorouders buiten Afrika hebben ongeveer 1–2% Neanderthaler-DNA. Dat is bewijs voor vermenging, maar we weten niet dat alle Homo-soorten volledig in elkaar zijn opgegaan.';document.querySelector('#continueBtn').textContent=stage===0?'SPEEL HOMO ERECTUS':'BEKIJK DE STAMBOOM';document.querySelector('#chapterModal').style.display='grid'}
-document.querySelector('#continueBtn').onclick=()=>{if(stage===0&&saved.unlocked>=1)loadStage(1);else{document.querySelector('#chapterModal').style.display='none';document.querySelector('#intro').style.display='flex';started=false}};
-document.querySelector('#stayBtn').onclick=()=>document.querySelector('#chapterModal').style.display='none';
-document.querySelector('#startBtn').onclick=()=>loadStage(stage);
-document.querySelector('#menuBtn').onclick=()=>{const choices=stages.map((s,i)=>(i<=saved.unlocked?'▶ ':'🔒 ')+s.species+' — '+s.date).join('\n');const pick=prompt('Kies een vrijgespeeld level (nummer):\n'+choices, String(stage+1));if(pick){const n=Number(pick)-1;if(n>=0&&n<=saved.unlocked&&n<stages.length)loadStage(n);else say('Dat level is nog niet vrijgespeeld.')}};
-document.querySelector('#resetBtn').onclick=()=>{if(confirm('Alle opgeslagen voortgang wissen?')){localStorage.removeItem(key);saved={unlocked:0,cleared:[],selected:0};loadStage(0);document.querySelector('#intro').style.display='flex';started=false;updateUI()}};
-document.addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=true;if([' ','arrowup','arrowleft','arrowright'].includes(k))e.preventDefault();if(k==='e'||k==='enter')action()});
-document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-document.querySelectorAll('.touch button').forEach(btn=>{let k=btn.dataset.key;const down=e=>{e.preventDefault();if(k==='action')action();else keys[k]=true},up=e=>{e.preventDefault();keys[k]=false};btn.addEventListener('pointerdown',down);btn.addEventListener('pointerup',up);btn.addEventListener('pointerleave',up);btn.addEventListener('pointercancel',up)});
-canvas.addEventListener('pointerdown',e=>{if(!started)return;const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*canvas.width+camera,y=(e.clientY-r.top)/r.height*canvas.height;for(const it of items){if(!it.taken&&Math.abs(x-(it.x+12))<42&&Math.abs(y-(it.y+12))<48){collect(it);return}}if(Math.abs(x-boss.x)<100)action()});
-function collect(it){if(it.taken)return;it.taken=true;progress[it.type]=(progress[it.type]||0)+1;particles.push({x:it.x,y:it.y,vx:0,vy:-2,t:30,color:it.type==='fruit'?'#ed8e50':'#f4c766'});updateUI();if(stage===0&&progress.stone===3)say('Druk op E / DOE om een scherpe steen te maken.');else say(it.type==='water'?'Water meegenomen.':'Gevonden!');if(completed()&&stage===1)say('Op naar de overkant!');}
-function drawBG(){const g=ctx.createLinearGradient(0,0,0,540);g.addColorStop(0,'#a9cec1');g.addColorStop(.62,'#e7c88e');g.addColorStop(1,'#c98f5c');ctx.fillStyle=g;ctx.fillRect(0,0,960,540);
- // distant hills
- for(let i=-1;i<6;i++){let x=i*260-(camera*.18%260);ctx.fillStyle=i%2?'#748c70':'#829878';ctx.beginPath();ctx.ellipse(x+130,300,190,95,0,Math.PI,Math.PI*2);ctx.fill()}
- // sun and atmospheric layers
- ctx.fillStyle='#ffe9a9';ctx.beginPath();ctx.arc(780,100,42,0,Math.PI*2);ctx.fill();
- for(let i=-1;i<5;i++){let x=i*280-(camera*.42%280);ctx.fillStyle='#9c9c69';ctx.beginPath();ctx.ellipse(x+150,400,210,65,0,Math.PI,Math.PI*2);ctx.fill()}
- ctx.fillStyle='#806347';ctx.fillRect(0,ground,960,96);ctx.fillStyle='#b99a5c';ctx.fillRect(0,ground,960,10);for(let x=0;x<1000;x+=35){let sx=x-(camera%35);ctx.fillStyle='#6c503b';ctx.fillRect(sx,ground+24,10,4)}
- // platforms
- for(const x of [330,530,930,1140,1430]){const sx=x-camera;if(sx>-80&&sx<1000){ctx.fillStyle='#70553e';ctx.fillRect(sx,ground-55,125,13);ctx.fillStyle='#a78c5e';ctx.fillRect(sx,ground-60,125,9)}}
- // acacia silhouettes
- for(let i=-1;i<7;i++){let x=i*220-(camera*.7%220);ctx.fillStyle='#66513a';ctx.fillRect(x+70,270,14,135);ctx.fillStyle='#60765a';ctx.beginPath();ctx.ellipse(x+76,262,67,24,0,0,Math.PI*2);ctx.fill()}
-}
-function drawPerson(x,y,scale=1,shirt='#654635',face='#9e7050'){ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
- // shadow
- ctx.fillStyle='#312d2380';ctx.beginPath();ctx.ellipse(20,64,25,6,0,0,Math.PI*2);ctx.fill();
- // legs and feet
- ctx.strokeStyle='#4b3429';ctx.lineWidth=9;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(17,44);ctx.lineTo(14,61);ctx.lineTo(6,64);ctx.moveTo(25,44);ctx.lineTo(31,60);ctx.lineTo(38,61);ctx.stroke();
+function drawHero(x,y,blink=false){if(blink&&Math.floor(elapsed*12)%2===0)return;const X=Math.round(x),Y=Math.round(y);
+ // pixel shadow
+ pixelRect(X-4,Y+27,34,4,'#3a3025');
+ // legs
+ pixelRect(X+5,Y+20,7,9,'#48352b');pixelRect(X+20,Y+20,7,9,'#48352b');pixelRect(X+2,Y+27,12,3,'#302822');pixelRect(X+18,Y+27,12,3,'#302822');
  // body
- ctx.fillStyle=shirt;ctx.beginPath();ctx.ellipse(21,34,16,21,.1,0,Math.PI*2);ctx.fill();
- // arm
- ctx.strokeStyle=face;ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(9,31);ctx.lineTo(2,44);ctx.moveTo(33,31);ctx.lineTo(39,43);ctx.stroke();
- // head
- ctx.fillStyle=face;ctx.beginPath();ctx.arc(21,9,13,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(31,12,7,4,0,0,Math.PI*2);ctx.fill();
- ctx.fillStyle='#211c19';ctx.beginPath();ctx.arc(25,6,2,0,Math.PI*2);ctx.fill();
- // hair
- ctx.fillStyle='#30251f';ctx.beginPath();ctx.arc(19,3,12,Math.PI,Math.PI*2);ctx.fill();
- ctx.restore()}
-function drawItems(){items.forEach(it=>{if(it.taken)return;let x=it.x-camera;if(x<-50||x>1010)return;if(it.type==='fruit'){ctx.fillStyle='#db7650';ctx.beginPath();ctx.arc(x+12,it.y+13,11,0,Math.PI*2);ctx.fill();ctx.fillStyle='#6b8b50';ctx.fillRect(x+11,it.y-1,3,7)}else if(it.type==='water'){ctx.fillStyle='#8fc7cf';ctx.beginPath();ctx.moveTo(x+12,it.y);ctx.quadraticCurveTo(x+28,it.y+17,x+12,it.y+25);ctx.quadraticCurveTo(x-4,it.y+17,x+12,it.y);ctx.fill()}else{ctx.fillStyle='#a4a09a';ctx.beginPath();ctx.moveTo(x,it.y+20);ctx.lineTo(x+5,it.y+4);ctx.lineTo(x+18,it.y);ctx.lineTo(x+26,it.y+17);ctx.closePath();ctx.fill();ctx.strokeStyle='#e2d8bc';ctx.stroke()}})}
-function drawBoss(){const x=boss.x-camera;if(x<-100||x>1050)return;
- if(stage===0){ctx.save();ctx.translate(x,ground-15);ctx.scale(boss.dir<0?-1:1,1);ctx.fillStyle='#78513a';ctx.beginPath();ctx.ellipse(0,-24,49,26,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(38,-42,20,0,Math.PI*2);ctx.fill();ctx.fillStyle='#d9aa63';ctx.beginPath();ctx.moveTo(32,-54);ctx.lineTo(38,-71);ctx.lineTo(44,-54);ctx.fill();ctx.fillStyle='#f4e8cc';ctx.fillRect(45,-43,5,4);ctx.restore();ctx.fillStyle='#17231f';ctx.fillRect(x-34,ground-89,68,6);ctx.fillStyle='#f4c766';ctx.fillRect(x-34,ground-89,68*(boss.hp/3),6)}
- else{ctx.fillStyle='#70564288';ctx.beginPath();ctx.ellipse(x,ground-38,70,40,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff0c5';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('ZANDSTORM',x,ground-95)}
+ pixelRect(X+5,Y+9,20,15,level===0?'#87533a':'#596044');pixelRect(X+1,Y+13,6,9,'#a36e4b');pixelRect(X+24,Y+12,5,10,'#a36e4b');
+ // head, brow and hair
+ pixelRect(X+7,Y,16,13,'#b77d53');pixelRect(X+18,Y+5,10,6,'#b77d53');pixelRect(X+5,Y-2,17,6,'#3c3029');pixelRect(X+8,Y+6,4,3,'#34251f');
+ pixelRect(X+22,Y+6,2,2,'#201a19');
+ // small travel wrap
+ pixelRect(X+6,Y+11,17,4,'#d1a654');pixelRect(X+13,Y+10,5,6,'#e9c66a');
 }
-function draw(){ctx.save();drawBG();ctx.save();ctx.translate(-camera,0);drawItems();drawBoss();ctx.restore();drawPerson(player.x-camera,player.y,1,stage===0?'#694536':'#535a42');ctx.restore();
- if(stage===0&&crafted&&!done){ctx.fillStyle='#13211dcc';ctx.fillRect(300,32,360,35);ctx.fillStyle='#fff4d7';ctx.font='bold 16px system-ui';ctx.textAlign='center';ctx.fillText('Dichtbij? Druk DOE / E om de doorgang vrij te maken',480,55)}
- if(stage===1){ctx.fillStyle='#17231f';ctx.fillRect(0,0,960,6);ctx.fillStyle='#e9d18f';ctx.fillRect(0,0,Math.max(0,960*(player.x/(worldW-120))),6)}
+function drawItem(it){const x=Math.round(it.x-camera),y=Math.round(it.y);if(x<-10||x>490)return;pixelRect(x+3,y,9,11,'#777d7b');pixelRect(x,y+6,12,7,'#b4b1a2');pixelRect(x+5,y+2,5,3,'#e1d7bb');pixelRect(x+2,y+13,12,3,'#443d34')}
+function drawEnemy(){let x=boss.x-camera;if(x<-50||x>510)return;const y=floor-24;pixelRect(x-12,y+14,37,7,'#44312a');pixelRect(x-7,y,29,17,level===0?'#79523b':'#665d50');pixelRect(x+11,y-10,16,15,level===0?'#80593d':'#766857');pixelRect(x+19,y-7,8,6,'#bf8155');pixelRect(x+21,y-6,3,3,'#ffe49b');pixelRect(x-5,y+14,7,8,'#3f312b');pixelRect(x+13,y+14,7,8,'#3f312b');
+ // health bar
+ pixelRect(x-8,y-18,34,4,'#302326');pixelRect(x-7,y-17,Math.max(0,32*boss.hp/3),2,'#f3c456');
 }
-function step(){if(started&&!done){let left=keys['arrowleft']||keys.a||keys.left,right=keys['arrowright']||keys.d||keys.right,jump=keys[' ']||keys.arrowup||keys.w||keys.jump;
- player.vx=(right?3.8:0)-(left?3.8:0);player.x=Math.max(0,Math.min(worldW-player.w,player.x+player.vx));
- if(jump&&player.on){player.vy=-10.5;player.on=false}
- player.vy=Math.min(12,player.vy+.5);player.y+=player.vy;
- // platforms / ground
- let land=ground-player.h;if(player.y>=land){player.y=land;player.vy=0;player.on=true}
- for(const px of [330,530,930,1140,1430]){if(player.x+player.w>px&&player.x<px+125&&player.y+player.h>=ground-60&&player.y+player.h<=ground-36&&player.vy>=0){player.y=ground-60-player.h;player.vy=0;player.on=true}}
- camera=Math.max(0,Math.min(worldW-960,player.x-350));
- if(stage===0&&crafted&&boss.hp>0){boss.t++;if(boss.t%70===0)boss.dir=boss.x<player.x?1:-1;boss.x+=boss.dir*1.5;if(Math.abs(boss.x-player.x)<36&&player.invuln<=0){player.x=Math.max(0,player.x-90);player.invuln=1.2;say('Au! Spring over de hyena als ze op je afkomt.')}}
- if(stage===1){if(player.x>worldW-170&&progress.water>=2&&progress.stone>=2&&!done){progress.exit=1;updateUI();win()}boss.t++;if(boss.t%160===0){say('Stofstorm! Blijf even uit de open vlakte.');bossTimer=110}if(bossTimer>0){bossTimer--;if(bossTimer%30===0&&player.x>camera+250&&player.x<camera+760){player.x=Math.max(0,player.x-25)}}if(player.x>worldW-175&&completed())win()}
- if(player.invuln>0)player.invuln-=1/60;
- items.forEach(it=>{if(!it.taken&&Math.abs(player.x+player.w/2-(it.x+12))<27&&Math.abs(player.y+player.h-(it.y+18))<48)collect(it)});
- if(completed()&&stage===0&&!crafted)say('Materiaal compleet — druk DOE / E om het werktuig te maken.');
- if(stage===0&&crafted&&boss.hp<=0)win();
- }
- particles=particles.filter(p=>p.t-->0);particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;ctx.fillStyle=p.color;ctx.globalAlpha=p.t/30;ctx.beginPath();ctx.arc(p.x-camera,p.y,5,0,7);ctx.fill();ctx.globalAlpha=1});
- draw();requestAnimationFrame(step)}
-makeItems();updateUI();
-if(saved.unlocked>0){document.querySelector('#intro h1').innerHTML='De reis gaat<br>verder.';document.querySelector('#intro p').textContent='Je opgeslagen voortgang staat klaar. Kies een vrijgespeeld hoofdstuk via Tijdlijn.';document.querySelector('#startBtn').textContent='VERDER SPELEN'}
-requestAnimationFrame(step);
+function drawWorld(){drawBackground();const off=camera;
+ for(const o of world){let x=o.x-off;if(x<-60||x>500)continue;if(o.type==='pit'){pixelRect(x,floor, o.w,52,'#171f24');pixelRect(x-3,floor,o.w+6,5,'#4d463b');pixelRect(x+6,floor+24,7,2,'#382d2a')}else if(o.type==='rock'){pixelRect(x,floor-o.h,o.w,o.h,'#655948');pixelRect(x+3,floor-o.h-3,o.w-6,4,'#928066');pixelRect(x+2,floor-o.h+4,4,3,'#b39b78')}else{pixelRect(x,floor-8,o.w,9,'#634733');pixelRect(x+4,floor-11,o.w-8,3,'#a17c4e')}}
+ for(const it of items)if(!it.got)drawItem(it);drawEnemy();
+ drawHero(player.x-camera,player.y,player.inv>0);
+ // pixel dust
+ for(const p of particles){pixelRect(p.x-camera,p.y,3,3,p.color);p.y+=p.vy;p.life--}particles=particles.filter(p=>p.life>0);
+}
+function floorAt(x){for(const o of world)if(o.type==='pit'&&x>o.x-4&&x<o.x+o.w+4)return null;return floor}
+function hurt(){if(player.inv>0)return;player.life--;player.inv=1.6;$('hearts').textContent='♥'.repeat(Math.max(0,player.life))+'♡'.repeat(Math.max(0,3-player.life));if(player.life<=0){player.x=Math.max(35,Math.floor(camera/550)*550);player.y=floor-30;player.life=3;$('hearts').textContent='♥♥♥';message('Even bijkomen. Je gaat verder vanaf hier.')}else message('Oei! Spring over de hindernis.')}
+function win(){if(mode==='finish')return;mode='finish';saved.unlocked=Math.max(saved.unlocked,level+1);persist();$('finishTitle').textContent=level===0?'HOMO HABILIS → HOMO ERECTUS':'DE FAMILIE TAKT UIT';$('finishText').innerHTML=stages[level].end+'<br><br><b>Dit is geen rechte ladder.</b> Veel soorten overlapten. Neanderthalers en sapiens kregen samen kinderen. Bij veel mensen met voorouders buiten Afrika is ongeveer 1–2% van het DNA Neanderthaler-afkomstig. Dat toont vermenging; het bewijst niet dat alle menssoorten volledig in elkaar zijn opgegaan.';show('finish');$('jump').style.display='none';}
+function update(dt){if(mode!=='play')return;elapsed+=dt;const touchMove=(cv.matches(':active')&&leftTouch? -1:0);let axis=Math.abs(tilt)>3?Math.max(-1,Math.min(1,tilt/22)):0;let move=axis||((keyR||rightTouch)?1:0)-((keyL||leftTouch)?1:0);player.x+=move*2.45;player.x=Math.max(0,Math.min(stages[level].length-15,player.x));player.vy+=grav;player.y+=player.vy;
+ let f=floorAt(player.x+12);if(f!==null&&player.y+29>=f&&player.vy>=0){player.y=f-29;player.vy=0;player.ground=true}else player.ground=false;
+ if(jumpQueued&&player.ground){player.vy=-7.7;player.ground=false}jumpQueued=false;
+ for(const o of world){if(o.type==='pit')continue;if(player.x+25>o.x&&player.x+3<o.x+o.w&&player.y+28>floor-12){if(player.vy>1&&player.y+28<floor+2){player.y=floor-30;player.vy=-5;continue}hurt();player.x=Math.max(30,player.x-35)}}
+ for(const it of items){if(!it.got&&Math.abs(player.x+13-it.x)<17&&Math.abs(player.y+12-it.y)<21){it.got=true;let n=items.filter(i=>i.got).length;$('stones').textContent='◆ '+n+'/3';particles.push({x:it.x,y:it.y,vy:-1.2,life:18,color:'#f5cf6e'});if(n===3)message('Werktuig compleet! Zoek de eindbaas.');persist()}}
+ boss.x+=boss.dir*.55;if(boss.x<stages[level].length-245||boss.x>stages[level].length-85)boss.dir*=-1;
+ if(Math.abs(player.x-boss.x)<25&&Math.abs(player.y+28-floor)<15){if(player.vy>0){boss.hp--;boss.flash=.2;player.vy=-6;player.inv=.8;message(boss.hp?'Raak! Nog een keer!':'Eindbaas verslagen!');if(boss.hp<=0&&items.every(i=>i.got)){win()}}else hurt()}
+ if(player.y>300){hurt();player.y=floor-30;player.vy=0}
+ camera=Math.max(0,Math.min(stages[level].length-480,player.x-140));player.inv=Math.max(0,player.inv-dt);
+ if(player.x>stages[level].length-40){if(items.every(i=>i.got)&&boss.hp<=0)win();else if(!items.every(i=>i.got))message('Eerst de drie stenen!');else message('Spring op de eindbaas!')}
+ persist();
+}
+function frame(t){const dt=Math.min(.035,(t-last)/1000||.016);last=t;update(dt);drawWorld();requestAnimationFrame(frame)}
+$('introGo').addEventListener('click',()=>{mode='play';hide('intro');$('jump').style.display='block';show('help');mode='help'});
+$('helpGo').onclick=()=>{hide('help');mode='play'};
+renderTree();$('sensorHelp').textContent='Kantelen werkt als de bewegingssensor toestemming krijgt. De knop kalibreert de neutrale stand.';
+if(saved.unlocked>0&&saved.level===0)$('play').textContent='VERDER SPELEN';
+persist();requestAnimationFrame(frame);
 })();
 </script>
 </body>
