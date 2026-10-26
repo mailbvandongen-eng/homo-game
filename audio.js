@@ -50,6 +50,7 @@ function play(kind){
  else if(kind==='hit'){tone(520,.22,'sawtooth',.13,t,sfxGain,.48);tone(760,.15,'triangle',.08,t+.018,sfxGain,.55);noise(t,.11,.05,'bandpass',1200,450)}
  else if(kind==='hyena'){tone(145,.42,'sawtooth',.16,t,sfxGain,.62);tone(205,.3,'square',.06,t,sfxGain,.54);noise(t,.32,.12,'lowpass',680,180)}
  else if(kind==='stone'){noise(t,.095,.22,'highpass',2100,620);tone(180,.12,'triangle',.09,t,sfxGain,.48)}
+ else if(kind==='paw'){tone(95,.25,'sine',.2,t,sfxGain,.42);noise(t,.18,.15,'lowpass',380,95)}
  else if(kind==='win'){[69,74,78,81].forEach((n,i)=>tone(midi(n),.18,'square',.105,t+i*.105,sfxGain));tone(midi(86),.52,'triangle',.13,t+.49,sfxGain,.72);tone(midi(62),.62,'triangle',.095,t+.49,sfxGain,.9);noise(t+.50,.16,.1,'lowpass',760,160)}
  else if(kind==='step'){noise(t,.035,.025,'lowpass',520,190)}
  else{tone(260,.12,'triangle',.08,t,sfxGain,.72)}
