@@ -63,8 +63,8 @@ function updateControls(){
 }
 function bindControls(){
  const open=document.getElementById('audioButton'),panel=document.getElementById('audioPanel'),musicButton=document.getElementById('musicToggle'),sfxButton=document.getElementById('sfxToggle'),slider=document.getElementById('sfxVolume'),close=document.getElementById('audioClose');
- if(open&&panel){open.addEventListener('pointerdown',e=>{e.preventDefault();panel.classList.toggle('open');panel.setAttribute('aria-hidden',String(!panel.classList.contains('open')))});}
- if(close&&panel)close.addEventListener('pointerdown',e=>{e.preventDefault();panel.classList.remove('open');panel.setAttribute('aria-hidden','true')});
+ if(open&&panel){open.addEventListener('pointerdown',e=>{e.preventDefault();panel.classList.toggle('open');panel.setAttribute('aria-hidden',String(!panel.classList.contains('open')));open.setAttribute('aria-expanded',String(panel.classList.contains('open')))});}
+ if(close&&panel)close.addEventListener('pointerdown',e=>{e.preventDefault();panel.classList.remove('open');panel.setAttribute('aria-hidden','true');if(open)open.setAttribute('aria-expanded','false')});
  if(musicButton)musicButton.addEventListener('pointerdown',e=>{e.preventDefault();setMusic(!musicEnabled)});
  if(sfxButton)sfxButton.addEventListener('pointerdown',e=>{e.preventDefault();toggleSfx()});
  if(slider)slider.addEventListener('input',()=>setSfx(Number(slider.value)/100));
