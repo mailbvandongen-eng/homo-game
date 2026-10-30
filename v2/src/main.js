@@ -5,6 +5,9 @@ import level11 from './levels/w1-1.js';
 import level12 from './levels/w1-2.js';
 import { SPECIES } from './species.js';
 
+// Ophogen bij elke publicatie: zo zie je op het titelscherm of je de nieuwste versie hebt.
+export const VERSION = '2026-10-30c';
+
 const LEVELS = [level11, level12];
 const $ = id => document.getElementById(id);
 const canvas = $('game');
@@ -80,7 +83,7 @@ function renderLevels() {
     const b = document.createElement('button');
     b.className = 'chip'; b.disabled = i >= save.unlocked;
     const art = save.best[L.id]?.artifacts || 0;
-    b.innerHTML = `<b>${L.id}</b> ${L.name}${i < save.unlocked ? ` <span>${'◆'.repeat(art)}${'◇'.repeat(3 - art)}</span>` : ' 🔒'}`;
+    b.innerHTML = `<b>${L.id}</b> ${L.name}${i < save.unlocked ? ` <span>${'◆'.repeat(art)}${'◇'.repeat(3 - art)}</span>` : ' · op slot'}`;
     b.addEventListener('click', e => { e.preventDefault(); audio.unlock(); audio.play('click'); startLevel(i); });
     box.appendChild(b);
   });
@@ -93,6 +96,17 @@ on('toTitle', () => { show('title'); game.load(LEVELS[0]); game.state = 'title';
 on('again', () => startLevel(current));
 on('nextLevel', () => startLevel(current + 1));
 on('retry', () => startLevel(current));
+
+// Nieuwste versie laden: alle spelbestanden vers ophalen en dan herstarten.
+// (Handig in volledig scherm, waar de browser geen verversknop toont.)
+async function update() {
+  const files = new Set([location.href.split('?')[0]]);
+  for (const e of performance.getEntriesByType('resource')) if (/\.(js|svg|json)(\?|$)/.test(e.name)) files.add(e.name);
+  try { await Promise.all([...files].map(f => fetch(f, { cache: 'reload' }))); } catch {}
+  location.reload();
+}
+for (const el of document.querySelectorAll('[data-update]')) el.addEventListener('click', e => { e.preventDefault(); el.textContent = '↻ Bezig…'; update(); });
+$('version').textContent = 'versie ' + VERSION;
 
 function syncAudioButtons() {
   for (const el of document.querySelectorAll('[data-toggle=music]')) el.textContent = audio.music ? '♫ Muziek aan' : '♫ Muziek uit';
