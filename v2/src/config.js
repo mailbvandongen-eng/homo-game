@@ -24,6 +24,8 @@ export const PHYS = {
   stompBounce: 470,
   stompBounceHeld: 700,
   springV: 930,
+  branchV: 820,       // verende tak
+  lianaJump: 470,     // extra omhoog bij loslaten liaan
   hurtInvuln: 1.5,
 };
 

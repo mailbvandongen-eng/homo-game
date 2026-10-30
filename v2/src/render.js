@@ -61,14 +61,17 @@ export class Renderer {
       const wx = i * 140 + hash(i, 6) * 80, x = wx - camX * 0.55;
       bush(c, x, nearY + 4 - ridgeH(wx, 9, 0.012, 11), 0.8 + hash(i, 7) * 0.6, th.midDark);
     }
-    // Onder het maaiveld: donkere kloof, zodat kuilen diep ogen
-    const gs = groundWorld - camY;
-    const pit = c.createLinearGradient(0, gs, 0, gs + 110);
-    pit.addColorStop(0, '#6b4a2e'); pit.addColorStop(0.25, '#3e2a1b'); pit.addColorStop(1, '#120c08');
-    c.fillStyle = pit; c.fillRect(0, gs + 6, viewW, viewH - gs + 200);
     // Kudde ver weg
     const herdX = ((900 - camX * 0.3 + time * 8) % 2600 + 2600) % 2600 - 300;
     for (let k = 0; k < 4; k++) antelope(c, herdX + k * 26 + hash(k) * 10, midY + 2 - ridgeH(herdX + camX * 0.3, 20, 0.006, 3) + hash(k, 1) * 6, 0.45, time + k);
+  }
+
+  // Onder het maaiveld een donkere kloof, zodat kuilen diep ogen (in wereldcoördinaten, klopt ook bij inzoomen)
+  pits(c, camX, viewW, levelH) {
+    const top = levelH - 3 * TILE + 6;
+    const g = c.createLinearGradient(0, top - 6, 0, top + 104);
+    g.addColorStop(0, '#6b4a2e'); g.addColorStop(0.25, '#3e2a1b'); g.addColorStop(1, '#120c08');
+    c.fillStyle = g; c.fillRect(camX - 10, top, viewW + 20, levelH - top + 200);
   }
 
   // ---------------- Tegels (in stukken voorgetekend) ----------------
@@ -118,6 +121,8 @@ export class Renderer {
       } else if (t === T.SPRING) {
         const anim = map.bounce.get(i) || 0;
         springTile(c, cx * TILE, cy * TILE, anim, time);
+      } else if (t === T.BOUNCY) {
+        bouncyTile(c, map, cx, cy, map.bounce.get(i) || 0, time);
       }
     }
   }
@@ -385,5 +390,72 @@ export function drawShelter(c, x, y) {
   c.fillStyle = '#9a6e45'; c.beginPath(); c.moveTo(-34, -6); c.lineTo(8, -66); c.lineTo(30, -6); c.closePath(); c.fill();
   c.fillStyle = '#7a5434'; c.beginPath(); c.moveTo(-20, -6); c.lineTo(7, -46); c.lineTo(18, -6); c.closePath(); c.fill();
   c.fillStyle = '#3a2618'; c.beginPath(); c.moveTo(-8, -6); c.lineTo(6, -30); c.lineTo(12, -6); c.closePath(); c.fill();
+  c.restore();
+}
+
+function bouncyTile(c, map, cx, cy, anim, time) {
+  // Verende acaciatak: buigt door en veert na
+  const x = cx * TILE, y = cy * TILE;
+  const left = map.get(cx - 1, cy) === T.BOUNCY, right = map.get(cx + 1, cy) === T.BOUNCY;
+  const sag = anim > 0 ? Math.sin((0.45 - anim) / 0.45 * Math.PI * 3) * (anim / 0.45) * 7 : Math.sin(time * 2 + cx) * 0.8;
+  const yy = y + 2 + sag * (left && right ? 1 : 0.6);
+  c.fillStyle = '#3f2a1a'; c.beginPath(); c.roundRect(x - (left ? 1 : -2), yy, TILE + (left ? 1 : -2) + (right ? 1 : -2), 10, 4); c.fill();
+  c.fillStyle = '#9a6a3c'; c.fillRect(x + (left ? 0 : 3), yy + 2, TILE - (left ? 0 : 3) - (right ? 0 : 3), 4);
+  c.fillStyle = '#c99a5a'; c.fillRect(x + (left ? 0 : 4), yy + 2, TILE - (left ? 0 : 4) - (right ? 0 : 4), 1.5);
+  c.fillStyle = '#7fb043';
+  c.beginPath(); c.ellipse(x + 8, yy - 2, 9, 4.5, -0.4, 0, Math.PI * 2); c.ellipse(x + 23, yy - 3, 9, 4.5, 0.4, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#a7d35c'; c.beginPath(); c.ellipse(x + 15, yy - 5, 6, 3, 0, 0, Math.PI * 2); c.fill();
+  if (!left) { c.strokeStyle = '#3f2a1a'; c.lineWidth = 6; c.lineCap = 'round'; c.beginPath(); c.moveTo(x + 2, yy + 6); c.quadraticCurveTo(x - 6, yy + 30, x - 4, y + 70); c.stroke(); }
+  if (!right) {
+    // pijltje omhoog als hint
+    c.fillStyle = `rgba(255,240,180,${0.35 + Math.sin(time * 4) * 0.25})`;
+    c.beginPath(); c.moveTo(x + 4, yy - 20); c.lineTo(x - 1, yy - 13); c.lineTo(x + 9, yy - 13); c.closePath(); c.fill();
+  }
+}
+
+// Liaan aan een overhangende tak
+export function drawLiana(c, L, time) {
+  const ex = L.ax + Math.sin(L.angle) * L.len, ey = L.ay + Math.cos(L.angle) * L.len;
+  // Tak waar hij aan hangt
+  c.strokeStyle = '#4c3220'; c.lineWidth = 10; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(L.ax - 70, L.ay - 26); c.quadraticCurveTo(L.ax - 20, L.ay - 2, L.ax + 40, L.ay - 8); c.stroke();
+  c.fillStyle = '#5d8a3c';
+  for (const [dx, dy, r] of [[-60, -30, 26], [-20, -16, 30], [30, -16, 26], [5, -30, 22]]) { c.beginPath(); c.ellipse(L.ax + dx, L.ay + dy, r, r * 0.45, 0, 0, Math.PI * 2); c.fill(); }
+  // De liaan zelf: licht gebogen touw met blaadjes
+  const mx = (L.ax + ex) / 2 - Math.cos(L.angle) * L.omega * 6, my = (L.ay + ey) / 2 + Math.sin(L.angle) * L.omega * 6;
+  c.strokeStyle = '#3e5a22'; c.lineWidth = 5;
+  c.beginPath(); c.moveTo(L.ax, L.ay); c.quadraticCurveTo(mx, my, ex, ey); c.stroke();
+  c.strokeStyle = '#7fae3e'; c.lineWidth = 2.4;
+  c.beginPath(); c.moveTo(L.ax, L.ay); c.quadraticCurveTo(mx, my, ex, ey); c.stroke();
+  for (let i = 1; i < 6; i++) {
+    const t = i / 6, px = (1 - t) * (1 - t) * L.ax + 2 * (1 - t) * t * mx + t * t * ex, py = (1 - t) * (1 - t) * L.ay + 2 * (1 - t) * t * my + t * t * ey;
+    c.fillStyle = i % 2 ? '#6f9a3b' : '#8fbf4a';
+    c.beginPath(); c.ellipse(px + (i % 2 ? 5 : -5), py, 5, 2.4, i % 2 ? 0.5 : -0.5, 0, Math.PI * 2); c.fill();
+  }
+  if (!L.held) {
+    // Handvat-lus onderaan; knippert zacht als hint
+    c.strokeStyle = `rgba(255,236,160,${0.5 + Math.sin(time * 5) * 0.3})`; c.lineWidth = 2;
+    c.beginPath(); c.arc(ex, ey + 3, 6, 0, Math.PI * 2); c.stroke();
+  }
+}
+
+// Grot in een rotswand: hier wacht de stam
+export function drawCave(c, x, y, time) {
+  c.save(); c.translate(x, y);
+  const g = c.createLinearGradient(0, -260, 0, 0); g.addColorStop(0, '#b3a07c'); g.addColorStop(1, '#7c6b52');
+  c.fillStyle = g;
+  c.beginPath(); c.moveTo(-170, 0); c.quadraticCurveTo(-180, -120, -120, -200); c.quadraticCurveTo(-40, -280, 60, -250);
+  c.quadraticCurveTo(170, -230, 220, -130); c.quadraticCurveTo(250, -60, 250, 0); c.closePath(); c.fill();
+  c.strokeStyle = '#6a5a44'; c.lineWidth = 2;
+  for (const [a, b, d, e] of [[-120, -150, -80, -120], [60, -210, 100, -170], [150, -120, 190, -90], [-60, -230, -20, -215]]) { c.beginPath(); c.moveTo(a, b); c.lineTo(d, e); c.stroke(); }
+  c.fillStyle = '#88a84a'; c.beginPath(); c.ellipse(-60, -262, 50, 12, -0.2, 0, Math.PI * 2); c.ellipse(70, -252, 60, 12, 0.15, 0, Math.PI * 2); c.fill();
+  // Opening met warm licht van binnen
+  c.fillStyle = '#1b130e';
+  c.beginPath(); c.moveTo(-10, 0); c.quadraticCurveTo(-14, -110, 60, -120); c.quadraticCurveTo(130, -110, 130, 0); c.closePath(); c.fill();
+  const glow = c.createRadialGradient(60, -20, 5, 60, -20, 110); glow.addColorStop(0, `rgba(255,170,70,${0.45 + Math.sin(time * 7) * 0.05})`); glow.addColorStop(1, 'rgba(255,170,70,0)');
+  c.fillStyle = glow; c.beginPath(); c.moveTo(-10, 0); c.quadraticCurveTo(-14, -110, 60, -120); c.quadraticCurveTo(130, -110, 130, 0); c.closePath(); c.fill();
+  // Handafdrukken op de wand (rotskunst-hint)
+  c.fillStyle = '#9b4a2c88';
+  for (const [hx, hy] of [[-100, -90], [165, -70]]) { c.beginPath(); c.ellipse(hx, hy, 6, 8, 0, 0, Math.PI * 2); c.fill(); for (let f = 0; f < 4; f++) { c.beginPath(); c.ellipse(hx - 5 + f * 3.4, hy - 11, 1.4, 3.5, 0, 0, Math.PI * 2); c.fill(); } }
   c.restore();
 }

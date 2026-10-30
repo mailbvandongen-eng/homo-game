@@ -2,8 +2,10 @@ import { TILE, PHYS, MAX_STONES } from './config.js';
 import { moveBody, T } from './level.js';
 
 export class Player {
-  constructor(x, y) {
+  constructor(x, y, look = null) {
     this.w = 22; this.h = 44;
+    // Uiterlijk (voor stamleden): vachtkleur, huid, haar en grootte
+    this.look = { fur: '#8a5a39', skin: '#c18a5f', limb: '#a8744d', hair: '#5d3a25', size: 1, ...look };
     this.reset(x, y);
   }
 
@@ -22,7 +24,9 @@ export class Player {
     this.dead = false;
     this.deadT = 0;
     this.auto = 0;              // automatisch lopen (finish)
-    this.fallDist = 0;
+    this.hang = null;           // vastgegrepen liaan
+    this.regrab = 0;
+    this.cheer = 0;             // juichen bij de finish
   }
 
   get cx() { return this.x + this.w / 2; }
@@ -41,7 +45,9 @@ export class Player {
     }
     const map = game.map;
     let dir = input.left ? -1 : input.right ? 1 : 0;
-    if (this.auto) dir = 1;
+    if (this.auto) dir = this.auto;
+    this.regrab = Math.max(0, this.regrab - dt);
+    if (this.hang) return this.swing(dt, dir, input, game);
 
     // Rennen ontstaat vanzelf als je een richting vasthoudt.
     if (dir !== 0 && dir === Math.sign(this.vx || dir)) this.holdTime += dt; else if (this.onGround) this.holdTime = 0;
@@ -102,11 +108,11 @@ export class Player {
     if (r.landed) {
       this.jumping = false;
       const tile = map.get(r.groundX, r.groundY);
-      if (tile === T.SPRING) {
-        this.vy = -PHYS.springV * (input.jumpHeld ? 1.1 : 1);
+      if (tile === T.SPRING || tile === T.BOUNCY) {
+        this.vy = -(tile === T.SPRING ? PHYS.springV : PHYS.branchV) * (input.jumpHeld ? 1.1 : 1);
         this.onGround = false; this.jumping = false;
         this.sx = 0.75; this.sy = 1.3;
-        map.bounce.set(map.idx(r.groundX, r.groundY), 0.3);
+        for (let k = -2; k <= 2; k++) if (map.get(r.groundX + k, r.groundY) === tile) map.bounce.set(map.idx(r.groundX + k, r.groundY), 0.45);
         game.audio.play('spring');
       } else {
         if (tile === T.CRUMBLE) map.touchCrumble(r.groundX, r.groundY);
@@ -131,6 +137,42 @@ export class Player {
     if (input.throw && !this.auto) game.throwStone();
   }
 
+  // Slingeren aan een liaan: een slinger met lengte len rond het ophangpunt.
+  grab(liana) {
+    const len = liana.len;
+    this.hang = liana; liana.held = true;
+    // Neem de vaart mee in de slinger.
+    liana.omega = (this.vx * Math.cos(liana.angle) - this.vy * Math.sin(liana.angle) * 0.3) / len;
+    this.vx = 0; this.vy = 0; this.jumping = false; this.onGround = false;
+    this.sx = 1.15; this.sy = 0.88;
+  }
+
+  swing(dt, dir, input, game) {
+    const L = this.hang, len = L.len;
+    // Zwaartekracht op de slinger, plus zelf "pompen" met links/rechts
+    L.omega += (-(1700 / len) * Math.sin(L.angle) + dir * 2.6) * dt;
+    L.omega *= 1 - 0.2 * dt;
+    L.angle = Math.max(-1.25, Math.min(1.25, L.angle + L.omega * dt));
+    if (dir) this.face = dir; else if (Math.abs(L.omega) > 0.3) this.face = Math.sign(L.omega);
+    const hx = L.ax + Math.sin(L.angle) * len, hy = L.ay + Math.cos(L.angle) * len;
+    this.x = hx - this.w / 2; this.y = hy + 9;   // handen precies aan de liaan
+    this.anim += dt * 4;
+    this.sx += (1 - this.sx) * Math.min(1, dt * 12); this.sy += (1 - this.sy) * Math.min(1, dt * 12);
+    this.invuln = Math.max(0, this.invuln - dt);
+    if (input.jump) {
+      // Loslaten: snelheid langs de slingerbaan plus een sprong omhoog
+      const tv = L.omega * len;
+      let vx = tv * Math.cos(L.angle) + this.face * 70;
+      if (vx * this.face < 170) vx = this.face * 170;   // altijd een fatsoenlijke zwaai in de kijkrichting
+      this.vx = Math.max(-PHYS.run * 1.3, Math.min(PHYS.run * 1.3, vx));
+      this.vy = Math.min(0, -tv * Math.sin(L.angle)) - PHYS.lianaJump;
+      this.holdTime = PHYS.runDelay;
+      L.held = false; this.hang = null; this.regrab = 0.35; this.jumping = true;
+      this.sx = 0.8; this.sy = 1.2;
+      game.audio.play('jump');
+    }
+  }
+
   bounceOff(held) {
     this.vy = -(held ? PHYS.stompBounceHeld : PHYS.stompBounce);
     this.onGround = false; this.jumping = true;
@@ -140,9 +182,11 @@ export class Player {
   // ---------- tekenen ----------
   draw(c, time) {
     if (this.invuln > 0 && !this.dead && Math.floor(time * 16) % 2 === 0) return;
-    const air = !this.onGround;
+    const air = !this.onGround && !this.cheer;
+    const hanging = !!this.hang;
     c.save();
-    c.translate(Math.round(this.cx), Math.round(this.bottom));
+    c.translate(Math.round(this.cx), Math.round(this.bottom - (this.hop || 0)));
+    if (this.look.size !== 1) c.scale(this.look.size, this.look.size);
     if (this.dead) { c.translate(0, -22); c.rotate(Math.min(this.deadT * 6, Math.PI)); c.translate(0, 22); }
     c.scale(this.face * this.sx, this.sy);
 
@@ -157,7 +201,7 @@ export class Player {
     if (air) lean = this.vy < 0 ? 0.08 : -0.02;
 
     c.translate(0, bob);
-    const fur = '#8a5a39', furDark = '#5d3a25', skin = '#c18a5f', outline = '#2c1d15';
+    const fur = this.look.fur, furDark = this.look.hair, skin = this.look.skin, limbBack = this.look.limb, outline = '#2c1d15';
 
     const limb = (pts, color, width) => {
       c.lineCap = 'round'; c.lineJoin = 'round';
@@ -168,7 +212,8 @@ export class Player {
     const leg = (side) => {
       const hip = [side * 3, -21];
       let a, bend;
-      if (air) {
+      if (hanging) { a = side * 0.15 - this.hang.omega * 0.25 + Math.sin(this.anim + side) * 0.1; bend = 0.25; }
+      else if (air) {
         if (this.vy < 0) { a = side > 0 ? 0.9 : -0.25; bend = side > 0 ? 1.4 : 0.4; }
         else { a = side > 0 ? 0.35 : -0.3; bend = 0.35; }
       } else if (this.skidding) { a = 0.55; bend = 0.15; }
@@ -179,14 +224,16 @@ export class Player {
       } else { a = side * 0.08; bend = 0.05; }
       const knee = [hip[0] + Math.sin(a) * 11, hip[1] + Math.cos(a) * 11];
       const foot = [knee[0] + Math.sin(a - bend) * 11, knee[1] + Math.cos(a - bend) * 11];
-      limb([hip, knee, foot], side > 0 ? skin : '#a8744d', 5);
+      limb([hip, knee, foot], side > 0 ? skin : limbBack, 5);
       c.fillStyle = outline;
       c.beginPath(); c.ellipse(foot[0] + 2.5, foot[1] - 0.5, 4.8, 2.2, 0, 0, Math.PI * 2); c.fill();
     };
     const arm = (side) => {
       const sh = [side * 2 + 1, -35];
       let a, bend;
-      if (this.throwAnim > 0 && side > 0) {
+      if (hanging) { a = Math.PI - 0.12 * side; bend = 0; }
+      else if (this.cheer) { a = Math.PI - 0.45 * side + Math.sin(time * 9 + side + this.x) * 0.35; bend = 0.3 * side; }
+      else if (this.throwAnim > 0 && side > 0) {
         const t = 1 - this.throwAnim / 0.25;
         a = -2.2 + t * 3.6; bend = -0.3;
       } else if (air) {
@@ -198,7 +245,7 @@ export class Player {
       else { a = 0.1 * side + Math.sin(time * 2.4) * 0.03; bend = -0.15; }
       const elbow = [sh[0] + Math.sin(a) * 9, sh[1] + Math.cos(a) * 9];
       const hand = [elbow[0] + Math.sin(a - bend) * 9, elbow[1] + Math.cos(a - bend) * 9];
-      limb([sh, elbow, hand], side > 0 ? skin : '#a8744d', 4.2);
+      limb([sh, elbow, hand], side > 0 ? skin : limbBack, 4.2);
       if (this.throwAnim > 0.12 && side > 0) {
         c.fillStyle = '#8d8778'; c.beginPath(); c.arc(hand[0], hand[1], 3.2, 0, Math.PI * 2); c.fill();
       }
@@ -235,10 +282,11 @@ export class Player {
     c.fillStyle = '#1d1410'; c.beginPath(); c.arc(8.4, hy + 0.8, 1.3, 0, Math.PI * 2); c.fill();
     // Mond
     c.strokeStyle = '#6d3f2a'; c.lineWidth = 1.2; c.beginPath();
-    if (this.dead || this.invuln > 1) { c.arc(11, hy + 7, 1.6, 0, Math.PI * 2); } else { c.moveTo(9, hy + 6.5); c.quadraticCurveTo(11.5, hy + 7.5, 13.5, hy + 5.8); }
+    if (this.cheer) { c.fillStyle = '#5a2a1c'; c.beginPath(); c.ellipse(11, hy + 6.5, 2.4, 2, 0, 0, Math.PI * 2); c.fill(); }
+    else if (this.dead || this.invuln > 1) { c.arc(11, hy + 7, 1.6, 0, Math.PI * 2); } else { c.moveTo(9, hy + 6.5); c.quadraticCurveTo(11.5, hy + 7.5, 13.5, hy + 5.8); }
     c.stroke();
     // Oor
-    c.fillStyle = '#a8744d'; c.beginPath(); c.ellipse(-3, hy + 1, 2.2, 3.2, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = limbBack; c.beginPath(); c.ellipse(-3, hy + 1, 2.2, 3.2, 0, 0, Math.PI * 2); c.fill();
     c.restore();
     leg(1); arm(1);
     c.restore();

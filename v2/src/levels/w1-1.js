@@ -4,7 +4,7 @@ export default {
   id: '1-1', world: 1, name: 'Eerste stappen',
   species: 'Homo habilis', place: 'Riftvallei, Oost-Afrika', era: 'circa 2,4 miljoen jaar geleden',
   theme: 'savanna', music: 'savanna',
-  width: 212, height: 15,
+  width: 222, height: 15,
   fact: 'Homo habilis betekent "handige mens". Deze vroege mensachtige sloeg scherpe afslagen van keien: de oudste bekende gereedschapscultuur, het Oldowan.',
   build(b) {
     b.ent('start', 3, 3);
@@ -71,18 +71,22 @@ export default {
     b.bones(154, 6, 2);
     b.rock(159, 0, 2, 6);
     b.bones(159, 7, 2);
-    b.ground(163, 186);
+    b.ground(163, 184);
     b.ent('hyena', 167, 3, { fast: true });
     b.spring(169, 3);
     b.bump(171, 7, 'fig'); b.bump(172, 7, 'bone'); b.bump(173, 7, 'bone');
     b.ent('artifact', 172, 8, { id: 'a3', name: 'Oldowan-hakker' });
     b.ent('vulture', 178, 3, { alt: 5 });
 
-    // G · Trap omhoog, sprong omlaag naar het kamp
-    b.stairs(181, 3, 5);
-    b.bones(186, 9, 3, { arc: 0.6 });
-    b.ground(188, 211);
-    b.ent('tree', 196, 3, { scale: 1.15 });
-    b.ent('finish', 192, 3);
+    // G · Verende tak en twee lianen over de kloof naar de grot van de stam
+    b.ent('checkpoint', 164, 3);
+    b.bouncy(185, 2, 2);
+    b.bones(187, 9, 2);
+    b.ent('liana', 189, 13, { len: 4 });
+    b.bones(191, 10, 2, { arc: 0.5 });
+    b.ent('liana', 194, 13, { len: 6 });
+    b.bones(196, 10, 2, { arc: 0.5 });
+    b.ground(199, 221, 5);
+    b.ent('finish', 204, 5);
   },
 };

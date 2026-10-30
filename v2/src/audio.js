@@ -93,6 +93,7 @@ export class Audio {
       case 'hiss': this.noise(t, 0.4, 0.12, 'highpass', 4000, 6000); break;
       case 'screech': this.tone(1300, 0.35, 'sawtooth', 0.05, t, d, 0.6); this.tone(1700, 0.25, 'square', 0.03, t + 0.05, d, 0.7); break;
       case 'snort': this.noise(t, 0.2, 0.3, 'lowpass', 500, 200); this.noise(t + 0.22, 0.2, 0.3, 'lowpass', 500, 200); break;
+      case 'grab': this.noise(t, 0.08, 0.15, 'bandpass', 900, 400); this.tone(240, 0.08, 'triangle', 0.08, t, d, 1.5); break;
       case 'click': this.tone(660, 0.05, 'square', 0.05, t, d); break;
     }
   }

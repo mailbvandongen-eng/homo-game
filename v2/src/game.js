@@ -3,7 +3,7 @@ import { buildLevel, TileMap, moveBody, T } from './level.js';
 import { Player } from './player.js';
 import { ENEMY_TYPES } from './enemies.js';
 import { Fx, star } from './fx.js';
-import { Renderer, drawPickup, drawTree, drawCampfire, drawShelter, flintIcon, artifactIcon } from './render.js';
+import { Renderer, drawPickup, drawTree, drawCampfire, drawLiana, drawCave, flintIcon, artifactIcon } from './render.js';
 
 const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
@@ -15,7 +15,7 @@ export class Game {
     this.fx = new Fx();
     this.state = 'title';     // title | intro | play | paused | dying | complete | gameover
     this.time = 0; this.acc = 0; this.last = 0;
-    this.camX = 0; this.camY = 0; this.look = 0;
+    this.camX = 0; this.camY = 0; this.look = 0; this.zoom = 1;
     this.shakeT = 0; this.shakeA = 0;
     this.debug = new URLSearchParams(location.search).has('debug');
     addEventListener('resize', () => this.resize());
@@ -79,10 +79,19 @@ export class Game {
         else if (e.type === 'tree' || e.type === 'finish' || e.type === 'sign') this.decor.push({ ...e });
       }
     }
+    // Lianen beginnen altijd weer stil
+    this.lianas = L.entities.filter(e => e.type === 'liana').map(e => ({ ax: e.x, ay: e.y, len: (e.len || 4) * TILE, angle: 0, omega: 0, held: false }));
     this.finish = L.entities.find(e => e.type === 'finish');
     if (this.finish && !fromCheckpoint) {
-      this.npcs = [new Player(this.finish.x + 46, this.finish.y), new Player(this.finish.x + 92, this.finish.y)];
-      this.npcs[0].face = -1; this.npcs[1].face = -1;
+      // De stam wacht bij de grot: oudere, volwassenen en een kind
+      const f = this.finish;
+      this.npcs = [
+        new Player(f.x + 92, f.y, { fur: '#7a6a5a', hair: '#9a948a', skin: '#b98a66', size: 0.95 }),
+        new Player(f.x + 150, f.y, { fur: '#9a6844', hair: '#4a2e1c', skin: '#c99a6c', size: 0.93 }),
+        new Player(f.x + 182, f.y, { fur: '#8f6040', hair: '#6a4028', skin: '#d0a070', size: 0.68 }),
+        new Player(f.x + 222, f.y, { fur: '#6e4a30', hair: '#3a2416', skin: '#a8744d', size: 1.06 }),
+      ];
+      this.npcs.forEach((n, i) => { n.face = i === 0 ? 1 : -1; n.phase = i * 1.7; });
     }
   }
 
@@ -115,6 +124,7 @@ export class Game {
     const p = this.player;
     if (p.invuln > 0 || p.dead) return;
     this.hearts--;
+    if (p.hang) { p.hang.held = false; p.hang = null; p.regrab = 0.5; }
     if (this.hearts <= 0) return this.die();
     p.invuln = PHYS.hurtInvuln;
     const dir = Math.sign(p.cx - fromX) || -p.face;
@@ -126,6 +136,7 @@ export class Game {
     const p = this.player;
     if (p.dead) return;
     p.dead = true; p.deadT = 0; p.vy = -560; p.vx = 0;
+    if (p.hang) { p.hang.held = false; p.hang = null; }
     this.hearts = 0;
     this.state = 'dying'; this.dieT = 0;
     this.audio.stopSong(); this.audio.play('die');
@@ -227,15 +238,28 @@ export class Game {
     }
 
     // Finish: even naar de groep lopen, dan het eindscherm
-    if (this.finish && this.finishing === null && p.cx > this.finish.x) {
+    if (this.finish && this.finishing === null && p.cx > this.finish.x && p.onGround) {
       this.finishing = 0; p.auto = 1; this.input.enabled = false;
       this.audio.stopSong(); this.audio.play('win');
+      for (const n of this.npcs) { n.cheer = 1; n.face = Math.sign(p.cx - n.cx) || -1; }
     }
     if (this.finishing !== null) {
       this.finishing += dt;
-      if (p.auto && p.cx > this.finish.x + 26) { p.auto = 0; }
-      if (this.finishing > 2.4 && this.state === 'play') { this.state = 'complete'; this.input.enabled = true; this.ui.complete(this.results()); }
+      if (p.auto && p.cx > this.finish.x + 58) { p.auto = 0; p.cheer = 1; p.face = 1; }
+      // Feest: blaadjes en vonken boven de groep
+      if (Math.random() < dt * 14) {
+        const x = this.finish.x + 60 + Math.random() * 200, y = this.finish.y - 90 - Math.random() * 40;
+        this.fx.sparkle(x, y, ['#ffe27a', '#ff9c5a', '#9cf27a', '#fff6dc'][Math.floor(Math.random() * 4)]);
+      }
+      if (this.finishing > 3.6 && this.state === 'play') { this.state = 'complete'; this.input.enabled = true; this.ui.complete(this.results()); }
     }
+    for (const n of this.npcs || []) {
+      n.hop = n.cheer ? Math.abs(Math.sin(this.time * 7 + n.phase)) * 12 : 0;
+      if (n.cheer && n !== p) n.anim += dt * 6;
+    }
+    p.hop = p.cheer ? Math.abs(Math.sin(this.time * 7)) * 12 : 0;
+
+    this.updateLianas(dt);
 
     this.updateCamera(dt);
     this.fx.update(dt);
@@ -314,7 +338,42 @@ export class Game {
     }
   }
 
+  updateLianas(dt) {
+    const p = this.player;
+    for (const L of this.lianas) {
+      if (!L.held) {
+        L.omega += (-(1700 / L.len) * Math.sin(L.angle) + Math.sin(this.time * 1.3 + L.ax) * 0.25) * dt;
+        L.omega *= 1 - 0.8 * dt;
+        L.angle += L.omega * dt;
+      }
+      if (p.hang || p.regrab > 0 || p.onGround || p.dead) continue;
+      const ex = L.ax + Math.sin(L.angle) * L.len, ey = L.ay + Math.cos(L.angle) * L.len;
+      // Grijpen: een punt op het onderste deel van de liaan raakt je handen of bovenlijf (ruim, voor iedereen)
+      const box = { x: p.x - 16, y: p.y - 14, w: p.w + 32, h: p.h * 0.7 + 14 };
+      for (let t = 0.3; t <= 1.001; t += 0.05) {
+        const px = L.ax + (ex - L.ax) * t, py = L.ay + (ey - L.ay) * t;
+        if (px > box.x && px < box.x + box.w && py > box.y && py < box.y + box.h) {
+          L.len = Math.max(TILE * 1.5, Math.hypot(p.cx - L.ax, p.y - 9 - L.ay));
+          L.angle = Math.atan2(p.cx - L.ax, p.y - 9 - L.ay);
+          p.grab(L); this.audio.play('grab'); break;
+        }
+      }
+    }
+  }
+
   updateCamera(dt) {
+    if (this.finishing !== null) {
+      // Inzoomen op de juichende stam
+      this.zoom += (1.5 - this.zoom) * Math.min(1, dt * 2.5);
+      const vw = this.viewW / this.zoom, vh = this.viewH / this.zoom;
+      const tx = this.finish.x + 140 - vw / 2, ty = this.finish.y - 70 - vh / 2;
+      this.camX += (tx - this.camX) * Math.min(1, dt * 3);
+      this.camY += (ty - this.camY) * Math.min(1, dt * 3);
+      this.camX = Math.max(0, Math.min(this.level.pxW - vw, this.camX));
+      this.camY = Math.max(0, Math.min(this.level.pxH - vh, this.camY));
+      return;
+    }
+    this.zoom = 1;
     const p = this.player;
     const targetLook = Math.abs(p.vx) > 40 ? Math.sign(p.vx) * this.viewW * 0.12 : this.look;
     this.look += (targetLook - this.look) * Math.min(1, dt * 2.2);
@@ -333,28 +392,28 @@ export class Game {
 
   // ---------------- Tekenen ----------------
   draw() {
-    const c = this.c, k = this.scale * this.dpr;
+    const c = this.c, kb = this.scale * this.dpr, k = kb * (this.zoom || 1);
     if (!this.level) { c.fillStyle = '#15252a'; c.fillRect(0, 0, this.cv.width, this.cv.height); return; }
     let sx = 0, sy = 0;
     if (this.shakeT > 0) { sx = (Math.random() - 0.5) * this.shakeA; sy = (Math.random() - 0.5) * this.shakeA; }
     const camX = Math.round((this.camX + sx) * k) / k, camY = Math.round((this.camY + sy) * k) / k;
 
-    c.setTransform(k, 0, 0, k, 0, 0);
+    c.setTransform(kb, 0, 0, kb, 0, 0);
     this.renderer.background(c, this.level.theme, camX, camY, this.viewW, this.viewH, this.level.pxH, this.time);
 
     c.setTransform(k, 0, 0, k, -camX * k, -camY * k);
     const vis = (x, m = 120) => x > camX - m && x < camX + this.viewW + m;
+    this.renderer.pits(c, camX, this.viewW, this.level.pxH);
     for (const d of this.decor) if (d.type === 'tree' && vis(d.x, 200)) drawTree(c, d.x, d.y, d.scale || 1);
-    if (this.finish && vis(this.finish.x, 200)) {
-      drawShelter(c, this.finish.x + 140, this.finish.y);
-      drawCampfire(c, this.finish.x + 70, this.finish.y, true, this.time);
-    }
+    if (this.finish && vis(this.finish.x, 420)) drawCave(c, this.finish.x + 150, this.finish.y, this.time);
     this.renderer.tiles(c, this.map, camX, camY, this.viewW, this.viewH);
     this.renderer.dynamicTiles(c, this.map, camX, this.viewW, this.time);
     for (const d of this.decor) if (d.type === 'sign' && vis(d.x)) drawSign(c, d.x, d.y, d.text);
     for (const f of this.fires) if (vis(f.x)) drawCampfire(c, f.x, f.y, f.lit, this.time);
+    if (this.finish && vis(this.finish.x, 420)) drawCampfire(c, this.finish.x + 122, this.finish.y, true, this.time);
+    for (const L of this.lianas) if (vis(L.ax, 200)) drawLiana(c, L, this.time);
     for (const k2 of this.pickups) if (!k2.taken && vis(k2.x)) drawPickup(c, k2, this.time);
-    if (this.npcs && this.finish && vis(this.finish.x, 200)) for (const n of this.npcs) n.draw(c, this.time + n.x);
+    if (this.npcs && this.finish && vis(this.finish.x, 420)) for (const n of this.npcs) n.draw(c, this.time + n.x);
     for (const e of this.enemies) if (e.active || vis(e.x)) e.draw(c, this.time);
     for (const s of this.stonesFlying) {
       c.save(); c.translate(s.x + 5, s.y + 5); c.rotate(s.spin);

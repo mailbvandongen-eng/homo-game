@@ -10,6 +10,7 @@ export const T = {
   BUMP: 5,     // vuursteenknol: stoot er van onderen tegen
   SPRING: 6,   // termietenheuvel: lanceert je omhoog
   THORNS: 7,   // doornstruik: doet pijn, niet stevig
+  BOUNCY: 8,   // verende tak: van bovenaf stevig en lanceert je
 };
 
 const SOLID = new Set([T.GROUND, T.ROCK, T.CRUMBLE, T.BUMP, T.SPRING]);
@@ -35,6 +36,7 @@ export function buildLevel(def) {
     bump: (x, y, item = 'bone') => { set(x, y, T.BUMP); bumps.set(row(y) * w + x, item); },
     spring: (x, y) => set(x, y, T.SPRING),
     thorns: (x, y, cw = 1) => fill(x, x + cw - 1, y, y, T.THORNS),
+    bouncy: (x, y, cw = 2) => fill(x, x + cw - 1, y, y, T.BOUNCY),
     ent: (type, x, y, opts = {}) => entities.push({ type, ...at(x, y), ...opts }),
     bones: (x, y, n = 1, opts = {}) => {
       for (let i = 0; i < n; i++) {
@@ -72,7 +74,7 @@ export class TileMap {
     if (t === T.CRUMBLE) { const s = this.crumble.get(this.idx(cx, cy)); return !(s && s.gone); }
     return SOLID.has(t);
   }
-  oneWayAt(cx, cy) { return this.get(cx, cy) === T.BRANCH; }
+  oneWayAt(cx, cy) { const t = this.get(cx, cy); return t === T.BRANCH || t === T.BOUNCY; }
 
   update(dt, game) {
     for (const [i, s] of this.crumble) {
