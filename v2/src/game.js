@@ -1,0 +1,454 @@
+import { TILE, VIEW_ROWS, STEP, START_LIVES, MAX_HEARTS, MAX_STONES, PHYS } from './config.js';
+import { buildLevel, TileMap, moveBody, T } from './level.js';
+import { Player } from './player.js';
+import { ENEMY_TYPES } from './enemies.js';
+import { Fx, star } from './fx.js';
+import { Renderer, drawPickup, drawTree, drawCampfire, drawShelter, flintIcon, artifactIcon } from './render.js';
+
+const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+export class Game {
+  constructor(canvas, input, audio, ui) {
+    this.cv = canvas; this.c = canvas.getContext('2d', { alpha: false });
+    this.input = input; this.audio = audio; this.ui = ui;
+    this.renderer = new Renderer();
+    this.fx = new Fx();
+    this.state = 'title';     // title | intro | play | paused | dying | complete | gameover
+    this.time = 0; this.acc = 0; this.last = 0;
+    this.camX = 0; this.camY = 0; this.look = 0;
+    this.shakeT = 0; this.shakeA = 0;
+    this.debug = new URLSearchParams(location.search).has('debug');
+    addEventListener('resize', () => this.resize());
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', () => this.resize());
+    this.resize();
+  }
+
+  resize() {
+    const W = innerWidth, H = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2.5);
+    this.W = W; this.H = H; this.dpr = dpr;
+    this.cv.width = Math.round(W * dpr); this.cv.height = Math.round(H * dpr);
+    this.scale = H / (VIEW_ROWS * TILE);
+    this.viewW = W / this.scale; this.viewH = VIEW_ROWS * TILE;
+    this.renderer.setResolution(Math.min(3, this.scale * dpr));
+    // Touchknoppen (css-pixels), rekening houdend met veilige randen van de telefoon
+    const cs = getComputedStyle(document.documentElement);
+    const safeL = parseFloat(cs.getPropertyValue('--sal')) || 0, safeR = parseFloat(cs.getPropertyValue('--sar')) || 0, safeB = parseFloat(cs.getPropertyValue('--sab')) || 0;
+    this.safe = { l: Math.max(12, safeL), t: Math.max(10, parseFloat(cs.getPropertyValue('--sat')) || 0) };
+    const u = Math.max(0.8, Math.min(1.25, H / 400));
+    const by = H - 62 * u - safeB * 0.5;
+    this.input.layout = {
+      split: W * 0.42,
+      padCenter: safeL + 110 * u,
+      left: { x: safeL + 62 * u, y: by, r: 38 * u },
+      right: { x: safeL + 158 * u, y: by, r: 38 * u },
+      jump: { x: W - safeR - 70 * u, y: by - 4 * u, r: 44 * u },
+      throw: { x: W - safeR - 168 * u, y: by + 14 * u, r: 32 * u },
+      pause: { x: W - safeR - 30, y: 30, r: 20 },
+    };
+  }
+
+  // ---------------- Levels ----------------
+  load(def, keepStats = false) {
+    this.def = def;
+    this.level = buildLevel(def);
+    this.map = new TileMap(this.level);
+    if (!keepStats) { this.lives = START_LIVES; }
+    this.bonesTotal = keepStats ? this.bonesTotal : 0;
+    this.checkpoint = null;
+    this.artifacts = new Set();
+    this.levelTime = 0;
+    this.finishing = null;
+    this.spawnAll();
+    this.player = new Player(this.level.start.x, this.level.start.y);
+    this.hearts = MAX_HEARTS; this.stones = 3; this.bones = 0;
+    this.snapCamera();
+  }
+
+  spawnAll(fromCheckpoint = false) {
+    const L = this.level;
+    this.enemies = []; this.stonesFlying = [];
+    if (!fromCheckpoint) { this.pickups = []; this.decor = []; this.fires = []; }
+    for (const e of L.entities) {
+      if (ENEMY_TYPES[e.type]) {
+        const en = new ENEMY_TYPES[e.type](e.x, e.y, e);
+        en.spawnX = e.x;
+        this.enemies.push(en);
+      } else if (!fromCheckpoint) {
+        if (['bone', 'fig', 'flint', 'artifact'].includes(e.type)) this.pickups.push({ ...e, taken: false });
+        else if (e.type === 'checkpoint') this.fires.push({ ...e, lit: false });
+        else if (e.type === 'tree' || e.type === 'finish' || e.type === 'sign') this.decor.push({ ...e });
+      }
+    }
+    this.finish = L.entities.find(e => e.type === 'finish');
+    if (this.finish && !fromCheckpoint) {
+      this.npcs = [new Player(this.finish.x + 46, this.finish.y), new Player(this.finish.x + 92, this.finish.y)];
+      this.npcs[0].face = -1; this.npcs[1].face = -1;
+    }
+  }
+
+  start(def) {
+    this.load(def);
+    this.state = 'intro'; this.introT = 0;
+    this.audio.playSong(def.music || 'savanna');
+  }
+
+  respawn() {
+    const p = this.checkpoint || this.level.start;
+    this.spawnAll(true);
+    this.map = new TileMap(this.level);
+    this.player.reset(p.x, p.y);
+    this.hearts = MAX_HEARTS; this.stones = Math.max(this.stones, 3);
+    this.snapCamera();
+    this.state = 'intro'; this.introT = 0.6;
+    this.audio.playSong(this.def.music || 'savanna');
+  }
+
+  snapCamera() {
+    const p = this.player;
+    this.look = 0;
+    this.camX = Math.max(0, Math.min(this.level.pxW - this.viewW, p.cx - this.viewW * 0.38));
+    this.camY = Math.max(0, Math.min(this.level.pxH - this.viewH, p.y - this.viewH * 0.55));
+  }
+
+  // ---------------- Spelregels ----------------
+  hurt(fromX) {
+    const p = this.player;
+    if (p.invuln > 0 || p.dead) return;
+    this.hearts--;
+    if (this.hearts <= 0) return this.die();
+    p.invuln = PHYS.hurtInvuln;
+    const dir = Math.sign(p.cx - fromX) || -p.face;
+    p.vx = dir * 200; p.vy = -330; p.onGround = false; p.jumping = false;
+    this.audio.play('hurt'); this.shake(5);
+  }
+
+  die() {
+    const p = this.player;
+    if (p.dead) return;
+    p.dead = true; p.deadT = 0; p.vy = -560; p.vx = 0;
+    this.hearts = 0;
+    this.state = 'dying'; this.dieT = 0;
+    this.audio.stopSong(); this.audio.play('die');
+  }
+
+  throwStone() {
+    if (this.stones <= 0) { this.fx.text(this.player.cx, this.player.y - 6, 'geen stenen'); return; }
+    if (this.stonesFlying.length >= 2) return;
+    const p = this.player;
+    this.stones--;
+    this.stonesFlying.push({ x: p.cx + p.face * 10 - 5, y: p.y + 10, w: 10, h: 10, vx: p.face * 400 + p.vx * 0.35, vy: -240, bounces: 0, life: 1.6, spin: 0 });
+    p.throwAnim = 0.25;
+    this.audio.play('throw');
+  }
+
+  hitHead(cx, cy) {
+    const t = this.map.get(cx, cy), i = this.map.idx(cx, cy);
+    if (t === T.BUMP) {
+      this.map.bounce.set(i, 0.2);
+      this.audio.play('bump');
+      // Vijanden die op het blok staan schrikken weg
+      for (const e of this.enemies) if (!e.fleeing && Math.abs(e.cx - (cx + 0.5) * TILE) < 24 && Math.abs(e.y + e.h - cy * TILE) < 4) e.scare(Math.sign(e.cx - (cx + 0.5) * TILE) || 1, this);
+      const item = this.map.bumpItems.get(i);
+      if (item) {
+        this.map.bumpItems.delete(i);
+        const x = (cx + 0.5) * TILE, y = cy * TILE;
+        if (item === 'bone') { this.addBones(1); this.fx.sparkle(x, y - 10); this.fx.text(x, y - 14, '+1'); }
+        else this.pickups.push({ type: item, x, y: y - 14, taken: false, pop: 0.3 });
+      }
+    } else this.audio.play('bump');
+  }
+
+  addBones(n) {
+    this.bones += n; this.bonesTotal += n;
+    this.audio.play('bone');
+    if (this.bonesTotal >= 100) { this.bonesTotal -= 100; this.lives++; this.audio.play('oneup'); this.fx.text(this.player.cx, this.player.y - 10, '1 UP!', '#9cf27a'); }
+  }
+
+  shake(a) { this.shakeT = 0.25; this.shakeA = a; }
+
+  // ---------------- Lus ----------------
+  frame(now) {
+    const dt = Math.min(0.25, (now - (this.last || now)) / 1000);
+    this.last = now;
+    this.acc += dt;
+    let first = true;
+    while (this.acc >= STEP) {
+      this.step(STEP, first);
+      this.acc -= STEP; first = false;
+    }
+    this.draw();
+  }
+
+  step(dt, readInput) {
+    const inp = readInput ? this.input.read() : { ...this.lastInput, jump: false, throw: false, pause: false };
+    this.lastInput = inp;
+    this.time += dt;
+    if (inp.pause && (this.state === 'play' || this.state === 'intro')) { this.ui.pause(); return; }
+    if (this.state === 'title' || this.state === 'paused' || this.state === 'complete' || this.state === 'gameover') {
+      if (this.state === 'title') this.camX = (this.camX + dt * 40) % Math.max(1, (this.level?.pxW || 4000) - this.viewW);
+      this.fx.update(dt);
+      return;
+    }
+    if (this.state === 'intro') {
+      this.introT += dt;
+      if (this.introT > 1.4) this.state = 'play';
+    }
+    this.map.update(dt, this);
+    const p = this.player;
+    if (this.state === 'play' && this.finishing === null) this.levelTime += dt;
+    p.update(dt, this.state === 'play' ? inp : { left: false, right: false, jumpHeld: false, jump: false, throw: false }, this);
+
+    if (this.state === 'dying') {
+      this.dieT += dt;
+      if (this.dieT > 2.2) {
+        this.lives--;
+        if (this.lives <= 0) { this.state = 'gameover'; this.ui.gameOver(); }
+        else this.respawn();
+      }
+      this.fx.update(dt);
+      return;
+    }
+
+    // In een kuil gevallen
+    if (p.y > this.level.pxH + 40) { this.hearts = 0; this.die(); return; }
+
+    // Doornen
+    const tx1 = Math.floor((p.x + 3) / TILE), tx2 = Math.floor((p.x + p.w - 3) / TILE), ty1 = Math.floor((p.y + 8) / TILE), ty2 = Math.floor((p.y + p.h - 2) / TILE);
+    for (let cx = tx1; cx <= tx2; cx++) for (let cy = ty1; cy <= ty2; cy++) if (this.map.get(cx, cy) === T.THORNS && p.y + p.h > cy * TILE + 14) this.hurt(p.cx - p.vx);
+
+    this.updateEnemies(dt);
+    this.updateStones(dt);
+    this.updatePickups(dt);
+
+    // Kampvuur = checkpoint
+    for (const f of this.fires) if (!f.lit && Math.abs(p.cx - f.x) < 24 && Math.abs(p.bottom - f.y) < 40) {
+      f.lit = true; this.checkpoint = { x: f.x, y: f.y };
+      this.audio.play('checkpoint'); this.fx.sparkle(f.x, f.y - 16, '#ffcf6a'); this.fx.text(f.x, f.y - 40, 'Kampvuur!');
+    }
+
+    // Finish: even naar de groep lopen, dan het eindscherm
+    if (this.finish && this.finishing === null && p.cx > this.finish.x) {
+      this.finishing = 0; p.auto = 1; this.input.enabled = false;
+      this.audio.stopSong(); this.audio.play('win');
+    }
+    if (this.finishing !== null) {
+      this.finishing += dt;
+      if (p.auto && p.cx > this.finish.x + 26) { p.auto = 0; }
+      if (this.finishing > 2.4 && this.state === 'play') { this.state = 'complete'; this.input.enabled = true; this.ui.complete(this.results()); }
+    }
+
+    this.updateCamera(dt);
+    this.fx.update(dt);
+    if (this.shakeT > 0) this.shakeT -= dt;
+    p.prevBottom = p.bottom;
+  }
+
+  results() {
+    return {
+      bones: this.bones, bonesMax: this.level.entities.filter(e => e.type === 'bone').length + [...this.level.bumps.values()].filter(v => v === 'bone').length,
+      artifacts: this.artifacts.size, time: this.levelTime, def: this.def,
+    };
+  }
+
+  updateEnemies(dt) {
+    const p = this.player;
+    const left = this.camX - 64, right = this.camX + this.viewW + 64;
+    for (const e of this.enemies) {
+      if (e.gone) continue;
+      if (!e.active) { if (e.x + e.w > left && e.x < right) e.active = true; else continue; }
+      e.update(dt, this);
+      if (e.y > this.level.pxH + 64) { e.gone = true; continue; }
+      if (!e.harmful() || p.dead) continue;
+      const hb = e.hitbox();
+      if (!overlap(p, hb)) continue;
+      const fromAbove = p.vy > 0 && (p.prevBottom ?? p.bottom) <= hb.y + 10;
+      if (fromAbove && e.stompable) {
+        e.scare(Math.sign(e.cx - p.cx) || p.face, this);
+        p.bounceOff(this.lastInput?.jumpHeld);
+        p.y = hb.y - p.h;
+        this.audio.play('stomp');
+      } else this.hurt(e.cx);
+    }
+    this.enemies = this.enemies.filter(e => !e.gone);
+  }
+
+  updateStones(dt) {
+    for (const s of this.stonesFlying) {
+      s.life -= dt; s.spin += dt * 18;
+      s.vy = Math.min(s.vy + 1500 * dt, 700);
+      const vyBefore = s.vy;
+      const r = moveBody(s, dt, this.map, { ignoreOneWay: true });
+      if (r.wall) { s.life = 0; this.fx.dust(s.x + 5, s.y + 5, 0, 2); this.audio.play('hit'); }
+      if (r.landed) { s.bounces++; s.vy = -vyBefore * 0.45; s.vx *= 0.7; if (s.bounces > 1) s.life = 0; }
+      if (r.ceil) s.vy = 60;
+      for (const e of this.enemies) {
+        if (e.fleeing || !e.active) continue;
+        if (overlap(s, e.hitbox())) { e.scare(Math.sign(s.vx) || 1, this); s.life = 0; this.audio.play('hit'); break; }
+      }
+      if (s.y > this.level.pxH) s.life = 0;
+    }
+    this.stonesFlying = this.stonesFlying.filter(s => s.life > 0);
+  }
+
+  updatePickups(dt) {
+    const p = this.player;
+    const box = { x: p.x - 4, y: p.y - 4, w: p.w + 8, h: p.h + 8 };
+    for (const k of this.pickups) {
+      if (k.taken) continue;
+      if (k.pop > 0) { k.pop -= dt; k.y -= 70 * dt; continue; }
+      if (!overlap(box, { x: k.x - 9, y: k.y - 9, w: 18, h: 18 })) continue;
+      k.taken = true;
+      if (k.type === 'bone') { this.addBones(1); this.fx.sparkle(k.x, k.y, '#fff6dc'); }
+      else if (k.type === 'fig') {
+        this.audio.play('heart'); this.fx.sparkle(k.x, k.y, '#ff9ccf');
+        if (this.hearts < MAX_HEARTS) { this.hearts++; this.fx.text(k.x, k.y - 10, '+♥', '#ff9ccf'); }
+        else { this.addBones(5); this.fx.text(k.x, k.y - 10, '+5'); }
+      } else if (k.type === 'flint') {
+        this.stones = Math.min(MAX_STONES, this.stones + 3);
+        this.audio.play('flint'); this.fx.sparkle(k.x, k.y, '#cfe0ff'); this.fx.text(k.x, k.y - 10, '+3 stenen');
+      } else if (k.type === 'artifact') {
+        this.artifacts.add(k.id ?? k.x);
+        this.audio.play('artifact'); this.fx.sparkle(k.x, k.y, '#ffe27a'); this.fx.sparkle(k.x, k.y, '#ffffff');
+        this.fx.text(k.x, k.y - 14, k.name || 'Artefact!', '#ffe27a');
+      }
+    }
+  }
+
+  updateCamera(dt) {
+    const p = this.player;
+    const targetLook = Math.abs(p.vx) > 40 ? Math.sign(p.vx) * this.viewW * 0.12 : this.look;
+    this.look += (targetLook - this.look) * Math.min(1, dt * 2.2);
+    const tx = p.cx - this.viewW * 0.42 + this.look;
+    this.camX += (tx - this.camX) * Math.min(1, dt * 9);
+    // Verticaal alleen bijsturen buiten een rustige zone
+    const top = this.camY + this.viewH * 0.28, bottom = this.camY + this.viewH * 0.62;
+    let ty = this.camY;
+    if (p.y < top) ty = p.y - this.viewH * 0.28;
+    else if (p.bottom > bottom && p.onGround) ty = p.bottom - this.viewH * 0.62;
+    else if (p.bottom > this.camY + this.viewH * 0.8) ty = p.bottom - this.viewH * 0.8;
+    this.camY += (ty - this.camY) * Math.min(1, dt * 5);
+    this.camX = Math.max(0, Math.min(this.level.pxW - this.viewW, this.camX));
+    this.camY = Math.max(0, Math.min(this.level.pxH - this.viewH, this.camY));
+  }
+
+  // ---------------- Tekenen ----------------
+  draw() {
+    const c = this.c, k = this.scale * this.dpr;
+    if (!this.level) { c.fillStyle = '#15252a'; c.fillRect(0, 0, this.cv.width, this.cv.height); return; }
+    let sx = 0, sy = 0;
+    if (this.shakeT > 0) { sx = (Math.random() - 0.5) * this.shakeA; sy = (Math.random() - 0.5) * this.shakeA; }
+    const camX = Math.round((this.camX + sx) * k) / k, camY = Math.round((this.camY + sy) * k) / k;
+
+    c.setTransform(k, 0, 0, k, 0, 0);
+    this.renderer.background(c, this.level.theme, camX, camY, this.viewW, this.viewH, this.level.pxH, this.time);
+
+    c.setTransform(k, 0, 0, k, -camX * k, -camY * k);
+    const vis = (x, m = 120) => x > camX - m && x < camX + this.viewW + m;
+    for (const d of this.decor) if (d.type === 'tree' && vis(d.x, 200)) drawTree(c, d.x, d.y, d.scale || 1);
+    if (this.finish && vis(this.finish.x, 200)) {
+      drawShelter(c, this.finish.x + 140, this.finish.y);
+      drawCampfire(c, this.finish.x + 70, this.finish.y, true, this.time);
+    }
+    this.renderer.tiles(c, this.map, camX, camY, this.viewW, this.viewH);
+    this.renderer.dynamicTiles(c, this.map, camX, this.viewW, this.time);
+    for (const d of this.decor) if (d.type === 'sign' && vis(d.x)) drawSign(c, d.x, d.y, d.text);
+    for (const f of this.fires) if (vis(f.x)) drawCampfire(c, f.x, f.y, f.lit, this.time);
+    for (const k2 of this.pickups) if (!k2.taken && vis(k2.x)) drawPickup(c, k2, this.time);
+    if (this.npcs && this.finish && vis(this.finish.x, 200)) for (const n of this.npcs) n.draw(c, this.time + n.x);
+    for (const e of this.enemies) if (e.active || vis(e.x)) e.draw(c, this.time);
+    for (const s of this.stonesFlying) {
+      c.save(); c.translate(s.x + 5, s.y + 5); c.rotate(s.spin);
+      c.fillStyle = '#2a2c30'; c.beginPath(); c.moveTo(-5, 1); c.lineTo(-2, -5); c.lineTo(4, -4); c.lineTo(5, 2); c.lineTo(0, 5); c.closePath(); c.fill();
+      c.fillStyle = '#7d8590'; c.beginPath(); c.arc(-1, -1, 2, 0, Math.PI * 2); c.fill(); c.restore();
+    }
+    if (this.state !== 'title') this.player.draw(c, this.time);
+    this.fx.draw(c);
+    if (this.debug) this.drawDebug(c);
+
+    c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    if (this.state !== 'title') { this.drawHud(c); this.drawTouch(c); }
+    if (this.state === 'intro' && this.introT < 1.4) this.drawIntro(c);
+  }
+
+  drawDebug(c) {
+    c.strokeStyle = '#0f0'; c.lineWidth = 1;
+    const p = this.player; c.strokeRect(p.x, p.y, p.w, p.h);
+    c.strokeStyle = '#f00'; for (const e of this.enemies) { const h = e.hitbox(); c.strokeRect(h.x, h.y, h.w, h.h); }
+  }
+
+  drawIntro(c) {
+    const a = Math.min(1, (1.4 - this.introT) * 3, this.introT * 4);
+    c.globalAlpha = a;
+    c.textAlign = 'center';
+    c.fillStyle = '#0d1a1ccc'; c.fillRect(0, this.H * 0.36, this.W, 74);
+    c.fillStyle = '#f6cf75'; c.font = '800 13px system-ui, sans-serif'; c.fillText(`WERELD ${this.def.world} · LEVEL ${this.def.id}`, this.W / 2, this.H * 0.36 + 26);
+    c.fillStyle = '#fff1c4'; c.font = '900 28px system-ui, sans-serif'; c.fillText(this.def.name, this.W / 2, this.H * 0.36 + 58);
+    c.textAlign = 'left'; c.globalAlpha = 1;
+  }
+
+  drawHud(c) {
+    const sl = this.safe.l, st = this.safe.t;
+    const pill = (x, y, w) => { c.fillStyle = '#0f1d1fa8'; c.beginPath(); c.roundRect(x, y, w, 30, 15); c.fill(); };
+    c.font = '800 15px system-ui, sans-serif'; c.textBaseline = 'middle';
+    // Hartjes en levens
+    pill(sl, st, 136);
+    for (let i = 0; i < MAX_HEARTS; i++) heart(c, sl + 18 + i * 22, st + 15, i < this.hearts);
+    miniHead(c, sl + 90, st + 15);
+    c.fillStyle = '#fff1c4'; c.fillText('×' + this.lives, sl + 102, st + 16);
+    // Botjes
+    pill(sl + 144, st, 72);
+    c.save(); c.translate(sl + 162, st + 15); c.scale(0.8, 0.8); drawPickup(c, { type: 'bone', x: 0, y: 0 }, 0); c.restore();
+    c.fillStyle = '#fff1c4'; c.fillText(String(this.bonesTotal).padStart(2, '0'), sl + 178, st + 16);
+    // Stenen
+    pill(sl + 224, st, 60);
+    flintIcon(c, sl + 242, st + 15, 1);
+    c.fillStyle = this.stones ? '#fff1c4' : '#ff9b8a'; c.fillText(String(this.stones), sl + 256, st + 16);
+    // Artefacten
+    pill(sl + 292, st, 84);
+    for (let i = 0; i < 3; i++) artifactIcon(c, sl + 312 + i * 24, st + 15, 1, i < this.artifacts.size);
+    c.textBaseline = 'alphabetic';
+  }
+
+  drawTouch(c) {
+    if (!this.input.touchMode || this.state === 'complete' || this.state === 'gameover') return;
+    const L = this.input.layout, dir = this.input.padDir();
+    const btn = (b, active, draw) => {
+      c.fillStyle = active ? '#f6cf75aa' : '#0f1d1f55'; c.strokeStyle = active ? '#fff3c4' : '#ffffff88'; c.lineWidth = 2;
+      c.beginPath(); c.arc(b.x, b.y, b.r, 0, Math.PI * 2); c.fill(); c.stroke();
+      c.save(); c.translate(b.x, b.y); c.fillStyle = '#fff6dc'; draw(b.r); c.restore();
+    };
+    const arrow = (d) => r => { c.beginPath(); c.moveTo(d * r * 0.38, 0); c.lineTo(-d * r * 0.2, -r * 0.36); c.lineTo(-d * r * 0.2, r * 0.36); c.closePath(); c.fill(); };
+    btn(L.left, dir < 0, arrow(-1));
+    btn(L.right, dir > 0, arrow(1));
+    btn(L.jump, this.input.held('jump'), r => { c.beginPath(); c.moveTo(0, -r * 0.4); c.lineTo(-r * 0.36, r * 0.12); c.lineTo(-r * 0.12, r * 0.12); c.lineTo(-r * 0.12, r * 0.38); c.lineTo(r * 0.12, r * 0.38); c.lineTo(r * 0.12, r * 0.12); c.lineTo(r * 0.36, r * 0.12); c.closePath(); c.fill(); });
+    btn(L.throw, this.input.held('throw'), r => { flintIcon(c, 0, 0, r / 14); });
+    // Pauze
+    const P = L.pause;
+    c.fillStyle = '#0f1d1f88'; c.beginPath(); c.arc(P.x, P.y, P.r, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#fff6dc'; c.fillRect(P.x - 6, P.y - 7, 4, 14); c.fillRect(P.x + 2, P.y - 7, 4, 14);
+  }
+}
+
+function heart(c, x, y, full) {
+  c.save(); c.translate(x, y);
+  c.fillStyle = full ? '#ff5d6c' : '#ffffff30';
+  c.beginPath(); c.moveTo(0, 7); c.bezierCurveTo(-11, -1, -6, -10, 0, -4); c.bezierCurveTo(6, -10, 11, -1, 0, 7); c.fill();
+  if (full) { c.fillStyle = '#ffc2c8'; c.beginPath(); c.arc(-3.5, -3, 1.8, 0, Math.PI * 2); c.fill(); }
+  c.restore();
+}
+
+function miniHead(c, x, y) {
+  c.fillStyle = '#c18a5f'; c.beginPath(); c.arc(x, y, 7, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#5d3a25'; c.beginPath(); c.arc(x - 1, y - 3, 6, Math.PI, 0); c.fill();
+  c.fillStyle = '#1d1410'; c.beginPath(); c.arc(x + 3, y, 1.2, 0, Math.PI * 2); c.fill();
+}
+
+function drawSign(c, x, y, text) {
+  c.save(); c.translate(x, y);
+  c.fillStyle = '#5b3c26'; c.fillRect(-2, -30, 4, 30);
+  c.font = '700 9px system-ui, sans-serif';
+  const w = Math.max(40, c.measureText(text).width + 12);
+  c.fillStyle = '#8a5f3a'; c.beginPath(); c.roundRect(-w / 2, -48, w, 20, 4); c.fill();
+  c.fillStyle = '#fff1c4'; c.textAlign = 'center'; c.fillText(text, 0, -35); c.textAlign = 'left';
+  c.restore();
+}

@@ -1,9 +1,11 @@
-const CACHE="homo-game-v6";
+const CACHE="homo-game-v7";
 const ASSETS=["./","./index.html","./audio.js","./manifest.webmanifest","./icon.svg"];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener("fetch",event=>{
   if(event.request.method!=="GET")return;
+  // De nieuwe versie in v2/ wordt nog ontwikkeld en mag niet uit deze cache komen.
+  if(new URL(event.request.url).pathname.includes("/v2/"))return;
   const request=event.request;
   if(request.mode==="navigate"||request.destination==="document"){
     event.respondWith(fetch(request).then(response=>{
