@@ -3,7 +3,9 @@ import { buildLevel, TileMap, moveBody, T } from './level.js';
 import { Player } from './player.js';
 import { ENEMY_TYPES } from './enemies.js';
 import { Fx, star } from './fx.js';
-import { Renderer, drawPickup, drawTree, drawCampfire, drawLiana, drawCave, flintIcon, artifactIcon } from './render.js';
+import { Renderer, drawPickup, drawTree, drawStoneCache, drawFoodCache, drawLiana, drawCave, flintIcon, artifactIcon } from './render.js';
+import { PLATFORM_TYPES } from './platforms.js';
+import { SPECIES } from './species.js';
 
 const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
@@ -67,7 +69,8 @@ export class Game {
   spawnAll(fromCheckpoint = false) {
     const L = this.level;
     this.enemies = []; this.stonesFlying = [];
-    if (!fromCheckpoint) { this.pickups = []; this.decor = []; this.fires = []; }
+    if (!fromCheckpoint) { this.pickups = []; this.decor = []; this.fires = []; this.meets = []; this.met = new Set(); this.banner = null; }
+    this.platforms = L.entities.filter(e => PLATFORM_TYPES[e.type]).map(e => new PLATFORM_TYPES[e.type](e));
     for (const e of L.entities) {
       if (ENEMY_TYPES[e.type]) {
         const en = new ENEMY_TYPES[e.type](e.x, e.y, e);
@@ -77,6 +80,16 @@ export class Game {
         if (['bone', 'fig', 'flint', 'artifact'].includes(e.type)) this.pickups.push({ ...e, taken: false });
         else if (e.type === 'checkpoint') this.fires.push({ ...e, lit: false });
         else if (e.type === 'tree' || e.type === 'finish' || e.type === 'sign') this.decor.push({ ...e });
+        else if (e.type === 'meet') {
+          // Een groepje van een andere soort: vriendelijk, ze doen hun eigen ding
+          const sp = SPECIES[e.species];
+          const group = (e.offsets || [0, 40, 76]).map((dx, i) => {
+            const n = new Player(e.x + dx, e.y, { ...sp.look, size: (sp.look.size || 1) * (e.sizes?.[i] ?? 1) });
+            n.face = -1; n.phase = i * 2.1; n.idle = e.idle?.[i] || 'chew';
+            return n;
+          });
+          this.meets.push({ ...e, group, seen: false });
+        }
       }
     }
     // Lianen beginnen altijd weer stil
@@ -207,7 +220,10 @@ export class Game {
     this.map.update(dt, this);
     const p = this.player;
     if (this.state === 'play' && this.finishing === null) this.levelTime += dt;
+    for (const pl of this.platforms) pl.update(dt, this);
+    if (p.platform && p.onGround && !p.hang) { p.x += p.platform.dx; p.y += p.platform.dy; }
     p.update(dt, this.state === 'play' ? inp : { left: false, right: false, jumpHeld: false, jump: false, throw: false }, this);
+    this.landOnPlatforms(p);
 
     if (this.state === 'dying') {
       this.dieT += dt;
@@ -222,6 +238,13 @@ export class Game {
 
     // In een kuil gevallen
     if (p.y > this.level.pxH + 40) { this.hearts = 0; this.die(); return; }
+    // In het water gevallen
+    const wy = Math.floor((p.bottom - 14) / TILE);
+    if (!p.onGround && this.map.get(Math.floor(p.cx / TILE), wy) === T.WATER && this.map.get(Math.floor(p.cx / TILE), wy - 1) !== T.WATER) {
+      this.fx.splash(p.cx, wy * TILE + 8); this.audio.play('splash'); this.hearts = 0; this.die(); p.vy = -200; return;
+    }
+    // Bek van de krokodil
+    for (const pl of this.platforms) { const hz = pl.hazard?.(); if (hz && overlap(p, hz)) this.hurt(hz.x + hz.w / 2); }
 
     // Doornen
     const tx1 = Math.floor((p.x + 3) / TILE), tx2 = Math.floor((p.x + p.w - 3) / TILE), ty1 = Math.floor((p.y + 8) / TILE), ty2 = Math.floor((p.y + p.h - 2) / TILE);
@@ -231,11 +254,23 @@ export class Game {
     this.updateStones(dt);
     this.updatePickups(dt);
 
-    // Kampvuur = checkpoint
-    for (const f of this.fires) if (!f.lit && Math.abs(p.cx - f.x) < 24 && Math.abs(p.bottom - f.y) < 40) {
+    // Voorraadplek met stenen = checkpoint (habilis kende nog geen vuur)
+    for (const f of this.fires) if (!f.lit && Math.abs(p.cx - f.x) < 26 && Math.abs(p.bottom - f.y) < 40) {
       f.lit = true; this.checkpoint = { x: f.x, y: f.y };
-      this.audio.play('checkpoint'); this.fx.sparkle(f.x, f.y - 16, '#ffcf6a'); this.fx.text(f.x, f.y - 40, 'Kampvuur!');
+      this.stones = Math.max(this.stones, 5);
+      this.audio.play('checkpoint'); this.fx.sparkle(f.x, f.y - 16, '#cfe0ff'); this.fx.text(f.x, f.y - 40, 'Voorraadplek!');
     }
+
+    // Ontmoetingen met andere soorten
+    for (const m of this.meets) {
+      for (const n of m.group) { n.face = Math.sign(p.cx - n.cx) || -1; n.anim += dt * 2; }
+      if (!m.seen && Math.abs(p.cx - m.x) < 220) {
+        m.seen = true; this.met.add(m.species);
+        this.banner = { sp: SPECIES[m.species], t: 0 };
+        this.audio.play('meet'); this.ui.met?.(m.species);
+      }
+    }
+    if (this.banner) { this.banner.t += dt; if (this.banner.t > 7) this.banner = null; }
 
     // Finish: even naar de groep lopen, dan het eindscherm
     if (this.finish && this.finishing === null && p.cx > this.finish.x && p.onGround) {
@@ -270,7 +305,7 @@ export class Game {
   results() {
     return {
       bones: this.bones, bonesMax: this.level.entities.filter(e => e.type === 'bone').length + [...this.level.bumps.values()].filter(v => v === 'bone').length,
-      artifacts: this.artifacts.size, time: this.levelTime, def: this.def,
+      artifacts: this.artifacts.size, time: this.levelTime, def: this.def, met: [...this.met],
     };
   }
 
@@ -309,6 +344,8 @@ export class Game {
         if (e.fleeing || !e.active) continue;
         if (overlap(s, e.hitbox())) { e.scare(Math.sign(s.vx) || 1, this); s.life = 0; this.audio.play('hit'); break; }
       }
+      for (const pl of this.platforms) { const hz = pl.hazard?.() || (pl.headX && pl.state === 'warn' ? { x: pl.headX() - 4, y: pl.top - 26, w: 38, h: 34 } : null); if (hz && overlap(s, hz)) { pl.scare?.(this); s.life = 0; this.audio.play('hit'); } }
+      if (this.map.get(Math.floor((s.x + 5) / TILE), Math.floor((s.y + 8) / TILE)) === T.WATER) { this.fx.splash(s.x + 5, s.y + 6, 4); s.life = 0; }
       if (s.y > this.level.pxH) s.life = 0;
     }
     this.stonesFlying = this.stonesFlying.filter(s => s.life > 0);
@@ -336,6 +373,24 @@ export class Game {
         this.fx.text(k.x, k.y - 14, k.name || 'Artefact!', '#ffe27a');
       }
     }
+  }
+
+  // Landen op boomstammen, krokodillenruggen en nijlpaarden
+  landOnPlatforms(p) {
+    if (p.hang || p.dead) { p.platform = null; return; }
+    const prev = p.prevBottom ?? p.bottom;
+    let landed = null;
+    if (p.vy >= 0) for (const pl of this.platforms) {
+      if (!pl.standable()) continue;
+      const [a, b] = pl.standX ? pl.standX() : [pl.x, pl.x + pl.w];
+      if (p.x + p.w - 4 < a || p.x + 4 > b) continue;
+      if (p.bottom >= pl.top && prev <= pl.top + 6 + Math.max(0, pl.dy)) { landed = pl; break; }
+    }
+    if (landed) {
+      if (!p.onGround) { p.sx = 1.15; p.sy = 0.87; }
+      p.y = landed.top - p.h; p.vy = 0; p.onGround = true; p.jumping = false;
+    }
+    p.platform = landed;
   }
 
   updateLianas(dt) {
@@ -409,11 +464,13 @@ export class Game {
     this.renderer.tiles(c, this.map, camX, camY, this.viewW, this.viewH);
     this.renderer.dynamicTiles(c, this.map, camX, this.viewW, this.time);
     for (const d of this.decor) if (d.type === 'sign' && vis(d.x)) drawSign(c, d.x, d.y, d.text);
-    for (const f of this.fires) if (vis(f.x)) drawCampfire(c, f.x, f.y, f.lit, this.time);
-    if (this.finish && vis(this.finish.x, 420)) drawCampfire(c, this.finish.x + 122, this.finish.y, true, this.time);
+    for (const f of this.fires) if (vis(f.x)) drawStoneCache(c, f.x, f.y, f.lit, this.time);
+    if (this.finish && vis(this.finish.x, 420)) drawFoodCache(c, this.finish.x + 122, this.finish.y);
     for (const L of this.lianas) if (vis(L.ax, 200)) drawLiana(c, L, this.time);
     for (const k2 of this.pickups) if (!k2.taken && vis(k2.x)) drawPickup(c, k2, this.time);
     if (this.npcs && this.finish && vis(this.finish.x, 420)) for (const n of this.npcs) n.draw(c, this.time + n.x);
+    for (const m of this.meets) if (vis(m.x, 200)) for (const n of m.group) n.draw(c, this.time + n.phase);
+    for (const pl of this.platforms) if (vis(pl.x, 140)) pl.draw(c, this.time);
     for (const e of this.enemies) if (e.active || vis(e.x)) e.draw(c, this.time);
     for (const s of this.stonesFlying) {
       c.save(); c.translate(s.x + 5, s.y + 5); c.rotate(s.spin);
@@ -421,18 +478,39 @@ export class Game {
       c.fillStyle = '#7d8590'; c.beginPath(); c.arc(-1, -1, 2, 0, Math.PI * 2); c.fill(); c.restore();
     }
     if (this.state !== 'title') this.player.draw(c, this.time);
+    this.renderer.water(c, this.map, camX, this.viewW, this.level.pxH, this.time);
     this.fx.draw(c);
     if (this.debug) this.drawDebug(c);
 
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     if (this.state !== 'title') { this.drawHud(c); this.drawTouch(c); }
     if (this.state === 'intro' && this.introT < 1.4) this.drawIntro(c);
+    if (this.banner && this.state === 'play') this.drawBanner(c);
   }
 
   drawDebug(c) {
     c.strokeStyle = '#0f0'; c.lineWidth = 1;
     const p = this.player; c.strokeRect(p.x, p.y, p.w, p.h);
     c.strokeStyle = '#f00'; for (const e of this.enemies) { const h = e.hitbox(); c.strokeRect(h.x, h.y, h.w, h.h); }
+  }
+
+  drawBanner(c) {
+    const b = this.banner, sp = b.sp;
+    const a = Math.min(1, b.t * 4, (7 - b.t) * 2);
+    const w = Math.min(520, this.W - 40), x = (this.W - w) / 2, y = this.safe.t + 44;
+    c.globalAlpha = a;
+    c.font = '13px system-ui, sans-serif';
+    const lines = wrap(c, sp.text, w - 28);
+    const h = 58 + lines.length * 17;
+    c.fillStyle = '#10221fe6'; c.beginPath(); c.roundRect(x, y, w, h, 14); c.fill();
+    c.strokeStyle = '#f6cf7588'; c.lineWidth = 1; c.stroke();
+    c.fillStyle = '#f6cf75'; c.font = '800 11px system-ui, sans-serif'; c.fillText('ONTMOETING · ' + sp.when.toUpperCase(), x + 14, y + 20);
+    c.fillStyle = '#fff1c4'; c.font = '900 18px system-ui, sans-serif'; c.fillText(sp.name, x + 14, y + 42);
+    const nameW = c.measureText(sp.name).width;
+    c.fillStyle = '#cfe1c8'; c.font = 'italic 13px system-ui, sans-serif'; c.fillText(sp.nick, x + 24 + nameW, y + 42);
+    c.fillStyle = '#e8e2c8'; c.font = '13px system-ui, sans-serif';
+    lines.forEach((l, i) => c.fillText(l, x + 14, y + 62 + i * 17));
+    c.globalAlpha = 1;
   }
 
   drawIntro(c) {
@@ -486,6 +564,16 @@ export class Game {
     c.fillStyle = '#0f1d1f88'; c.beginPath(); c.arc(P.x, P.y, P.r, 0, Math.PI * 2); c.fill();
     c.fillStyle = '#fff6dc'; c.fillRect(P.x - 6, P.y - 7, 4, 14); c.fillRect(P.x + 2, P.y - 7, 4, 14);
   }
+}
+
+function wrap(c, text, maxW) {
+  const out = []; let line = '';
+  for (const word of text.split(' ')) {
+    const test = line ? line + ' ' + word : word;
+    if (c.measureText(test).width > maxW && line) { out.push(line); line = word; } else line = test;
+  }
+  if (line) out.push(line);
+  return out;
 }
 
 function heart(c, x, y, full) {

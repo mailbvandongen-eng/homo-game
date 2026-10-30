@@ -11,6 +11,7 @@ export const T = {
   SPRING: 6,   // termietenheuvel: lanceert je omhoog
   THORNS: 7,   // doornstruik: doet pijn, niet stevig
   BOUNCY: 8,   // verende tak: van bovenaf stevig en lanceert je
+  WATER: 9,    // rivier: erin vallen kost een leven
 };
 
 const SOLID = new Set([T.GROUND, T.ROCK, T.CRUMBLE, T.BUMP, T.SPRING]);
@@ -37,6 +38,7 @@ export function buildLevel(def) {
     spring: (x, y) => set(x, y, T.SPRING),
     thorns: (x, y, cw = 1) => fill(x, x + cw - 1, y, y, T.THORNS),
     bouncy: (x, y, cw = 2) => fill(x, x + cw - 1, y, y, T.BOUNCY),
+    water: (x1, x2, top = 2) => fill(x1, x2, 0, top - 1, T.WATER),
     ent: (type, x, y, opts = {}) => entities.push({ type, ...at(x, y), ...opts }),
     bones: (x, y, n = 1, opts = {}) => {
       for (let i = 0; i < n; i++) {

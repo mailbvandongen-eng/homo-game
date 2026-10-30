@@ -8,6 +8,11 @@ export function hash(a, b = 0) { const n = Math.sin(a * 127.1 + b * 311.7) * 437
 
 // ---------------- Achtergrond ----------------
 const THEMES = {
+  gorge: {
+    sky: ['#4f9fd0', '#a9d4d8', '#f7d49a'], sun: '#fff0b8',
+    far: '#c68a5a', farTop: '#dcae7c', mid: '#b5774a', midDark: '#8d9a52', near: '#9aa65a', acacia: '#5d6f3c',
+    mesa: true,
+  },
   savanna: {
     sky: ['#5fb3d9', '#9fd6dc', '#f6e2a8'], sun: '#fff4c4',
     far: '#9cb6b4', farTop: '#b9cdc4', mid: '#9fb46c', midDark: '#7f9a55', near: '#86a64c', acacia: '#5a7840',
@@ -45,10 +50,10 @@ export class Renderer {
     const yOf = (f, h) => groundWorld - h - ref - (camY - ref) * f;
 
     // Verre breukrand van de Riftvallei
-    ridge(c, camX * 0.1, viewW, yOf(0.1, 112), 46, 0.0035, 7, th.far, th.farTop);
+    ridge(c, camX * 0.1, viewW, yOf(0.1, 112), 46, 0.0035, 7, th.far, th.farTop, th.mesa);
     // Middenheuvels met acacia's
     const midY = yOf(0.3, 70);
-    ridge(c, camX * 0.3, viewW, midY, 20, 0.006, 3, th.mid, th.mid);
+    ridge(c, camX * 0.3, viewW, midY, 20, 0.006, 3, th.mid, th.mid, th.mesa);
     for (let i = Math.floor(camX * 0.3 / 230) - 1; i < (camX * 0.3 + viewW) / 230 + 1; i++) {
       if (hash(i, 9) < 0.35) continue;
       const wx = i * 230 + hash(i, 4) * 120, x = wx - camX * 0.3;
@@ -74,9 +79,40 @@ export class Renderer {
     c.fillStyle = g; c.fillRect(camX - 10, top, viewW + 20, levelH - top + 200);
   }
 
+  // Rivierwater: oppervlak met golfjes, van voren getekend zodat dingen erin "zakken"
+  water(c, map, camX, viewW, levelH, time) {
+    const a = Math.max(0, Math.floor(camX / TILE) - 1), b = Math.min(map.w - 1, Math.ceil((camX + viewW) / TILE) + 1);
+    let run = null;
+    const flush = () => {
+      if (!run) return;
+      const { x1, x2, y } = run;
+      const g = c.createLinearGradient(0, y, 0, levelH);
+      g.addColorStop(0, '#3f9fb0cc'); g.addColorStop(0.3, '#2a6f86dd'); g.addColorStop(1, '#123744f0');
+      c.fillStyle = g;
+      c.beginPath(); c.moveTo(x1, levelH + 10);
+      for (let x = x1; x <= x2; x += 6) c.lineTo(x, y + Math.sin(x * 0.05 + time * 3) * 1.6);
+      c.lineTo(x2, levelH + 10); c.closePath(); c.fill();
+      c.strokeStyle = '#c8f0f0aa'; c.lineWidth = 1.5; c.beginPath();
+      for (let x = x1; x <= x2; x += 6) c.lineTo(x, y + Math.sin(x * 0.05 + time * 3) * 1.6);
+      c.stroke();
+      c.fillStyle = '#e8ffff66';
+      for (let x = x1 + 10; x < x2; x += 37) { const o = (time * 18 + x) % 37; c.fillRect(x + o * 0.3, y + 6 + (x % 3) * 4, 8, 1.4); }
+      run = null;
+    };
+    for (let cx = a; cx <= b; cx++) {
+      let top = -1;
+      for (let cy = 0; cy < map.h; cy++) if (map.get(cx, cy) === T.WATER) { top = cy; break; }
+      if (top < 0) { flush(); continue; }
+      const y = top * TILE + 8;
+      if (run && run.y === y && run.x2 === cx * TILE) run.x2 = (cx + 1) * TILE;
+      else { flush(); run = { x1: cx * TILE, x2: (cx + 1) * TILE, y }; }
+    }
+    flush();
+  }
+
   // ---------------- Tegels (in stukken voorgetekend) ----------------
   tiles(c, map, camX, camY, viewW, viewH) {
-    if (map.version !== this.mapVersion) { this.chunks.clear(); this.mapVersion = map.version; }
+    if (map !== this.mapRef || map.version !== this.mapVersion) { this.chunks.clear(); this.mapRef = map; this.mapVersion = map.version; }
     const first = Math.floor(camX / (CHUNK * TILE)), last = Math.floor((camX + viewW) / (CHUNK * TILE));
     for (let i = first; i <= last; i++) {
       if (i < 0 || i * CHUNK >= map.w) continue;
@@ -142,11 +178,22 @@ function ridgeH(wx, amp, freq, seed) {
   return (Math.sin(wx * freq + seed) * 0.6 + Math.sin(wx * freq * 2.3 + seed * 2) * 0.3 + Math.sin(wx * freq * 5.1 + seed) * 0.1) * amp + amp;
 }
 
-function ridge(c, offset, viewW, baseY, amp, freq, seed, color, top) {
+function ridge(c, offset, viewW, baseY, amp, freq, seed, color, top, mesa = false) {
+  // mesa: vlakke toppen en gelaagde wanden, zoals de Olduvai-kloof
+  const hAt = x => { const h = ridgeH(x + offset, amp, freq, seed); return mesa ? Math.min(h, amp * 1.25) : h; };
   c.fillStyle = color;
   c.beginPath(); c.moveTo(-10, 2000);
-  for (let x = -10; x <= viewW + 20; x += 12) c.lineTo(x, baseY - ridgeH(x + offset, amp, freq, seed));
+  for (let x = -10; x <= viewW + 20; x += 12) c.lineTo(x, baseY - hAt(x));
   c.lineTo(viewW + 20, 2000); c.closePath(); c.fill();
+  if (mesa) {
+    c.save(); c.clip();
+    for (let k = 0; k < 8; k++) { c.fillStyle = k % 2 ? '#00000014' : '#ffffff12'; c.fillRect(-10, baseY - amp * 2.6 + k * 11, viewW + 30, 5 + (k % 3) * 2); }
+    c.restore();
+    c.strokeStyle = top; c.lineWidth = 3; c.beginPath();
+    for (let x = -10; x <= viewW + 20; x += 12) c.lineTo(x, baseY - hAt(x) + 2);
+    c.stroke();
+    return;
+  }
   if (top !== color) {
     c.strokeStyle = top; c.lineWidth = 3; c.beginPath();
     for (let x = -10; x <= viewW + 20; x += 12) c.lineTo(x, baseY - ridgeH(x + offset, amp, freq, seed) + 2);
@@ -452,10 +499,41 @@ export function drawCave(c, x, y, time) {
   // Opening met warm licht van binnen
   c.fillStyle = '#1b130e';
   c.beginPath(); c.moveTo(-10, 0); c.quadraticCurveTo(-14, -110, 60, -120); c.quadraticCurveTo(130, -110, 130, 0); c.closePath(); c.fill();
-  const glow = c.createRadialGradient(60, -20, 5, 60, -20, 110); glow.addColorStop(0, `rgba(255,170,70,${0.45 + Math.sin(time * 7) * 0.05})`); glow.addColorStop(1, 'rgba(255,170,70,0)');
+  const glow = c.createRadialGradient(60, -10, 5, 60, -10, 110); glow.addColorStop(0, 'rgba(120,96,70,0.55)'); glow.addColorStop(1, 'rgba(120,96,70,0)');
   c.fillStyle = glow; c.beginPath(); c.moveTo(-10, 0); c.quadraticCurveTo(-14, -110, 60, -120); c.quadraticCurveTo(130, -110, 130, 0); c.closePath(); c.fill();
   // Handafdrukken op de wand (rotskunst-hint)
   c.fillStyle = '#9b4a2c88';
   for (const [hx, hy] of [[-100, -90], [165, -70]]) { c.beginPath(); c.ellipse(hx, hy, 6, 8, 0, 0, Math.PI * 2); c.fill(); for (let f = 0; f < 4; f++) { c.beginPath(); c.ellipse(hx - 5 + f * 3.4, hy - 11, 1.4, 3.5, 0, 0, Math.PI * 2); c.fill(); } }
+  c.restore();
+}
+
+// Voorraadplek: een hoop keien met vuursteen (checkpoint in de tijd vóór vuur)
+export function drawStoneCache(c, x, y, active, time) {
+  c.save(); c.translate(x, y);
+  const stones = [[-14, -4, 7], [-3, -5, 8], [9, -4, 7], [-8, -12, 6], [4, -13, 6], [-2, -19, 5]];
+  for (const [sx, sy, r] of stones) {
+    c.fillStyle = '#5d554a'; c.beginPath(); c.ellipse(sx, sy, r + 1, r * 0.8 + 1, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#a69a85'; c.beginPath(); c.ellipse(sx - 1, sy - 1, r, r * 0.75, 0, 0, Math.PI * 2); c.fill();
+  }
+  if (active) {
+    // Bovenop een glanzende vuursteen-afslag
+    c.fillStyle = '#2a2c30'; c.beginPath(); c.moveTo(-5, -24); c.lineTo(0, -32); c.lineTo(6, -25); c.lineTo(1, -21); c.closePath(); c.fill();
+    c.fillStyle = `rgba(207,224,255,${0.6 + Math.sin(time * 4) * 0.3})`; c.beginPath(); c.moveTo(-1, -29); c.lineTo(2, -27); c.lineTo(0, -25); c.closePath(); c.fill();
+  } else {
+    c.fillStyle = '#ffffff'; c.globalAlpha = 0.45 + Math.sin(time * 3) * 0.3;
+    c.font = 'bold 10px system-ui'; c.textAlign = 'center'; c.fillText('▲', 0, -26); c.textAlign = 'left';
+  }
+  c.restore();
+}
+
+// Bij de finish: verzamelde vruchten, knollen en stenen werktuigen op een groot blad
+export function drawFoodCache(c, x, y) {
+  c.save(); c.translate(x, y);
+  c.fillStyle = '#5f8a36'; c.beginPath(); c.ellipse(0, -2, 26, 6, 0, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#79a743'; c.beginPath(); c.ellipse(-4, -3, 20, 4, 0, 0, Math.PI * 2); c.fill();
+  for (const [fx, fy] of [[-12, -7], [-5, -9], [2, -7], [-8, -13]]) { c.fillStyle = '#7c3360'; c.beginPath(); c.arc(fx, fy, 4, 0, Math.PI * 2); c.fill(); }
+  c.fillStyle = '#b07a48'; c.beginPath(); c.ellipse(12, -7, 7, 3.5, 0.4, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#9a8f7c'; c.beginPath(); c.ellipse(22, -4, 5, 4, 0, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#2a2c30'; c.beginPath(); c.moveTo(26, -3); c.lineTo(31, -9); c.lineTo(34, -3); c.closePath(); c.fill();
   c.restore();
 }

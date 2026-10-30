@@ -5,7 +5,7 @@ export default {
   species: 'Homo habilis', place: 'Riftvallei, Oost-Afrika', era: 'circa 2,4 miljoen jaar geleden',
   theme: 'savanna', music: 'savanna',
   width: 222, height: 15,
-  fact: 'Homo habilis betekent "handige mens". Deze vroege mensachtige sloeg scherpe afslagen van keien: de oudste bekende gereedschapscultuur, het Oldowan.',
+  fact: 'Homo habilis betekent "handige mens". Deze vroege mensachtige sloeg scherpe afslagen van keien: Oldowan-werktuigen. Die techniek is zelfs ouder dan habilis zelf: ook eerdere mensachtigen maakten al stenen werktuigen.',
   build(b) {
     b.ent('start', 3, 3);
 

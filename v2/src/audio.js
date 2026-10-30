@@ -94,6 +94,10 @@ export class Audio {
       case 'screech': this.tone(1300, 0.35, 'sawtooth', 0.05, t, d, 0.6); this.tone(1700, 0.25, 'square', 0.03, t + 0.05, d, 0.7); break;
       case 'snort': this.noise(t, 0.2, 0.3, 'lowpass', 500, 200); this.noise(t + 0.22, 0.2, 0.3, 'lowpass', 500, 200); break;
       case 'grab': this.noise(t, 0.08, 0.15, 'bandpass', 900, 400); this.tone(240, 0.08, 'triangle', 0.08, t, d, 1.5); break;
+      case 'bubble': for (let k = 0; k < 3; k++) this.tone(300 + k * 120, 0.06, 'sine', 0.08, t + k * 0.07, d, 1.8); break;
+      case 'snap': this.noise(t, 0.08, 0.35, 'lowpass', 1200); this.tone(120, 0.12, 'square', 0.12, t, d, 0.5); break;
+      case 'splash': this.noise(t, 0.5, 0.3, 'lowpass', 2500, 300); break;
+      case 'meet': [67, 71, 74, 79].forEach((n, k) => this.tone(midi(n), 0.25, 'triangle', 0.1, t + k * 0.1, d)); break;
       case 'click': this.tone(660, 0.05, 'square', 0.05, t, d); break;
     }
   }
@@ -103,6 +107,13 @@ function midi(n) { return 440 * Math.pow(2, (n - 69) / 12); }
 
 // Eigen melodieën. Lead in achtsten, bas in kwarten.
 const SONGS = {
+  gorge: {
+    bpm: 120, drums: true,
+    lead: [69, 0, 72, 0, 76, 74, 72, 0, 71, 0, 72, 74, 76, 0, 0, 0, 74, 0, 72, 71, 69, 0, 67, 0, 69, 72, 71, 69, 67, 0, 0, 0,
+           69, 0, 72, 0, 76, 0, 79, 77, 76, 0, 74, 72, 74, 0, 0, 0, 72, 0, 74, 76, 77, 76, 74, 72, 71, 0, 72, 71, 69, 0, 0, 0],
+    bass: [45, 52, 45, 52, 41, 48, 41, 48, 43, 50, 43, 50, 40, 47, 40, 47,
+           45, 52, 45, 52, 41, 48, 41, 48, 38, 45, 43, 50, 45, 52, 45, 45],
+  },
   savanna: {
     bpm: 132, drums: true,
     lead: [67, 0, 71, 74, 76, 0, 74, 71, 72, 0, 74, 76, 79, 0, 76, 74, 71, 0, 72, 74, 76, 74, 72, 71, 69, 0, 71, 72, 74, 0, 0, 0,

@@ -15,6 +15,10 @@ export class Fx {
   debris(x, y) {
     for (let i = 0; i < 6; i++) this.add({ kind: 'rock', x: x + (Math.random() - 0.5) * 24, y: y + (Math.random() - 0.5) * 16, vx: (Math.random() - 0.5) * 120, vy: -80 - Math.random() * 120, life: 1, max: 1, r: 3 + Math.random() * 4, g: 1500, rot: Math.random() * 6 });
   }
+  bubble(x, y) { this.add({ kind: 'bubble', x: x + (Math.random() - 0.5) * 16, y, vx: 0, vy: -30 - Math.random() * 20, life: 0.6, max: 0.6, r: 1.5 + Math.random() * 2, g: 0 }); }
+  splash(x, y, n = 12) {
+    for (let i = 0; i < n; i++) this.add({ kind: 'drop', x: x + (Math.random() - 0.5) * 20, y, vx: (Math.random() - 0.5) * 160, vy: -120 - Math.random() * 200, life: 0.6, max: 0.6, r: 2 + Math.random() * 2, g: 900 });
+  }
   text(x, y, str, color = '#fff6d0') { this.texts.push({ x, y, str, color, life: 0.9 }); }
 
   update(dt) {
@@ -31,6 +35,8 @@ export class Fx {
       if (p.kind === 'dust') { c.fillStyle = '#e8d6ae'; c.beginPath(); c.arc(p.x, p.y, p.r * (1.6 - a * 0.6), 0, Math.PI * 2); c.fill(); }
       else if (p.kind === 'star') { star(c, p.x, p.y, 4.5, '#ffe27a'); }
       else if (p.kind === 'spark') { c.fillStyle = p.color; c.fillRect(p.x - 1.5, p.y - 1.5, 3, 3); }
+      else if (p.kind === 'bubble') { c.strokeStyle = '#e8ffff'; c.lineWidth = 1; c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.stroke(); }
+      else if (p.kind === 'drop') { c.fillStyle = '#bfeaf0'; c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.fill(); }
       else if (p.kind === 'rock') { c.save(); c.translate(p.x, p.y); c.rotate(p.rot); c.fillStyle = '#9b7d55'; c.fillRect(-p.r / 2, -p.r / 2, p.r, p.r); c.restore(); }
     }
     c.globalAlpha = 1;

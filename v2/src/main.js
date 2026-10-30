@@ -2,8 +2,10 @@ import { Input } from './input.js';
 import { Audio } from './audio.js';
 import { Game } from './game.js';
 import level11 from './levels/w1-1.js';
+import level12 from './levels/w1-2.js';
+import { SPECIES } from './species.js';
 
-const LEVELS = [level11];
+const LEVELS = [level11, level12];
 const $ = id => document.getElementById(id);
 const canvas = $('game');
 const input = new Input(canvas);
@@ -16,6 +18,11 @@ function show(name) {
   if (btn && !input.touchMode) btn.focus({ preventScroll: true });
 }
 
+// Voortgang wordt op het apparaat bewaard
+const SAVE_KEY = 'homo-v2-save';
+const save = Object.assign({ unlocked: 1, met: [], best: {} }, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}'));
+const store = () => localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+
 let current = 0;
 const ui = {
   pause() { game.state = 'paused'; show('pause'); audio.play('click'); },
@@ -26,11 +33,19 @@ const ui = {
     $('resTime').textContent = `${mm}:${ss}`;
     $('resSpecies').textContent = `${r.def.species} · ${r.def.place}`;
     $('resFact').textContent = r.def.fact;
+    $('resMet').hidden = $('resMetRow').hidden = !r.met.length;
+    $('resMet').textContent = r.met.map(k => SPECIES[k].name).join(', ');
+    save.unlocked = Math.max(save.unlocked, Math.min(LEVELS.length, current + 2));
+    const best = save.best[r.def.id] || {};
+    save.best[r.def.id] = { artifacts: Math.max(best.artifacts || 0, r.artifacts), bones: Math.max(best.bones || 0, r.bones) };
+    store(); renderLevels();
     $('nextLevel').hidden = current + 1 >= LEVELS.length;
     $('soon').hidden = current + 1 < LEVELS.length;
+    $('soon').textContent = `Level ${LEVELS[current].world}-${LEVELS.length + 1} komt binnenkort.`;
     show('complete');
   },
   gameOver() { show('gameover'); },
+  met(k) { if (!save.met.includes(k)) { save.met.push(k); store(); } },
 };
 
 const game = new Game(canvas, input, audio, ui);
@@ -56,7 +71,22 @@ function tryFullscreen() {
 }
 
 const on = (id, fn) => $(id).addEventListener('click', e => { e.preventDefault(); audio.unlock(); audio.play('click'); fn(); });
-on('play', () => startLevel(0));
+on('play', () => startLevel(Math.min(save.unlocked, LEVELS.length) - 1));
+
+// Levelkeuze op het titelscherm
+function renderLevels() {
+  const box = $('levels'); box.innerHTML = '';
+  LEVELS.forEach((L, i) => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.disabled = i >= save.unlocked;
+    const art = save.best[L.id]?.artifacts || 0;
+    b.innerHTML = `<b>${L.id}</b> ${L.name}${i < save.unlocked ? ` <span>${'◆'.repeat(art)}${'◇'.repeat(3 - art)}</span>` : ' 🔒'}`;
+    b.addEventListener('click', e => { e.preventDefault(); audio.unlock(); audio.play('click'); startLevel(i); });
+    box.appendChild(b);
+  });
+  $('play').textContent = save.unlocked > 1 ? `▶ Verder: ${LEVELS[Math.min(save.unlocked, LEVELS.length) - 1].id}` : '▶ Spelen';
+}
+renderLevels();
 on('resume', () => { show(null); game.state = 'play'; game.last = performance.now(); });
 on('restart', () => startLevel(current));
 on('toTitle', () => { show('title'); game.load(LEVELS[0]); game.state = 'title'; audio.playSong('title'); });

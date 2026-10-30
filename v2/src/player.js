@@ -104,6 +104,14 @@ export class Player {
       else { game.hitHead(r.headX, r.headY); this.jumping = false; }
     }
 
+    // Randhulp: net te laag tegen een rand aan? Dan stap je er alsnog op.
+    if (r.wall && this.vy >= 0 && !r.landed) {
+      const cx = r.wall > 0 ? Math.floor((this.x + this.w + 1) / TILE) : Math.floor((this.x - 1) / TILE);
+      const cy = Math.floor((this.y + this.h - 1) / TILE), top = cy * TILE;
+      if (this.y + this.h - top <= 18 && !map.solidAt(cx, cy - 1) && !map.solidAt(cx, cy - 2)) {
+        this.y = top - this.h; this.x += r.wall * 3; this.vy = 0; r.landed = true; r.groundX = cx; r.groundY = cy;
+      }
+    }
     this.onGround = r.landed;
     if (r.landed) {
       this.jumping = false;
@@ -276,6 +284,16 @@ export class Player {
     c.fillStyle = furDark;
     c.beginPath(); c.moveTo(-7, hy + 3); c.quadraticCurveTo(-9, hy - 9, 2, hy - 10); c.quadraticCurveTo(10, hy - 10, 10, hy - 4);
     c.lineTo(4, hy - 3); c.quadraticCurveTo(-1, hy - 2, -3, hy + 5); c.closePath(); c.fill();
+    if (this.look.crest) {
+      // Paranthropus: schedelkam en brede jukbeenderen voor enorme kauwspieren
+      c.fillStyle = '#2c1d15'; c.beginPath(); c.moveTo(-8, hy - 4); c.quadraticCurveTo(-2, hy - 19, 8, hy - 10); c.lineTo(6, hy - 5); c.closePath(); c.fill();
+      c.fillStyle = '#6a4630'; c.beginPath(); c.moveTo(-6, hy - 5); c.quadraticCurveTo(-1, hy - 16, 6, hy - 9); c.lineTo(5, hy - 6); c.closePath(); c.fill();
+      c.fillStyle = '#2c1d15'; c.beginPath(); c.ellipse(4, hy + 4, 10.5, 7.5, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = skin; c.beginPath(); c.ellipse(4, hy + 4, 9, 6.2, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#9a6a48'; c.beginPath(); c.ellipse(1, hy + 2, 4, 3, 0, 0, Math.PI * 2); c.fill();
+      const chew = Math.sin(this.anim * 6) * 1.2;
+      c.fillStyle = '#5a3a26'; c.beginPath(); c.ellipse(10, hy + 7 + chew, 5, 2.2, 0, 0, Math.PI * 2); c.fill();
+    }
     // Wenkbrauwboog en oog
     c.fillStyle = '#7b4f33'; c.beginPath(); c.ellipse(7, hy - 2.5, 5.5, 1.8, 0.1, 0, Math.PI * 2); c.fill();
     c.fillStyle = '#fff3dc'; c.beginPath(); c.ellipse(7.5, hy + 0.6, 2.4, 2.2, 0, 0, Math.PI * 2); c.fill();
