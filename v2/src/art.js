@@ -21,12 +21,39 @@ export function taper(c, x1, y1, x2, y2, w1, w2) {
 
 // Oog met wit, iris, pupil en glimlichtje. look: 1 = open, 0 = dicht.
 export function eye(c, x, y, r, iris, open = 1, angry = false) {
-  if (open < 0.15) { c.strokeStyle = '#2a1a12'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x - r, y); c.quadraticCurveTo(x, y + r * 0.5, x + r, y); c.stroke(); return; }
-  c.fillStyle = '#fffaf0'; c.beginPath(); c.ellipse(x, y, r, r * open, 0, 0, Math.PI * 2); c.fill();
-  c.fillStyle = iris; c.beginPath(); c.arc(x + r * 0.25, y, r * 0.62, 0, Math.PI * 2); c.fill();
-  c.fillStyle = '#120c08'; c.beginPath(); c.arc(x + r * 0.32, y, r * 0.34, 0, Math.PI * 2); c.fill();
-  c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x + r * 0.05, y - r * 0.3, r * 0.22, 0, Math.PI * 2); c.fill();
-  if (angry) { c.fillStyle = '#2a1a12'; c.beginPath(); c.moveTo(x - r * 1.2, y - r * 1.1); c.lineTo(x + r * 1.3, y - r * 0.2); c.lineTo(x + r * 1.3, y - r * 1.3); c.closePath(); c.fill(); }
+  if (open < 0.15) { c.strokeStyle = 'rgba(30,18,10,0.8)'; c.lineWidth = 1; c.beginPath(); c.moveTo(x - r, y); c.quadraticCurveTo(x, y + r * 0.45, x + r, y); c.stroke(); return; }
+  const h = r * 0.72 * open;
+  c.save();
+  c.beginPath(); c.moveTo(x - r, y); c.quadraticCurveTo(x, y - h * 1.35, x + r, y - h * 0.1); c.quadraticCurveTo(x, y + h * 1.2, x - r, y); c.closePath();
+  c.fillStyle = '#efe4cc'; c.fill(); c.clip();
+  c.fillStyle = iris; c.beginPath(); c.arc(x + r * 0.22, y, r * 0.72, 0, Math.PI * 2); c.fill();
+  c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.arc(x + r * 0.22, y + r * 0.1, r * 0.72, Math.PI * 1.05, Math.PI * 1.95, true); c.fill();
+  c.fillStyle = '#0c0806'; c.beginPath(); c.arc(x + r * 0.28, y, r * 0.38, 0, Math.PI * 2); c.fill();
+  c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(x - r, y - h * 1.4, r * 2, h * 0.5);
+  c.restore();
+  c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.arc(x + r * 0.05, y - r * 0.22, r * 0.16, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = 'rgba(30,18,10,0.7)'; c.lineWidth = 0.9; c.beginPath(); c.moveTo(x - r, y); c.quadraticCurveTo(x, y - h * 1.35, x + r, y - h * 0.1); c.stroke();
+  if (angry) { c.fillStyle = 'rgba(40,24,14,0.85)'; c.beginPath(); c.moveTo(x - r * 1.2, y - r * 1.0); c.lineTo(x + r * 1.3, y - r * 0.15); c.lineTo(x + r * 1.3, y - r * 1.1); c.closePath(); c.fill(); }
+}
+
+// Licht van linksboven (zoals bij de bomen): lichtvlek, kernschaduw en vachtstreepjes binnen het huidige pad
+export function paintLight(c, x, y, w, h, light, dark, fur = 0, seed = 1) {
+  const g = c.createRadialGradient(x - w * 0.35, y - h * 0.45, 1, x - w * 0.2, y - h * 0.2, Math.max(w, h) * 1.1);
+  g.addColorStop(0, light + 'aa'); g.addColorStop(0.45, light + '22'); g.addColorStop(1, light + '00');
+  c.fillStyle = g; c.fill();
+  const s = c.createLinearGradient(0, y - h * 0.1, 0, y + h * 0.75);
+  s.addColorStop(0, dark + '00'); s.addColorStop(1, dark + '88');
+  c.fillStyle = s; c.fill();
+  if (fur) {
+    c.save(); c.clip(); c.lineWidth = 0.8; c.lineCap = 'round';
+    for (let i = 0; i < fur; i++) {
+      const fx = x - w + ((i * 37 + seed * 11) % 100) / 100 * w * 2, fy = y - h + ((i * 61 + seed * 7) % 100) / 100 * h * 2;
+      const up = fy < y;
+      c.strokeStyle = up ? light + '66' : dark + '55';
+      c.beginPath(); c.moveTo(fx, fy); c.lineTo(fx - 2.6, fy + 1.6); c.stroke();
+    }
+    c.restore();
+  }
 }
 
 // Zachte schaduw op de grond
@@ -58,10 +85,12 @@ export function quad(c, o, time) {
     let fx = kx + Math.sin(a2) * shin, fy = ky + Math.cos(a2) * shin;
     if (fy > 0) fy = 0;
     const col = far ? mix(base, dark, 0.45) : base;
-    c.fillStyle = far ? mix(dark, '#000000', 0.2) : dark;
-    taper(c, x, y + bh * 0.1, kx, ky, bh * 0.62 + 1.6, bh * 0.32 + 1.6); c.fill();
-    taper(c, kx, ky, fx, fy, bh * 0.32 + 1.6, bh * 0.22 + 1.4); c.fill();
-    c.fillStyle = col;
+    c.fillStyle = far ? mix(dark, base, 0.15) : mix(dark, base, 0.35);
+    taper(c, x, y + bh * 0.1, kx, ky, bh * 0.62 + 0.9, bh * 0.32 + 0.9); c.fill();
+    taper(c, kx, ky, fx, fy, bh * 0.32 + 0.9, bh * 0.22 + 0.8); c.fill();
+    const lg = c.createLinearGradient(x - bh * 0.4, 0, x + bh * 0.4, 0);
+    lg.addColorStop(0, far ? col : mix(col, light, 0.35)); lg.addColorStop(1, mix(col, dark, far ? 0.3 : 0.2));
+    c.fillStyle = lg;
     taper(c, x, y + bh * 0.1, kx, ky, bh * 0.62, bh * 0.32); c.fill();
     taper(c, kx, ky, fx, fy, bh * 0.32, bh * 0.22); c.fill();
     c.fillStyle = far ? mix(dark, '#000000', 0.3) : dark;
@@ -84,13 +113,14 @@ export function quad(c, o, time) {
     c.quadraticCurveTo(hipX - bh * 0.55, hipY + bh * 0.25, hipX - bh * 0.35, hipY - bh * 0.1);
     c.closePath();
   };
-  bodyPath(); c.fillStyle = dark; c.lineWidth = 3; c.strokeStyle = dark; c.stroke();
+  bodyPath(); c.lineWidth = 1.3; c.strokeStyle = mix(dark, base, 0.25); c.stroke();
   const g = c.createLinearGradient(0, by - bh, 0, by + bh * 0.8);
   g.addColorStop(0, light); g.addColorStop(0.45, base); g.addColorStop(1, mix(base, dark, 0.45));
   bodyPath(); c.fillStyle = g; c.fill();
   c.clip();
-  if (o.belly) { c.fillStyle = o.belly; c.beginPath(); c.ellipse(0, by + bh * 0.62, L * 0.55, bh * 0.38, 0, 0, Math.PI * 2); c.fill(); }
+  if (o.belly) { c.fillStyle = o.belly; c.globalAlpha = 0.7; c.beginPath(); c.ellipse(0, by + bh * 0.62, L * 0.55, bh * 0.38, 0, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1; }
   drawPattern(c, o, by, L, bh);
+  bodyPath(); paintLight(c, 0, by, L * 0.7, bh * 0.8, light, mix(dark, '#000000', 0.2), 46, o.seed ? Math.floor(o.seed * 10) : 3);
   c.restore();
   // Rand van licht langs de rug
   c.strokeStyle = mix(light, '#ffffff', 0.4); c.globalAlpha = 0.55; c.lineWidth = 1.4;
@@ -146,7 +176,7 @@ function drawTail(c, o, x, y, time) {
   } else if (o.tail === 'brush') {
     // Ruige staart: dik bij de aanzet, hangt naar achteren en omlaag
     const brush = () => { c.beginPath(); c.moveTo(0, -2); c.bezierCurveTo(-8, -6, -16, -2, -19, 8); c.bezierCurveTo(-20, 14, -14, 15, -12, 10); c.bezierCurveTo(-10, 4, -5, 3, 0, 3); c.closePath(); };
-    brush(); c.lineWidth = 2.4; c.strokeStyle = o.dark; c.stroke(); brush(); c.fillStyle = col; c.fill();
+    brush(); c.lineWidth = 1.1; c.strokeStyle = mix(o.dark, col, 0.3); c.stroke(); brush(); c.fillStyle = col; c.fill(); brush(); paintLight(c, -10, 4, 10, 8, o.light, o.dark, 12, 2);
     c.fillStyle = o.dark; c.globalAlpha = 0.5; c.beginPath(); c.ellipse(-16, 11, 3.5, 4, 0.4, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
   } else if (o.tail === 'whip') {
     c.strokeStyle = o.dark; c.lineWidth = 2; c.lineCap = 'round';
@@ -165,7 +195,7 @@ function drawHead(c, o, x, y, time) {
   const blink = (Math.sin(time * 0.9 + (o.seed || 0) * 3) > 0.985) ? 0 : 1;
   const open = o.eyeOpen ?? blink;
   c.save(); c.translate(x, y); c.scale(s, s);
-  const fillShape = (fn, col) => { fn(); c.lineWidth = 2.6; c.strokeStyle = dark; c.stroke(); fn(); c.fillStyle = col; c.fill(); };
+  const fillShape = (fn, col) => { fn(); c.lineWidth = 1.1; c.strokeStyle = mix(dark, base, 0.2); c.stroke(); fn(); c.fillStyle = col; c.fill(); fn(); paintLight(c, 0, -2, 10, 8, light, mix(dark, '#000000', 0.2), 10, 5); };
   const grad = (y0, y1) => { const g = c.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, light); g.addColorStop(0.6, base); g.addColorStop(1, mix(base, dark, 0.35)); return g; };
   const mouth = o.mouth || 0;
   if (o.head === 'lion' && o.mane) {
@@ -176,7 +206,7 @@ function drawHead(c, o, x, y, time) {
     c.fillStyle = mix(o.mane, '#ffd090', 0.25); c.beginPath(); c.arc(-6, -6, 4, 0, Math.PI * 2); c.fill();
   }
   // Oren
-  const ear = (ex, ey, rot, w, h) => { c.save(); c.translate(ex, ey); c.rotate(rot); c.fillStyle = dark; c.beginPath(); c.ellipse(0, 0, w + 1.2, h + 1.2, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = base; c.beginPath(); c.ellipse(0, 0, w, h, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = o.earIn || mix(base, '#e8a090', 0.4); c.beginPath(); c.ellipse(0.5, 1, w * 0.5, h * 0.55, 0, 0, Math.PI * 2); c.fill(); c.restore(); };
+  const ear = (ex, ey, rot, w, h) => { c.save(); c.translate(ex, ey); c.rotate(rot); c.fillStyle = mix(dark, base, 0.3); c.beginPath(); c.ellipse(0, 0, w + 0.7, h + 0.7, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = base; c.beginPath(); c.ellipse(0, 0, w, h, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = o.earIn || mix(base, '#e8a090', 0.4); c.beginPath(); c.ellipse(0.5, 1, w * 0.5, h * 0.55, 0, 0, Math.PI * 2); c.fill(); c.restore(); };
   const H = o.head;
   if (H === 'hyena') { ear(-5, -10, -0.35, 4.2, 5.5); ear(1, -11, 0.15, 4.2, 5.5); }
   else if (H === 'dog') { ear(-4, -11, -0.15, 2.6, 6.5); ear(1, -12, 0.2, 2.6, 6.5); }

@@ -1,5 +1,5 @@
 import { TILE } from './config.js';
-import { taper, taper as tp, mix, mix as mixA, eye, eye as eyeA, groundShadow } from './art.js';
+import { taper, taper as tp, mix, mix as mixA, eye, eye as eyeA, groundShadow, paintLight } from './art.js';
 
 // Bewegende dingen waar je op kunt staan. Elk heeft:
 //  x, top, w            standvlak
@@ -84,9 +84,10 @@ export class Croc {
     for (let i = 0; i < 5; i++) { const t = i / 5, x = -46 - t * 26, y = 2 + t * (sw * 0.8); c.fillStyle = light; c.beginPath(); c.moveTo(x - 2, y); c.lineTo(x, y - 4 + t * 2); c.lineTo(x + 2, y); c.fill(); }
     // Lijf met schubbenrijen
     const bodyP = () => { c.beginPath(); c.moveTo(-46, 10); c.bezierCurveTo(-46, -4, -20, -4, 0, -3); c.bezierCurveTo(16, -2, 26, 0, 30, 6); c.bezierCurveTo(26, 15, -20, 17, -46, 10); c.closePath(); };
-    bodyP(); c.lineWidth = 3; c.strokeStyle = o; c.stroke();
+    bodyP(); c.lineWidth = 1.2; c.strokeStyle = mixA(o, body, 0.3); c.stroke();
     const g = c.createLinearGradient(0, -4, 0, 16); g.addColorStop(0, light); g.addColorStop(0.5, body); g.addColorStop(1, mixA(body, o, 0.4));
     bodyP(); c.fillStyle = g; c.fill();
+    c.save(); bodyP(); c.clip(); bodyP(); paintLight(c, -8, 5, 34, 10, mixA(light, '#ffffff', 0.3), mixA(body, o, 0.6), 0); c.restore();
     c.fillStyle = mixA(light, '#ffffff', 0.15);
     for (let i = -40; i < 22; i += 7) { c.beginPath(); c.moveTo(i - 3, -2); c.lineTo(i, -7); c.lineTo(i + 3, -2); c.closePath(); c.fill(); }
     c.strokeStyle = mixA(body, o, 0.5); c.lineWidth = 1; for (let i = -38; i < 24; i += 6) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i, 10); c.stroke(); }
@@ -97,7 +98,7 @@ export class Croc {
     if (this.open > 0.1) { c.fillStyle = '#b84a4a'; c.beginPath(); c.moveTo(27, 5); c.lineTo(27 + 30 * Math.cos(a), 5 - 30 * Math.sin(a)); c.lineTo(56, 5); c.closePath(); c.fill(); }
     c.save(); c.translate(26, 4); c.rotate(-a);
     const jaw = () => { c.beginPath(); c.moveTo(-4, 2); c.bezierCurveTo(-4, -10, 20, -10, 33, -3); c.quadraticCurveTo(35, 1, 31, 2); c.closePath(); };
-    jaw(); c.lineWidth = 2.6; c.strokeStyle = o; c.stroke();
+    jaw(); c.lineWidth = 1.1; c.strokeStyle = mixA(o, body, 0.3); c.stroke();
     const jg = c.createLinearGradient(0, -9, 0, 2); jg.addColorStop(0, light); jg.addColorStop(1, body); jaw(); c.fillStyle = jg; c.fill();
     c.fillStyle = '#f4f0dc'; for (let i = 3; i < 30; i += 4.5) { c.beginPath(); c.moveTo(i, 1); c.lineTo(i + 1.6, 4.5); c.lineTo(i + 3.2, 1); c.fill(); }
     c.fillStyle = o; c.beginPath(); c.arc(31, -4, 1.2, 0, Math.PI * 2); c.fill();
@@ -137,12 +138,13 @@ export class Hippo {
     c.save(); c.translate(x + w / 2 + wob, y);
     const o = '#2a2028', body = '#7a6674', light = '#a8909c', pink = '#d89aa0';
     const back = () => { c.beginPath(); c.ellipse(-6, 20, 50, 23, 0, Math.PI, 0); c.closePath(); };
-    back(); c.lineWidth = 3; c.strokeStyle = o; c.stroke();
+    back(); c.lineWidth = 1.2; c.strokeStyle = mixA(o, body, 0.3); c.stroke();
     const g = c.createLinearGradient(0, -4, 0, 20); g.addColorStop(0, light); g.addColorStop(1, body); back(); c.fillStyle = g; c.fill();
+    back(); paintLight(c, -6, 10, 46, 14, mixA(light, '#ffffff', 0.35), mixA(body, o, 0.5), 0);
     c.fillStyle = 'rgba(255,255,255,0.35)'; c.beginPath(); c.ellipse(-16, 3, 20, 3.5, -0.05, 0, Math.PI * 2); c.fill();
     // Kop met roze wangen, neusgaten en oren die wiebelen
     const head = () => { c.beginPath(); c.ellipse(36, 15, 19, 14, 0, Math.PI, 0); c.closePath(); };
-    head(); c.lineWidth = 3; c.strokeStyle = o; c.stroke(); head(); c.fillStyle = g; c.fill();
+    head(); c.lineWidth = 1.2; c.strokeStyle = mixA(o, body, 0.3); c.stroke(); head(); c.fillStyle = g; c.fill(); head(); paintLight(c, 36, 8, 18, 10, mixA(light, '#ffffff', 0.35), mixA(body, o, 0.5), 0);
     c.fillStyle = pink; c.globalAlpha = 0.55; c.beginPath(); c.ellipse(46, 13, 6, 3, 0, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
     const ear = this.state === 'warn' ? Math.sin(time * 25) * 0.5 : Math.sin(time * 2) * 0.15;
     for (const ex of [26, 38]) { c.save(); c.translate(ex, 2); c.rotate(ear); c.fillStyle = o; c.beginPath(); c.ellipse(0, -2, 3.6, 4.6, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = pink; c.beginPath(); c.ellipse(0, -2, 2, 3, 0, 0, Math.PI * 2); c.fill(); c.restore(); }
@@ -176,14 +178,15 @@ export class Stegodon extends Log {
     };
     leg(-22, Math.PI, true); leg(38, Math.PI * 1.5, true);
     const body = () => { c.beginPath(); c.ellipse(0, 26, 57, 30, 0, 0, Math.PI * 2); };
-    body(); c.lineWidth = 3; c.strokeStyle = o; c.stroke();
+    body(); c.lineWidth = 1.3; c.strokeStyle = mixA(o, skin, 0.3); c.stroke();
     const g = c.createLinearGradient(0, -4, 0, 56); g.addColorStop(0, light); g.addColorStop(0.5, skin); g.addColorStop(1, mix(skin, o, 0.4));
     body(); c.fillStyle = g; c.fill();
+    body(); paintLight(c, -4, 18, 52, 26, mix(light, '#ffffff', 0.3), mix(skin, o, 0.5), 60, 3);
     c.strokeStyle = mix(skin, o, 0.3); c.lineWidth = 1; for (let i = -40; i < 40; i += 9) { c.beginPath(); c.moveTo(i, 10); c.quadraticCurveTo(i + 3, 26, i - 1, 44); c.stroke(); }
     leg(-38, 0, false); leg(22, Math.PI / 2, false);
     // Kop met oor, slurf en lange slagtanden
     const head = () => { c.beginPath(); c.ellipse(56, 24, 19, 18, 0, 0, Math.PI * 2); };
-    head(); c.lineWidth = 3; c.strokeStyle = o; c.stroke();
+    head(); c.lineWidth = 1.3; c.strokeStyle = mixA(o, skin, 0.3); c.stroke();
     const hg = c.createLinearGradient(40, 6, 70, 42); hg.addColorStop(0, light); hg.addColorStop(1, skin); head(); c.fillStyle = hg; c.fill();
     c.fillStyle = mix(skin, o, 0.25); c.beginPath(); c.ellipse(44, 26, 11, 15, -0.2, 0, Math.PI * 2); c.fill();
     c.strokeStyle = o; c.lineWidth = 10; c.lineCap = 'round'; c.beginPath(); c.moveTo(68, 32); c.quadraticCurveTo(80, 54 + Math.sin(ph) * 4, 72, 72); c.stroke();

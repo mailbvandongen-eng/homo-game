@@ -699,12 +699,12 @@ Gnu.prototype.draw = function (c, time) {
 // ------------------------------------------------------------------
 // Overige dieren in de nieuwe stijl
 // ------------------------------------------------------------------
-import { taper as tp, eye as eyeA, mix as mixA, groundShadow as shadowA } from './art.js';
+import { taper as tp, eye as eyeA, mix as mixA, groundShadow as shadowA, paintLight } from './art.js';
 
 function tube(c, pts, w0, w1, outline, fill, belly) {
   // Dikke, taps toelopende "slang" langs een reeks punten
   const n = pts.length;
-  for (const [col, extra] of [[outline, 2.6], [fill, 0]]) {
+  for (const [col, extra] of [[mixA(outline, fill, 0.3), 1.1], [fill, 0]]) {
     c.fillStyle = col;
     for (let i = 0; i < n - 1; i++) { const w = w0 + (w1 - w0) * i / (n - 1), w2 = w0 + (w1 - w0) * (i + 1) / (n - 1); tp(c, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], w + extra, w2 + extra); c.fill(); }
   }
@@ -727,7 +727,7 @@ Snake.prototype.draw = function (c, time) {
   c.fillStyle = light; for (let i = 2; i < pts.length - 2; i += 2) { c.beginPath(); c.moveTo(pts[i][0] - 2, pts[i][1] - 2.4); c.lineTo(pts[i][0], pts[i][1] - 4); c.lineTo(pts[i][0] + 2, pts[i][1] - 2.4); c.lineTo(pts[i][0], pts[i][1] - 1); c.closePath(); c.fill(); }
   // Kop
   c.save(); c.translate(hx + 3, hy);
-  c.fillStyle = o; c.beginPath(); c.ellipse(0, 0, 8, 5.8, 0.1, 0, Math.PI * 2); c.fill();
+  c.fillStyle = mixA(o, body, 0.35); c.beginPath(); c.ellipse(0, 0, 7.2, 5.1, 0.1, 0, Math.PI * 2); c.fill();
   const hg = c.createLinearGradient(0, -5, 0, 5); hg.addColorStop(0, light); hg.addColorStop(1, body);
   c.fillStyle = hg; c.beginPath(); c.ellipse(0, 0, 6.6, 4.5, 0.1, 0, Math.PI * 2); c.fill();
   c.fillStyle = belly; c.beginPath(); c.ellipse(1, 2.4, 4.5, 1.4, 0.1, 0, Math.PI * 2); c.fill();
@@ -753,7 +753,7 @@ Vulture.prototype.draw = function (c, time) {
   const wing = (back) => {
     c.save(); if (back) c.scale(1, -0.6);
     const up = flap * 9;
-    c.fillStyle = back ? dk : md; c.strokeStyle = o; c.lineWidth = 1.6;
+    c.fillStyle = back ? dk : md; c.strokeStyle = mixA(o, md, 0.3); c.lineWidth = 1;
     c.beginPath(); c.moveTo(-9, -1);
     c.quadraticCurveTo(-10, -10 - up, -6, -17 - up * 1.2);
     for (let k = 0; k < 4; k++) { const fx = -6 + k * 3.5, fy = -17 - up * 1.2 + k * 2.2; c.lineTo(fx + 1.5, fy - 3); c.lineTo(fx + 2.5, fy + 1.5); }
@@ -763,9 +763,10 @@ Vulture.prototype.draw = function (c, time) {
   };
   if (!diving) wing(true);
   // Lijf
-  c.fillStyle = o; c.beginPath(); c.ellipse(0, 0, 15, 8, 0, 0, Math.PI * 2); c.fill();
+  c.fillStyle = mixA(o, dk, 0.4); c.beginPath(); c.ellipse(0, 0, 14, 7.2, 0, 0, Math.PI * 2); c.fill();
   const bg = c.createLinearGradient(0, -7, 0, 7); bg.addColorStop(0, lt); bg.addColorStop(1, dk);
   c.fillStyle = bg; c.beginPath(); c.ellipse(0, 0, 13.4, 6.6, 0, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.ellipse(0, 0, 13.4, 6.6, 0, 0, Math.PI * 2); paintLight(c, 0, 0, 13, 6.6, mixA(lt, '#ffffff', 0.3), dk, 20, 6);
   c.fillStyle = o; c.beginPath(); c.moveTo(-12, -2); c.lineTo(-21, -4); c.lineTo(-20, 1); c.lineTo(-22, 4); c.lineTo(-12, 3); c.closePath(); c.fill();
   // Witte kraag, kale nek en kop met haaksnavel
   c.fillStyle = '#f2ead8'; c.beginPath(); c.ellipse(9, -2, 5, 4.2, 0, 0, Math.PI * 2); c.fill();
@@ -787,12 +788,13 @@ Baboon.prototype.draw = function (c, time) {
   if (mac) c.scale(0.85, 0.85);
   const o = '#251c14', fur = mac ? '#8f8674' : '#9a8558', lt = mac ? '#b8ae98' : '#c4ae7a', face = mac ? '#d49a88' : '#4e3e34';
   // Staart
-  c.strokeStyle = o; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(-9, -6); c.bezierCurveTo(-20, -8, -24, 0, -18, 6 + Math.sin(time * 3) * 2); c.stroke();
+  c.strokeStyle = mixA(o, fur, 0.3); c.lineWidth = 4.2; c.lineCap = 'round'; c.beginPath(); c.moveTo(-9, -6); c.bezierCurveTo(-20, -8, -24, 0, -18, 6 + Math.sin(time * 3) * 2); c.stroke();
   c.strokeStyle = fur; c.lineWidth = 3; c.beginPath(); c.moveTo(-9, -6); c.bezierCurveTo(-20, -8, -24, 0, -18, 6 + Math.sin(time * 3) * 2); c.stroke();
   // Lijf (zittend)
   const body = () => { c.beginPath(); c.moveTo(-12, -2); c.bezierCurveTo(-16, -18, -2, -28, 6, -22); c.bezierCurveTo(12, -16, 10, -4, 6, 0); c.closePath(); };
-  body(); c.lineWidth = 2.6; c.strokeStyle = o; c.stroke();
+  body(); c.lineWidth = 1.1; c.strokeStyle = mixA(o, fur, 0.3); c.stroke();
   const g = c.createLinearGradient(-10, -26, 8, 0); g.addColorStop(0, lt); g.addColorStop(1, mixA(fur, o, 0.3)); body(); c.fillStyle = g; c.fill();
+  c.save(); body(); c.clip(); body(); paintLight(c, -2, -14, 11, 13, mixA(lt, '#fff0d0', 0.4), mixA(fur, o, 0.6), 30, 2); c.restore();
   c.strokeStyle = mixA(fur, o, 0.4); c.lineWidth = 1; for (let i = 0; i < 5; i++) { c.beginPath(); c.moveTo(-10 + i * 3, -20 + i); c.lineTo(-13 + i * 3, -16 + i); c.stroke(); }
   // Poten
   c.fillStyle = o; tp(c, -6, -4, -2, 0, 7, 5); c.fill(); tp(c, 2, -4, 6, 0, 7, 5); c.fill();
@@ -803,8 +805,9 @@ Baboon.prototype.draw = function (c, time) {
   c.fillStyle = o; tp(c, ax, ay, hx, hy, 6.5, 5); c.fill(); c.fillStyle = fur; tp(c, ax, ay, hx, hy, 4.5, 3.2); c.fill();
   if (this.state === 'aim') { c.fillStyle = '#7a3e10'; c.beginPath(); c.arc(hx, hy + 1, 5, 0, Math.PI * 2); c.fill(); c.fillStyle = '#e8902e'; c.beginPath(); c.arc(hx, hy + 1, 3.8, 0, Math.PI * 2); c.fill(); }
   // Kop
-  c.fillStyle = o; c.beginPath(); c.ellipse(8, -27, 8.5, 8, 0, 0, Math.PI * 2); c.fill();
+  c.fillStyle = mixA(o, fur, 0.3); c.beginPath(); c.ellipse(8, -27, 7.8, 7.4, 0, 0, Math.PI * 2); c.fill();
   c.fillStyle = lt; c.beginPath(); c.ellipse(8, -27, 7.2, 6.8, 0, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.ellipse(8, -27, 7.2, 6.8, 0, 0, Math.PI * 2); paintLight(c, 8, -27, 7, 7, mixA(lt, '#ffffff', 0.4), mixA(fur, o, 0.5), 0);
   const sn = mac ? 4 : 7;
   c.fillStyle = o; c.beginPath(); c.ellipse(11 + sn * 0.5, -24.5, sn + 1.3, 4.6, 0.1, 0, Math.PI * 2); c.fill();
   c.fillStyle = face; c.beginPath(); c.ellipse(11 + sn * 0.5, -24.5, sn, 3.4, 0.1, 0, Math.PI * 2); c.fill();
@@ -820,7 +823,7 @@ Bat.prototype.draw = function (c, time) {
   const o = '#1c141c', mem = '#4a3448', body = '#5e4a5a';
   for (const s of [-1, 1]) {
     const tipY = -4 - f * 9;
-    c.fillStyle = mem; c.strokeStyle = o; c.lineWidth = 1.4;
+    c.fillStyle = mem; c.strokeStyle = mixA(o, mem, 0.3); c.lineWidth = 0.9;
     c.beginPath(); c.moveTo(0, -1); c.quadraticCurveTo(s * 7, tipY - 4, s * 16, tipY);
     c.quadraticCurveTo(s * 13, tipY + 5, s * 12, 3); c.quadraticCurveTo(s * 9, 1, s * 7, 5); c.quadraticCurveTo(s * 4, 2, 0, 4); c.closePath(); c.fill(); c.stroke();
     c.strokeStyle = 'rgba(255,255,255,0.15)'; c.beginPath(); c.moveTo(0, 0); c.lineTo(s * 12, 3); c.moveTo(s * 5, -2); c.lineTo(s * 7, 5); c.stroke();
@@ -854,7 +857,7 @@ Varaan.prototype.draw = function (c, time) {
   c.fillStyle = mixA(skin, o, 0.3); for (let i = 2; i < pts.length; i += 2) { c.beginPath(); c.arc(pts[i][0] + 1, pts[i][1] - 0.5, 1, 0, Math.PI * 2); c.fill(); }
   // Kop
   const hp = pts[pts.length - 1];
-  c.fillStyle = o; c.beginPath(); c.ellipse(hp[0] + 6, hp[1] - 1, 9, 5, 0.05, 0, Math.PI * 2); c.fill();
+  c.fillStyle = mixA(o, skin, 0.35); c.beginPath(); c.ellipse(hp[0] + 6, hp[1] - 1, 8.4, 4.4, 0.05, 0, Math.PI * 2); c.fill();
   c.fillStyle = skin; c.beginPath(); c.ellipse(hp[0] + 6, hp[1] - 1, 7.8, 3.8, 0.05, 0, Math.PI * 2); c.fill();
   eyeA(c, hp[0] + 6, hp[1] - 2.5, 1.5, '#e8c840', 1);
   if (Math.sin(time * 5 + this.t) > 0.4) { c.strokeStyle = '#d0505a'; c.lineWidth = 1.2; c.lineCap = 'round'; c.beginPath(); c.moveTo(hp[0] + 14, hp[1]); c.lineTo(hp[0] + 20, hp[1]); c.lineTo(hp[0] + 22, hp[1] - 2); c.moveTo(hp[0] + 20, hp[1]); c.lineTo(hp[0] + 22, hp[1] + 2); c.stroke(); }

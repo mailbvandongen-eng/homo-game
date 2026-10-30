@@ -1,6 +1,6 @@
 import { TILE, PHYS, MAX_STONES } from './config.js';
 import { moveBody, T } from './level.js';
-import { taper, eye, mix, groundShadow } from './art.js';
+import { taper, eye, mix, groundShadow, paintLight } from './art.js';
 
 export class Player {
   constructor(x, y, look = null) {
@@ -216,9 +216,12 @@ export class Player {
     const outline = '#2c1d15', fur = L.fur, skin = L.skin, limbBack = L.limb, hair = L.hair;
     const tall = L.tall ? 1.12 : 1;
     // Ledematen: dik bij de aanzet, smaller naar de pols/enkel
+    // Ledematen: fijne donkere rand, licht van links, donkerder aan de schaduwkant
     const seg = (x1, y1, x2, y2, w1, w2, col) => {
-      c.fillStyle = outline; taper(c, x1, y1, x2, y2, w1 + 2.6, w2 + 2.6); c.fill();
-      c.fillStyle = col; taper(c, x1, y1, x2, y2, w1, w2); c.fill();
+      c.fillStyle = mix(outline, col, 0.35); taper(c, x1, y1, x2, y2, w1 + 1.2, w2 + 1.2); c.fill();
+      const g = c.createLinearGradient(Math.min(x1, x2) - w1 / 2, 0, Math.max(x1, x2) + w1 / 2, 0);
+      g.addColorStop(0, mix(col, '#ffe6c8', 0.22)); g.addColorStop(1, mix(col, outline, 0.25));
+      c.fillStyle = g; taper(c, x1, y1, x2, y2, w1, w2); c.fill();
     };
     const leg = (side) => {
       const hip = [side * 3, -21 * tall];
@@ -232,11 +235,11 @@ export class Player {
       const knee = [hip[0] + Math.sin(a) * l1, hip[1] + Math.cos(a) * l1];
       const foot = [knee[0] + Math.sin(a - bend) * l2, knee[1] + Math.cos(a - bend) * l2];
       const col = side > 0 ? skin : limbBack;
-      seg(hip[0], hip[1], knee[0], knee[1], 7.5, 5.2, col);
-      seg(knee[0], knee[1], foot[0], foot[1], 5.2, 3.6, col);
+      seg(hip[0], hip[1], knee[0], knee[1], 7.6, 4.8, col);
+      seg(knee[0], knee[1], foot[0], foot[1], 5.0, 2.8, col);
       // Voet
-      c.fillStyle = outline; c.beginPath(); c.ellipse(foot[0] + 3, foot[1] - 0.5, 6, 3, 0.05, 0, Math.PI * 2); c.fill();
-      c.fillStyle = side > 0 ? mix(skin, outline, 0.25) : mix(limbBack, outline, 0.3); c.beginPath(); c.ellipse(foot[0] + 3, foot[1] - 0.9, 4.6, 1.9, 0.05, 0, Math.PI * 2); c.fill();
+      c.fillStyle = mix(outline, col, 0.35); c.beginPath(); c.ellipse(foot[0] + 3, foot[1] - 0.4, 5.4, 2.1, 0.05, 0, Math.PI * 2); c.fill();
+      c.fillStyle = side > 0 ? mix(skin, outline, 0.15) : mix(limbBack, outline, 0.25); c.beginPath(); c.ellipse(foot[0] + 3, foot[1] - 0.8, 4.5, 1.4, 0.05, 0, Math.PI * 2); c.fill();
     };
     const arm = (side) => {
       const sh = [side * 2 + 1, -35 * tall];
@@ -254,8 +257,8 @@ export class Player {
       const col = side > 0 ? skin : limbBack;
       seg(sh[0], sh[1], elbow[0], elbow[1], 6, 4.4, col);
       seg(elbow[0], elbow[1], hand[0], hand[1], 4.4, 3.4, col);
-      c.fillStyle = outline; c.beginPath(); c.arc(hand[0], hand[1], 3.6, 0, Math.PI * 2); c.fill();
-      c.fillStyle = mix(col, '#ffe0c0', 0.15); c.beginPath(); c.arc(hand[0], hand[1], 2.5, 0, Math.PI * 2); c.fill();
+      c.fillStyle = mix(outline, col, 0.35); c.beginPath(); c.ellipse(hand[0], hand[1] + 0.4, 2.7, 3.1, a, 0, Math.PI * 2); c.fill();
+      c.fillStyle = mix(col, '#ffe0c0', 0.12); c.beginPath(); c.ellipse(hand[0], hand[1] + 0.4, 2.1, 2.5, a, 0, Math.PI * 2); c.fill();
       this.drawTool(c, side, hand, a, bend, hanging, time);
     };
 
@@ -264,13 +267,17 @@ export class Player {
     // Romp: peervorm met vacht, buik en licht van boven
     const ty = -29 * tall;
     const torso = () => { c.beginPath(); c.moveTo(-8, ty - 9); c.bezierCurveTo(-13, ty - 3, -12, ty + 9, -6, ty + 12); c.bezierCurveTo(0, ty + 14, 9, ty + 12, 10, ty + 5); c.bezierCurveTo(11, ty - 4, 7, ty - 12, 0, ty - 12); c.bezierCurveTo(-4, ty - 12, -6, ty - 11, -8, ty - 9); c.closePath(); };
-    torso(); c.lineWidth = 2.8; c.strokeStyle = outline; c.stroke();
-    const tg = c.createLinearGradient(-10, ty - 12, 8, ty + 12); tg.addColorStop(0, mix(fur, '#ffffff', 0.18)); tg.addColorStop(0.55, fur); tg.addColorStop(1, mix(fur, outline, 0.4));
+    torso(); c.lineWidth = 1.2; c.strokeStyle = mix(outline, fur, 0.3); c.stroke();
+    const tg = c.createLinearGradient(-10, ty - 12, 8, ty + 12); tg.addColorStop(0, mix(fur, '#ffffff', 0.1)); tg.addColorStop(0.55, fur); tg.addColorStop(1, mix(fur, outline, 0.4));
     torso(); c.fillStyle = tg; c.fill();
-    c.fillStyle = mix(skin, '#ffe8c8', 0.2); c.beginPath(); c.ellipse(4, ty + 1, 4.6, 7, 0.15, 0, Math.PI * 2); c.fill();
+    c.save(); torso(); c.clip();
+    c.fillStyle = mix(skin, '#ffe8c8', 0.15); c.globalAlpha = 0.85; c.beginPath(); c.ellipse(4, ty + 1, 4.6, 7, 0.15, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
+    torso(); paintLight(c, 0, ty, 11, 12, mix(fur, '#ffe0b0', 0.45), mix(fur, outline, 0.6), 38, 4);
+    c.restore();
     // Vachtplukjes op de rug
-    c.strokeStyle = mix(fur, outline, 0.5); c.lineWidth = 1.2; c.lineCap = 'round';
-    for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(-9 + i * 0.5, ty - 6 + i * 4); c.lineTo(-12, ty - 4 + i * 4); c.stroke(); }
+    // Zachte vachtrand langs de rug
+    c.fillStyle = mix(fur, outline, 0.25);
+    for (let i = 0; i < 5; i++) { c.beginPath(); c.ellipse(-9.5 + i * 0.4, ty - 7 + i * 4, 2.4, 1.3, -0.6, 0, Math.PI * 2); c.fill(); }
     // Lendendoek van huid
     c.fillStyle = '#5e3f22'; c.beginPath(); c.moveTo(-8, ty + 7); c.quadraticCurveTo(1, ty + 11, 10, ty + 7); c.lineTo(9, ty + 14); c.quadraticCurveTo(3, ty + 17, -1, ty + 15); c.quadraticCurveTo(-5, ty + 17, -7, ty + 13); c.closePath(); c.fill();
     c.fillStyle = '#8a6238'; c.beginPath(); c.moveTo(-6, ty + 8); c.quadraticCurveTo(1, ty + 11, 8, ty + 8); c.lineTo(8, ty + 10); c.quadraticCurveTo(1, ty + 13, -6, ty + 10); c.closePath(); c.fill();
@@ -290,12 +297,16 @@ export class Player {
     // Kop: ronde schedel + snuit, met contour
     const skull = () => { c.beginPath(); c.ellipse(1.5, hy, flat ? 10.5 : 10, flat ? 10 : 9.4, 0, 0, Math.PI * 2); };
     const muzzle = () => { c.beginPath(); c.ellipse(mz, hy + 4.5, flat ? 5.5 : 6.6, 5, 0.12, 0, Math.PI * 2); };
-    c.lineWidth = 2.8; c.strokeStyle = outline; skull(); c.stroke(); muzzle(); c.stroke();
-    const hg = c.createLinearGradient(-8, hy - 10, 8, hy + 10); hg.addColorStop(0, mix(skin, '#ffffff', 0.18)); hg.addColorStop(1, mix(skin, outline, 0.25));
+    c.lineWidth = 1.2; c.strokeStyle = mix(outline, skin, 0.3); skull(); c.stroke(); muzzle(); c.stroke();
+    const hg = c.createLinearGradient(-8, hy - 10, 8, hy + 10); hg.addColorStop(0, mix(skin, '#ffffff', 0.1)); hg.addColorStop(1, mix(skin, outline, 0.3));
     skull(); c.fillStyle = hg; c.fill();
-    muzzle(); c.fillStyle = mix(skin, '#ffe0b8', 0.3); c.fill();
+    skull(); paintLight(c, 0, hy, 10, 9, mix(skin, '#fff0d8', 0.5), mix(skin, outline, 0.6), 0);
+    muzzle(); c.fillStyle = mix(skin, '#f0c8a0', 0.25); c.fill();
+    muzzle(); paintLight(c, mz, hy + 4, 6, 5, mix(skin, '#fff0d8', 0.4), mix(skin, outline, 0.5), 0);
+    // Schaduw onder de wenkbrauw: diepere oogkas
+    c.fillStyle = mix(skin, outline, 0.5); c.globalAlpha = 0.45; c.beginPath(); c.ellipse(7.2, hy + 0.4, 4.2, 3.2, 0, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
     // Oor
-    c.fillStyle = outline; c.beginPath(); c.ellipse(-4, hy + 1, 3.4, 4.4, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = mix(outline, limbBack, 0.35); c.beginPath(); c.ellipse(-4, hy + 1, 3.1, 4.1, 0, 0, Math.PI * 2); c.fill();
     c.fillStyle = limbBack; c.beginPath(); c.ellipse(-4, hy + 1, 2.3, 3.3, 0, 0, Math.PI * 2); c.fill();
     c.fillStyle = mix(limbBack, '#d08070', 0.3); c.beginPath(); c.ellipse(-3.6, hy + 1.4, 1.1, 1.8, 0, 0, Math.PI * 2); c.fill();
     // Haar: plukken die meewiegen
@@ -313,7 +324,7 @@ export class Player {
     c.fillStyle = mix(skin, outline, 0.45); c.beginPath(); c.ellipse(7, hy - 2.6, 5.6, 1.9, 0.1, 0, Math.PI * 2); c.fill();
     // Groot oog met glans
     const scared = this.dead || this.invuln > 1;
-    eye(c, 7.4, hy + 0.8, 2.9, '#5a3a20', scared ? 1 : blink);
+    eye(c, 7.6, hy + 0.9, 2.6, '#4a2c16', scared ? 1 : blink);
     // Neus en mond
     c.fillStyle = mix(skin, outline, 0.55); c.beginPath(); c.ellipse(mz + (flat ? 4 : 5), hy + 2.6, 1.6, 1.1, 0, 0, Math.PI * 2); c.fill();
     c.strokeStyle = '#5a2e1e'; c.lineWidth = 1.3; c.lineCap = 'round'; c.beginPath();
