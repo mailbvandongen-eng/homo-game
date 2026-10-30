@@ -19,6 +19,24 @@ const THEMES = {
     forest: true,
   },
   cave: { cave: true },
+  grassland: {
+    sky: ['#6aaad6', '#bfdcd2', '#f6dc9c'], sun: '#fff2b8',
+    far: '#a9b5a2', farTop: '#c2cab6', mid: '#c4b46a', midDark: '#a89a52', near: '#b8a85c', acacia: '#6a7a40',
+  },
+  dmanisi: {
+    sky: ['#7aaed0', '#c4d8dc', '#e8e2c8'], sun: '#fffbe0',
+    far: '#8c9aa8', farTop: '#f2f4f6', mid: '#7f9460', midDark: '#66804c', near: '#89a05e', acacia: '#4e6a3c',
+    snow: true, forest: true,
+  },
+  java: {
+    sky: ['#5f9fc0', '#b6d6c6', '#f0d8a8'], sun: '#fff0c0',
+    far: '#7a8e86', farTop: '#93a69c', mid: '#4f7f48', midDark: '#3e6a3c', near: '#5a8c46', acacia: '#2f5a32',
+    forest: true, volcano: true,
+  },
+  dusk: {
+    sky: ['#3a4a7a', '#c97a6a', '#f2b064'], sun: '#ffd28a',
+    far: '#6a5a6a', farTop: '#8a7080', mid: '#7a6a48', midDark: '#5e5238', near: '#6e6040', acacia: '#3a3020',
+  },
   savanna: {
     sky: ['#5fb3d9', '#9fd6dc', '#f6e2a8'], sun: '#fff4c4',
     far: '#9cb6b4', farTop: '#b9cdc4', mid: '#9fb46c', midDark: '#7f9a55', near: '#86a64c', acacia: '#5a7840',
@@ -57,7 +75,9 @@ export class Renderer {
     const yOf = (f, h) => groundWorld - h - ref - (camY - ref) * f;
 
     // Verre breukrand van de Riftvallei
+    if (th.volcano) volcano(c, viewW * 0.62 - camX * 0.04, yOf(0.05, 120), time);
     ridge(c, camX * 0.1, viewW, yOf(0.1, 112), 46, 0.0035, 7, th.far, th.farTop, th.mesa);
+    if (th.snow) snowCaps(c, camX * 0.1, viewW, yOf(0.1, 112), 46, 0.0035, 7);
     // Middenheuvels met acacia's
     const midY = yOf(0.3, 70);
     ridge(c, camX * 0.3, viewW, midY, 20, 0.006, 3, th.mid, th.mid, th.mesa);
@@ -89,27 +109,40 @@ export class Renderer {
 
   // Rivierwater: oppervlak met golfjes, van voren getekend zodat dingen erin "zakken"
   water(c, map, camX, viewW, levelH, time) {
+    this.liquid(c, map, camX, viewW, levelH, time, T.WATER);
+    this.liquid(c, map, camX, viewW, levelH, time, T.LAVA);
+  }
+
+  liquid(c, map, camX, viewW, levelH, time, kind) {
+    const lava = kind === T.LAVA;
     const a = Math.max(0, Math.floor(camX / TILE) - 1), b = Math.min(map.w - 1, Math.ceil((camX + viewW) / TILE) + 1);
     let run = null;
     const flush = () => {
       if (!run) return;
       const { x1, x2, y } = run;
       const g = c.createLinearGradient(0, y, 0, levelH);
-      g.addColorStop(0, '#3f9fb0cc'); g.addColorStop(0.3, '#2a6f86dd'); g.addColorStop(1, '#123744f0');
+      if (lava) { g.addColorStop(0, '#ffcf5a'); g.addColorStop(0.15, '#ff7a22'); g.addColorStop(0.6, '#c2321a'); g.addColorStop(1, '#5a140c'); }
+      else { g.addColorStop(0, '#3f9fb0cc'); g.addColorStop(0.3, '#2a6f86dd'); g.addColorStop(1, '#123744f0'); }
       c.fillStyle = g;
       c.beginPath(); c.moveTo(x1, levelH + 10);
       for (let x = x1; x <= x2; x += 6) c.lineTo(x, y + Math.sin(x * 0.05 + time * 3) * 1.6);
       c.lineTo(x2, levelH + 10); c.closePath(); c.fill();
-      c.strokeStyle = '#c8f0f0aa'; c.lineWidth = 1.5; c.beginPath();
+      c.strokeStyle = lava ? '#fff0a0' : '#c8f0f0aa'; c.lineWidth = 1.5; c.beginPath();
       for (let x = x1; x <= x2; x += 6) c.lineTo(x, y + Math.sin(x * 0.05 + time * 3) * 1.6);
       c.stroke();
-      c.fillStyle = '#e8ffff66';
-      for (let x = x1 + 10; x < x2; x += 37) { const o = (time * 18 + x) % 37; c.fillRect(x + o * 0.3, y + 6 + (x % 3) * 4, 8, 1.4); }
+      if (lava) {
+        for (let x = x1 + 12; x < x2; x += 41) { const ph = (time * 1.3 + x * 0.07) % 1; c.fillStyle = `rgba(255,220,120,${1 - ph})`; c.beginPath(); c.arc(x + (x % 7), y + 4 - ph * 10, 2 + ph * 3, 0, Math.PI * 2); c.fill(); }
+        const glow = c.createLinearGradient(0, y - 60, 0, y); glow.addColorStop(0, 'rgba(255,120,40,0)'); glow.addColorStop(1, 'rgba(255,120,40,0.25)');
+        c.fillStyle = glow; c.fillRect(x1, y - 60, x2 - x1, 60);
+      } else {
+        c.fillStyle = '#e8ffff66';
+        for (let x = x1 + 10; x < x2; x += 37) { const o = (time * 18 + x) % 37; c.fillRect(x + o * 0.3, y + 6 + (x % 3) * 4, 8, 1.4); }
+      }
       run = null;
     };
     for (let cx = a; cx <= b; cx++) {
       let top = -1;
-      for (let cy = 0; cy < map.h; cy++) if (map.get(cx, cy) === T.WATER) { top = cy; break; }
+      for (let cy = 0; cy < map.h; cy++) if (map.get(cx, cy) === kind) { top = cy; break; }
       if (top < 0) { flush(); continue; }
       const y = top * TILE + 8;
       if (run && run.y === y && run.x2 === cx * TILE) run.x2 = (cx + 1) * TILE;
@@ -141,7 +174,7 @@ export class Renderer {
     for (let cy = 0; cy < map.h; cy++) for (let cx = x0; cx < x1; cx++) {
       const t = map.get(cx, cy);
       if (cx < 0 || cx >= map.w) continue;
-      const theme = map.level.outside && cx >= map.level.outside.from ? 'savanna' : map.level.theme;
+      const theme = map.level.outside && cx >= map.level.outside.from ? (map.level.outsideTheme || 'savanna') : map.level.theme;
       if (t === T.GROUND) groundTile(c, map, cx, cy, theme);
       else if (t === T.ROCK) rockTile(c, map, cx, cy);
       else if (t === T.BRANCH) branchTile(c, map, cx, cy);
@@ -166,6 +199,8 @@ export class Renderer {
       } else if (t === T.SPRING) {
         const anim = map.bounce.get(i) || 0;
         springTile(c, cx * TILE, cy * TILE, anim, time);
+      } else if (t === T.CRACK) {
+        crackTile(c, cx * TILE, cy * TILE);
       } else if (t === T.BOUNCY) {
         bouncyTile(c, map, cx, cy, map.bounce.get(i) || 0, time);
       }
@@ -610,5 +645,36 @@ function stalagmiteTile(c, cx, cy) {
   for (const [dx, h, w] of [[6, 22, 7], [16, 30, 8], [26, 18, 6]]) {
     c.fillStyle = '#4a4036'; c.beginPath(); c.moveTo(x + dx - w, y + TILE); c.lineTo(x + dx + w, y + TILE); c.lineTo(x + dx, y + TILE - h); c.closePath(); c.fill();
     c.fillStyle = '#9a8a72'; c.beginPath(); c.moveTo(x + dx - w + 3, y + TILE); c.lineTo(x + dx, y + TILE); c.lineTo(x + dx, y + TILE - h + 4); c.closePath(); c.fill();
+  }
+}
+
+function crackTile(c, x, y) {
+  // Gebarsten rots: duidelijk anders dan gewone rots, met lichte barsten
+  c.fillStyle = '#8f7f68'; c.beginPath(); c.roundRect(x + 1, y + 1, TILE - 2, TILE - 2, 5); c.fill();
+  c.fillStyle = '#a8977c'; c.fillRect(x + 4, y + 3, TILE - 8, 3);
+  c.strokeStyle = '#3e3428'; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(x + 6, y + 4); c.lineTo(x + 14, y + 14); c.lineTo(x + 10, y + 22); c.lineTo(x + 16, y + 29); c.moveTo(x + 14, y + 14); c.lineTo(x + 26, y + 10); c.moveTo(x + 21, y + 18); c.lineTo(x + 28, y + 26); c.stroke();
+  c.strokeStyle = '#e8d8b0'; c.lineWidth = 0.8;
+  c.beginPath(); c.moveTo(x + 7, y + 4); c.lineTo(x + 15, y + 13); c.stroke();
+}
+
+function snowCaps(c, offset, viewW, baseY, amp, freq, seed) {
+  // Besneeuwde toppen van de Kaukasus in de verte
+  c.fillStyle = '#f4f6f8';
+  for (let x = -10; x <= viewW + 20; x += 12) {
+    const h = (Math.sin((x + offset) * freq + seed) * 0.6 + Math.sin((x + offset) * freq * 2.3 + seed * 2) * 0.3 + Math.sin((x + offset) * freq * 5.1 + seed) * 0.1) * amp + amp;
+    if (h > amp * 1.55) { c.beginPath(); c.moveTo(x - 7, baseY - h + 9); c.lineTo(x, baseY - h - 1); c.lineTo(x + 7, baseY - h + 9); c.closePath(); c.fill(); }
+  }
+}
+
+function volcano(c, x, y, time) {
+  // Rokende vulkaan in de verte (Java)
+  c.fillStyle = '#5e6a66';
+  c.beginPath(); c.moveTo(x - 180, y + 40); c.lineTo(x - 30, y - 120); c.lineTo(x + 30, y - 120); c.lineTo(x + 180, y + 40); c.closePath(); c.fill();
+  c.fillStyle = '#ff7a3a55'; c.beginPath(); c.moveTo(x - 30, y - 120); c.lineTo(x + 30, y - 120); c.lineTo(x + 8, y - 70); c.lineTo(x - 12, y - 90); c.closePath(); c.fill();
+  for (let i = 0; i < 6; i++) {
+    const t = (time * 0.15 + i / 6) % 1;
+    c.fillStyle = `rgba(110,110,115,${0.45 * (1 - t)})`;
+    c.beginPath(); c.arc(x + Math.sin(i * 2 + time * 0.3) * 20 + t * 60, y - 130 - t * 120, 16 + t * 34, 0, Math.PI * 2); c.fill();
   }
 }

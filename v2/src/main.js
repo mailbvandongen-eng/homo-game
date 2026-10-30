@@ -5,12 +5,16 @@ import level11 from './levels/w1-1.js';
 import level12 from './levels/w1-2.js';
 import level13 from './levels/w1-3.js';
 import level14 from './levels/w1-4.js';
+import level21 from './levels/w2-1.js';
+import level22 from './levels/w2-2.js';
+import level23 from './levels/w2-3.js';
+import level24 from './levels/w2-4.js';
 import { SPECIES } from './species.js';
 
 // Ophogen bij elke publicatie: zo zie je op het titelscherm of je de nieuwste versie hebt.
-export const VERSION = '2026-10-30d';
+export const VERSION = '2026-10-31a';
 
-const LEVELS = [level11, level12, level13, level14];
+const LEVELS = [level11, level12, level13, level14, level21, level22, level23, level24];
 const $ = id => document.getElementById(id);
 const canvas = $('game');
 const input = new Input(canvas);
@@ -46,7 +50,9 @@ const ui = {
     store(); renderLevels();
     $('nextLevel').hidden = current + 1 >= LEVELS.length;
     $('soon').hidden = current + 1 < LEVELS.length;
-    $('soon').textContent = current + 1 >= LEVELS.length ? 'Wereld 1 voltooid! Wereld 2 (Homo erectus) komt binnenkort.' : '';
+    const nextDef = LEVELS[current + 1];
+    $('soon').textContent = current + 1 >= LEVELS.length ? `Wereld ${r.def.world} voltooid! De volgende wereld komt binnenkort.` : '';
+    $('nextLevel').textContent = nextDef && nextDef.world !== r.def.world ? `Naar wereld ${nextDef.world} ▶` : 'Volgende level ▶';
     show('complete');
   },
   gameOver() { show('gameover'); },

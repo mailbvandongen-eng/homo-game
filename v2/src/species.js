@@ -19,6 +19,12 @@ export const SPECIES = {
     text: 'Leefde tegelijk met habilis, onder meer bij het Turkanameer (vroeger Rudolfmeer). Groter brein en een plat, lang gezicht. Bekendste vondst: schedel KNM-ER 1470 uit 1972. Of het echt een aparte soort is, wordt nog steeds besproken.',
     look: { fur: '#7a5a3e', hair: '#3e2a1a', skin: '#b07c52', limb: '#946240', flat: true, size: 1.06 },
   },
+  robustus: {
+    name: 'Paranthropus robustus', nick: '"Robuuste mensaap-mens"',
+    when: 'circa 2 – 1 miljoen jaar geleden', where: 'Zuid-Afrika',
+    text: 'Leefde in Zuid-Afrika tegelijk met vroege Homo, onder meer bij Swartkrans. Net als boisei: grote kiezen en een schedelkam. In Swartkrans ligt ook een schedel van robustus met twee gaatjes: tandafdrukken van een luipaard.',
+    look: { fur: '#5a3e2c', hair: '#2e1d12', skin: '#8a6040', limb: '#74503a', crest: true, size: 0.98 },
+  },
   erectus: {
     name: 'Homo erectus', nick: '"Rechtopgaande mens"',
     when: 'circa 1,9 miljoen – 110.000 jaar geleden', where: 'Afrika en Azië',

@@ -322,7 +322,7 @@ export class Warthog extends Enemy {
 
 // ---------------- Baviaan: zit op een tak en gooit vruchten (waarschuwt eerst met een opgeheven arm) ----------------
 export class Baboon extends Enemy {
-  constructor(x, y, o = {}) { super(x, y, 30, 30); this.state = 'sit'; this.timer = 0; this.cool = 1 + Math.random(); this.dir = o.dir || -1; }
+  constructor(x, y, o = {}) { super(x, y, 30, 30); this.state = 'sit'; this.timer = 0; this.cool = 1 + Math.random(); this.dir = o.dir || -1; this.skin = o.skin; }
   update(dt, game) {
     this.t += dt;
     if (this.fleeing) return this.updateFlee(dt);
@@ -347,7 +347,9 @@ export class Baboon extends Enemy {
     c.save(); c.globalAlpha = this.alpha();
     c.translate(Math.round(this.cx), Math.round(this.y + this.h));
     c.scale(this.dir, this.squash());
-    const o = '#2a2118', fur = '#8d7a52', face = '#5e4a3a';
+    const mac = this.skin === 'macaque';   // makaak (Java): grijzer, kortere snuit
+    const o = '#2a2118', fur = mac ? '#8a8270' : '#8d7a52', face = mac ? '#c48a78' : '#5e4a3a';
+    if (mac) c.scale(0.85, 0.85);
     // Staart
     c.strokeStyle = fur; c.lineWidth = 3.5; c.lineCap = 'round';
     c.beginPath(); c.moveTo(-10, -6); c.quadraticCurveTo(-22, -10, -18, 4 + Math.sin(time * 3) * 2); c.stroke();
@@ -365,7 +367,7 @@ export class Baboon extends Enemy {
     // Kop met lange snuit
     c.fillStyle = o; c.beginPath(); c.ellipse(9, -26, 8, 7.5, 0, 0, Math.PI * 2); c.fill();
     c.fillStyle = fur; c.beginPath(); c.ellipse(9, -26, 6.8, 6.4, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = face; c.beginPath(); c.ellipse(15, -24, 6, 3.6, 0.15, 0, Math.PI * 2); c.fill();
+    c.fillStyle = face; c.beginPath(); c.ellipse(mac ? 13 : 15, -24, mac ? 4 : 6, 3.6, 0.15, 0, Math.PI * 2); c.fill();
     c.fillStyle = '#1b120b'; c.beginPath(); c.arc(17.5, -24.5, 1.1, 0, Math.PI * 2); c.fill();
     c.fillStyle = this.fleeing ? '#fff' : '#f0d070'; c.beginPath(); c.arc(11, -28, 1.5, 0, Math.PI * 2); c.fill();
     c.restore();
@@ -476,7 +478,7 @@ export class Stalactite extends Enemy {
     this.y = o.ceil ?? y;     // hangt aan het plafond (bovenkant)
     this.stompable = false; this.immune = true;
     this.state = o.falling ? 'shake' : 'hang'; this.timer = o.falling ? 0.9 : 0;
-    this.shadow = !!o.falling;
+    this.shadow = !!o.falling; this.skin = o.skin;
   }
   scare() {}
   harmful() { return this.state === 'fall'; }
@@ -500,6 +502,15 @@ export class Stalactite extends Enemy {
       c.fillStyle = `rgba(0,0,0,${0.25 + Math.sin(time * 20) * 0.1})`;
       c.beginPath(); c.ellipse(this.cx, this.groundY ?? this.y + 200, 16, 4, 0, 0, Math.PI * 2); c.fill();
     }
+    if (this.skin === 'bomb') {
+      // Vulkaanbom: gloeiende steen met rookspoor (alleen zichtbaar tijdens het vallen)
+      if (this.state !== 'fall') return;
+      c.fillStyle = 'rgba(80,70,70,0.35)'; c.beginPath(); c.ellipse(this.cx, this.y - 10, 8, 16, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#3a2420'; c.beginPath(); c.arc(this.cx, this.y + 15, 11, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ff6a2a'; c.beginPath(); c.arc(this.cx - 2, this.y + 13, 7, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ffd36a'; c.beginPath(); c.arc(this.cx - 3, this.y + 11, 3, 0, Math.PI * 2); c.fill();
+      return;
+    }
     const shake = this.state === 'shake' ? Math.sin(time * 70) * 1.5 : 0;
     c.save(); c.translate(Math.round(this.cx + shake), Math.round(this.y));
     c.fillStyle = '#4a4036'; c.beginPath(); c.moveTo(-10, 0); c.lineTo(10, 0); c.lineTo(1, 31); c.closePath(); c.fill();
@@ -509,4 +520,105 @@ export class Stalactite extends Enemy {
   }
 }
 
-export const ENEMY_TYPES = { hyena: Hyena, snake: Snake, vulture: Vulture, warthog: Warthog, baboon: Baboon, leopard: Leopard, bat: Bat, stalactite: Stalactite };
+// ---------------- Wolf (Canis etruscus, Dmanisi): sneller dan een hyena, jaagt in paren ----------------
+export class Wolf extends Hyena {
+  constructor(x, y, o = {}) { super(x, y, o); this.speed = o.fast ? 110 : 85; this.w = 36; this.h = 24; }
+  draw(c, time) {
+    c.save(); c.globalAlpha = this.alpha();
+    c.translate(Math.round(this.cx), Math.round(this.y + this.h)); c.scale(this.dir, this.squash());
+    const ph = this.t * this.speed / 8, o = '#22201e', coat = '#8a8580', light = '#c9c2b6';
+    for (const [lx, off] of [[-12, 0], [-7, Math.PI], [9, Math.PI / 2], [14, Math.PI * 1.5]]) {
+      const s = this.fleeing ? Math.sin(time * 30 + off) : Math.sin(ph + off);
+      c.strokeStyle = o; c.lineWidth = 4; c.lineCap = 'round'; c.beginPath(); c.moveTo(lx, -11); c.lineTo(lx + s * 4, -1); c.stroke();
+    }
+    c.strokeStyle = coat; c.lineWidth = 5; c.beginPath(); c.moveTo(-16, -14); c.quadraticCurveTo(-26, -12, -28, -6); c.stroke();
+    c.fillStyle = o; c.beginPath(); c.ellipse(0, -15, 18, 7.5, -0.05, 0, Math.PI * 2); c.fill();
+    c.fillStyle = coat; c.beginPath(); c.ellipse(0, -15, 16.5, 6.2, -0.05, 0, Math.PI * 2); c.fill();
+    c.fillStyle = light; c.beginPath(); c.ellipse(2, -12, 12, 3, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = o; c.beginPath(); c.ellipse(18, -19, 7, 6, 0.2, 0, Math.PI * 2); c.fill(); c.beginPath(); c.moveTo(20, -21); c.lineTo(31, -17); c.lineTo(20, -14); c.closePath(); c.fill();
+    c.fillStyle = coat; c.beginPath(); c.ellipse(18, -19, 5.8, 4.8, 0.2, 0, Math.PI * 2); c.fill(); c.beginPath(); c.moveTo(20, -20); c.lineTo(29.5, -17); c.lineTo(20, -15); c.closePath(); c.fill();
+    c.fillStyle = o; c.beginPath(); c.moveTo(13, -23); c.lineTo(15, -31); c.lineTo(18, -24); c.closePath(); c.fill(); c.beginPath(); c.moveTo(17, -24); c.lineTo(20, -31); c.lineTo(22, -23); c.closePath(); c.fill();
+    c.fillStyle = '#111'; c.beginPath(); c.arc(30, -17.5, 1.3, 0, Math.PI * 2); c.fill();
+    c.fillStyle = this.fleeing ? '#fff' : '#f2c84b'; c.beginPath(); c.arc(21, -21, 1.4, 0, Math.PI * 2); c.fill();
+    c.restore();
+  }
+}
+
+// ---------------- Varaan (Java): grote hagedis, loopt laag en zwiept met de staart ----------------
+export class Varaan extends Hyena {
+  constructor(x, y, o = {}) { super(x, y, o); this.speed = 60; this.w = 46; this.h = 16; }
+  draw(c, time) {
+    c.save(); c.globalAlpha = this.alpha();
+    c.translate(Math.round(this.cx), Math.round(this.y + this.h)); c.scale(this.dir, this.squash());
+    const ph = this.t * 9, o = '#1f2116', skin = '#6c6a45', spot = '#a39f6a';
+    const sw = Math.sin(ph) * 0.15;
+    c.save(); c.rotate(sw * 0.3);
+    c.strokeStyle = o; c.lineWidth = 7; c.lineCap = 'round'; c.beginPath(); c.moveTo(-14, -7); c.quadraticCurveTo(-30, -6 + Math.sin(ph) * 5, -40, -3); c.stroke();
+    c.strokeStyle = skin; c.lineWidth = 4.5; c.beginPath(); c.moveTo(-14, -7); c.quadraticCurveTo(-30, -6 + Math.sin(ph) * 5, -40, -3); c.stroke();
+    for (const [lx, off] of [[-10, 0], [10, Math.PI]]) { const s = Math.sin(ph + off) * 4; c.strokeStyle = o; c.lineWidth = 4; c.beginPath(); c.moveTo(lx, -6); c.lineTo(lx + s - 3, 0); c.moveTo(lx + 3, -6); c.lineTo(lx + 3 - s + 3, 0); c.stroke(); }
+    c.fillStyle = o; c.beginPath(); c.ellipse(0, -8, 18, 6.5, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = skin; c.beginPath(); c.ellipse(0, -8, 16.5, 5, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = spot; for (let i = -12; i < 14; i += 5) { c.beginPath(); c.arc(i, -9, 1.3, 0, Math.PI * 2); c.fill(); }
+    c.fillStyle = o; c.beginPath(); c.ellipse(21, -9, 9, 4.5, 0.05, 0, Math.PI * 2); c.fill();
+    c.fillStyle = skin; c.beginPath(); c.ellipse(21, -9, 7.6, 3.4, 0.05, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#f0d050'; c.beginPath(); c.arc(22, -10.5, 1.2, 0, Math.PI * 2); c.fill();
+    if (Math.sin(time * 5 + this.t) > 0.4) { c.strokeStyle = '#d0505a'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(29, -8); c.lineTo(35, -8); c.lineTo(37, -10); c.moveTo(35, -8); c.lineTo(37, -6); c.stroke(); }
+    c.restore(); c.restore();
+  }
+}
+
+// ---------------- Sabeltandkat (Megantereon, Dmanisi): luipaard-gedrag, grote hoektanden ----------------
+export class Sabre extends Leopard {
+  constructor(x, y, o = {}) { super(x, y, { ...o, range: o.range || 240 }); this.w = 48; this.h = 24; }
+  draw(c, time) {
+    c.save(); c.globalAlpha = this.alpha();
+    c.translate(Math.round(this.cx), Math.round(this.y + this.h)); c.scale(this.dir, this.squash());
+    const o = '#2a1d10', coat = '#b88a52', low = this.state === 'hide' || this.state === 'crouch';
+    if (this.state === 'pounce') c.rotate(Math.max(-0.35, Math.min(0.35, this.vy / 1500)));
+    const by = low ? -10 : -14;
+    c.strokeStyle = coat; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath(); c.moveTo(-22, by); c.lineTo(-27, by - 4 + (this.state === 'crouch' ? Math.sin(time * 14) * 4 : 0)); c.stroke();
+    c.strokeStyle = o; c.lineWidth = 6;
+    for (const lx of [-15, -9, 11, 17]) { c.beginPath(); c.moveTo(lx, by + 2); c.lineTo(lx + (this.state === 'pounce' ? (lx > 0 ? 7 : -7) : 0), -1); c.stroke(); }
+    c.fillStyle = o; c.beginPath(); c.ellipse(0, by, 24, 10.5, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = coat; c.beginPath(); c.ellipse(0, by, 22.5, 9, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#d7b07a'; c.beginPath(); c.ellipse(2, by + 3, 16, 4, 0, 0, Math.PI * 2); c.fill();
+    const hy = by - 5 + (low ? 2 : 0);
+    c.fillStyle = o; c.beginPath(); c.ellipse(24, hy, 9, 8, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = coat; c.beginPath(); c.ellipse(24, hy, 7.6, 6.6, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#f4efe0'; c.beginPath(); c.moveTo(27, hy + 3); c.lineTo(29, hy + 15); c.lineTo(30.5, hy + 3); c.closePath(); c.fill();
+    c.fillStyle = (this.state === 'crouch' || this.state === 'pounce') ? '#ffe45a' : '#c9b04a'; c.beginPath(); c.arc(27, hy - 2, 1.7, 0, Math.PI * 2); c.fill();
+    c.fillStyle = o; c.beginPath(); c.ellipse(20, hy - 7, 2.5, 3, -0.3, 0, Math.PI * 2); c.fill();
+    if (this.state === 'recover') { c.fillStyle = '#ffe27a'; for (let i = 0; i < 3; i++) { const a = time * 5 + i * 2.1; c.beginPath(); c.arc(22 + Math.cos(a) * 8, hy - 14 + Math.sin(a) * 3, 1.8, 0, Math.PI * 2); c.fill(); } }
+    c.restore();
+  }
+}
+
+// ---------------- Gnoe: deel van een stormende kudde; rent door, spring erop of klim weg ----------------
+export class Gnu extends Enemy {
+  constructor(x, y, o = {}) { super(x, y, 46, 30); this.dir = 1; this.speed = o.speed || 300 + Math.random() * 40; this.active = true; }
+  scare(dir, game) { if (!this.fleeing) { this.fleeing = true; this.fleeT = 0; this.fleeDir = 1; game.fx.stars(this.cx, this.y); } }
+  update(dt, game) {
+    this.t += dt;
+    if (this.fleeing) return this.updateFlee(dt);
+    this.vx = this.speed; this.vy = Math.min(this.vy + 1900 * dt, 800);
+    const r = moveBody(this, dt, game.map);
+    if (r.wall) { this.fleeing = true; this.fleeT = 0.2; this.fleeDir = 1; }   // zwenkt af langs de rots
+    if (this.x > game.camX + game.viewW + 300) this.gone = true;
+  }
+  draw(c, time) {
+    c.save(); c.globalAlpha = this.alpha();
+    c.translate(Math.round(this.cx), Math.round(this.y + this.h)); c.scale(1, this.squash());
+    const ph = this.t * 22, o = '#1c1a1e', coat = '#56545e';
+    for (const [lx, off] of [[-14, 0], [-8, Math.PI], [10, Math.PI / 2], [16, Math.PI * 1.5]]) { const s2 = Math.sin(ph + off) * 7; c.strokeStyle = o; c.lineWidth = 3.5; c.lineCap = 'round'; c.beginPath(); c.moveTo(lx, -14); c.lineTo(lx + s2, -1); c.stroke(); }
+    c.fillStyle = o; c.beginPath(); c.ellipse(0, -19, 21, 9, -0.12, 0, Math.PI * 2); c.fill();
+    c.fillStyle = coat; c.beginPath(); c.ellipse(0, -19, 19.5, 7.6, -0.12, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = '#2c2a30'; c.lineWidth = 1; for (let i = -8; i < 10; i += 4) { c.beginPath(); c.moveTo(i, -25); c.lineTo(i + 2, -14); c.stroke(); }
+    c.fillStyle = o; c.beginPath(); c.moveTo(14, -26); c.lineTo(28, -20); c.lineTo(27, -10); c.lineTo(18, -16); c.closePath(); c.fill();
+    c.fillStyle = '#2a2826'; c.beginPath(); c.moveTo(10, -27); c.lineTo(16, -32); c.lineTo(17, -24); c.closePath(); c.fill();
+    c.strokeStyle = '#d8d0c0'; c.lineWidth = 2; c.beginPath(); c.moveTo(20, -24); c.quadraticCurveTo(16, -32, 22, -34); c.moveTo(22, -24); c.quadraticCurveTo(28, -32, 24, -35); c.stroke();
+    c.strokeStyle = '#1c1a1e'; c.lineWidth = 3; c.beginPath(); c.moveTo(-20, -21); c.quadraticCurveTo(-26, -18, -27, -12); c.stroke();
+    c.restore();
+  }
+}
+
+export const ENEMY_TYPES = { hyena: Hyena, snake: Snake, vulture: Vulture, warthog: Warthog, baboon: Baboon, leopard: Leopard, bat: Bat, stalactite: Stalactite, wolf: Wolf, varaan: Varaan, sabre: Sabre, gnu: Gnu };

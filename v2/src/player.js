@@ -254,7 +254,22 @@ export class Player {
       const elbow = [sh[0] + Math.sin(a) * 9, sh[1] + Math.cos(a) * 9];
       const hand = [elbow[0] + Math.sin(a - bend) * 9, elbow[1] + Math.cos(a - bend) * 9];
       limb([sh, elbow, hand], side > 0 ? skin : limbBack, 4.2);
-      if (this.throwAnim > 0.12 && side > 0) {
+      if (side > 0 && this.tool === 'axe' && !hanging) {
+        // Handbijl (Acheuléen): druppelvormige, aan twee kanten bewerkte steen
+        c.save(); c.translate(hand[0], hand[1]); c.rotate(a - bend + Math.PI);
+        c.fillStyle = '#3a3226'; c.beginPath(); c.moveTo(0, -2); c.quadraticCurveTo(6, 3, 1, 14); c.quadraticCurveTo(-5, 3, 0, -2); c.fill();
+        c.fillStyle = '#b8a27a'; c.beginPath(); c.moveTo(0, -1); c.quadraticCurveTo(4.5, 3, 1, 12); c.quadraticCurveTo(-3.5, 3, 0, -1); c.fill();
+        c.fillStyle = '#e0cfa4'; c.beginPath(); c.moveTo(0, 1); c.lineTo(2, 4); c.lineTo(0, 7); c.closePath(); c.fill();
+        c.restore();
+      } else if (side > 0 && this.tool === 'torch' && !hanging) {
+        // Fakkel: tak met vlam, altijd rechtop gehouden
+        c.save(); c.translate(hand[0], hand[1]); c.rotate(this.throwAnim > 0 ? 0.9 : 0.25);
+        c.strokeStyle = '#4a2f1a'; c.lineWidth = 3; c.beginPath(); c.moveTo(0, 4); c.lineTo(0, -14); c.stroke();
+        const f = Math.sin(time * 18) * 1.5;
+        c.fillStyle = '#ff8a2a'; c.beginPath(); c.moveTo(-4, -13); c.quadraticCurveTo(-3 + f, -22, 0, -26); c.quadraticCurveTo(3 + f, -22, 4, -13); c.closePath(); c.fill();
+        c.fillStyle = '#ffe07a'; c.beginPath(); c.moveTo(-2, -14); c.quadraticCurveTo(-1 + f, -19, 0, -21); c.quadraticCurveTo(1 + f, -19, 2, -14); c.closePath(); c.fill();
+        c.restore();
+      } else if (this.throwAnim > 0.12 && side > 0) {
         c.fillStyle = '#8d8778'; c.beginPath(); c.arc(hand[0], hand[1], 3.2, 0, Math.PI * 2); c.fill();
       }
     };

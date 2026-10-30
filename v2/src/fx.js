@@ -38,6 +38,8 @@ export class Fx {
       else if (p.kind === 'spark') { c.fillStyle = p.color; c.fillRect(p.x - 1.5, p.y - 1.5, 3, 3); }
       else if (p.kind === 'bubble') { c.strokeStyle = '#e8ffff'; c.lineWidth = 1; c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.stroke(); }
       else if (p.kind === 'drop') { c.fillStyle = p.color || '#bfeaf0'; c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.fill(); }
+      else if (p.kind === 'wind') { c.strokeStyle = '#ffffff'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(p.x - Math.sign(p.vx) * 26, p.y); c.stroke(); }
+      else if (p.kind === 'leaf') { c.fillStyle = '#9ab35a'; c.save(); c.translate(p.x, p.y); c.rotate(p.life * 9); c.fillRect(-3, -1.5, 6, 3); c.restore(); }
       else if (p.kind === 'rock') { c.save(); c.translate(p.x, p.y); c.rotate(p.rot); c.fillStyle = '#9b7d55'; c.fillRect(-p.r / 2, -p.r / 2, p.r, p.r); c.restore(); }
     }
     c.globalAlpha = 1;

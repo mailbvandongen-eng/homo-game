@@ -19,5 +19,7 @@ Een volledige herbouw als platformspel: strakke besturing (variabele springhoogt
 - `v2/STAMBOOM.md` — plan voor alle werelden en soorten, met bronnen
 
 Wereld 1 (Homo habilis) is compleet: 1-1 Eerste stappen, 1-2 De rivierkloof, 1-3 Het galerijbos, 1-4 De grot van de reuzenhyena.
+
+Wereld 2 (Homo erectus) is compleet: 2-1 De eerste handbijl (Kokiselei), 2-2 Buiten Afrika (Dmanisi), 2-3 De vulkanen van Java, 2-4 Het vuur (Swartkrans/Wonderwerk). Nieuw: handbijl, gebarsten rots, stormloop, wind, lava, vulkaanbommen, Stegodon, fakkel en kampvuren, eindbaas leeuw.
 - `v2/src/player.js`, `game.js`, `render.js`, `audio.js`, `input.js`
 - `?debug` achter de URL toont de botsingsvakken

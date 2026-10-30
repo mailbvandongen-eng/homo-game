@@ -105,6 +105,14 @@ export class Audio {
       case 'roar': this.noise(t, 1.1, 0.4, 'lowpass', 500, 120); this.tone(90, 1, 'sawtooth', 0.12, t, d, 0.6); break;
       case 'crash': this.noise(t, 0.4, 0.45, 'lowpass', 900, 100); this.tone(60, 0.3, 'sine', 0.3, t, d, 0.5); break;
       case 'bosshit': this.tone(300, 0.2, 'square', 0.12, t, d, 0.4); this.noise(t, 0.2, 0.3, 'bandpass', 1200, 300); break;
+      case 'swing': this.noise(t, 0.12, 0.2, 'bandpass', 2500, 900); break;
+      case 'whoosh': this.noise(t, 0.2, 0.22, 'bandpass', 900, 300); this.noise(t + 0.03, 0.2, 0.1, 'highpass', 3000); break;
+      case 'break': this.noise(t, 0.3, 0.4, 'lowpass', 1400, 200); this.tone(140, 0.15, 'square', 0.1, t, d, 0.5); break;
+      case 'sizzle': this.noise(t, 0.6, 0.3, 'highpass', 3000, 6000); break;
+      case 'ignite': this.noise(t, 0.5, 0.3, 'bandpass', 800, 2000); [62, 67, 71, 74].forEach((n, k) => this.tone(midi(n), 0.25, 'triangle', 0.12, t + 0.1 + k * 0.09, d)); break;
+      case 'windwarn': this.noise(t, 0.6, 0.08, 'bandpass', 600, 1400); break;
+      case 'wind': this.noise(t, 1.6, 0.18, 'bandpass', 500, 900); break;
+      case 'rumble': this.noise(t, 1.5, 0.35, 'lowpass', 180, 80); this.tone(45, 1.4, 'sine', 0.25, t, d, 0.9); break;
       case 'click': this.tone(660, 0.05, 'square', 0.05, t, d); break;
     }
   }
@@ -114,6 +122,27 @@ function midi(n) { return 440 * Math.pow(2, (n - 69) / 12); }
 
 // Eigen melodieën. Lead in achtsten, bas in kwarten.
 const SONGS = {
+  plains: {
+    bpm: 138, drums: true,
+    lead: [64, 0, 67, 69, 71, 0, 69, 67, 69, 0, 71, 74, 76, 0, 74, 71, 72, 0, 71, 69, 67, 69, 71, 0, 69, 0, 67, 64, 67, 0, 0, 0,
+           64, 0, 67, 69, 71, 0, 74, 76, 79, 0, 76, 74, 76, 0, 74, 71, 72, 74, 76, 74, 71, 69, 67, 0, 69, 67, 64, 0, 0, 0],
+    bass: [40, 47, 40, 47, 45, 52, 45, 52, 43, 50, 43, 50, 47, 54, 47, 54, 40, 47, 40, 47, 45, 52, 45, 52, 43, 50, 47, 54, 40, 40, 40, 40],
+  },
+  dmanisi: {
+    bpm: 108, drums: true,
+    lead: [62, 0, 65, 0, 69, 67, 65, 0, 64, 0, 65, 67, 69, 0, 0, 0, 70, 0, 69, 67, 65, 0, 64, 0, 62, 64, 65, 64, 62, 0, 0, 0],
+    bass: [38, 45, 38, 45, 34, 41, 34, 41, 36, 43, 36, 43, 33, 40, 38, 38],
+  },
+  java: {
+    bpm: 124, drums: true,
+    lead: [69, 72, 74, 0, 76, 0, 74, 72, 74, 0, 69, 0, 67, 69, 0, 0, 69, 72, 74, 0, 79, 0, 76, 74, 72, 0, 74, 72, 69, 0, 0, 0],
+    bass: [45, 45, 52, 52, 43, 43, 50, 50, 41, 41, 48, 48, 40, 40, 47, 47],
+  },
+  fire: {
+    bpm: 92, drums: false,
+    lead: [62, 0, 0, 65, 69, 0, 67, 0, 65, 0, 64, 0, 62, 0, 0, 0, 60, 0, 62, 0, 65, 0, 64, 62, 60, 0, 0, 57, 62, 0, 0, 0],
+    bass: [38, 38, 41, 41, 36, 36, 33, 33, 34, 34, 36, 36, 38, 38, 38, 38],
+  },
   forest: {
     bpm: 112, drums: true,
     lead: [72, 0, 76, 79, 0, 76, 74, 0, 72, 0, 74, 76, 79, 81, 79, 0, 77, 0, 76, 74, 72, 0, 74, 0, 76, 0, 72, 0, 0, 0, 0, 0,

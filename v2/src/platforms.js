@@ -143,4 +143,39 @@ export class Hippo {
   }
 }
 
-export const PLATFORM_TYPES = { log: Log, croc: Croc, hippo: Hippo };
+// Stegodon (Java): een uitgestorven slurfdier dat rustig heen en weer loopt; je kunt op zijn rug meerijden
+export class Stegodon extends Log {
+  constructor(e) {
+    super({ ...e, len: 4 });
+    this.w = 116; this.x2 = (e.to + 1) * TILE - this.w;
+    this.x = this.x1 + (e.offset || 0) * (this.x2 - this.x1);
+    this.speed = e.speed || 45;
+    this.base = e.y - 76;   // e.y = maaiveld
+  }
+  update(dt) { super.update(dt); this.top = this.base + Math.abs(Math.sin(this.t * 4)) * -1.5; }
+  draw(c, time) {
+    const x = this.x, y = this.top, w = this.w, d = this.dir;
+    c.save(); c.translate(x + w / 2, y); c.scale(d, 1);
+    const o = '#2a2420', skin = '#7d7268', light = '#9a8f84', ph = this.t * 4;
+    // Poten
+    for (const [lx, off] of [[-38, 0], [-22, Math.PI], [22, Math.PI / 2], [38, Math.PI * 1.5]]) {
+      const s = Math.sin(ph + off) * 6;
+      c.fillStyle = o; c.fillRect(lx - 7 + s * 0.5, 30, 14, 46); c.fillStyle = skin; c.fillRect(lx - 5.5 + s * 0.5, 30, 11, 44);
+    }
+    // Romp
+    c.fillStyle = o; c.beginPath(); c.ellipse(0, 26, 58, 30, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = skin; c.beginPath(); c.ellipse(0, 26, 56, 28, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = light; c.beginPath(); c.ellipse(-6, 10, 40, 10, 0, 0, Math.PI * 2); c.fill();
+    // Kop, oor, slurf en lange slagtanden
+    c.fillStyle = o; c.beginPath(); c.ellipse(56, 26, 20, 19, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = skin; c.beginPath(); c.ellipse(56, 26, 18, 17, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#6a5f56'; c.beginPath(); c.ellipse(46, 26, 10, 14, -0.2, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = o; c.lineWidth = 9; c.lineCap = 'round'; c.beginPath(); c.moveTo(68, 34); c.quadraticCurveTo(78, 56 + Math.sin(ph) * 3, 72, 72); c.stroke();
+    c.strokeStyle = skin; c.lineWidth = 6.5; c.beginPath(); c.moveTo(68, 34); c.quadraticCurveTo(78, 56 + Math.sin(ph) * 3, 72, 72); c.stroke();
+    c.strokeStyle = '#f2ead6'; c.lineWidth = 5; c.beginPath(); c.moveTo(64, 40); c.quadraticCurveTo(88, 52, 96, 36); c.stroke();
+    c.fillStyle = '#1a1410'; c.beginPath(); c.arc(62, 20, 2, 0, Math.PI * 2); c.fill();
+    c.restore();
+  }
+}
+
+export const PLATFORM_TYPES = { log: Log, croc: Croc, hippo: Hippo, stegodon: Stegodon };

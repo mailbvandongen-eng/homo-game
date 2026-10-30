@@ -12,9 +12,11 @@ export const T = {
   THORNS: 7,   // doornstruik: doet pijn, niet stevig
   BOUNCY: 8,   // verende tak: van bovenaf stevig en lanceert je
   WATER: 9,    // rivier: erin vallen kost een leven
+  CRACK: 10,   // gebarsten rots: hak hem kapot met de handbijl
+  LAVA: 11,    // lava: erin vallen kost een leven
 };
 
-const SOLID = new Set([T.GROUND, T.ROCK, T.CRUMBLE, T.BUMP, T.SPRING]);
+const SOLID = new Set([T.GROUND, T.ROCK, T.CRUMBLE, T.BUMP, T.SPRING, T.CRACK]);
 
 // Bouwt een level uit een definitie. Coördinaten in de definitie zijn
 // (kolom, hoogte vanaf de onderkant) zodat "y = 3" drie tegels boven de bodem is.
@@ -39,6 +41,8 @@ export function buildLevel(def) {
     thorns: (x, y, cw = 1) => fill(x, x + cw - 1, y, y, T.THORNS),
     bouncy: (x, y, cw = 2) => fill(x, x + cw - 1, y, y, T.BOUNCY),
     water: (x1, x2, top = 2) => fill(x1, x2, 0, top - 1, T.WATER),
+    lava: (x1, x2, top = 2) => fill(x1, x2, 0, top - 1, T.LAVA),
+    crack: (x, y, cw = 1, ch = 1) => fill(x, x + cw - 1, y, y + ch - 1, T.CRACK),
     ent: (type, x, y, opts = {}) => entities.push({ type, ...at(x, y), ...opts }),
     bones: (x, y, n = 1, opts = {}) => {
       for (let i = 0; i < n; i++) {

@@ -1,13 +1,14 @@
-import { TILE, VIEW_ROWS, STEP, START_LIVES, MAX_HEARTS, MAX_STONES, PHYS } from './config.js';
+import { TILE, VIEW_ROWS, STEP, START_LIVES, MAX_HEARTS, MAX_STONES, PHYS, applyPhys } from './config.js';
 import { buildLevel, TileMap, moveBody, T } from './level.js';
 import { Player } from './player.js';
 import { ENEMY_TYPES } from './enemies.js';
 import { Fx, star } from './fx.js';
 import { PAD_RADIUS } from './input.js';
-import { Renderer, drawPickup, drawTree, drawStoneCache, drawFoodCache, drawLiana, drawCave, drawBigTree, drawShelter, flintIcon, artifactIcon } from './render.js';
+import { Renderer, drawPickup, drawTree, drawCampfire, drawStoneCache, drawFoodCache, drawLiana, drawCave, drawBigTree, drawShelter, flintIcon, artifactIcon } from './render.js';
 import { PLATFORM_TYPES } from './platforms.js';
 import { SPECIES } from './species.js';
-import { GiantHyena } from './boss.js';
+import { GiantHyena, Lion } from './boss.js';
+import { Stalactite, Gnu } from './enemies.js';
 
 const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
@@ -64,7 +65,10 @@ export class Game {
     this.levelTime = 0;
     this.finishing = null;
     this.spawnAll();
-    this.player = new Player(this.level.start.x, this.level.start.y);
+    applyPhys(def.phys);
+    this.player = new Player(this.level.start.x, this.level.start.y, def.look ? SPECIES[def.look].look : null);
+    this.player.tool = def.tool || null;
+    this.bombT = 2;
     this.hearts = MAX_HEARTS; this.stones = 3; this.bones = 0;
     this.snapCamera();
   }
@@ -74,6 +78,8 @@ export class Game {
     this.enemies = []; this.stonesFlying = []; this.projectiles = [];
     this.arenaOn = false; this.boss = null;
     if (!fromCheckpoint) { this.pickups = []; this.decor = []; this.fires = []; this.meets = []; this.met = new Set(); this.banner = null; }
+    this.stampedes = [];
+    if (fromCheckpoint) for (const e of L.entities) if (e.type === 'stampede') this.stampedes.push({ ...e, started: false, spawned: 0, t: 0 });
     this.platforms = L.entities.filter(e => PLATFORM_TYPES[e.type]).map(e => new PLATFORM_TYPES[e.type](e));
     for (const e of L.entities) {
       if (ENEMY_TYPES[e.type]) {
@@ -81,7 +87,8 @@ export class Game {
         en.spawnX = e.x;
         this.enemies.push(en);
       } else if (!fromCheckpoint) {
-        if (['bone', 'fig', 'flint', 'artifact'].includes(e.type)) this.pickups.push({ ...e, taken: false });
+        if (['bone', 'fig', 'flint', 'artifact', 'handaxe'].includes(e.type)) this.pickups.push({ ...e, taken: false });
+        else if (e.type === 'stampede') this.stampedes.push({ ...e, started: false, spawned: 0, t: 0 });
         else if (e.type === 'checkpoint') this.fires.push({ ...e, lit: false });
         else if (e.type === 'tree' || e.type === 'bigtree' || e.type === 'finish' || e.type === 'sign') this.decor.push({ ...e });
         else if (e.type === 'meet') {
@@ -101,18 +108,19 @@ export class Game {
     const be = L.entities.find(e => e.type === 'boss');
     if (be && !this.bossBeaten) {
       const A = L.arena;
-      this.boss = new GiantHyena(be.x, be.y, { x1: A.x1 * TILE, x2: (A.x2 + 1) * TILE, ceil: (L.h - A.ceil) * TILE });
+      const Boss = L.boss === 'lion' ? Lion : GiantHyena;
+      this.boss = new Boss(be.x, be.y, { x1: A.x1 * TILE, x2: (A.x2 + 1) * TILE, ceil: (L.h - A.ceil) * TILE });
       this.enemies.push(this.boss);
     }
     this.finish = L.entities.find(e => e.type === 'finish');
     if (this.finish && !fromCheckpoint) {
       // De stam wacht bij de grot: oudere, volwassenen en een kind
-      const f = this.finish;
+      const f = this.finish, base = this.def.look ? SPECIES[this.def.look].look : {}, sz = base.size || 1;
       this.npcs = [
-        new Player(f.x + 92, f.y, { fur: '#7a6a5a', hair: '#9a948a', skin: '#b98a66', size: 0.95 }),
-        new Player(f.x + 150, f.y, { fur: '#9a6844', hair: '#4a2e1c', skin: '#c99a6c', size: 0.93 }),
-        new Player(f.x + 182, f.y, { fur: '#8f6040', hair: '#6a4028', skin: '#d0a070', size: 0.68 }),
-        new Player(f.x + 222, f.y, { fur: '#6e4a30', hair: '#3a2416', skin: '#a8744d', size: 1.06 }),
+        new Player(f.x + 92, f.y, { ...base, fur: '#7a6a5a', hair: '#9a948a', skin: '#b98a66', size: sz * 0.95 }),
+        new Player(f.x + 150, f.y, { ...base, fur: '#9a6844', hair: '#4a2e1c', skin: '#c99a6c', size: sz * 0.93 }),
+        new Player(f.x + 182, f.y, { ...base, fur: '#8f6040', hair: '#6a4028', skin: '#d0a070', size: sz * 0.68 }),
+        new Player(f.x + 222, f.y, { ...base, fur: '#6e4a30', hair: '#3a2416', skin: '#a8744d', size: sz * 1.06 }),
       ];
       this.npcs.forEach((n, i) => { n.face = i === 0 ? 1 : -1; n.phase = i * 1.7; });
     }
@@ -167,6 +175,7 @@ export class Game {
   }
 
   throwStone() {
+    if (this.player.tool) return this.swing();
     if (this.stones <= 0) { this.fx.text(this.player.cx, this.player.y - 6, 'geen stenen'); return; }
     if (this.stonesFlying.length >= 2) return;
     const p = this.player;
@@ -174,6 +183,30 @@ export class Game {
     this.stonesFlying.push({ x: p.cx + p.face * 10 - 5, y: p.y + 10, w: 10, h: 10, vx: p.face * 400 + p.vx * 0.35, vy: -240, bounces: 0, life: 1.6, spin: 0 });
     p.throwAnim = 0.25;
     this.audio.play('throw');
+  }
+
+  // Handbijl of fakkel: korte zwaai voor je. Verjaagt dieren, breekt gebarsten rots, slaat vruchten weg.
+  swing() {
+    const p = this.player;
+    if ((p.swingCd || 0) > 0) return;
+    const torch = p.tool === 'torch', reach = torch ? 46 : 36;
+    p.swingCd = 0.38; p.throwAnim = 0.25;
+    const box = { x: p.face > 0 ? p.x + p.w - 6 : p.x - reach + 6, y: p.y - 4, w: reach, h: p.h + 4 };
+    this.audio.play(torch ? 'whoosh' : 'swing');
+    for (const e of this.enemies) {
+      if (e.fleeing || !e.active) continue;
+      if (!overlap(box, e.hitbox())) continue;
+      if (e.isBoss) e.scare(p.face, this); else if (!e.immune) e.scare(p.face, this);
+      this.audio.play('hit');
+    }
+    for (const pl of this.platforms) { const hz = pl.hazard?.() || (pl.headX && pl.state === 'warn' ? { x: pl.headX() - 4, y: pl.top - 26, w: 38, h: 34 } : null); if (hz && overlap(box, hz)) pl.scare?.(this); }
+    for (const q of this.projectiles) if (overlap(box, q)) { q.life = 0; this.fx.splat(q.x + 6, q.y + 6); }
+    const x1 = Math.floor(box.x / TILE), x2 = Math.floor((box.x + box.w) / TILE), y1 = Math.floor(box.y / TILE), y2 = Math.floor((box.y + box.h - 1) / TILE);
+    for (let cx = x1; cx <= x2; cx++) for (let cy = y1; cy <= y2; cy++) if (this.map.get(cx, cy) === T.CRACK) {
+      this.map.tiles[cy * this.map.w + cx] = T.EMPTY;
+      this.fx.debris(cx * TILE + 16, cy * TILE + 16); this.audio.play('break'); this.shake(3);
+    }
+    if (torch) this.fx.sparkle(box.x + box.w / 2, p.y + 6, '#ffb24a');
   }
 
   hitHead(cx, cy) {
@@ -232,6 +265,7 @@ export class Game {
     const p = this.player;
     if (this.state === 'play' && this.finishing === null) this.levelTime += dt;
     for (const pl of this.platforms) pl.update(dt, this);
+    p.swingCd = Math.max(0, (p.swingCd || 0) - dt);
     if (p.platform && p.onGround && !p.hang) { p.x += p.platform.dx; p.y += p.platform.dy; }
     p.update(dt, this.state === 'play' ? inp : { left: false, right: false, jumpHeld: false, jump: false, throw: false }, this);
     this.landOnPlatforms(p);
@@ -251,9 +285,15 @@ export class Game {
     if (p.y > this.level.pxH + 40) { this.hearts = 0; this.die(); return; }
     // In het water gevallen
     const wy = Math.floor((p.bottom - 14) / TILE);
-    if (!p.onGround && this.map.get(Math.floor(p.cx / TILE), wy) === T.WATER && this.map.get(Math.floor(p.cx / TILE), wy - 1) !== T.WATER) {
-      this.fx.splash(p.cx, wy * TILE + 8); this.audio.play('splash'); this.hearts = 0; this.die(); p.vy = -200; return;
+    const liquid = this.map.get(Math.floor(p.cx / TILE), wy);
+    if (!p.onGround && (liquid === T.WATER || liquid === T.LAVA) && this.map.get(Math.floor(p.cx / TILE), wy - 1) !== liquid) {
+      if (liquid === T.LAVA) { this.fx.sparkle(p.cx, wy * TILE + 8, '#ff8a2a'); this.fx.sparkle(p.cx, wy * TILE + 4, '#ffd36a'); this.audio.play('sizzle'); }
+      else { this.fx.splash(p.cx, wy * TILE + 8); this.audio.play('splash'); }
+      this.hearts = 0; this.die(); p.vy = -200; return;
     }
+    this.updateWind(dt);
+    this.updateStampedes(dt);
+    this.updateBombs(dt);
     // Bek van de krokodil
     for (const pl of this.platforms) { const hz = pl.hazard?.(); if (hz && overlap(p, hz)) this.hurt(hz.x + hz.w / 2); }
 
@@ -271,7 +311,8 @@ export class Game {
     for (const f of this.fires) if (!f.lit && Math.abs(p.cx - f.x) < 26 && Math.abs(p.bottom - f.y) < 40) {
       f.lit = true; this.checkpoint = { x: f.x, y: f.y };
       this.stones = Math.max(this.stones, 5);
-      this.audio.play('checkpoint'); this.fx.sparkle(f.x, f.y - 16, '#cfe0ff'); this.fx.text(f.x, f.y - 40, 'Voorraadplek!');
+      if (this.def.fire) { this.audio.play('ignite'); this.fx.sparkle(f.x, f.y - 16, '#ffb24a'); this.fx.text(f.x, f.y - 40, 'Kampvuur aangestoken!'); }
+      else { this.audio.play('checkpoint'); this.fx.sparkle(f.x, f.y - 16, '#cfe0ff'); this.fx.text(f.x, f.y - 40, 'Voorraadplek!'); }
     }
 
     // Ontmoetingen met andere soorten
@@ -363,7 +404,8 @@ export class Game {
         if (overlap(s, e.hitbox())) { if (!e.immune) e.scare(Math.sign(s.vx) || 1, this); s.life = 0; this.audio.play('hit'); this.fx.dust(s.x + 5, s.y + 5, 0, 2); break; }
       }
       for (const pl of this.platforms) { const hz = pl.hazard?.() || (pl.headX && pl.state === 'warn' ? { x: pl.headX() - 4, y: pl.top - 26, w: 38, h: 34 } : null); if (hz && overlap(s, hz)) { pl.scare?.(this); s.life = 0; this.audio.play('hit'); } }
-      if (this.map.get(Math.floor((s.x + 5) / TILE), Math.floor((s.y + 8) / TILE)) === T.WATER) { this.fx.splash(s.x + 5, s.y + 6, 4); s.life = 0; }
+      const st = this.map.get(Math.floor((s.x + 5) / TILE), Math.floor((s.y + 8) / TILE));
+      if (st === T.WATER || st === T.LAVA) { this.fx.splash(s.x + 5, s.y + 6, 4); s.life = 0; }
       if (s.y > this.level.pxH) s.life = 0;
     }
     this.stonesFlying = this.stonesFlying.filter(s => s.life > 0);
@@ -375,7 +417,9 @@ export class Game {
     for (const k of this.pickups) {
       if (k.taken) continue;
       if (k.pop > 0) { k.pop -= dt; k.y -= 70 * dt; continue; }
-      if (!overlap(box, { x: k.x - 9, y: k.y - 9, w: 18, h: 18 })) continue;
+      // De handbijl pak je ook als je eroverheen springt (hij is te belangrijk om te missen)
+      const kb = k.type === 'handaxe' ? { x: k.x - 14, y: k.y - 220, w: 28, h: 232 } : { x: k.x - 9, y: k.y - 9, w: 18, h: 18 };
+      if (!overlap(box, kb)) continue;
       k.taken = true;
       if (k.type === 'bone') { this.addBones(1); this.fx.sparkle(k.x, k.y, '#fff6dc'); }
       else if (k.type === 'fig') {
@@ -385,12 +429,72 @@ export class Game {
       } else if (k.type === 'flint') {
         this.stones = Math.min(MAX_STONES, this.stones + 3);
         this.audio.play('flint'); this.fx.sparkle(k.x, k.y, '#cfe0ff'); this.fx.text(k.x, k.y - 10, '+3 stenen');
+      } else if (k.type === 'handaxe') {
+        p.tool = 'axe'; this.toolFound = true;
+        this.audio.play('artifact'); this.fx.sparkle(k.x, k.y, '#ffe27a');
+        this.banner = { sp: { name: 'Handbijl', nick: '"Acheuléen"', when: 'circa 1,76 miljoen jaar geleden', text: 'Je hebt een handbijl! Druk op de actieknop (X of de knop rechts) om te hakken: dieren schrikken weg en gebarsten rots breekt. Handbijlen waren eeuwenlang het belangrijkste gereedschap van erectus.' }, t: 0 };
       } else if (k.type === 'artifact') {
         this.artifacts.add(k.id ?? k.x);
         this.audio.play('artifact'); this.fx.sparkle(k.x, k.y, '#ffe27a'); this.fx.sparkle(k.x, k.y, '#ffffff');
         this.fx.text(k.x, k.y - 14, k.name || 'Artefact!', '#ffe27a');
       }
     }
+  }
+
+  // Windstoten (Dmanisi): rustig → waarschuwing (wervelende blaadjes) → stoot die je opzij duwt
+  windState(z) {
+    const t = (this.time + (z.offset || 0)) % (z.period || 5);
+    return t < 2.4 ? 'calm' : t < 3.1 ? 'warn' : 'gust';
+  }
+  updateWind(dt) {
+    const p = this.player, W = this.level.wind;
+    if (!W || p.dead || p.hang) return;
+    for (const z of W) {
+      if (p.cx < z.from * TILE || p.cx > z.to * TILE) continue;
+      const st = this.windState(z);
+      if (st === 'gust') {
+        const force = (z.strength || 520) * (p.onGround ? 1 : 1.35);
+        p.vx = Math.max(-330, Math.min(330, p.vx + z.dir * force * dt));
+        if (Math.random() < dt * 30) this.fx.add({ kind: 'wind', x: this.camX + (z.dir > 0 ? -10 : this.viewW + 10), y: this.camY + Math.random() * this.viewH, vx: z.dir * (500 + Math.random() * 200), vy: 0, life: 1.2, max: 1.2, r: 1, g: 0 });
+      }
+      if (st === 'warn' && Math.random() < dt * 12) this.fx.add({ kind: 'leaf', x: this.camX + Math.random() * this.viewW, y: this.camY + this.viewH * (0.3 + Math.random() * 0.4), vx: z.dir * 90, vy: -20, life: 0.8, max: 0.8, r: 2, g: 30 });
+      if (st !== z.last) { if (st === 'warn') this.audio.play('windwarn'); if (st === 'gust') this.audio.play('wind'); z.last = st; }
+    }
+  }
+
+  // Stormende kudde gnoes: eerst gerommel en een waarschuwing, dan rennen ze van links door het beeld
+  updateStampedes(dt) {
+    const p = this.player;
+    for (const s of this.stampedes) {
+      if (!s.started) { if (p.cx > s.x) { s.started = true; s.t = -1.6; this.audio.play('rumble'); this.shake(4); this.fx.text(p.cx, p.y - 30, 'Een kudde gnoes! Klim omhoog!', '#ffd07a'); } continue; }
+      s.t += dt;
+      if (s.t > 0 && s.spawned < (s.count || 10) && s.t > s.spawned * (s.every || 0.55)) {
+        s.spawned++;
+        const x = this.camX - 60;
+        let y = null; const cx = Math.floor(x / TILE);
+        for (let cy = 0; cy < this.map.h; cy++) if (this.map.solidAt(cx, cy)) { y = cy * TILE; break; }
+        if (y !== null) this.enemies.push(new Gnu(x, y));
+        if (Math.random() < 0.5) this.shake(2);
+      }
+    }
+  }
+
+  // Vulkaanbommen (Java): vallen met een schaduw als waarschuwing
+  updateBombs(dt) {
+    const B = this.level.bombs, p = this.player;
+    if (!B || p.dead) return;
+    const z = B.find(b => p.cx > b.from * TILE && p.cx < b.to * TILE);
+    if (!z) return;
+    this.bombT -= dt;
+    if (this.bombT > 0) return;
+    this.bombT = z.every || 2.2;
+    const x = p.cx + p.vx * 0.8 + (Math.random() - 0.4) * 160;
+    let gy = null;
+    for (let cy = 0; cy < this.map.h; cy++) { const cx = Math.floor(x / TILE); if (this.map.solidAt(cx, cy) || this.map.get(cx, cy) === T.LAVA) { gy = cy * TILE; break; } }
+    if (gy === null) return;
+    const s = new Stalactite(x, 0, { ceil: this.camY - 30, falling: true, skin: 'bomb' });
+    s.groundY = gy; s.active = true; s.timer = 1.0;
+    this.enemies.push(s);
   }
 
   // Gegooide vruchten van bavianen
@@ -518,7 +622,7 @@ export class Game {
     if (this.level.outside) {
       // Buiten de grot: daglicht en savanne
       const sx = (this.level.outside.from * TILE - camX) * (this.zoom || 1);
-      if (sx < this.viewW) { c.save(); c.beginPath(); c.rect(Math.max(0, sx), 0, this.viewW + 10, this.viewH); c.clip(); this.renderer.background(c, 'savanna', camX, camY, this.viewW, this.viewH, this.level.pxH, this.time); c.restore(); }
+      if (sx < this.viewW) { c.save(); c.beginPath(); c.rect(Math.max(0, sx), 0, this.viewW + 10, this.viewH); c.clip(); this.renderer.background(c, this.level.outsideTheme || 'savanna', camX, camY, this.viewW, this.viewH, this.level.pxH, this.time); c.restore(); }
     }
 
     c.setTransform(k, 0, 0, k, -camX * k, -camY * k);
@@ -530,10 +634,13 @@ export class Game {
     this.renderer.tiles(c, this.map, camX, camY, this.viewW, this.viewH);
     this.renderer.dynamicTiles(c, this.map, camX, this.viewW, this.time);
     for (const d of this.decor) if (d.type === 'sign' && vis(d.x)) drawSign(c, d.x, d.y, d.text);
-    for (const f of this.fires) if (vis(f.x)) drawStoneCache(c, f.x, f.y, f.lit, this.time);
+    for (const f of this.fires) if (vis(f.x)) (this.def.fire ? drawCampfire : drawStoneCache)(c, f.x, f.y, f.lit, this.time);
     if (this.finish && vis(this.finish.x, 420)) drawFoodCache(c, this.finish.x + 122, this.finish.y);
     for (const L of this.lianas) if (vis(L.ax, 200)) drawLiana(c, L, this.time);
-    for (const k2 of this.pickups) if (!k2.taken && vis(k2.x)) drawPickup(c, k2, this.time);
+    for (const k2 of this.pickups) if (!k2.taken && vis(k2.x)) {
+      if (k2.type === 'handaxe') { c.save(); const gl = c.createRadialGradient(k2.x, k2.y, 2, k2.x, k2.y, 22); gl.addColorStop(0, '#fff3b0aa'); gl.addColorStop(1, '#fff3b000'); c.fillStyle = gl; c.fillRect(k2.x - 22, k2.y - 22, 44, 44); toolIcon(c, 'axe', k2.x, k2.y + Math.sin(this.time * 3) * 2.5, 1.5, this.time); c.restore(); }
+      else drawPickup(c, k2, this.time);
+    }
     if (this.npcs && this.finish && vis(this.finish.x, 420)) for (const n of this.npcs) n.draw(c, this.time + n.x);
     for (const m of this.meets) if (vis(m.x, 200)) for (const n of m.group) n.draw(c, this.time + n.phase);
     for (const pl of this.platforms) if (vis(pl.x, 140)) pl.draw(c, this.time);
@@ -561,6 +668,14 @@ export class Game {
     if (this.arenaOn && this.boss) this.drawBossBar(c);
     if (this.state === 'intro' && this.introT < 1.4) this.drawIntro(c);
     if (this.banner && this.state === 'play') this.drawBanner(c);
+    if (this.level.wind && this.state === 'play') for (const z of this.level.wind) {
+      if (this.player.cx < z.from * TILE || this.player.cx > z.to * TILE) continue;
+      const st = this.windState(z); if (st === 'calm') continue;
+      c.save(); c.globalAlpha = st === 'warn' ? 0.5 + Math.sin(this.time * 20) * 0.4 : 0.9;
+      c.fillStyle = '#10221fd0'; c.beginPath(); c.roundRect(this.W / 2 - 46, this.safe.t + 40, 92, 26, 13); c.fill();
+      c.fillStyle = '#e8f4ff'; c.font = '800 13px system-ui, sans-serif'; c.textAlign = 'center';
+      c.fillText((z.dir > 0 ? 'WIND →' : '← WIND'), this.W / 2, this.safe.t + 58); c.textAlign = 'left'; c.restore();
+    }
   }
 
   drawDebug(c) {
@@ -585,7 +700,8 @@ export class Game {
     d.setTransform(k, 0, 0, k, -camX * k, -camY * k);
     const hole = (x, y, r, a = 1) => { const g = d.createRadialGradient(x, y, r * 0.15, x, y, r); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(0.6, `rgba(0,0,0,${a * 0.7})`); g.addColorStop(1, 'rgba(0,0,0,0)'); d.fillStyle = g; d.fillRect(x - r, y - r, r * 2, r * 2); };
     const p = this.player;
-    hole(p.cx, p.y + 18, 165);
+    hole(p.cx, p.y + 18, p.tool === 'torch' ? 235 + Math.sin(this.time * 9) * 6 : 165);
+    if (this.def.fire) for (const f of this.fires) if (f.lit) hole(f.x, f.y - 20, 190);
     for (const L of this.level.entities) if (L.type === 'light') {
       const g = d.createLinearGradient(L.x - 50, 0, L.x + 50, 0);
       g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.5, 'rgba(0,0,0,0.85)'); g.addColorStop(1, 'rgba(0,0,0,0)');
@@ -609,7 +725,7 @@ export class Game {
     const top = this.safe.t + 44;
     c.fillStyle = '#10221fd8'; c.beginPath(); c.roundRect(x, top, w, 34, 12); c.fill();
     c.fillStyle = '#f6cf75'; c.font = '800 12px system-ui, sans-serif'; c.textAlign = 'center';
-    c.fillText('REUZENHYENA · Pachycrocuta', this.W / 2, top + 14);
+    c.fillText(b.title || 'EINDBAAS', this.W / 2, top + 14);
     for (let i = 0; i < b.maxHits; i++) {
       const bx = this.W / 2 + (i - (b.maxHits - 1) / 2) * 30;
       c.fillStyle = i < b.maxHits - b.hits ? '#ff6b4a' : '#ffffff30';
@@ -662,8 +778,8 @@ export class Game {
     c.fillStyle = '#fff1c4'; c.fillText(String(this.bonesTotal).padStart(2, '0'), sl + 178, st + 16);
     // Stenen
     pill(sl + 224, st, 60);
-    flintIcon(c, sl + 242, st + 15, 1);
-    c.fillStyle = this.stones ? '#fff1c4' : '#ff9b8a'; c.fillText(String(this.stones), sl + 256, st + 16);
+    if (this.player.tool) { toolIcon(c, this.player.tool, sl + 242, st + 15, 1, this.time); c.fillStyle = '#fff1c4'; c.fillText('∞', sl + 256, st + 16); }
+    else { flintIcon(c, sl + 242, st + 15, 1); c.fillStyle = this.stones ? '#fff1c4' : '#ff9b8a'; c.fillText(String(this.stones), sl + 256, st + 16); }
     // Artefacten
     pill(sl + 292, st, 84);
     for (let i = 0; i < 3; i++) artifactIcon(c, sl + 312 + i * 24, st + 15, 1, i < this.artifacts.size);
@@ -698,8 +814,8 @@ export class Game {
     icon(jumping ? 0.8 : 0.35, () => { const r = J.r; c.beginPath(); c.moveTo(J.x, J.y - r * 0.42); c.lineTo(J.x - r * 0.36, J.y + r * 0.08); c.lineTo(J.x + r * 0.36, J.y + r * 0.08); c.closePath(); c.fill(); c.fillRect(J.x - r * 0.12, J.y + r * 0.05, r * 0.24, r * 0.32); });
     const Th = L.throw, throwing = this.input.held('throw');
     ring(Th.x, Th.y, Th.r, throwing);
-    c.save(); c.globalAlpha = throwing ? 0.9 : 0.45; flintIcon(c, Th.x, Th.y, Th.r / 15); c.restore();
-    if (this.stones > 0) { c.fillStyle = 'rgba(255,241,196,0.7)'; c.font = '800 11px system-ui, sans-serif'; c.textAlign = 'center'; c.fillText(String(this.stones), Th.x + Th.r * 0.75, Th.y - Th.r * 0.6); c.textAlign = 'left'; }
+    c.save(); c.globalAlpha = throwing ? 0.9 : 0.45; if (this.player.tool) toolIcon(c, this.player.tool, Th.x, Th.y, Th.r / 15, this.time); else flintIcon(c, Th.x, Th.y, Th.r / 15); c.restore();
+    if (this.stones > 0 && !this.player.tool) { c.fillStyle = 'rgba(255,241,196,0.7)'; c.font = '800 11px system-ui, sans-serif'; c.textAlign = 'center'; c.fillText(String(this.stones), Th.x + Th.r * 0.75, Th.y - Th.r * 0.6); c.textAlign = 'left'; }
     // Pauze
     const P = L.pause;
     ring(P.x, P.y, P.r, false);
@@ -727,6 +843,22 @@ function wrap(c, text, maxW) {
   }
   if (line) out.push(line);
   return out;
+}
+
+function toolIcon(c, tool, x, y, s, time) {
+  c.save(); c.translate(x, y); c.scale(s, s);
+  if (tool === 'axe') {
+    c.rotate(-0.5);
+    c.fillStyle = '#3a3226'; c.beginPath(); c.moveTo(0, -9); c.quadraticCurveTo(8, -1, 1, 10); c.quadraticCurveTo(-7, -1, 0, -9); c.fill();
+    c.fillStyle = '#c9b183'; c.beginPath(); c.moveTo(0, -7.5); c.quadraticCurveTo(6, -1, 1, 8); c.quadraticCurveTo(-5, -1, 0, -7.5); c.fill();
+    c.fillStyle = '#efe0b8'; c.beginPath(); c.moveTo(0, -4); c.lineTo(2.5, 0); c.lineTo(0, 3); c.closePath(); c.fill();
+  } else {
+    c.strokeStyle = '#6a4228'; c.lineWidth = 3; c.beginPath(); c.moveTo(3, 9); c.lineTo(-1, -2); c.stroke();
+    const f = Math.sin(time * 14);
+    c.fillStyle = '#ff8a2a'; c.beginPath(); c.moveTo(-6, -1); c.quadraticCurveTo(-4 + f, -9, -2, -12); c.quadraticCurveTo(1 + f, -8, 3, -1); c.closePath(); c.fill();
+    c.fillStyle = '#ffe07a'; c.beginPath(); c.moveTo(-3.5, -2); c.quadraticCurveTo(-2.5, -6, -1.5, -7); c.quadraticCurveTo(0, -5, 1, -2); c.closePath(); c.fill();
+  }
+  c.restore();
 }
 
 function heart(c, x, y, full) {

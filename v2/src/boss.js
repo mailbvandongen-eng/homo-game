@@ -18,6 +18,8 @@ export class GiantHyena {
     this.invuln = 0; this.active = false; this.gone = false; this.fleeing = false;
     this.stompable = true; this.isBoss = true;
     this.name = 'Reuzenhyena';
+    this.title = 'REUZENHYENA · Pachycrocuta';
+    this.rocks = true;
   }
   get cx() { return this.x + this.w / 2; }
   get phase() { return this.hits + 1; }
@@ -71,7 +73,7 @@ export class GiantHyena {
           this.x = Math.max(this.arena.x1 + 2, Math.min(this.arena.x2 - 2 - this.w, this.x));
           this.state = 'dazed'; this.timer = this.phase >= 3 ? 1.6 : 2; this.vx = 0;
           game.shake(9); game.audio.play('crash'); game.fx.debris(this.cx + this.dir * 40, this.y + 10);
-          if (this.phase >= 3) this.dropRocks(game);
+          if (this.phase >= 3 && this.rocks) this.dropRocks(game);
         } else if (this.timer <= 0) { this.state = 'stalk'; this.timer = 0.8; }
         break;
       }
@@ -164,6 +166,57 @@ export class GiantHyena {
       c.fillStyle = '#ffe27a';
       for (let i = 0; i < 4; i++) { const a = time * 5 + i * 1.6; c.beginPath(); c.arc(this.cx + Math.cos(a) * 22, this.y - 6 + Math.sin(a) * 5, 3, 0, Math.PI * 2); c.fill(); }
       // Pijl: hier kun je op springen
+      c.fillStyle = `rgba(255,236,160,${0.6 + Math.sin(time * 8) * 0.3})`;
+      c.beginPath(); c.moveTo(this.cx, this.y - 18); c.lineTo(this.cx - 8, this.y - 30); c.lineTo(this.cx + 8, this.y - 30); c.closePath(); c.fill();
+    }
+  }
+}
+
+// Leeuw (Wonderwerk, wereld 2): sneller, springt vaker; schrikt van vuur.
+// Een zwaai met de fakkel tijdens het grommen of mikken laat hem schrikken (versuft).
+export class Lion extends GiantHyena {
+  constructor(x, y, arena) {
+    super(x, y, arena);
+    this.w = 88; this.h = 54; this.title = 'LEEUW · Panthera leo'; this.rocks = false;
+  }
+  update(dt, game) {
+    // Na een treffer vaker springen
+    if (this.state === 'stalk' && this.timer <= dt && this.phase >= 2) { this.state = Math.random() < 0.6 ? 'aim' : 'growl'; this.timer = 0.8; game.audio.play('growl'); return; }
+    super.update(dt, game);
+  }
+  draw(c, time) {
+    const blink = this.invuln > 0 && Math.floor(time * 14) % 2 === 0;
+    if (blink) return;
+    c.save(); c.translate(Math.round(this.cx), Math.round(this.y + this.h)); c.scale(this.dir, 1);
+    const o = '#2a1a0c', coat = '#c9974e', mane = '#6a3e1c', charging = this.state === 'charge', low = this.state === 'growl' || this.state === 'aim';
+    const ph = this.t * (charging ? 22 : 7);
+    if (this.state === 'leap') c.rotate(Math.max(-0.3, Math.min(0.3, this.vy / 2000)));
+    if (this.state === 'dazed') c.rotate(Math.sin(time * 8) * 0.05);
+    for (const [lx, off] of [[-30, 0], [-22, Math.PI], [22, Math.PI / 2], [30, Math.PI * 1.5]]) {
+      const s = (this.vx !== 0 ? Math.sin(ph + off) : 0) * (charging ? 9 : 5);
+      c.strokeStyle = o; c.lineWidth = 9; c.lineCap = 'round'; c.beginPath(); c.moveTo(lx, -26); c.lineTo(lx + s, -2); c.stroke();
+      c.strokeStyle = coat; c.lineWidth = 6; c.beginPath(); c.moveTo(lx, -26); c.lineTo(lx + s, -2); c.stroke();
+    }
+    c.strokeStyle = coat; c.lineWidth = 4; c.beginPath(); c.moveTo(-38, -34); c.quadraticCurveTo(-54, -30, -56, -16 + Math.sin(time * 3) * 3); c.stroke();
+    c.fillStyle = o; c.beginPath(); c.arc(-56, -14 + Math.sin(time * 3) * 3, 4, 0, Math.PI * 2); c.fill();
+    c.fillStyle = o; c.beginPath(); c.ellipse(0, -34, 42, 17, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = coat; c.beginPath(); c.ellipse(0, -34, 40, 15.5, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#e0b878'; c.beginPath(); c.ellipse(0, -26, 30, 6, 0, 0, Math.PI * 2); c.fill();
+    const hy = low ? -34 : -44;
+    c.fillStyle = mane; c.beginPath(); c.ellipse(38, hy + 2, 22, 22, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#8a5428'; c.beginPath(); c.ellipse(40, hy, 17, 17, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = o; c.beginPath(); c.ellipse(48, hy + 2, 13, 12, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = coat; c.beginPath(); c.ellipse(48, hy + 2, 11.5, 10.5, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#e0b878'; c.beginPath(); c.ellipse(56, hy + 7, 6, 5, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#3a2210'; c.beginPath(); c.arc(60, hy + 4, 2.4, 0, Math.PI * 2); c.fill();
+    if (low || charging || this.state === 'roar') { c.fillStyle = '#5a1f18'; c.beginPath(); c.ellipse(56, hy + 12, 6, 4, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = '#f2eedc'; c.fillRect(52, hy + 9, 2, 4); c.fillRect(58, hy + 9, 2, 4); }
+    const red = low || charging || this.state === 'aim';
+    c.fillStyle = this.state === 'dazed' ? '#fff' : red ? '#ff7a3a' : '#f2d36b'; c.beginPath(); c.arc(51, hy - 2, 2.6, 0, Math.PI * 2); c.fill();
+    if (this.state !== 'dazed') { c.fillStyle = '#1b120b'; c.beginPath(); c.arc(52, hy - 2, 1.2, 0, Math.PI * 2); c.fill(); }
+    c.restore();
+    if (this.state === 'dazed') {
+      c.fillStyle = '#ffe27a';
+      for (let i = 0; i < 4; i++) { const a = time * 5 + i * 1.6; c.beginPath(); c.arc(this.cx + Math.cos(a) * 22, this.y - 6 + Math.sin(a) * 5, 3, 0, Math.PI * 2); c.fill(); }
       c.fillStyle = `rgba(255,236,160,${0.6 + Math.sin(time * 8) * 0.3})`;
       c.beginPath(); c.moveTo(this.cx, this.y - 18); c.lineTo(this.cx - 8, this.y - 30); c.lineTo(this.cx + 8, this.y - 30); c.closePath(); c.fill();
     }
