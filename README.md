@@ -12,6 +12,12 @@ Een volledige herbouw als platformspel: strakke besturing (variabele springhoogt
 
 - `v2/src/config.js` — natuurkunde en afmetingen
 - `v2/src/levels/` — één bestand per level (bouwfuncties: `ground`, `rock`, `branch`, `crumble`, `bump`, `spring`, `thorns`, `ent`, `bones`)
-- `v2/src/enemies.js` — hyena, slang, gier, wrattenzwijn
+- `v2/src/enemies.js` — hyena, slang, gier, wrattenzwijn, baviaan, luipaard, vleermuis, stalactiet
+- `v2/src/boss.js` — eindbaas wereld 1: reuzenhyena (Pachycrocuta)
+- `v2/src/platforms.js` — boomstammen, krokodillen, nijlpaarden
+- `v2/src/species.js` — teksten bij ontmoetingen met andere soorten
+- `v2/STAMBOOM.md` — plan voor alle werelden en soorten, met bronnen
+
+Wereld 1 (Homo habilis) is compleet: 1-1 Eerste stappen, 1-2 De rivierkloof, 1-3 Het galerijbos, 1-4 De grot van de reuzenhyena.
 - `v2/src/player.js`, `game.js`, `render.js`, `audio.js`, `input.js`
 - `?debug` achter de URL toont de botsingsvakken

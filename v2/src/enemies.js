@@ -475,7 +475,7 @@ export class Stalactite extends Enemy {
     super(x, y, 18, 30);
     this.y = o.ceil ?? y;     // hangt aan het plafond (bovenkant)
     this.stompable = false; this.immune = true;
-    this.state = o.falling ? 'shake' : 'hang'; this.timer = o.falling ? 0.7 : 0;
+    this.state = o.falling ? 'shake' : 'hang'; this.timer = o.falling ? 0.9 : 0;
     this.shadow = !!o.falling;
   }
   scare() {}

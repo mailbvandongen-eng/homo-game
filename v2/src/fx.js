@@ -19,6 +19,7 @@ export class Fx {
   splash(x, y, n = 12) {
     for (let i = 0; i < n; i++) this.add({ kind: 'drop', x: x + (Math.random() - 0.5) * 20, y, vx: (Math.random() - 0.5) * 160, vy: -120 - Math.random() * 200, life: 0.6, max: 0.6, r: 2 + Math.random() * 2, g: 900 });
   }
+  splat(x, y) { for (let i = 0; i < 8; i++) this.add({ kind: 'drop', x, y, vx: (Math.random() - 0.5) * 140, vy: -60 - Math.random() * 100, life: 0.5, max: 0.5, r: 2, g: 800, color: '#e8902e' }); }
   text(x, y, str, color = '#fff6d0') { this.texts.push({ x, y, str, color, life: 0.9 }); }
 
   update(dt) {
@@ -36,7 +37,7 @@ export class Fx {
       else if (p.kind === 'star') { star(c, p.x, p.y, 4.5, '#ffe27a'); }
       else if (p.kind === 'spark') { c.fillStyle = p.color; c.fillRect(p.x - 1.5, p.y - 1.5, 3, 3); }
       else if (p.kind === 'bubble') { c.strokeStyle = '#e8ffff'; c.lineWidth = 1; c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.stroke(); }
-      else if (p.kind === 'drop') { c.fillStyle = '#bfeaf0'; c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.fill(); }
+      else if (p.kind === 'drop') { c.fillStyle = p.color || '#bfeaf0'; c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.fill(); }
       else if (p.kind === 'rock') { c.save(); c.translate(p.x, p.y); c.rotate(p.rot); c.fillStyle = '#9b7d55'; c.fillRect(-p.r / 2, -p.r / 2, p.r, p.r); c.restore(); }
     }
     c.globalAlpha = 1;

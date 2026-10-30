@@ -3,12 +3,14 @@ import { Audio } from './audio.js';
 import { Game } from './game.js';
 import level11 from './levels/w1-1.js';
 import level12 from './levels/w1-2.js';
+import level13 from './levels/w1-3.js';
+import level14 from './levels/w1-4.js';
 import { SPECIES } from './species.js';
 
 // Ophogen bij elke publicatie: zo zie je op het titelscherm of je de nieuwste versie hebt.
-export const VERSION = '2026-10-30c';
+export const VERSION = '2026-10-30d';
 
-const LEVELS = [level11, level12];
+const LEVELS = [level11, level12, level13, level14];
 const $ = id => document.getElementById(id);
 const canvas = $('game');
 const input = new Input(canvas);
@@ -44,7 +46,7 @@ const ui = {
     store(); renderLevels();
     $('nextLevel').hidden = current + 1 >= LEVELS.length;
     $('soon').hidden = current + 1 < LEVELS.length;
-    $('soon').textContent = `Level ${LEVELS[current].world}-${LEVELS.length + 1} komt binnenkort.`;
+    $('soon').textContent = current + 1 >= LEVELS.length ? 'Wereld 1 voltooid! Wereld 2 (Homo erectus) komt binnenkort.' : '';
     show('complete');
   },
   gameOver() { show('gameover'); },

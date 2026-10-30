@@ -171,7 +171,7 @@ export class Player {
       // Loslaten: snelheid langs de slingerbaan plus een sprong omhoog
       const tv = L.omega * len;
       let vx = tv * Math.cos(L.angle) + this.face * 70;
-      if (vx * this.face < 170) vx = this.face * 170;   // altijd een fatsoenlijke zwaai in de kijkrichting
+      if (vx * this.face < 205) vx = this.face * 205;   // altijd een fatsoenlijke zwaai in de kijkrichting
       this.vx = Math.max(-PHYS.run * 1.3, Math.min(PHYS.run * 1.3, vx));
       this.vy = Math.min(0, -tv * Math.sin(L.angle)) - PHYS.lianaJump;
       this.holdTime = PHYS.runDelay;
@@ -273,13 +273,15 @@ export class Player {
     c.beginPath(); c.moveTo(-8, -22); c.quadraticCurveTo(1, -18, 10, -22); c.lineTo(9, -16); c.quadraticCurveTo(1, -12, -7, -16); c.closePath(); c.fill();
     // Hoofd
     const hy = -45;
+    // Snuit: plat gezicht (rudolfensis, erectus) of vooruitstekend (habilis)
+    const mz = this.look.flat ? 6.5 : 9, mw = this.look.flat ? 4.6 : 5.5;
     c.fillStyle = outline;
-    c.beginPath(); c.ellipse(2, hy, 10.5, 10, 0, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.ellipse(9, hy + 4, 7, 5.5, 0.1, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(2, hy, this.look.flat ? 11 : 10.5, this.look.flat ? 10.6 : 10, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(mz, hy + 4, mw + 1.5, 5.5, 0.1, 0, Math.PI * 2); c.fill();
     c.fillStyle = skin;
-    c.beginPath(); c.ellipse(2, hy, 8.8, 8.4, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(2, hy, this.look.flat ? 9.4 : 8.8, this.look.flat ? 9 : 8.4, 0, 0, Math.PI * 2); c.fill();
     c.fillStyle = '#d4a073';
-    c.beginPath(); c.ellipse(9, hy + 4, 5.5, 4.2, 0.1, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(mz, hy + 4, mw, 4.2, 0.1, 0, Math.PI * 2); c.fill();
     // Haar
     c.fillStyle = furDark;
     c.beginPath(); c.moveTo(-7, hy + 3); c.quadraticCurveTo(-9, hy - 9, 2, hy - 10); c.quadraticCurveTo(10, hy - 10, 10, hy - 4);

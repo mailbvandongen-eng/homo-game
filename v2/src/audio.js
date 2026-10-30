@@ -98,6 +98,13 @@ export class Audio {
       case 'snap': this.noise(t, 0.08, 0.35, 'lowpass', 1200); this.tone(120, 0.12, 'square', 0.12, t, d, 0.5); break;
       case 'splash': this.noise(t, 0.5, 0.3, 'lowpass', 2500, 300); break;
       case 'meet': [67, 71, 74, 79].forEach((n, k) => this.tone(midi(n), 0.25, 'triangle', 0.1, t + k * 0.1, d)); break;
+      case 'chatter': [900, 1100, 950].forEach((f, k) => this.tone(f, 0.05, 'square', 0.04, t + k * 0.06, d, 0.8)); break;
+      case 'growl': this.noise(t, 0.5, 0.3, 'lowpass', 300, 120); this.tone(70, 0.5, 'sawtooth', 0.08, t, d, 0.8); break;
+      case 'squeak': this.tone(2400, 0.08, 'square', 0.03, t, d, 1.3); this.tone(2600, 0.06, 'square', 0.03, t + 0.1, d, 1.2); break;
+      case 'crack': this.noise(t, 0.15, 0.2, 'highpass', 1500); break;
+      case 'roar': this.noise(t, 1.1, 0.4, 'lowpass', 500, 120); this.tone(90, 1, 'sawtooth', 0.12, t, d, 0.6); break;
+      case 'crash': this.noise(t, 0.4, 0.45, 'lowpass', 900, 100); this.tone(60, 0.3, 'sine', 0.3, t, d, 0.5); break;
+      case 'bosshit': this.tone(300, 0.2, 'square', 0.12, t, d, 0.4); this.noise(t, 0.2, 0.3, 'bandpass', 1200, 300); break;
       case 'click': this.tone(660, 0.05, 'square', 0.05, t, d); break;
     }
   }
@@ -107,6 +114,22 @@ function midi(n) { return 440 * Math.pow(2, (n - 69) / 12); }
 
 // Eigen melodieën. Lead in achtsten, bas in kwarten.
 const SONGS = {
+  forest: {
+    bpm: 112, drums: true,
+    lead: [72, 0, 76, 79, 0, 76, 74, 0, 72, 0, 74, 76, 79, 81, 79, 0, 77, 0, 76, 74, 72, 0, 74, 0, 76, 0, 72, 0, 0, 0, 0, 0,
+           72, 0, 76, 79, 0, 81, 84, 0, 83, 81, 79, 0, 77, 76, 74, 0, 76, 0, 79, 0, 77, 76, 74, 72, 71, 0, 72, 0, 0, 0, 0, 0],
+    bass: [48, 55, 48, 55, 45, 52, 45, 52, 41, 48, 41, 48, 43, 50, 43, 50, 48, 55, 48, 55, 45, 52, 45, 52, 41, 48, 43, 50, 48, 48, 48, 48],
+  },
+  cave: {
+    bpm: 84, drums: false,
+    lead: [57, 0, 0, 60, 0, 0, 64, 0, 63, 0, 0, 0, 60, 0, 0, 0, 57, 0, 0, 55, 0, 0, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    bass: [33, 33, 33, 33, 31, 31, 29, 29, 33, 33, 36, 36, 31, 31, 33, 33],
+  },
+  boss: {
+    bpm: 152, drums: true,
+    lead: [57, 57, 60, 57, 63, 0, 62, 60, 57, 57, 60, 57, 55, 0, 56, 0, 57, 57, 60, 57, 63, 0, 65, 63, 62, 60, 62, 63, 64, 0, 0, 0],
+    bass: [33, 33, 33, 33, 36, 36, 35, 35, 33, 33, 33, 33, 31, 31, 32, 32],
+  },
   gorge: {
     bpm: 120, drums: true,
     lead: [69, 0, 72, 0, 76, 74, 72, 0, 71, 0, 72, 74, 76, 0, 0, 0, 74, 0, 72, 71, 69, 0, 67, 0, 69, 72, 71, 69, 67, 0, 0, 0,

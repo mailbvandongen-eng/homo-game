@@ -13,6 +13,12 @@ const THEMES = {
     far: '#c68a5a', farTop: '#dcae7c', mid: '#b5774a', midDark: '#8d9a52', near: '#9aa65a', acacia: '#5d6f3c',
     mesa: true,
   },
+  forest: {
+    sky: ['#6fb7cf', '#b8dcc8', '#e9e2a8'], sun: '#fff6cc',
+    far: '#86a88e', farTop: '#9cbc9f', mid: '#4f7a45', midDark: '#3f6a3a', near: '#5f8f45', acacia: '#3d6136',
+    forest: true,
+  },
+  cave: { cave: true },
   savanna: {
     sky: ['#5fb3d9', '#9fd6dc', '#f6e2a8'], sun: '#fff4c4',
     far: '#9cb6b4', farTop: '#b9cdc4', mid: '#9fb46c', midDark: '#7f9a55', near: '#86a64c', acacia: '#5a7840',
@@ -26,6 +32,7 @@ export class Renderer {
 
   background(c, theme, camX, camY, viewW, viewH, levelH, time) {
     const th = THEMES[theme] || THEMES.savanna;
+    if (th.cave) return caveBackground(c, camX, camY, viewW, viewH, time);
     const g = c.createLinearGradient(0, 0, 0, viewH);
     g.addColorStop(0, th.sky[0]); g.addColorStop(0.55, th.sky[1]); g.addColorStop(1, th.sky[2]);
     c.fillStyle = g; c.fillRect(0, 0, viewW, viewH);
@@ -55,9 +62,10 @@ export class Renderer {
     const midY = yOf(0.3, 70);
     ridge(c, camX * 0.3, viewW, midY, 20, 0.006, 3, th.mid, th.mid, th.mesa);
     for (let i = Math.floor(camX * 0.3 / 230) - 1; i < (camX * 0.3 + viewW) / 230 + 1; i++) {
-      if (hash(i, 9) < 0.35) continue;
+      if (hash(i, 9) < (th.forest ? 0.05 : 0.35)) continue;
       const wx = i * 230 + hash(i, 4) * 120, x = wx - camX * 0.3;
-      acacia(c, x, midY + 6 - ridgeH(wx, 20, 0.006, 3), 0.55 + hash(i, 5) * 0.35, th.acacia);
+      if (th.forest) roundTree(c, x, midY + 10 - ridgeH(wx, 20, 0.006, 3), 0.8 + hash(i, 5) * 0.5, th.acacia, th.mid);
+      else acacia(c, x, midY + 6 - ridgeH(wx, 20, 0.006, 3), 0.55 + hash(i, 5) * 0.35, th.acacia);
     }
     // Dichtbij: struikenrand
     const nearY = yOf(0.55, 30);
@@ -133,10 +141,11 @@ export class Renderer {
     for (let cy = 0; cy < map.h; cy++) for (let cx = x0; cx < x1; cx++) {
       const t = map.get(cx, cy);
       if (cx < 0 || cx >= map.w) continue;
-      if (t === T.GROUND) groundTile(c, map, cx, cy);
+      const theme = map.level.outside && cx >= map.level.outside.from ? 'savanna' : map.level.theme;
+      if (t === T.GROUND) groundTile(c, map, cx, cy, theme);
       else if (t === T.ROCK) rockTile(c, map, cx, cy);
       else if (t === T.BRANCH) branchTile(c, map, cx, cy);
-      else if (t === T.THORNS) thornTile(c, cx, cy);
+      else if (t === T.THORNS) (theme === 'cave' ? stalagmiteTile : thornTile)(c, cx, cy);
     }
     return cv;
   }
@@ -228,7 +237,8 @@ function antelope(c, x, y, s, t) {
 // ---------------- Tegeltekeningen ----------------
 function solidish(map, cx, cy) { const t = map.get(cx, cy); return t === T.GROUND || t === T.ROCK; }
 
-function groundTile(c, map, cx, cy) {
+function groundTile(c, map, cx, cy, theme) {
+  if (theme === 'cave') return caveFloorTile(c, map, cx, cy);
   const x = cx * TILE, y = cy * TILE;
   const above = map.get(cx, cy - 1);
   const topOpen = above !== T.GROUND && above !== T.ROCK && above !== T.CRUMBLE && above !== T.BUMP;
@@ -536,4 +546,69 @@ export function drawFoodCache(c, x, y) {
   c.fillStyle = '#9a8f7c'; c.beginPath(); c.ellipse(22, -4, 5, 4, 0, 0, Math.PI * 2); c.fill();
   c.fillStyle = '#2a2c30'; c.beginPath(); c.moveTo(26, -3); c.lineTo(31, -9); c.lineTo(34, -3); c.closePath(); c.fill();
   c.restore();
+}
+
+function roundTree(c, x, y, s, dark, light) {
+  // Boom in het galerijbos: hoge stam met ronde kruin
+  c.save(); c.translate(x, y); c.scale(s, s);
+  c.fillStyle = '#3a2c1e'; c.fillRect(-4, -70, 8, 70);
+  c.fillStyle = dark;
+  c.beginPath(); c.arc(0, -86, 30, 0, Math.PI * 2); c.arc(-24, -72, 20, 0, Math.PI * 2); c.arc(24, -74, 22, 0, Math.PI * 2); c.fill();
+  c.fillStyle = light; c.globalAlpha = 0.35; c.beginPath(); c.arc(-8, -96, 14, 0, Math.PI * 2); c.fill();
+  c.restore();
+}
+
+export function drawBigTree(c, x, groundY, topY) {
+  // Reusachtige boom in het speelveld: de takken (tegels) hangen eraan
+  c.save();
+  const g = c.createLinearGradient(x - 22, 0, x + 22, 0);
+  g.addColorStop(0, '#3e2b1b'); g.addColorStop(0.45, '#6b4a2e'); g.addColorStop(1, '#35251a');
+  c.fillStyle = g;
+  c.beginPath(); c.moveTo(x - 30, groundY); c.quadraticCurveTo(x - 18, groundY - 30, x - 16, groundY - 60);
+  c.lineTo(x - 14, topY + 20); c.lineTo(x + 14, topY + 20); c.lineTo(x + 16, groundY - 60); c.quadraticCurveTo(x + 18, groundY - 30, x + 30, groundY); c.closePath(); c.fill();
+  c.strokeStyle = '#2c1f14'; c.lineWidth = 2;
+  for (let yy = groundY - 40; yy > topY + 40; yy -= 46) { c.beginPath(); c.moveTo(x - 8, yy); c.quadraticCurveTo(x - 2, yy - 14, x + 6, yy - 22); c.stroke(); }
+  const crown = (cx, cy, r, col) => { c.fillStyle = col; c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.fill(); };
+  crown(x - 50, topY + 6, 46, '#3f6a3a'); crown(x + 52, topY + 2, 50, '#3f6a3a'); crown(x, topY - 20, 58, '#4f7a45');
+  crown(x - 20, topY - 34, 30, '#6a9a4f'); crown(x + 30, topY - 26, 26, '#6a9a4f');
+  c.restore();
+}
+
+function caveBackground(c, camX, camY, viewW, viewH, time) {
+  const g = c.createLinearGradient(0, 0, 0, viewH);
+  g.addColorStop(0, '#2a2220'); g.addColorStop(0.6, '#3a2f29'); g.addColorStop(1, '#1d1714');
+  c.fillStyle = g; c.fillRect(0, 0, viewW, viewH);
+  // Verre rotszuilen en druipsteen, twee lagen
+  for (const [f, col, w] of [[0.2, '#30282380', 90], [0.45, '#40352d', 60]]) {
+    c.fillStyle = col;
+    for (let i = Math.floor(camX * f / 170) - 1; i < (camX * f + viewW) / 170 + 1; i++) {
+      const x = i * 170 + hash(i, f * 10) * 80 - camX * f, h = 60 + hash(i, 3) * 90;
+      c.beginPath(); c.moveTo(x - w / 2, 0); c.lineTo(x + w / 2, 0); c.lineTo(x + 6, h); c.closePath(); c.fill();
+      const h2 = 40 + hash(i, 5) * 70;
+      c.beginPath(); c.moveTo(x - w / 2 + 40, viewH); c.lineTo(x + w / 2 + 40, viewH); c.lineTo(x + 46, viewH - h2); c.closePath(); c.fill();
+    }
+  }
+  // Glinsterende mineralen
+  for (let i = 0; i < 18; i++) {
+    const x = ((hash(i, 7) * 3000 - camX * 0.3) % (viewW + 40) + viewW + 40) % (viewW + 40) - 20, y = hash(i, 8) * viewH;
+    c.fillStyle = `rgba(200,220,255,${0.15 + 0.15 * Math.sin(time * 2 + i)})`; c.fillRect(x, y, 2, 2);
+  }
+}
+
+function caveFloorTile(c, map, cx, cy) {
+  const x = cx * TILE, y = cy * TILE;
+  const above = map.get(cx, cy - 1);
+  const topOpen = above !== T.GROUND && above !== T.ROCK && above !== T.CRUMBLE && above !== T.BUMP;
+  let depth = 0; while (depth < 4 && map.get(cx, cy - depth - 1) === T.GROUND) depth++;
+  c.fillStyle = ['#6a5a4a', '#5a4c3f', '#4c4036', '#41372f', '#382f29'][depth]; c.fillRect(x, y, TILE + 0.5, TILE + 0.5);
+  for (let k = 0; k < 3; k++) { const r = hash(cx * 3 + k, cy); if (r < 0.4) continue; c.fillStyle = r > 0.8 ? '#8a7a66' : '#00000026'; c.beginPath(); c.ellipse(x + 4 + hash(cx, cy * 7 + k) * 24, y + 6 + hash(cx * 5 + k, cy) * 22, 2 + r * 2, 1.5 + r, 0, 0, Math.PI * 2); c.fill(); }
+  if (topOpen) { c.fillStyle = '#8c7b66'; c.fillRect(x, y, TILE + 0.5, 4); c.fillStyle = '#a8977f'; c.fillRect(x, y, TILE + 0.5, 1.5); }
+}
+
+function stalagmiteTile(c, cx, cy) {
+  const x = cx * TILE, y = cy * TILE;
+  for (const [dx, h, w] of [[6, 22, 7], [16, 30, 8], [26, 18, 6]]) {
+    c.fillStyle = '#4a4036'; c.beginPath(); c.moveTo(x + dx - w, y + TILE); c.lineTo(x + dx + w, y + TILE); c.lineTo(x + dx, y + TILE - h); c.closePath(); c.fill();
+    c.fillStyle = '#9a8a72'; c.beginPath(); c.moveTo(x + dx - w + 3, y + TILE); c.lineTo(x + dx, y + TILE); c.lineTo(x + dx, y + TILE - h + 4); c.closePath(); c.fill();
+  }
 }

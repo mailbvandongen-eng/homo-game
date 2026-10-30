@@ -4,9 +4,10 @@ import { Player } from './player.js';
 import { ENEMY_TYPES } from './enemies.js';
 import { Fx, star } from './fx.js';
 import { PAD_RADIUS } from './input.js';
-import { Renderer, drawPickup, drawTree, drawStoneCache, drawFoodCache, drawLiana, drawCave, flintIcon, artifactIcon } from './render.js';
+import { Renderer, drawPickup, drawTree, drawStoneCache, drawFoodCache, drawLiana, drawCave, drawBigTree, drawShelter, flintIcon, artifactIcon } from './render.js';
 import { PLATFORM_TYPES } from './platforms.js';
 import { SPECIES } from './species.js';
+import { GiantHyena } from './boss.js';
 
 const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
@@ -56,6 +57,7 @@ export class Game {
     this.level = buildLevel(def);
     this.map = new TileMap(this.level);
     if (!keepStats) { this.lives = START_LIVES; }
+    this.bossBeaten = false;
     this.bonesTotal = keepStats ? this.bonesTotal : 0;
     this.checkpoint = null;
     this.artifacts = new Set();
@@ -69,7 +71,8 @@ export class Game {
 
   spawnAll(fromCheckpoint = false) {
     const L = this.level;
-    this.enemies = []; this.stonesFlying = [];
+    this.enemies = []; this.stonesFlying = []; this.projectiles = [];
+    this.arenaOn = false; this.boss = null;
     if (!fromCheckpoint) { this.pickups = []; this.decor = []; this.fires = []; this.meets = []; this.met = new Set(); this.banner = null; }
     this.platforms = L.entities.filter(e => PLATFORM_TYPES[e.type]).map(e => new PLATFORM_TYPES[e.type](e));
     for (const e of L.entities) {
@@ -80,7 +83,7 @@ export class Game {
       } else if (!fromCheckpoint) {
         if (['bone', 'fig', 'flint', 'artifact'].includes(e.type)) this.pickups.push({ ...e, taken: false });
         else if (e.type === 'checkpoint') this.fires.push({ ...e, lit: false });
-        else if (e.type === 'tree' || e.type === 'finish' || e.type === 'sign') this.decor.push({ ...e });
+        else if (e.type === 'tree' || e.type === 'bigtree' || e.type === 'finish' || e.type === 'sign') this.decor.push({ ...e });
         else if (e.type === 'meet') {
           // Een groepje van een andere soort: vriendelijk, ze doen hun eigen ding
           const sp = SPECIES[e.species];
@@ -95,6 +98,12 @@ export class Game {
     }
     // Lianen beginnen altijd weer stil
     this.lianas = L.entities.filter(e => e.type === 'liana').map(e => ({ ax: e.x, ay: e.y, len: (e.len || 4) * TILE, angle: 0, omega: 0, held: false }));
+    const be = L.entities.find(e => e.type === 'boss');
+    if (be && !this.bossBeaten) {
+      const A = L.arena;
+      this.boss = new GiantHyena(be.x, be.y, { x1: A.x1 * TILE, x2: (A.x2 + 1) * TILE, ceil: (L.h - A.ceil) * TILE });
+      this.enemies.push(this.boss);
+    }
     this.finish = L.entities.find(e => e.type === 'finish');
     if (this.finish && !fromCheckpoint) {
       // De stam wacht bij de grot: oudere, volwassenen en een kind
@@ -119,6 +128,7 @@ export class Game {
     const p = this.checkpoint || this.level.start;
     this.spawnAll(true);
     this.map = new TileMap(this.level);
+    if (this.bossBeaten) { const A = this.level.arena; this.setColumn(A.exit, A.exitRows, T.EMPTY); }
     this.player.reset(p.x, p.y);
     this.hearts = MAX_HEARTS; this.stones = Math.max(this.stones, 3);
     this.snapCamera();
@@ -252,6 +262,8 @@ export class Game {
     for (let cx = tx1; cx <= tx2; cx++) for (let cy = ty1; cy <= ty2; cy++) if (this.map.get(cx, cy) === T.THORNS && p.y + p.h > cy * TILE + 14) this.hurt(p.cx - p.vx);
 
     this.updateEnemies(dt);
+    this.updateProjectiles(dt);
+    this.updateArena();
     this.updateStones(dt);
     this.updatePickups(dt);
 
@@ -318,16 +330,21 @@ export class Game {
       if (!e.active) { if (e.x + e.w > left && e.x < right) e.active = true; else continue; }
       e.update(dt, this);
       if (e.y > this.level.pxH + 64) { e.gone = true; continue; }
-      if (!e.harmful() || p.dead) continue;
+      if (e.fleeing || p.dead) continue;
+      if (!e.harmful() && !e.isBoss && !e.stompable) continue;
       const hb = e.hitbox();
       if (!overlap(p, hb)) continue;
       const fromAbove = p.vy > 0 && (p.prevBottom ?? p.bottom) <= hb.y + 10;
-      if (fromAbove && e.stompable) {
+      if (fromAbove && e.isBoss) {
+        // Op de baas springen: raak als hij versuft is, anders veer je er zonder schade af
+        if (!e.stomp(this)) this.audio.play('bump');
+        p.bounceOff(true); p.y = hb.y - p.h;
+      } else if (fromAbove && e.stompable) {
         e.scare(Math.sign(e.cx - p.cx) || p.face, this);
         p.bounceOff(this.lastInput?.jumpHeld);
         p.y = hb.y - p.h;
         this.audio.play('stomp');
-      } else this.hurt(e.cx);
+      } else if (e.harmful()) this.hurt(e.cx);
     }
     this.enemies = this.enemies.filter(e => !e.gone);
   }
@@ -343,7 +360,7 @@ export class Game {
       if (r.ceil) s.vy = 60;
       for (const e of this.enemies) {
         if (e.fleeing || !e.active) continue;
-        if (overlap(s, e.hitbox())) { e.scare(Math.sign(s.vx) || 1, this); s.life = 0; this.audio.play('hit'); break; }
+        if (overlap(s, e.hitbox())) { if (!e.immune) e.scare(Math.sign(s.vx) || 1, this); s.life = 0; this.audio.play('hit'); this.fx.dust(s.x + 5, s.y + 5, 0, 2); break; }
       }
       for (const pl of this.platforms) { const hz = pl.hazard?.() || (pl.headX && pl.state === 'warn' ? { x: pl.headX() - 4, y: pl.top - 26, w: 38, h: 34 } : null); if (hz && overlap(s, hz)) { pl.scare?.(this); s.life = 0; this.audio.play('hit'); } }
       if (this.map.get(Math.floor((s.x + 5) / TILE), Math.floor((s.y + 8) / TILE)) === T.WATER) { this.fx.splash(s.x + 5, s.y + 6, 4); s.life = 0; }
@@ -376,6 +393,44 @@ export class Game {
     }
   }
 
+  // Gegooide vruchten van bavianen
+  updateProjectiles(dt) {
+    const p = this.player;
+    for (const q of this.projectiles) {
+      q.life -= dt; q.spin += dt * 10;
+      q.vy += q.g * dt; q.x += q.vx * dt; q.y += q.vy * dt;
+      const cx = Math.floor((q.x + q.w / 2) / TILE), cy = Math.floor((q.y + q.h / 2) / TILE);
+      if (this.map.solidAt(cx, cy)) { q.life = 0; this.fx.splat(q.x + 6, q.y + 6); }
+      else if (!p.dead && overlap(p, q)) { q.life = 0; this.fx.splat(q.x + 6, q.y + 6); this.hurt(q.x); }
+    }
+    this.projectiles = this.projectiles.filter(q => q.life > 0 && q.y < this.level.pxH + 50);
+  }
+
+  // Bossarena: achter je gaat de doorgang dicht; na de overwinning gaat de uitgang open
+  setColumn(col, rows, code) {
+    for (const y of rows) { const cy = this.level.h - 1 - y; this.map.tiles[cy * this.map.w + col] = code; }
+    this.map.version++;
+  }
+  updateArena() {
+    const A = this.level.arena, p = this.player;
+    if (!A || !this.boss || this.arenaOn || this.bossBeaten) return;
+    if (p.cx > A.trigger * TILE && p.onGround) {
+      this.arenaOn = true;
+      this.setColumn(A.gate, A.gateRows, T.ROCK);
+      this.boss.active = true; this.boss.wake(this);
+      this.audio.playSong('boss');
+    }
+  }
+  bossDefeated(b) {
+    const A = this.level.arena;
+    this.bossBeaten = true; this.arenaOn = false;
+    this.setColumn(A.exit, A.exitRows, T.EMPTY);
+    this.setColumn(A.gate, A.gateRows, T.EMPTY);
+    this.audio.stopSong(); this.audio.play('win');
+    this.fx.text(b.cx, b.y - 20, 'Verjaagd!', '#ffe27a');
+    setTimeout(() => { if (this.state === 'play') this.audio.playSong(this.def.music); }, 2500);
+  }
+
   // Landen op boomstammen, krokodillenruggen en nijlpaarden
   landOnPlatforms(p) {
     if (p.hang || p.dead) { p.platform = null; return; }
@@ -398,14 +453,14 @@ export class Game {
     const p = this.player;
     for (const L of this.lianas) {
       if (!L.held) {
-        L.omega += (-(1700 / L.len) * Math.sin(L.angle) + Math.sin(this.time * 1.3 + L.ax) * 0.25) * dt;
-        L.omega *= 1 - 0.8 * dt;
+        L.omega += (-(1700 / L.len) * Math.sin(L.angle) + Math.sin(this.time * 1.3 + L.ax) * 0.05) * dt;
+        L.omega *= 1 - 1.6 * dt;
         L.angle += L.omega * dt;
       }
       if (p.hang || p.regrab > 0 || p.onGround || p.dead) continue;
       const ex = L.ax + Math.sin(L.angle) * L.len, ey = L.ay + Math.cos(L.angle) * L.len;
       // Grijpen: een punt op het onderste deel van de liaan raakt je handen of bovenlijf (ruim, voor iedereen)
-      const box = { x: p.x - 16, y: p.y - 14, w: p.w + 32, h: p.h * 0.7 + 14 };
+      const box = { x: p.x - 22, y: p.y - 16, w: p.w + 44, h: p.h * 0.75 + 16 };
       for (let t = 0.3; t <= 1.001; t += 0.05) {
         const px = L.ax + (ex - L.ax) * t, py = L.ay + (ey - L.ay) * t;
         if (px > box.x && px < box.x + box.w && py > box.y && py < box.y + box.h) {
@@ -444,6 +499,10 @@ export class Game {
     this.camY += (ty - this.camY) * Math.min(1, dt * 5);
     this.camX = Math.max(0, Math.min(this.level.pxW - this.viewW, this.camX));
     this.camY = Math.max(0, Math.min(this.level.pxH - this.viewH, this.camY));
+    if (this.arenaOn) {
+      const A = this.level.arena, a = A.x1 * TILE - 8, b = (A.x2 + 1) * TILE + 8;
+      this.camX = b - a <= this.viewW ? (a + b) / 2 - this.viewW / 2 : Math.max(a, Math.min(b - this.viewW, this.camX));
+    }
   }
 
   // ---------------- Tekenen ----------------
@@ -456,12 +515,18 @@ export class Game {
 
     c.setTransform(kb, 0, 0, kb, 0, 0);
     this.renderer.background(c, this.level.theme, camX, camY, this.viewW, this.viewH, this.level.pxH, this.time);
+    if (this.level.outside) {
+      // Buiten de grot: daglicht en savanne
+      const sx = (this.level.outside.from * TILE - camX) * (this.zoom || 1);
+      if (sx < this.viewW) { c.save(); c.beginPath(); c.rect(Math.max(0, sx), 0, this.viewW + 10, this.viewH); c.clip(); this.renderer.background(c, 'savanna', camX, camY, this.viewW, this.viewH, this.level.pxH, this.time); c.restore(); }
+    }
 
     c.setTransform(k, 0, 0, k, -camX * k, -camY * k);
     const vis = (x, m = 120) => x > camX - m && x < camX + this.viewW + m;
     this.renderer.pits(c, camX, this.viewW, this.level.pxH);
     for (const d of this.decor) if (d.type === 'tree' && vis(d.x, 200)) drawTree(c, d.x, d.y, d.scale || 1);
-    if (this.finish && vis(this.finish.x, 420)) drawCave(c, this.finish.x + 150, this.finish.y, this.time);
+    for (const d of this.decor) if (d.type === 'bigtree' && vis(d.x, 260)) drawBigTree(c, d.x, d.y, d.y - d.height * TILE);
+    if (this.finish && vis(this.finish.x, 420)) (this.def.finishScene === 'shelter' ? drawShelter(c, this.finish.x + 190, this.finish.y) : drawCave(c, this.finish.x + 150, this.finish.y, this.time));
     this.renderer.tiles(c, this.map, camX, camY, this.viewW, this.viewH);
     this.renderer.dynamicTiles(c, this.map, camX, this.viewW, this.time);
     for (const d of this.decor) if (d.type === 'sign' && vis(d.x)) drawSign(c, d.x, d.y, d.text);
@@ -478,13 +543,22 @@ export class Game {
       c.fillStyle = '#2a2c30'; c.beginPath(); c.moveTo(-5, 1); c.lineTo(-2, -5); c.lineTo(4, -4); c.lineTo(5, 2); c.lineTo(0, 5); c.closePath(); c.fill();
       c.fillStyle = '#7d8590'; c.beginPath(); c.arc(-1, -1, 2, 0, Math.PI * 2); c.fill(); c.restore();
     }
+    for (const q of this.projectiles) {
+      c.save(); c.translate(q.x + 6, q.y + 6); c.rotate(q.spin);
+      c.fillStyle = '#7a3e10'; c.beginPath(); c.arc(0, 0, 6.5, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#e8902e'; c.beginPath(); c.arc(0, 0, 5.2, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ffd07a'; c.beginPath(); c.arc(-1.6, -1.6, 1.6, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#5e8a32'; c.fillRect(-1, -8, 2, 3); c.restore();
+    }
     if (this.state !== 'title') this.player.draw(c, this.time);
     this.renderer.water(c, this.map, camX, this.viewW, this.level.pxH, this.time);
     this.fx.draw(c);
     if (this.debug) this.drawDebug(c);
 
+    this.drawDarkness(c, camX, camY, k);
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     if (this.state !== 'title') { this.drawHud(c); this.drawTouch(c); }
+    if (this.arenaOn && this.boss) this.drawBossBar(c);
     if (this.state === 'intro' && this.introT < 1.4) this.drawIntro(c);
     if (this.banner && this.state === 'play') this.drawBanner(c);
   }
@@ -493,6 +567,55 @@ export class Game {
     c.strokeStyle = '#0f0'; c.lineWidth = 1;
     const p = this.player; c.strokeRect(p.x, p.y, p.w, p.h);
     c.strokeStyle = '#f00'; for (const e of this.enemies) { const h = e.hitbox(); c.strokeRect(h.x, h.y, h.w, h.h); }
+  }
+
+  // Grotten zijn donker: alleen rond de speler en bij lichtbundels zie je iets
+  drawDarkness(c, camX, camY, k) {
+    const D = this.level.dark;
+    if (!D) return;
+    const px = this.player.cx / TILE;
+    const amt = 0.84 * Math.max(0, Math.min(1, (px - D.from) / 4, (D.to - px) / 4));
+    if (amt <= 0.01 && this.state !== 'title') return;
+    const W = this.cv.width, H = this.cv.height;
+    if (!this.darkCv || this.darkCv.width !== W || this.darkCv.height !== H) { this.darkCv = document.createElement('canvas'); this.darkCv.width = W; this.darkCv.height = H; }
+    const d = this.darkCv.getContext('2d');
+    d.setTransform(1, 0, 0, 1, 0, 0); d.globalCompositeOperation = 'source-over'; d.clearRect(0, 0, W, H);
+    d.fillStyle = `rgba(6,5,8,${this.state === 'title' ? 0.6 : amt})`; d.fillRect(0, 0, W, H);
+    d.globalCompositeOperation = 'destination-out';
+    d.setTransform(k, 0, 0, k, -camX * k, -camY * k);
+    const hole = (x, y, r, a = 1) => { const g = d.createRadialGradient(x, y, r * 0.15, x, y, r); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(0.6, `rgba(0,0,0,${a * 0.7})`); g.addColorStop(1, 'rgba(0,0,0,0)'); d.fillStyle = g; d.fillRect(x - r, y - r, r * 2, r * 2); };
+    const p = this.player;
+    hole(p.cx, p.y + 18, 165);
+    for (const L of this.level.entities) if (L.type === 'light') {
+      const g = d.createLinearGradient(L.x - 50, 0, L.x + 50, 0);
+      g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.5, 'rgba(0,0,0,0.85)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      d.fillStyle = g; d.beginPath(); d.moveTo(L.x - 22, 0); d.lineTo(L.x + 22, 0); d.lineTo(L.x + 60, this.level.pxH); d.lineTo(L.x - 60, this.level.pxH); d.closePath(); d.fill();
+    }
+    if (this.boss && !this.boss.gone) hole(this.boss.cx, this.boss.y + 20, 120, 0.8);
+    for (const pk of this.pickups) if (!pk.taken && pk.type === 'artifact') hole(pk.x, pk.y, 40, 0.8);
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(this.darkCv, 0, 0); c.restore();
+    // Lichtbundels krijgen een zachte gloed
+    c.save(); c.setTransform(k, 0, 0, k, -camX * k, -camY * k); c.globalCompositeOperation = 'lighter';
+    for (const L of this.level.entities) if (L.type === 'light') {
+      const g = c.createLinearGradient(L.x - 40, 0, L.x + 40, 0);
+      g.addColorStop(0, 'rgba(255,230,170,0)'); g.addColorStop(0.5, 'rgba(255,230,170,0.08)'); g.addColorStop(1, 'rgba(255,230,170,0)');
+      c.fillStyle = g; c.beginPath(); c.moveTo(L.x - 18, 0); c.lineTo(L.x + 18, 0); c.lineTo(L.x + 55, this.level.pxH); c.lineTo(L.x - 55, this.level.pxH); c.closePath(); c.fill();
+    }
+    c.restore();
+  }
+
+  drawBossBar(c) {
+    const b = this.boss, w = Math.min(320, this.W - 120), x = (this.W - w) / 2, y = this.H - 34 - (this.input.touchMode ? 0 : 0);
+    const top = this.safe.t + 44;
+    c.fillStyle = '#10221fd8'; c.beginPath(); c.roundRect(x, top, w, 34, 12); c.fill();
+    c.fillStyle = '#f6cf75'; c.font = '800 12px system-ui, sans-serif'; c.textAlign = 'center';
+    c.fillText('REUZENHYENA · Pachycrocuta', this.W / 2, top + 14);
+    for (let i = 0; i < b.maxHits; i++) {
+      const bx = this.W / 2 + (i - (b.maxHits - 1) / 2) * 30;
+      c.fillStyle = i < b.maxHits - b.hits ? '#ff6b4a' : '#ffffff30';
+      c.beginPath(); c.roundRect(bx - 12, top + 20, 24, 8, 4); c.fill();
+    }
+    c.textAlign = 'left';
   }
 
   drawBanner(c) {
