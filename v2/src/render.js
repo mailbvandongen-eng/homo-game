@@ -1,6 +1,6 @@
 import { TILE } from './config.js';
 import { T } from './level.js';
-import { leafCluster, frond, WIND } from './art.js';
+import { leafCluster, frond, WIND, bakeTree, drawBakedTree } from './art.js';
 
 const CHUNK = 16; // tegels per voorgetekend stuk
 
@@ -47,7 +47,26 @@ const THEMES = {
 export class Renderer {
   constructor() { this.chunks = new Map(); this.k = 1; this.mapVersion = -1; }
 
-  setResolution(k) { if (Math.abs(k - this.k) > 0.001) { this.k = k; this.chunks.clear(); } }
+  setResolution(k) { if (Math.abs(k - this.k) > 0.001) { this.k = k; this.chunks.clear(); this.trees = new Map(); } }
+
+  // Gebakken bomen, bewaard per soort/variant/resolutie
+  tree(kind, palette, seed, height, haze = 0, hazeColor = '#c8d8d0') {
+    if (!this.trees) this.trees = new Map();
+    const key = kind + palette + seed + '|' + height + '|' + haze + hazeColor;
+    let T = this.trees.get(key);
+    if (!T) { T = bakeTree({ kind, palette, seed, height, haze, hazeColor }, Math.min(2.5, this.k)); this.trees.set(key, T); }
+    return T;
+  }
+  levelTree(c, d, theme, time) {
+    const pal = theme === 'forest' ? 'forest' : theme === 'java' ? 'java' : theme === 'dmanisi' ? 'dmanisi' : 'savanna';
+    const kind = theme === 'forest' || theme === 'dmanisi' ? 'broad' : theme === 'java' ? 'jungle' : 'acacia';
+    const T = this.tree(kind, pal, Math.floor(d.x / 7) % 5, 150);
+    drawBakedTree(c, T, d.x, d.y, (d.scale || 1) * 0.95, time);
+  }
+  bigTree(c, d, time) {
+    const T = this.tree('broad', 'forest', 2 + Math.floor(d.x / 11) % 3, Math.round(d.height * 32 * 1.55));
+    drawBakedTree(c, T, d.x, d.y, 1, time);
+  }
 
   drawSky(c, th, camX, viewW, viewH, time) {
     const g = c.createLinearGradient(0, 0, 0, viewH);
@@ -116,8 +135,11 @@ export class Renderer {
     for (let i = Math.floor(camX * 0.3 / 230) - 1; i < (camX * 0.3 + viewW) / 230 + 1; i++) {
       if (hash(i, 9) < (th.forest ? 0.05 : 0.35)) continue;
       const wx = i * 230 + hash(i, 4) * 120, x = wx - camX * 0.3;
-      if (th.forest) roundTree(c, x, midY + 10 - ridgeH(wx, 20, 0.006, 3), 0.8 + hash(i, 5) * 0.5, th.acacia, th.mid, time + i);
-      else acacia(c, x, midY + 6 - ridgeH(wx, 20, 0.006, 3), 0.55 + hash(i, 5) * 0.35, th.acacia);
+      // Bomen in de verte: zelfde techniek, maar vervaagd in de nevel
+      const pal = theme === 'forest' ? 'forest' : theme === 'java' ? 'java' : theme === 'dmanisi' ? 'dmanisi' : 'savanna';
+      const kind = th.forest ? (theme === 'java' ? 'jungle' : 'broad') : 'acacia';
+      const T = this.tree(kind, pal, 10 + (i & 3), 90, 0.42, th.sky[1]);
+      drawBakedTree(c, T, x, midY + 8 - ridgeH(wx, 20, 0.006, 3), (th.forest ? 0.9 : 0.7) + hash(i, 5) * 0.35, time + i);
     }
     // Dichtbij: struikenrand
     const nearY = yOf(0.55, 30);

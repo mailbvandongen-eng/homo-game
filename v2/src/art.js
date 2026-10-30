@@ -260,3 +260,124 @@ export function frond(c, x, y, len, angle, col, t, seed, push = 0) {
   }
   c.restore();
 }
+
+// ------------------------------------------------------------------
+// Schilderachtige bomen: vertakte stam met schors en bladmassa's van
+// honderden kleine blaadjes, licht van linksboven. Eén keer voorgetekend
+// (gebakken) en daarna per bladmassa licht wiegend getekend.
+// ------------------------------------------------------------------
+export const TREE_PALETTES = {
+  savanna: { bark: ['#3e2a1c', '#6a4a30', '#9a7450'], leaf: ['#22361c', '#34502a', '#4f7236', '#7a9a48', '#b4c870'] },
+  forest: { bark: ['#24302a', '#435246', '#748a74'], leaf: ['#12302a', '#1f4a3c', '#33695a', '#5d9474', '#a6d0a0'] },
+  java: { bark: ['#2a2a1e', '#4a4a34', '#7a7656'], leaf: ['#123a20', '#1e5a2c', '#2f7a3a', '#5aa04a', '#a6d47a'] },
+  dmanisi: { bark: ['#33281e', '#5a4a38', '#8a7a62'], leaf: ['#25391e', '#38562a', '#557a36', '#86a64e', '#c4d68a'] },
+};
+
+const R2 = (a, b) => { const n = Math.sin(a * 91.7 + b * 47.3) * 24634.6345; return n - Math.floor(n); };
+
+function hazeCol(col, haze, amt) { return amt > 0 ? mix(col, haze, amt) : col; }
+
+export function bakeTree(spec, k) {
+  const { kind, height: H, seed: sd } = spec;
+  const pal = TREE_PALETTES[spec.palette] || TREE_PALETTES.savanna, hz = spec.haze || 0, hc = spec.hazeColor || '#c8d8d0';
+  const bark = pal.bark.map(c => hazeCol(c, hc, hz)), leaf = pal.leaf.map(c => hazeCol(c, hc, hz));
+  // 1. Takken laten groeien
+  const segs = [], tips = [];
+  const grow = (x, y, ang, len, w, depth, idx) => {
+    const bend = (R2(idx, sd) - 0.5) * 0.35;
+    const mx = x + Math.sin(ang + bend) * len * 0.5, my = y - Math.cos(ang + bend) * len * 0.5;
+    const ex = x + Math.sin(ang) * len, ey = y - Math.cos(ang) * len;
+    segs.push([x, y, mx, my, w, w * 0.82, depth]); segs.push([mx, my, ex, ey, w * 0.82, w * 0.65, depth]);
+    if (depth === 0) { tips.push([ex, ey, w]); return; }
+    const n = kind === 'acacia' ? 3 : 2 + (R2(idx, sd + 1) > 0.6 ? 1 : 0);
+    for (let i = 0; i < n; i++) {
+      const spread = kind === 'acacia' ? 0.75 : kind === 'jungle' ? 0.45 : 0.55;
+      const a = ang + (i - (n - 1) / 2) * spread * (0.8 + R2(idx * 3 + i, sd) * 0.5) + (R2(idx + i, sd + 2) - 0.5) * 0.25;
+      const l = len * (kind === 'acacia' ? 0.78 : 0.7) * (0.85 + R2(idx * 7 + i, sd) * 0.3);
+      grow(ex, ey, kind === 'acacia' ? Math.max(-1.25, Math.min(1.25, a * 1.25)) : a, l, w * 0.62, depth - 1, idx * 4 + i + 1);
+    }
+  };
+  const trunkLen = H * (kind === 'jungle' ? 0.55 : kind === 'acacia' ? 0.42 : 0.4);
+  grow(0, 0, (R2(1, sd) - 0.5) * 0.12, trunkLen, H * (kind === 'acacia' ? 0.075 : 0.1), kind === 'acacia' ? 2 : 3, 1);
+  // 2. Bladmassa's op de takuiteinden
+  const masses = tips.map(([x, y, w], i) => {
+    const r = H * (kind === 'acacia' ? 0.2 : kind === 'jungle' ? 0.2 : 0.17) * (0.8 + R2(i, sd + 5) * 0.45);
+    return { x, y: y - r * (kind === 'acacia' ? 0.1 : 0.25), r, ry: kind === 'acacia' ? 0.42 : 0.78 };
+  });
+  // Extra massa's rond de kruin voor een volle vorm (niet bij acacia: die blijft luchtig)
+  if (kind !== 'acacia' && masses.length) {
+    const cx = masses.reduce((a, m) => a + m.x, 0) / masses.length, cy = Math.min(...masses.map(m => m.y));
+    masses.push({ x: cx, y: cy + H * 0.06, r: H * 0.22, ry: 0.7 });
+  }
+  // Bounding box
+  let minX = 0, maxX = 0, minY = 0;
+  for (const s of segs) { minX = Math.min(minX, s[0] - s[4], s[2] - s[4]); maxX = Math.max(maxX, s[0] + s[4], s[2] + s[4]); minY = Math.min(minY, s[1], s[3]); }
+  // 3. Stam en takken tekenen
+  const pad = 12, rootW = H * 0.16;
+  minX = Math.min(minX, -rootW); maxX = Math.max(maxX, rootW);
+  const tw = Math.ceil((maxX - minX + pad * 2) * k), th = Math.ceil((-minY + pad * 2 + 6) * k);
+  const trunk = document.createElement('canvas'); trunk.width = tw; trunk.height = th;
+  const c = trunk.getContext('2d'); c.scale(k, k); c.translate(pad - minX, pad - minY);
+  // Wortels
+  // Wortels: vloeiend uitlopende voet
+  const tw0 = segs[0][4];
+  for (const [col, off] of [[bark[0], 1.2], [bark[1], 0]]) {
+    c.fillStyle = col; c.beginPath();
+    c.moveTo(-tw0 / 2 - off, -H * 0.14);
+    c.bezierCurveTo(-tw0 / 2 - off, -H * 0.04, -rootW * 0.6, -1, -rootW - off, 3);
+    c.lineTo(rootW + off, 3);
+    c.bezierCurveTo(rootW * 0.6, -1, tw0 / 2 + off, -H * 0.04, tw0 / 2 + off, -H * 0.14);
+    c.closePath(); c.fill();
+  }
+  // Eerst alle schaduwranden, dan alle vullingen, dan het licht: zo ontstaan geen naden bij de knikken
+  for (const [x1, y1, x2, y2, w1, w2] of segs) { c.fillStyle = bark[0]; taper(c, x1 + 1, y1, x2 + 1, y2, w1 + 1.6, w2 + 1.6); c.fill(); }
+  for (const [x1, y1, x2, y2, w1, w2] of segs) { c.fillStyle = bark[1]; taper(c, x1, y1, x2, y2, w1, w2); c.fill(); }
+  c.globalAlpha = 0.5;
+  for (const [x1, y1, x2, y2, w1, w2] of segs) { c.fillStyle = bark[2]; taper(c, x1 - w1 * 0.22, y1, x2 - w2 * 0.22, y2, w1 * 0.32, w2 * 0.28); c.fill(); }
+  c.globalAlpha = 1;
+  // Schorslijnen op de stam
+  c.strokeStyle = bark[0]; c.globalAlpha = 0.5; c.lineWidth = 1;
+  for (let i = 0; i < 7; i++) { const yy = -trunkLen * (0.1 + i * 0.12), xx = (R2(i, sd + 9) - 0.5) * H * 0.05; c.beginPath(); c.moveTo(xx - 2, yy); c.quadraticCurveTo(xx + 1, yy - 6, xx + 3, yy - 12); c.stroke(); }
+  c.globalAlpha = 1;
+  // 4. Bladmassa's los bakken (elk een eigen afbeelding zodat ze apart kunnen wiegen)
+  const lx = -0.62, ly = -0.78;   // licht van linksboven
+  const bakedMasses = masses.map((m, mi) => {
+    const W = m.r * 2.6, Hh = m.r * 2.6 * m.ry + m.r * 0.5;
+    const cv = document.createElement('canvas'); cv.width = Math.ceil(W * k); cv.height = Math.ceil(Hh * k);
+    const mc = cv.getContext('2d'); mc.scale(k, k); mc.translate(W / 2, Hh / 2);
+    const N = Math.max(55, Math.round(m.r * m.r * (kind === 'acacia' ? 0.2 : 0.28))), ls = Math.max(3.8, m.r * 0.18);
+    const leaves = [];
+    for (let i = 0; i < N; i++) {
+      const a = R2(i, sd * 13 + mi) * Math.PI * 2, wob = 0.82 + 0.28 * Math.sin(a * 5 + mi + sd);
+      const d = Math.sqrt(R2(i + 17, sd + mi)) * wob;
+      const x = Math.cos(a) * m.r * d, y = Math.sin(a) * m.r * m.ry * d;
+      const nx = x / m.r, ny = y / (m.r * m.ry);
+      const light = (nx * lx + ny * ly) * 0.8 + (1 - d) * 0.15 + (R2(i, 77) - 0.5) * 0.35;
+      const band = light < -0.35 ? 0 : light < 0 ? 1 : light < 0.35 ? 2 : light < 0.62 ? 3 : 4;
+      leaves.push([x, y, band, R2(i + 3, sd) * Math.PI * 2, ls * (0.7 + R2(i + 9, sd) * 0.6) * (band === 0 ? 1.25 : 1)]);
+    }
+    for (let band = 0; band < 5; band++) {
+      mc.beginPath();
+      for (const [x, y, b, rot, s] of leaves) {
+        if (b !== band) continue;
+        const cs = Math.cos(rot), sn = Math.sin(rot), P = (u, v) => [x + u * cs - v * sn, y + u * sn + v * cs];
+        const p0 = P(-s, 0), c1 = P(0, -s * 0.5), p1 = P(s, 0), c2 = P(0, s * 0.5);
+        mc.moveTo(p0[0], p0[1]); mc.quadraticCurveTo(c1[0], c1[1], p1[0], p1[1]); mc.quadraticCurveTo(c2[0], c2[1], p0[0], p0[1]);
+      }
+      mc.fillStyle = leaf[band]; mc.fill();
+    }
+    return { cv, x: m.x - W / 2, y: m.y - Hh / 2, w: W, h: Hh, px: m.x, py: m.y + m.r * m.ry * 0.6 };
+  });
+  return { trunk, tx: minX - pad, ty: minY - pad, tw: tw / k, th: th / k, masses: bakedMasses, seed: sd };
+}
+
+// Gebakken boom tekenen: stam stil, bladmassa's wiegen elk apart (en buigen mee met de wind)
+export function drawBakedTree(c, T, x, y, s, time) {
+  c.save(); c.translate(x, y); c.scale(s, s);
+  c.drawImage(T.trunk, T.tx, T.ty, T.tw, T.th);
+  T.masses.forEach((m, i) => {
+    const a = Math.sin(time * (0.9 + (i % 3) * 0.23) + T.seed + i * 1.7) * 0.035 + WIND.push * 0.09;
+    c.save(); c.translate(m.px, m.py); c.rotate(a); c.drawImage(m.cv, m.x - m.px, m.y - m.py, m.w, m.h); c.restore();
+  });
+  c.restore();
+}

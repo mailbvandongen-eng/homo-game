@@ -641,8 +641,8 @@ export class Game {
     c.setTransform(k, 0, 0, k, -camX * k, -camY * k);
     const vis = (x, m = 120) => x > camX - m && x < camX + this.viewW + m;
     this.renderer.pits(c, camX, this.viewW, this.level.pxH);
-    for (const d of this.decor) if (d.type === 'tree' && vis(d.x, 200)) drawTree(c, d.x, d.y, d.scale || 1, this.time);
-    for (const d of this.decor) if (d.type === 'bigtree' && vis(d.x, 260)) drawBigTree(c, d.x, d.y, d.y - d.height * TILE, this.time);
+    for (const d of this.decor) if (d.type === 'tree' && vis(d.x, 220)) this.renderer.levelTree(c, d, this.level.theme, this.time);
+    for (const d of this.decor) if (d.type === 'bigtree' && vis(d.x, 300)) this.renderer.bigTree(c, d, this.time);
     if (this.finish && vis(this.finish.x, 420)) (this.def.finishScene === 'shelter' ? drawShelter(c, this.finish.x + 190, this.finish.y) : drawCave(c, this.finish.x + 150, this.finish.y, this.time));
     this.renderer.tiles(c, this.map, camX, camY, this.viewW, this.viewH);
     this.renderer.dynamicTiles(c, this.map, camX, this.viewW, this.time);
