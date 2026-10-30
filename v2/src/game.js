@@ -6,6 +6,7 @@ import { Fx, star } from './fx.js';
 import { PAD_RADIUS } from './input.js';
 import { Renderer, drawPickup, drawTree, drawCampfire, drawStoneCache, drawFoodCache, drawLiana, drawCave, drawBigTree, drawShelter, flintIcon, artifactIcon } from './render.js';
 import { PLATFORM_TYPES } from './platforms.js';
+import { WIND } from './art.js';
 import { SPECIES } from './species.js';
 import { GiantHyena, Lion } from './boss.js';
 import { Stalactite, Gnu } from './enemies.js';
@@ -29,7 +30,7 @@ export class Game {
   }
 
   resize() {
-    const W = innerWidth, H = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
+    const W = innerWidth, H = innerHeight, dpr = Math.min(devicePixelRatio || 1, this.lite ? 1.4 : 2);
     this.W = W; this.H = H; this.dpr = dpr;
     this.cv.width = Math.round(W * dpr); this.cv.height = Math.round(H * dpr);
     this.scale = H / (VIEW_ROWS * TILE);
@@ -239,6 +240,13 @@ export class Game {
   frame(now) {
     const dt = Math.min(0.25, (now - (this.last || now)) / 1000);
     this.last = now;
+    // Vangnet voor tragere toestellen: loopt het spel structureel onder ~45 beelden per seconde,
+    // dan gaan sierlagen uit en wordt de resolutie iets lager.
+    if (this.state === 'play' && !this.lite && dt > 0) {
+      this.fps = this.fps ? this.fps * 0.97 + dt * 0.03 : dt;
+      this.slowT = this.fps > 0.022 ? (this.slowT || 0) + dt : 0;
+      if (this.slowT > 3) { this.lite = true; this.renderer.lite = true; this.resize(); }
+    }
     this.acc += dt;
     let first = true;
     while (this.acc >= STEP) {
@@ -449,6 +457,10 @@ export class Game {
   }
   updateWind(dt) {
     const p = this.player, W = this.level.wind;
+    // Bladeren en gras buigen mee met de wind (vloeiend aan en uit)
+    let target = 0;
+    if (W) for (const z of W) if (p.cx > z.from * TILE - 400 && p.cx < z.to * TILE + 400) { const st = this.windState(z); target = st === 'gust' ? z.dir * 0.7 : st === 'warn' ? z.dir * 0.2 : 0; }
+    WIND.push += (target - WIND.push) * Math.min(1, dt * 3);
     if (!W || p.dead || p.hang) return;
     for (const z of W) {
       if (p.cx < z.from * TILE || p.cx > z.to * TILE) continue;
@@ -629,11 +641,12 @@ export class Game {
     c.setTransform(k, 0, 0, k, -camX * k, -camY * k);
     const vis = (x, m = 120) => x > camX - m && x < camX + this.viewW + m;
     this.renderer.pits(c, camX, this.viewW, this.level.pxH);
-    for (const d of this.decor) if (d.type === 'tree' && vis(d.x, 200)) drawTree(c, d.x, d.y, d.scale || 1);
-    for (const d of this.decor) if (d.type === 'bigtree' && vis(d.x, 260)) drawBigTree(c, d.x, d.y, d.y - d.height * TILE);
+    for (const d of this.decor) if (d.type === 'tree' && vis(d.x, 200)) drawTree(c, d.x, d.y, d.scale || 1, this.time);
+    for (const d of this.decor) if (d.type === 'bigtree' && vis(d.x, 260)) drawBigTree(c, d.x, d.y, d.y - d.height * TILE, this.time);
     if (this.finish && vis(this.finish.x, 420)) (this.def.finishScene === 'shelter' ? drawShelter(c, this.finish.x + 190, this.finish.y) : drawCave(c, this.finish.x + 150, this.finish.y, this.time));
     this.renderer.tiles(c, this.map, camX, camY, this.viewW, this.viewH);
     this.renderer.dynamicTiles(c, this.map, camX, this.viewW, this.time);
+    this.renderer.plants(c, this.map, camX, this.viewW, this.time, this.state === 'title' ? null : this.player);
     for (const d of this.decor) if (d.type === 'sign' && vis(d.x)) drawSign(c, d.x, d.y, d.text);
     for (const f of this.fires) if (vis(f.x)) (this.def.fire ? drawCampfire : drawStoneCache)(c, f.x, f.y, f.lit, this.time);
     if (this.finish && vis(this.finish.x, 420)) drawFoodCache(c, this.finish.x + 122, this.finish.y);

@@ -1,5 +1,5 @@
 import { TILE } from './config.js';
-import { taper, mix, eye, groundShadow } from './art.js';
+import { taper, taper as tp, mix, mix as mixA, eye, eye as eyeA, groundShadow } from './art.js';
 
 // Bewegende dingen waar je op kunt staan. Elk heeft:
 //  x, top, w            standvlak
@@ -76,33 +76,39 @@ export class Croc {
   }
   draw(c, time) {
     c.save();
-    c.translate(this.x + this.w / 2, this.top);
-    c.scale(this.dir, 1);
-    const o = '#1d2a14', body = '#4f6b2e', light = '#7d9a48';
-    // Staart
-    c.fillStyle = body; c.beginPath(); c.moveTo(-50, 4); c.quadraticCurveTo(-64, 2 + Math.sin(time * 4) * 3, -74, 6); c.quadraticCurveTo(-60, 10, -44, 10); c.closePath(); c.fill();
-    // Rug met schubben
-    c.fillStyle = o; c.beginPath(); c.roundRect(-52, -2, 82, 18, 9); c.fill();
-    c.fillStyle = body; c.beginPath(); c.roundRect(-50, 0, 78, 14, 7); c.fill();
-    c.fillStyle = light;
-    for (let i = -44; i < 24; i += 9) { c.beginPath(); c.moveTo(i, 1); c.lineTo(i + 4, -4); c.lineTo(i + 8, 1); c.closePath(); c.fill(); }
-    // Kop: onderkaak blijft liggen, bovenkaak klapt open
+    c.translate(this.x + this.w / 2, this.top); c.scale(this.dir, 1);
+    const o = '#172210', body = '#4f6e2c', light = '#7e9e48', belly = '#c8be7a';
+    // Staart die zwiept
+    const sw = Math.sin(time * 4 + this.t) * 4;
+    c.fillStyle = o; tp(c, -42, 6, -76, 8 + sw, 14, 3); c.fill(); c.fillStyle = body; tp(c, -42, 6, -76, 8 + sw, 11, 1.6); c.fill();
+    for (let i = 0; i < 5; i++) { const t = i / 5, x = -46 - t * 26, y = 2 + t * (sw * 0.8); c.fillStyle = light; c.beginPath(); c.moveTo(x - 2, y); c.lineTo(x, y - 4 + t * 2); c.lineTo(x + 2, y); c.fill(); }
+    // Lijf met schubbenrijen
+    const bodyP = () => { c.beginPath(); c.moveTo(-46, 10); c.bezierCurveTo(-46, -4, -20, -4, 0, -3); c.bezierCurveTo(16, -2, 26, 0, 30, 6); c.bezierCurveTo(26, 15, -20, 17, -46, 10); c.closePath(); };
+    bodyP(); c.lineWidth = 3; c.strokeStyle = o; c.stroke();
+    const g = c.createLinearGradient(0, -4, 0, 16); g.addColorStop(0, light); g.addColorStop(0.5, body); g.addColorStop(1, mixA(body, o, 0.4));
+    bodyP(); c.fillStyle = g; c.fill();
+    c.fillStyle = mixA(light, '#ffffff', 0.15);
+    for (let i = -40; i < 22; i += 7) { c.beginPath(); c.moveTo(i - 3, -2); c.lineTo(i, -7); c.lineTo(i + 3, -2); c.closePath(); c.fill(); }
+    c.strokeStyle = mixA(body, o, 0.5); c.lineWidth = 1; for (let i = -38; i < 24; i += 6) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i, 10); c.stroke(); }
+    // Onderkaak en bovenkaak die openklapt
     const a = this.open * 0.85;
-    c.fillStyle = o; c.beginPath(); c.roundRect(24, 4, 30, 10, 4); c.fill();
-    c.fillStyle = '#c9b77a'; c.beginPath(); c.roundRect(26, 5, 26, 6, 3); c.fill();
+    c.fillStyle = o; c.beginPath(); c.roundRect(24, 4, 34, 10, 5); c.fill();
+    c.fillStyle = belly; c.beginPath(); c.roundRect(26, 5, 30, 7, 3.5); c.fill();
+    if (this.open > 0.1) { c.fillStyle = '#b84a4a'; c.beginPath(); c.moveTo(27, 5); c.lineTo(27 + 30 * Math.cos(a), 5 - 30 * Math.sin(a)); c.lineTo(56, 5); c.closePath(); c.fill(); }
     c.save(); c.translate(26, 4); c.rotate(-a);
-    c.fillStyle = o; c.beginPath(); c.roundRect(-4, -10, 34, 13, 5); c.fill();
-    c.fillStyle = body; c.beginPath(); c.roundRect(-2, -8, 30, 9, 4); c.fill();
-    if (this.open > 0.1) { c.fillStyle = '#f2eedc'; for (let i = 2; i < 28; i += 5) { c.beginPath(); c.moveTo(i, 1); c.lineTo(i + 2, 5); c.lineTo(i + 4, 1); c.closePath(); c.fill(); } }
-    // Oog: komt omhoog als waarschuwing
+    const jaw = () => { c.beginPath(); c.moveTo(-4, 2); c.bezierCurveTo(-4, -10, 20, -10, 33, -3); c.quadraticCurveTo(35, 1, 31, 2); c.closePath(); };
+    jaw(); c.lineWidth = 2.6; c.strokeStyle = o; c.stroke();
+    const jg = c.createLinearGradient(0, -9, 0, 2); jg.addColorStop(0, light); jg.addColorStop(1, body); jaw(); c.fillStyle = jg; c.fill();
+    c.fillStyle = '#f4f0dc'; for (let i = 3; i < 30; i += 4.5) { c.beginPath(); c.moveTo(i, 1); c.lineTo(i + 1.6, 4.5); c.lineTo(i + 3.2, 1); c.fill(); }
+    c.fillStyle = o; c.beginPath(); c.arc(31, -4, 1.2, 0, Math.PI * 2); c.fill();
     const eyeUp = this.state === 'warn' || this.state === 'snap' ? 5 : 0;
-    c.fillStyle = o; c.beginPath(); c.arc(4, -10 - eyeUp, 5, 0, Math.PI * 2); c.fill();
-    c.fillStyle = this.state === 'stun' ? '#fff' : '#f2d94e'; c.beginPath(); c.arc(4, -10 - eyeUp, 3.2, 0, Math.PI * 2); c.fill();
-    if (this.state !== 'stun') { c.fillStyle = '#111'; c.fillRect(3.4, -12.5 - eyeUp, 1.3, 5); }
+    c.fillStyle = o; c.beginPath(); c.ellipse(5, -8 - eyeUp, 6, 5, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = light; c.beginPath(); c.ellipse(5, -8 - eyeUp, 4.8, 3.8, 0, 0, Math.PI * 2); c.fill();
+    eyeA(c, 5.5, -9 - eyeUp, 2.4, this.state === 'stun' ? '#ffffff' : '#e8cc30', this.state === 'stun' ? 0.2 : 1, this.state !== 'swim');
     c.restore();
-    if (this.open > 0.1) { c.fillStyle = '#b34b4b'; c.beginPath(); c.moveTo(28, 5); c.lineTo(28 + 26 * Math.cos(a), 5 - 26 * Math.sin(a)); c.lineTo(52, 5); c.closePath(); c.fill(); }
     c.restore();
   }
+
 }
 
 // Nijlpaard: komt boven (je kunt op zijn rug staan) en zakt na waarschuwing weer onder.
@@ -129,19 +135,22 @@ export class Hippo {
     const x = this.x, y = this.top, w = this.w;
     const wob = this.state === 'warn' ? Math.sin(time * 30) * 1.5 : 0;
     c.save(); c.translate(x + w / 2 + wob, y);
-    c.fillStyle = '#2e2530'; c.beginPath(); c.ellipse(-6, 18, 50, 22, 0, Math.PI, 0); c.fill();
-    c.fillStyle = '#6d5a6e'; c.beginPath(); c.ellipse(-6, 18, 47, 19, 0, Math.PI, 0); c.fill();
-    c.fillStyle = '#8f7a8c'; c.beginPath(); c.ellipse(-12, 6, 26, 6, 0, 0, Math.PI * 2); c.fill();
-    // Kop met oren, ogen en neusgaten net boven water
-    c.fillStyle = '#2e2530'; c.beginPath(); c.ellipse(36, 14, 18, 13, 0, Math.PI, 0); c.fill();
-    c.fillStyle = '#7b6679'; c.beginPath(); c.ellipse(36, 14, 16, 11, 0, Math.PI, 0); c.fill();
-    const ear = this.state === 'warn' ? Math.sin(time * 25) * 0.5 : 0;
-    for (const ex of [28, 40]) { c.save(); c.translate(ex, 3); c.rotate(ear); c.fillStyle = '#5a4858'; c.beginPath(); c.ellipse(0, -2, 3, 4, 0, 0, Math.PI * 2); c.fill(); c.restore(); }
-    c.fillStyle = '#fff'; c.beginPath(); c.arc(32, 8, 2.6, 0, Math.PI * 2); c.arc(42, 8, 2.6, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#1a1018'; c.beginPath(); c.arc(32.6, 8.4, 1.3, 0, Math.PI * 2); c.arc(42.6, 8.4, 1.3, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#4a3a48'; c.beginPath(); c.arc(48, 12, 1.6, 0, Math.PI * 2); c.arc(52, 12, 1.6, 0, Math.PI * 2); c.fill();
+    const o = '#2a2028', body = '#7a6674', light = '#a8909c', pink = '#d89aa0';
+    const back = () => { c.beginPath(); c.ellipse(-6, 20, 50, 23, 0, Math.PI, 0); c.closePath(); };
+    back(); c.lineWidth = 3; c.strokeStyle = o; c.stroke();
+    const g = c.createLinearGradient(0, -4, 0, 20); g.addColorStop(0, light); g.addColorStop(1, body); back(); c.fillStyle = g; c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.35)'; c.beginPath(); c.ellipse(-16, 3, 20, 3.5, -0.05, 0, Math.PI * 2); c.fill();
+    // Kop met roze wangen, neusgaten en oren die wiebelen
+    const head = () => { c.beginPath(); c.ellipse(36, 15, 19, 14, 0, Math.PI, 0); c.closePath(); };
+    head(); c.lineWidth = 3; c.strokeStyle = o; c.stroke(); head(); c.fillStyle = g; c.fill();
+    c.fillStyle = pink; c.globalAlpha = 0.55; c.beginPath(); c.ellipse(46, 13, 6, 3, 0, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
+    const ear = this.state === 'warn' ? Math.sin(time * 25) * 0.5 : Math.sin(time * 2) * 0.15;
+    for (const ex of [26, 38]) { c.save(); c.translate(ex, 2); c.rotate(ear); c.fillStyle = o; c.beginPath(); c.ellipse(0, -2, 3.6, 4.6, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = pink; c.beginPath(); c.ellipse(0, -2, 2, 3, 0, 0, Math.PI * 2); c.fill(); c.restore(); }
+    eyeA(c, 31, 7, 3, '#3a2010', this.state === 'sink' ? 0.3 : 1); eyeA(c, 41, 7, 3, '#3a2010', this.state === 'sink' ? 0.3 : 1);
+    c.fillStyle = o; c.beginPath(); c.ellipse(50, 10, 1.6, 1.2, 0, 0, Math.PI * 2); c.ellipse(54, 10, 1.6, 1.2, 0, 0, Math.PI * 2); c.fill();
     c.restore();
   }
+
 }
 
 // Stegodon (Java): een uitgestorven slurfdier dat rustig heen en weer loopt; je kunt op zijn rug meerijden

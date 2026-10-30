@@ -1,5 +1,6 @@
 import { TILE } from './config.js';
 import { T } from './level.js';
+import { leafCluster, frond, WIND } from './art.js';
 
 const CHUNK = 16; // tegels per voorgetekend stuk
 
@@ -16,7 +17,7 @@ const THEMES = {
   forest: {
     sky: ['#6fb7cf', '#b8dcc8', '#e9e2a8'], sun: '#fff6cc',
     far: '#86a88e', farTop: '#9cbc9f', mid: '#4f7a45', midDark: '#3f6a3a', near: '#5f8f45', acacia: '#3d6136',
-    forest: true,
+    forest: true, jungle: true,
   },
   cave: { cave: true },
   grassland: {
@@ -31,7 +32,7 @@ const THEMES = {
   java: {
     sky: ['#5f9fc0', '#b6d6c6', '#f0d8a8'], sun: '#fff0c0',
     far: '#7a8e86', farTop: '#93a69c', mid: '#4f7f48', midDark: '#3e6a3c', near: '#5a8c46', acacia: '#2f5a32',
-    forest: true, volcano: true,
+    forest: true, volcano: true, jungle: true,
   },
   dusk: {
     sky: ['#3a4a7a', '#c97a6a', '#f2b064'], sun: '#ffd28a',
@@ -115,7 +116,7 @@ export class Renderer {
     for (let i = Math.floor(camX * 0.3 / 230) - 1; i < (camX * 0.3 + viewW) / 230 + 1; i++) {
       if (hash(i, 9) < (th.forest ? 0.05 : 0.35)) continue;
       const wx = i * 230 + hash(i, 4) * 120, x = wx - camX * 0.3;
-      if (th.forest) roundTree(c, x, midY + 10 - ridgeH(wx, 20, 0.006, 3), 0.8 + hash(i, 5) * 0.5, th.acacia, th.mid);
+      if (th.forest) roundTree(c, x, midY + 10 - ridgeH(wx, 20, 0.006, 3), 0.8 + hash(i, 5) * 0.5, th.acacia, th.mid, time + i);
       else acacia(c, x, midY + 6 - ridgeH(wx, 20, 0.006, 3), 0.55 + hash(i, 5) * 0.35, th.acacia);
     }
     // Dichtbij: struikenrand
@@ -123,7 +124,27 @@ export class Renderer {
     ridge(c, camX * 0.55, viewW, nearY, 9, 0.012, 11, th.near, th.midDark);
     for (let i = Math.floor(camX * 0.55 / 140) - 1; i < (camX * 0.55 + viewW) / 140 + 1; i++) {
       const wx = i * 140 + hash(i, 6) * 80, x = wx - camX * 0.55;
-      bush(c, x, nearY + 4 - ridgeH(wx, 9, 0.012, 11), 0.8 + hash(i, 7) * 0.6, th.midDark);
+      const by = nearY + 4 - ridgeH(wx, 9, 0.012, 11), bs = 0.8 + hash(i, 7) * 0.6;
+      bush(c, x, by, bs, th.midDark);
+      leafCluster(c, x + 4, by - 6 * bs, 20 * bs, 7 * bs, { n: 9, size: 6, colors: [th.midDark, th.near, mixHex(th.near, '#ffffff', 0.2)], time, seed: i, sway: 0.25 });
+    }
+    // Bos: schuine lichtbundels door het bladerdak en hangende slingerplanten
+    if (th.jungle && !this.lite) {
+      c.save(); c.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 4; i++) {
+        const bx = ((i * 260 - camX * 0.4) % (viewW + 300) + viewW + 300) % (viewW + 300) - 150, a = 0.08 + 0.04 * Math.sin(time * 0.5 + i);
+        const g3 = c.createLinearGradient(bx, 0, bx + 120, viewH); g3.addColorStop(0, `rgba(255,250,210,${a})`); g3.addColorStop(1, 'rgba(255,250,210,0)');
+        c.fillStyle = g3; c.beginPath(); c.moveTo(bx, 0); c.lineTo(bx + 40, 0); c.lineTo(bx + 190, viewH); c.lineTo(bx + 110, viewH); c.closePath(); c.fill();
+      }
+      c.restore();
+      c.strokeStyle = mixHex(th.midDark, '#000000', 0.2); c.lineWidth = 2.2;
+      for (let i = Math.floor(camX * 0.6 / 90) - 1; i < (camX * 0.6 + viewW) / 90 + 1; i++) {
+        if (hash(i, 41) < 0.45) continue;
+        const vx = i * 90 + hash(i, 42) * 50 - camX * 0.6, len = 60 + hash(i, 43) * 120, sw = Math.sin(time * 1.2 + i) * 6;
+        c.beginPath(); c.moveTo(vx, -5); c.quadraticCurveTo(vx + sw, len * 0.5, vx + sw * 1.6, len); c.stroke();
+        c.fillStyle = mixHex(th.midDark, '#000000', 0.1);
+        for (let k = 1; k < 6; k++) { const ly = len * k / 6, lx = vx + sw * 1.6 * (k / 6) * (k / 6); c.beginPath(); c.ellipse(lx + (k % 2 ? 4 : -4), ly, 4.5, 2, k % 2 ? 0.5 : -0.5, 0, Math.PI * 2); c.fill(); }
+      }
     }
     // Grote kudde in de verte, met stofwolk (alleen op open vlaktes)
     if (!th.forest) {
@@ -149,6 +170,13 @@ export class Renderer {
       if (th.cave) { c.beginPath(); c.moveTo(x - 8, viewH + 2); c.lineTo(x + 1, viewH - h * 0.9); c.lineTo(x + 9, viewH + 2); c.closePath(); c.fill(); continue; }
       c.beginPath(); c.moveTo(x - 6, viewH + 2); c.bezierCurveTo(x - 5, viewH - h * 0.5, x + bend * 0.6 - 3, viewH - h * 0.8, x + bend + 2, viewH - h); c.bezierCurveTo(x + bend * 0.4 + 3, viewH - h * 0.6, x + 4, viewH - h * 0.3, x + 7, viewH + 2); c.closePath(); c.fill();
     }
+    // Bos: bladerdak dat over de bovenrand van het beeld hangt
+    if (th.jungle && !this.lite) {
+      for (let i = Math.floor(camX * f / 70) - 1; i < (camX * f + viewW) / 70 + 1; i++) {
+        const x = i * 70 + hash(i, 51) * 40 - camX * f;
+        leafCluster(c, x, -4 + hash(i, 52) * 8, 40, 16, { n: 14, size: 13, colors: [col, mixHex(col, '#2a4a20', 0.4), mixHex(col, '#3a5a28', 0.5)], time, seed: i * 2.3, sway: 0.16 });
+      }
+    }
     for (let i = Math.floor(camX * f / 520) - 1; i < (camX * f + viewW) / 520 + 1; i++) {
       if (th.cave || hash(i, 21) < 0.45) continue;
       const x = i * 520 + hash(i, 22) * 200 - camX * f, sway = Math.sin(time * 1.3 + i) * 0.06;
@@ -161,6 +189,7 @@ export class Renderer {
 
   // Zwevend stuifmeel / stofjes in de lucht, en een zachte vignet
   atmosphere(c, theme, camX, camY, viewW, viewH, time) {
+    if (this.lite) return;
     const th = THEMES[theme] || THEMES.savanna;
     c.save();
     for (let i = 0; i < 26; i++) {
@@ -275,6 +304,39 @@ export class Renderer {
       else if (t === T.THORNS) (theme === 'cave' ? stalagmiteTile : thornTile)(c, cx, cy);
     }
     return cv;
+  }
+
+  // Planten op de grond die bewegen: grasplukjes, varens en struikjes. Ze buigen weg van de speler.
+  plants(c, map, camX, viewW, time, player) {
+    if (this.plantMap !== map) {
+      this.plantMap = map; this.plantList = [];
+      const theme = map.level.theme;
+      if (theme !== 'cave') for (let cx = 0; cx < map.w; cx++) for (let cy = 1; cy < map.h; cy++) {
+        const t = map.get(cx, cy), up = map.get(cx, cy - 1);
+        if (t !== T.GROUND) continue;
+        if (up !== T.EMPTY && up !== T.BRANCH) break;
+        const r = hash(cx, cy * 3 + 1), lush = theme === 'forest' || theme === 'java';
+        const kind = lush && r > 0.72 ? 'fern' : r > 0.94 ? 'bush' : r > (lush ? 0.4 : 0.5) ? 'tuft' : null;
+        if (kind) this.plantList.push({ x: cx * TILE + 6 + hash(cx, 5) * 20, y: cy * TILE + 1, kind, seed: cx * 1.7 });
+        break;
+      }
+    }
+    const pcx = player ? player.cx : -1e9, pb = player ? player.bottom : 0;
+    for (const P of this.plantList) {
+      if (P.x < camX - 40 || P.x > camX + viewW + 40) continue;
+      const d = P.x - pcx, near = Math.abs(d) < 26 && Math.abs(P.y - pb) < 30 ? (1 - Math.abs(d) / 26) * Math.sign(d || 1) : 0;
+      if (P.kind === 'tuft') {
+        for (let j = 0; j < 6; j++) {
+          const h = 9 + hash(P.seed, j) * 9, lean = (j - 2.5) * 0.12 + Math.sin(time * 2.2 + P.seed + j * 0.4) * 0.12 + near * 0.9 + WIND.push * 1.2, bx = P.x + j * 1.8 - 5;
+          c.fillStyle = j % 2 ? '#6ea43a' : '#94c84c';
+          c.beginPath(); c.moveTo(bx, P.y); c.quadraticCurveTo(bx + lean * h * 0.4, P.y - h * 0.6, bx + lean * h, P.y - h); c.quadraticCurveTo(bx + 1 + lean * h * 0.3, P.y - h * 0.5, bx + 1.6, P.y); c.closePath(); c.fill();
+        }
+      } else if (P.kind === 'fern') {
+        for (let k = 0; k < 5; k++) frond(c, P.x, P.y, 20 + hash(P.seed, k) * 8, -Math.PI / 2 + (k - 2) * 0.5, k % 2 ? '#4f8a36' : '#6aa844', time, P.seed + k, near * 0.6);
+      } else {
+        leafCluster(c, P.x, P.y - 8, 14, 9, { n: 12, size: 6, colors: ['#3c6228', '#5a8a38', '#8cbc50'], time, seed: P.seed, sway: 0.25, push: near * 0.5 });
+      }
+    }
   }
 
   // Tegels die bewegen of veranderen worden elk beeld getekend.
@@ -551,14 +613,18 @@ export function artifactIcon(c, x, y, s, found) {
   c.restore();
 }
 
-export function drawTree(c, x, y, s) {
+export function drawTree(c, x, y, s, time = 0) {
   // Acacia in het speelveld (achter de tegels)
   c.save(); c.translate(x, y); c.scale(s, s);
   c.strokeStyle = '#5b3c26'; c.lineCap = 'round';
   c.lineWidth = 9; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(4, -40, -2, -80); c.stroke();
   c.lineWidth = 5; c.beginPath(); c.moveTo(-1, -70); c.lineTo(-30, -104); c.moveTo(0, -78); c.lineTo(28, -110); c.moveTo(-2, -80); c.lineTo(2, -112); c.stroke();
-  const leaf = (lx, ly, rx, ry, col) => { c.fillStyle = col; c.beginPath(); c.ellipse(lx, ly, rx, ry, 0, 0, Math.PI * 2); c.fill(); };
-  leaf(0, -112, 66, 14, '#4f7434'); leaf(-28, -118, 34, 12, '#5d8a3c'); leaf(26, -120, 38, 12, '#5d8a3c'); leaf(0, -124, 28, 9, '#79a64a');
+  // Platte acaciakruin van losse, wapperende blaadjes
+  const cols = ['#3c6228', '#5a8a38', '#8cbc50'], sd = x * 0.013;
+  c.fillStyle = '#3c6228'; c.beginPath(); c.ellipse(0, -110, 58, 9, 0, 0, Math.PI * 2); c.fill();
+  leafCluster(c, -30, -116, 34, 9, { n: 18, size: 9, colors: cols, time, seed: sd, flat: true, sway: 0.22 });
+  leafCluster(c, 28, -118, 38, 9, { n: 18, size: 9, colors: cols, time, seed: sd + 3, flat: true, sway: 0.22 });
+  leafCluster(c, 0, -122, 50, 9, { n: 22, size: 10, colors: cols, time, seed: sd + 6, flat: true, sway: 0.2 });
   c.restore();
 }
 
@@ -693,17 +759,16 @@ export function drawFoodCache(c, x, y) {
   c.restore();
 }
 
-function roundTree(c, x, y, s, dark, light) {
-  // Boom in het galerijbos: hoge stam met ronde kruin
+function roundTree(c, x, y, s, dark, light, time = 0) {
+  // Boom in het galerijbos: hoge stam met ronde, bewegende kruin
   c.save(); c.translate(x, y); c.scale(s, s);
   c.fillStyle = '#3a2c1e'; c.fillRect(-4, -70, 8, 70);
-  c.fillStyle = dark;
-  c.beginPath(); c.arc(0, -86, 30, 0, Math.PI * 2); c.arc(-24, -72, 20, 0, Math.PI * 2); c.arc(24, -74, 22, 0, Math.PI * 2); c.fill();
-  c.fillStyle = light; c.globalAlpha = 0.35; c.beginPath(); c.arc(-8, -96, 14, 0, Math.PI * 2); c.fill();
+  c.fillStyle = dark; c.beginPath(); c.arc(0, -84, 28, 0, Math.PI * 2); c.arc(-22, -72, 18, 0, Math.PI * 2); c.arc(22, -74, 20, 0, Math.PI * 2); c.fill();
+  leafCluster(c, 0, -86, 34, 24, { n: 16, size: 9, colors: [dark, mixHex(dark, light, 0.5), light], time, seed: x * 0.01, sway: 0.2 });
   c.restore();
 }
 
-export function drawBigTree(c, x, groundY, topY) {
+export function drawBigTree(c, x, groundY, topY, time = 0) {
   // Reusachtige boom in het speelveld: de takken (tegels) hangen eraan
   c.save();
   const g = c.createLinearGradient(x - 22, 0, x + 22, 0);
@@ -713,9 +778,11 @@ export function drawBigTree(c, x, groundY, topY) {
   c.lineTo(x - 14, topY + 20); c.lineTo(x + 14, topY + 20); c.lineTo(x + 16, groundY - 60); c.quadraticCurveTo(x + 18, groundY - 30, x + 30, groundY); c.closePath(); c.fill();
   c.strokeStyle = '#2c1f14'; c.lineWidth = 2;
   for (let yy = groundY - 40; yy > topY + 40; yy -= 46) { c.beginPath(); c.moveTo(x - 8, yy); c.quadraticCurveTo(x - 2, yy - 14, x + 6, yy - 22); c.stroke(); }
-  const crown = (cx, cy, r, col) => { c.fillStyle = col; c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.fill(); };
-  crown(x - 50, topY + 6, 46, '#3f6a3a'); crown(x + 52, topY + 2, 50, '#3f6a3a'); crown(x, topY - 20, 58, '#4f7a45');
-  crown(x - 20, topY - 34, 30, '#6a9a4f'); crown(x + 30, topY - 26, 26, '#6a9a4f');
+  const cols = ['#2f5a2c', '#4a7a3a', '#7aaa52'], sd = x * 0.01;
+  c.fillStyle = '#2a4c26'; c.beginPath(); c.ellipse(x, topY - 4, 96, 40, 0, 0, Math.PI * 2); c.fill();
+  leafCluster(c, x - 52, topY + 4, 46, 30, { n: 34, size: 12, colors: cols, time, seed: sd, sway: 0.16 });
+  leafCluster(c, x + 54, topY, 50, 32, { n: 36, size: 12, colors: cols, time, seed: sd + 2, sway: 0.16 });
+  leafCluster(c, x, topY - 22, 60, 36, { n: 44, size: 13, colors: cols, time, seed: sd + 4, sway: 0.14 });
   c.restore();
 }
 

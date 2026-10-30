@@ -214,3 +214,49 @@ function drawHead(c, o, x, y, time) {
   }
   c.restore();
 }
+
+// ------------------------------------------------------------------
+// Bladeren: een tros losse bladeren die elk apart in de wind bewegen.
+// opts: { n, size, colors: [donker, midden, licht], time, seed, sway, flat, push }
+// push: verschuiving door iets dat erlangs gaat (bijv. de speler)
+// ------------------------------------------------------------------
+// Windstoot: alle bladeren buigen mee (gezet door het spel)
+export const WIND = { push: 0 };
+const rnd = (a, b = 0) => { const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return n - Math.floor(n); };
+
+export function leafCluster(c, cx, cy, rx, ry, o) {
+  const n = o.n || 14, size = o.size || 8, cols = o.colors, t = o.time || 0, sd = o.seed || 0, sway = o.sway ?? 0.18;
+  const wind = Math.sin(t * 1.1 + sd) * 0.6 + Math.sin(t * 2.3 + sd * 2) * 0.4;
+  // Per kleurband één pad: donker (onder) eerst, licht (boven) laatst. Scheelt veel tekenwerk.
+  for (let band = 0; band < 3; band++) {
+    c.beginPath();
+    for (let i = 0; i < n; i++) {
+      const a = rnd(i, sd) * Math.PI * 2, d = Math.sqrt(rnd(i + 7, sd));
+      const x = cx + Math.cos(a) * rx * d, y = cy + Math.sin(a) * ry * d;
+      const depth = (y - (cy - ry)) / (2 * ry), b = depth > 0.62 ? 0 : depth > 0.3 ? 1 : 2;
+      if (b !== band) continue;
+      const rot = (o.flat ? 0 : (rnd(i + 3, sd) - 0.5) * 2.2) + Math.sin(t * (1.6 + rnd(i, 9) * 1.4) + i * 0.9 + sd) * sway + wind * sway * 0.8 + (o.push || 0) + WIND.push * (0.6 + rnd(i, 4) * 0.5);
+      const s = size * (0.7 + rnd(i + 5, sd) * 0.6), cs = Math.cos(rot), sn = Math.sin(rot);
+      // Bladvorm (spoel) in lokale coördinaten, gedraaid zonder save/restore
+      const P = (lx, ly) => [x + lx * cs - ly * sn, y + lx * sn + ly * cs];
+      const p0 = P(-s, 0), c1 = P(-s * 0.2, -s * 0.55), p1 = P(s, 0), c2 = P(-s * 0.2, s * 0.55);
+      c.moveTo(p0[0], p0[1]); c.quadraticCurveTo(c1[0], c1[1], p1[0], p1[1]); c.quadraticCurveTo(c2[0], c2[1], p0[0], p0[1]);
+    }
+    c.fillStyle = band === 0 ? cols[0] : band === 1 ? cols[1] : cols[2];
+    c.fill();
+  }
+}
+
+// Varenblad / palmblad dat aan de voet vastzit en meebuigt
+export function frond(c, x, y, len, angle, col, t, seed, push = 0) {
+  const bend = Math.sin(t * 1.7 + seed) * 0.12 + push + WIND.push * 0.5;
+  c.save(); c.translate(x, y); c.rotate(angle + bend);
+  c.strokeStyle = mix(col, '#000000', 0.3); c.lineWidth = 1.6; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(len * 0.5, -len * 0.15 + bend * 20, len, len * 0.15); c.stroke();
+  c.fillStyle = col;
+  for (let k = 1; k < 9; k++) {
+    const f = k / 9, px = len * f, py = -len * 0.15 * Math.sin(f * Math.PI) + f * f * len * 0.15 + bend * 20 * f, l = len * 0.24 * (1 - f * 0.6);
+    for (const sgn of [-1, 1]) { c.save(); c.translate(px, py); c.rotate(sgn * (1.0 - f * 0.3) + Math.sin(t * 3 + k + seed) * 0.08); c.beginPath(); c.ellipse(l / 2, 0, l / 2, l * 0.16, 0, 0, Math.PI * 2); c.fill(); c.restore(); }
+  }
+  c.restore();
+}
