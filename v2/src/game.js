@@ -3,6 +3,7 @@ import { buildLevel, TileMap, moveBody, T } from './level.js';
 import { Player } from './player.js';
 import { ENEMY_TYPES } from './enemies.js';
 import { Fx, star } from './fx.js';
+import { PAD_RADIUS } from './input.js';
 import { Renderer, drawPickup, drawTree, drawStoneCache, drawFoodCache, drawLiana, drawCave, flintIcon, artifactIcon } from './render.js';
 import { PLATFORM_TYPES } from './platforms.js';
 import { SPECIES } from './species.js';
@@ -38,13 +39,13 @@ export class Game {
     this.safe = { l: Math.max(12, safeL), t: Math.max(10, parseFloat(cs.getPropertyValue('--sat')) || 0) };
     const u = Math.max(0.8, Math.min(1.25, H / 400));
     const by = H - 62 * u - safeB * 0.5;
+    // Touch: links een zwevende joystick (overal in de linkerhelft), rechts is alles springen.
+    // De getekende knoppen zijn alleen hulplijnen in de hoeken.
     this.input.layout = {
-      split: W * 0.42,
-      padCenter: safeL + 110 * u,
-      left: { x: safeL + 62 * u, y: by, r: 38 * u },
-      right: { x: safeL + 158 * u, y: by, r: 38 * u },
-      jump: { x: W - safeR - 70 * u, y: by - 4 * u, r: 44 * u },
-      throw: { x: W - safeR - 168 * u, y: by + 14 * u, r: 32 * u },
+      split: W * 0.45,
+      pad: { x: safeL + 74 * u, y: H - 66 * u - safeB * 0.5, r: 34 * u },
+      jump: { x: W - safeR - 64 * u, y: H - 64 * u - safeB * 0.5, r: 38 * u },
+      throw: { x: W - safeR - 150 * u, y: H - 50 * u - safeB * 0.5, r: 27 * u },
       pause: { x: W - safeR - 30, y: 30, r: 20 },
     };
   }
@@ -548,22 +549,51 @@ export class Game {
 
   drawTouch(c) {
     if (!this.input.touchMode || this.state === 'complete' || this.state === 'gameover') return;
-    const L = this.input.layout, dir = this.input.padDir();
-    const btn = (b, active, draw) => {
-      c.fillStyle = active ? '#f6cf75aa' : '#0f1d1f55'; c.strokeStyle = active ? '#fff3c4' : '#ffffff88'; c.lineWidth = 2;
-      c.beginPath(); c.arc(b.x, b.y, b.r, 0, Math.PI * 2); c.fill(); c.stroke();
-      c.save(); c.translate(b.x, b.y); c.fillStyle = '#fff6dc'; draw(b.r); c.restore();
+    const L = this.input.layout, pad = this.input.pad();
+    const ring = (x, y, r, active) => {
+      if (active) { c.fillStyle = 'rgba(255,241,196,0.16)'; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); }
+      c.strokeStyle = active ? 'rgba(255,241,196,0.6)' : 'rgba(255,255,255,0.26)'; c.lineWidth = 2;
+      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.stroke();
     };
-    const arrow = (d) => r => { c.beginPath(); c.moveTo(d * r * 0.38, 0); c.lineTo(-d * r * 0.2, -r * 0.36); c.lineTo(-d * r * 0.2, r * 0.36); c.closePath(); c.fill(); };
-    btn(L.left, dir < 0, arrow(-1));
-    btn(L.right, dir > 0, arrow(1));
-    btn(L.jump, this.input.held('jump'), r => { c.beginPath(); c.moveTo(0, -r * 0.4); c.lineTo(-r * 0.36, r * 0.12); c.lineTo(-r * 0.12, r * 0.12); c.lineTo(-r * 0.12, r * 0.38); c.lineTo(r * 0.12, r * 0.38); c.lineTo(r * 0.12, r * 0.12); c.lineTo(r * 0.36, r * 0.12); c.closePath(); c.fill(); });
-    btn(L.throw, this.input.held('throw'), r => { flintIcon(c, 0, 0, r / 14); });
+    const icon = (alpha, fn) => { c.save(); c.globalAlpha = alpha; c.fillStyle = '#fff6dc'; fn(); c.restore(); };
+    const chevron = (x, y, d, sz) => { c.beginPath(); c.moveTo(x + d * sz * 0.5, y); c.lineTo(x - d * sz * 0.3, y - sz * 0.55); c.lineTo(x - d * sz * 0.3, y + sz * 0.55); c.closePath(); c.fill(); };
+
+    // Joystick: in rust een vage hint in de hoek; bij aanraken verschijnt hij onder je duim
+    if (pad) {
+      const R = PAD_RADIUS, dx = Math.max(-R, Math.min(R, pad.x - pad.ox)), dir = this.input.padDir();
+      ring(pad.ox, pad.oy, R, false);
+      icon(0.35, () => { chevron(pad.ox - R + 12, pad.oy, -1, 10); chevron(pad.ox + R - 12, pad.oy, 1, 10); });
+      c.fillStyle = dir ? 'rgba(246,207,117,0.45)' : 'rgba(255,255,255,0.25)';
+      c.beginPath(); c.arc(pad.ox + dx, pad.oy, 18, 0, Math.PI * 2); c.fill();
+    } else {
+      ring(L.pad.x, L.pad.y, L.pad.r, false);
+      icon(0.3, () => { chevron(L.pad.x - L.pad.r * 0.45, L.pad.y, -1, L.pad.r * 0.32); chevron(L.pad.x + L.pad.r * 0.45, L.pad.y, 1, L.pad.r * 0.32); });
+    }
+    // Springen en gooien
+    const J = L.jump, jumping = this.input.held('jump');
+    ring(J.x, J.y, J.r, jumping);
+    icon(jumping ? 0.8 : 0.35, () => { const r = J.r; c.beginPath(); c.moveTo(J.x, J.y - r * 0.42); c.lineTo(J.x - r * 0.36, J.y + r * 0.08); c.lineTo(J.x + r * 0.36, J.y + r * 0.08); c.closePath(); c.fill(); c.fillRect(J.x - r * 0.12, J.y + r * 0.05, r * 0.24, r * 0.32); });
+    const Th = L.throw, throwing = this.input.held('throw');
+    ring(Th.x, Th.y, Th.r, throwing);
+    c.save(); c.globalAlpha = throwing ? 0.9 : 0.45; flintIcon(c, Th.x, Th.y, Th.r / 15); c.restore();
+    if (this.stones > 0) { c.fillStyle = 'rgba(255,241,196,0.7)'; c.font = '800 11px system-ui, sans-serif'; c.textAlign = 'center'; c.fillText(String(this.stones), Th.x + Th.r * 0.75, Th.y - Th.r * 0.6); c.textAlign = 'left'; }
     // Pauze
     const P = L.pause;
-    c.fillStyle = '#0f1d1f88'; c.beginPath(); c.arc(P.x, P.y, P.r, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#fff6dc'; c.fillRect(P.x - 6, P.y - 7, 4, 14); c.fillRect(P.x + 2, P.y - 7, 4, 14);
+    ring(P.x, P.y, P.r, false);
+    icon(0.55, () => { c.fillRect(P.x - 6, P.y - 7, 4, 14); c.fillRect(P.x + 2, P.y - 7, 4, 14); });
+
+    // Uitleg tijdens de eerste seconden van het eerste level
+    if (this.def?.id === '1-1' && this.levelTime < 7 && this.state === 'play') {
+      const a = Math.min(1, (7 - this.levelTime) / 1.5) * 0.85;
+      c.save(); c.globalAlpha = a; c.font = '700 13px system-ui, sans-serif'; c.textAlign = 'center';
+      c.fillStyle = '#0f1d1fb0';
+      const tip = (x, y, t) => { const w = c.measureText(t).width + 18; c.beginPath(); c.roundRect(x - w / 2, y - 15, w, 22, 11); c.fill(); c.fillStyle = '#fff1c4'; c.fillText(t, x, y); c.fillStyle = '#0f1d1fb0'; };
+      tip(this.W * 0.22, this.H * 0.5, '← Sleep hier om te lopen →');
+      tip(this.W * 0.75, this.H * 0.5, 'Tik hier om te springen');
+      c.restore();
+    }
   }
+
 }
 
 function wrap(c, text, maxW) {

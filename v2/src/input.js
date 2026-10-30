@@ -7,6 +7,10 @@ const KEYS = {
   pause: ['escape', 'p'],
 };
 
+export const PAD_RADIUS = 46;   // hoe ver de joystick-knop kan uitslaan (css-pixels)
+const PAD_DEAD = 12;             // dode zone rond het midden
+const PAD_FOLLOW = 26;           // het midden blijft hooguit zo ver achter de duim
+
 export class Input {
   constructor(canvas) {
     this.canvas = canvas;
@@ -38,7 +42,8 @@ export class Input {
       e.preventDefault();
       try { canvas.setPointerCapture(e.pointerId); } catch {}
       const role = this.roleAt(e.clientX, e.clientY);
-      this.pointers.set(e.pointerId, { role, x: e.clientX, y: e.clientY });
+      // Zwevende joystick: het midden ligt waar je duim neerkomt.
+      this.pointers.set(e.pointerId, { role, x: e.clientX, y: e.clientY, ox: e.clientX, oy: e.clientY });
       if (role === 'jump') this.edges.jump = true;
       if (role === 'throw') this.edges.throw = true;
       if (role === 'pause') this.edges.pause = true;
@@ -47,8 +52,12 @@ export class Input {
       const p = this.pointers.get(e.pointerId);
       if (!p) return;
       p.x = e.clientX; p.y = e.clientY;
-      // De duim mag over het pijlenveld schuiven zonder los te laten.
-      if (p.role === 'pad') return;
+      // Schuift de duim verder dan de rand, dan schuift het midden mee:
+      // omkeren gaat zo altijd met een klein beweginkje.
+      if (p.role === 'pad') {
+        const max = PAD_FOLLOW, dx = p.x - p.ox;
+        if (Math.abs(dx) > max) p.ox = p.x - Math.sign(dx) * max;
+      }
     };
     const up = e => this.pointers.delete(e.pointerId);
     canvas.addEventListener('pointerdown', down);
@@ -65,8 +74,8 @@ export class Input {
     const near = (b, extra = 1) => Math.hypot(x - b.x, y - b.y) <= b.r * extra;
     if (near(L.pause, 1.4)) return 'pause';
     if (x < L.split) return 'pad';
-    if (near(L.throw, 1.25)) return 'throw';
-    return 'jump';
+    if (near(L.throw, 1.35)) return 'throw';
+    return 'jump';   // de hele rechterkant is springen
   }
 
   key(name) { return KEYS[name].some(k => this.keys.has(k)); }
@@ -79,9 +88,9 @@ export class Input {
     this.edges.jump = this.edges.throw = this.edges.pause = false;
 
     for (const p of this.pointers.values()) {
-      if (p.role === 'pad' && this.layout) {
-        const dx = p.x - this.layout.padCenter;
-        if (dx < -10) left = true; else if (dx > 10) right = true;
+      if (p.role === 'pad') {
+        const dx = p.x - p.ox;
+        if (dx < -PAD_DEAD) left = true; else if (dx > PAD_DEAD) right = true;
       }
       if (p.role === 'jump') jumpHeld = true;
     }
@@ -109,10 +118,7 @@ export class Input {
   }
 
   held(role) { for (const p of this.pointers.values()) if (p.role === role) return true; return false; }
-  padDir() {
-    for (const p of this.pointers.values()) if (p.role === 'pad' && this.layout) {
-      const dx = p.x - this.layout.padCenter; return dx < -10 ? -1 : dx > 10 ? 1 : 0;
-    }
-    return 0;
-  }
+  // Huidige duim op de joystick (voor het tekenen), of null
+  pad() { for (const p of this.pointers.values()) if (p.role === 'pad') return p; return null; }
+  padDir() { const p = this.pad(); if (!p) return 0; const dx = p.x - p.ox; return dx < -PAD_DEAD ? -1 : dx > PAD_DEAD ? 1 : 0; }
 }
