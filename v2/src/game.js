@@ -29,7 +29,7 @@ export class Game {
   }
 
   resize() {
-    const W = innerWidth, H = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2.5);
+    const W = innerWidth, H = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
     this.W = W; this.H = H; this.dpr = dpr;
     this.cv.width = Math.round(W * dpr); this.cv.height = Math.round(H * dpr);
     this.scale = H / (VIEW_ROWS * TILE);
@@ -130,6 +130,7 @@ export class Game {
     this.load(def);
     this.state = 'intro'; this.introT = 0;
     this.audio.playSong(def.music || 'savanna');
+    this.audio.setAmbience(def.theme); this.audio.setSpace(def.theme === 'cave' ? 'cave' : 'open');
   }
 
   respawn() {
@@ -288,7 +289,7 @@ export class Game {
     const liquid = this.map.get(Math.floor(p.cx / TILE), wy);
     if (!p.onGround && (liquid === T.WATER || liquid === T.LAVA) && this.map.get(Math.floor(p.cx / TILE), wy - 1) !== liquid) {
       if (liquid === T.LAVA) { this.fx.sparkle(p.cx, wy * TILE + 8, '#ff8a2a'); this.fx.sparkle(p.cx, wy * TILE + 4, '#ffd36a'); this.audio.play('sizzle'); }
-      else { this.fx.splash(p.cx, wy * TILE + 8); this.audio.play('splash'); }
+      else { this.fx.splash(p.cx, wy * TILE + 8, 22); this.fx.ripple(p.cx, wy * TILE + 8, 3); this.audio.play('splash'); }
       this.hearts = 0; this.die(); p.vy = -200; return;
     }
     this.updateWind(dt);
@@ -405,7 +406,7 @@ export class Game {
       }
       for (const pl of this.platforms) { const hz = pl.hazard?.() || (pl.headX && pl.state === 'warn' ? { x: pl.headX() - 4, y: pl.top - 26, w: 38, h: 34 } : null); if (hz && overlap(s, hz)) { pl.scare?.(this); s.life = 0; this.audio.play('hit'); } }
       const st = this.map.get(Math.floor((s.x + 5) / TILE), Math.floor((s.y + 8) / TILE));
-      if (st === T.WATER || st === T.LAVA) { this.fx.splash(s.x + 5, s.y + 6, 4); s.life = 0; }
+      if (st === T.WATER || st === T.LAVA) { this.fx.splash(s.x + 5, s.y + 6, 4); this.fx.ripple(s.x + 5, Math.floor((s.y + 8) / TILE) * TILE + 8); s.life = 0; this.audio.play('plip'); }
       if (s.y > this.level.pxH) s.life = 0;
     }
     this.stonesFlying = this.stonesFlying.filter(s => s.life > 0);
@@ -662,7 +663,13 @@ export class Game {
     this.fx.draw(c);
     if (this.debug) this.drawDebug(c);
 
+    // Voorgrond-silhouetten en lucht-sfeer (in schermcoördinaten)
+    c.setTransform(kb, 0, 0, kb, 0, 0);
+    const fgTheme = this.level.outside && this.player.cx > this.level.outside.from * TILE ? (this.level.outsideTheme || 'savanna') : this.level.theme;
+    if (this.state !== 'title') this.renderer.foreground(c, fgTheme, camX, this.viewW, this.viewH, this.time);
     this.drawDarkness(c, camX, camY, k);
+    c.setTransform(kb, 0, 0, kb, 0, 0);
+    this.renderer.atmosphere(c, fgTheme, camX, camY, this.viewW, this.viewH, this.time);
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     if (this.state !== 'title') { this.drawHud(c); this.drawTouch(c); }
     if (this.arenaOn && this.boss) this.drawBossBar(c);

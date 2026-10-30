@@ -48,9 +48,7 @@ export class Renderer {
 
   setResolution(k) { if (Math.abs(k - this.k) > 0.001) { this.k = k; this.chunks.clear(); } }
 
-  background(c, theme, camX, camY, viewW, viewH, levelH, time) {
-    const th = THEMES[theme] || THEMES.savanna;
-    if (th.cave) return caveBackground(c, camX, camY, viewW, viewH, time);
+  drawSky(c, th, camX, viewW, viewH, time) {
     const g = c.createLinearGradient(0, 0, 0, viewH);
     g.addColorStop(0, th.sky[0]); g.addColorStop(0.55, th.sky[1]); g.addColorStop(1, th.sky[2]);
     c.fillStyle = g; c.fillRect(0, 0, viewW, viewH);
@@ -61,6 +59,36 @@ export class Renderer {
     glow.addColorStop(0, '#fff8d8cc'); glow.addColorStop(0.3, '#ffeeb055'); glow.addColorStop(1, '#ffeeb000');
     c.fillStyle = glow; c.fillRect(sx - 140, sy - 140, 280, 280);
     c.fillStyle = th.sun; c.beginPath(); c.arc(sx, sy, 24, 0, Math.PI * 2); c.fill();
+    // Zonnestralen: zachte, langzaam draaiende lichtbundels
+    c.save(); c.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 7; i++) {
+      const a = time * 0.03 + i * 0.9 + Math.sin(time * 0.2 + i) * 0.05, len = viewH * 1.4, w = 0.07 + (i % 3) * 0.03;
+      const g2 = c.createLinearGradient(sx, sy, sx + Math.cos(a) * len, sy + Math.sin(a) * len);
+      g2.addColorStop(0, 'rgba(255,240,200,0.06)'); g2.addColorStop(1, 'rgba(255,240,200,0)');
+      c.fillStyle = g2; c.beginPath(); c.moveTo(sx, sy); c.lineTo(sx + Math.cos(a - w) * len, sy + Math.sin(a - w) * len); c.lineTo(sx + Math.cos(a + w) * len, sy + Math.sin(a + w) * len); c.closePath(); c.fill();
+    }
+    c.restore();
+  }
+
+  background(c, theme, camX, camY, viewW, viewH, levelH, time) {
+    const th = THEMES[theme] || THEMES.savanna;
+    if (th.cave) return caveBackground(c, camX, camY, viewW, viewH, time);
+    // Lucht, zon en zonnestralen veranderen nauwelijks: voorgetekend en af en toe ververst
+    const k = c.getTransform().a, key = theme + '|' + Math.round(viewW) + '|' + Math.round(viewH) + '|' + k.toFixed(2);
+    const sc = this.skyCache;
+    if (!sc || sc.key !== key || time - sc.t > 0.2 || Math.abs(sc.camX - camX) > 40) {
+      const cv = sc && sc.key === key ? sc.cv : document.createElement('canvas');
+      cv.width = Math.ceil(viewW * k); cv.height = Math.ceil(viewH * k);
+      const cc = cv.getContext('2d'); cc.setTransform(k, 0, 0, k, 0, 0);
+      this.drawSky(cc, th, camX, viewW, viewH, time);
+      this.skyCache = { cv, key, t: time, camX };
+    }
+    c.drawImage(this.skyCache.cv, 0, 0, viewW, viewH);
+    // Vogelzwerm in V-vorm die af en toe overvliegt
+    { const cyc = 26, t = (time % cyc) / cyc, fx = -100 + t * (viewW + 300), fy = viewH * 0.18 + Math.sin(time * 0.3) * 10;
+      c.strokeStyle = 'rgba(40,50,60,0.55)'; c.lineWidth = 1.4; c.lineCap = 'round';
+      for (let k = 0; k < 9; k++) { const row = Math.ceil(k / 2), side = k % 2 ? 1 : -1, bx = fx - row * 14, by = fy + side * row * 8, f = Math.sin(time * 9 + k) * 3;
+        c.beginPath(); c.moveTo(bx - 6, by - f); c.quadraticCurveTo(bx - 2, by - 3, bx, by); c.quadraticCurveTo(bx + 2, by - 3, bx + 6, by - f); c.stroke(); } }
 
     // Wolken
     for (let i = 0; i < 7; i++) {
@@ -76,7 +104,10 @@ export class Renderer {
 
     // Verre breukrand van de Riftvallei
     if (th.volcano) volcano(c, viewW * 0.62 - camX * 0.04, yOf(0.05, 120), time);
+    // Extra verre bergrug, bijna opgelost in de nevel
+    ridge(c, camX * 0.05, viewW, yOf(0.05, 132), 30, 0.0022, 2, mixHex(th.far, th.sky[1], 0.55), mixHex(th.far, th.sky[1], 0.45), th.mesa);
     ridge(c, camX * 0.1, viewW, yOf(0.1, 112), 46, 0.0035, 7, th.far, th.farTop, th.mesa);
+    haze(c, viewW, yOf(0.1, 70), th.sky[2]);
     if (th.snow) snowCaps(c, camX * 0.1, viewW, yOf(0.1, 112), 46, 0.0035, 7);
     // Middenheuvels met acacia's
     const midY = yOf(0.3, 70);
@@ -94,9 +125,63 @@ export class Renderer {
       const wx = i * 140 + hash(i, 6) * 80, x = wx - camX * 0.55;
       bush(c, x, nearY + 4 - ridgeH(wx, 9, 0.012, 11), 0.8 + hash(i, 7) * 0.6, th.midDark);
     }
-    // Kudde ver weg
-    const herdX = ((900 - camX * 0.3 + time * 8) % 2600 + 2600) % 2600 - 300;
-    for (let k = 0; k < 4; k++) antelope(c, herdX + k * 26 + hash(k) * 10, midY + 2 - ridgeH(herdX + camX * 0.3, 20, 0.006, 3) + hash(k, 1) * 6, 0.45, time + k);
+    // Grote kudde in de verte, met stofwolk (alleen op open vlaktes)
+    if (!th.forest) {
+      const span = 3200, herdX = ((1200 - camX * 0.3 + time * 10) % span + span) % span - 500;
+      const hy = midY + 4 - ridgeH(herdX + camX * 0.3, 20, 0.006, 3);
+      const dust = c.createRadialGradient(herdX + 120, hy - 6, 10, herdX + 120, hy - 6, 170);
+      dust.addColorStop(0, 'rgba(230,205,160,0.35)'); dust.addColorStop(1, 'rgba(230,205,160,0)');
+      c.fillStyle = dust; c.fillRect(herdX - 60, hy - 90, 360, 120);
+      for (let k = 0; k < 16; k++) antelope(c, herdX + (k % 8) * 30 + hash(k) * 16 + (k > 7 ? 14 : 0), hy + (k > 7 ? 5 : 0) + hash(k, 1) * 3, 0.42 + (k > 7 ? 0.06 : 0), time * 1.6 + k);
+    }
+  }
+
+  // Voorgrond: donkere gras- en bladsilhouetten onderaan het beeld (voor de speler, maar laag genoeg)
+  foreground(c, theme, camX, viewW, viewH, time) {
+    const th = THEMES[theme] || THEMES.savanna;
+    const col = th.cave ? '#120d0a' : th.fg || '#1d2a14';
+    c.save(); c.globalAlpha = 0.88;
+    c.fillStyle = col;
+    const f = 1.35, step = 18;
+    for (let i = Math.floor(camX * f / step) - 2; i < (camX * f + viewW) / step + 2; i++) {
+      const x = i * step - camX * f, h = 10 + hash(i, 3) * 20, bend = Math.sin(time * 1.6 + i * 0.7) * 5;
+      if (hash(i, 9) < (th.cave ? 0.75 : 0.35)) continue;
+      if (th.cave) { c.beginPath(); c.moveTo(x - 8, viewH + 2); c.lineTo(x + 1, viewH - h * 0.9); c.lineTo(x + 9, viewH + 2); c.closePath(); c.fill(); continue; }
+      c.beginPath(); c.moveTo(x - 6, viewH + 2); c.bezierCurveTo(x - 5, viewH - h * 0.5, x + bend * 0.6 - 3, viewH - h * 0.8, x + bend + 2, viewH - h); c.bezierCurveTo(x + bend * 0.4 + 3, viewH - h * 0.6, x + 4, viewH - h * 0.3, x + 7, viewH + 2); c.closePath(); c.fill();
+    }
+    for (let i = Math.floor(camX * f / 520) - 1; i < (camX * f + viewW) / 520 + 1; i++) {
+      if (th.cave || hash(i, 21) < 0.45) continue;
+      const x = i * 520 + hash(i, 22) * 200 - camX * f, sway = Math.sin(time * 1.3 + i) * 0.06;
+      c.save(); c.translate(x, viewH + 6); c.rotate(-0.5 + sway);
+      for (let k = 0; k < 5; k++) { c.rotate(0.24); c.beginPath(); c.ellipse(0, -30, 7, 30, 0, 0, Math.PI * 2); c.fill(); }
+      c.restore();
+    }
+    c.restore();
+  }
+
+  // Zwevend stuifmeel / stofjes in de lucht, en een zachte vignet
+  atmosphere(c, theme, camX, camY, viewW, viewH, time) {
+    const th = THEMES[theme] || THEMES.savanna;
+    c.save();
+    for (let i = 0; i < 26; i++) {
+      const px = ((hash(i, 31) * 2000 - camX * (0.6 + hash(i, 32) * 0.6) + time * (6 + hash(i, 33) * 10)) % (viewW + 40) + viewW + 40) % (viewW + 40) - 20;
+      const py = ((hash(i, 34) * viewH + Math.sin(time * 0.7 + i) * 14 - camY * 0.3 - time * 4) % viewH + viewH) % viewH;
+      c.globalAlpha = 0.25 + 0.25 * Math.sin(time * 2 + i);
+      c.fillStyle = th.cave ? '#d0c0a0' : '#fff6d8'; c.beginPath(); c.arc(px, py, th.cave ? 0.9 : 1.3, 0, Math.PI * 2); c.fill();
+    }
+    c.globalAlpha = 1;
+    // Vignet: één keer voorgetekend per schermmaat
+    const k = c.getTransform().a, key = (th.cave ? 'c' : 'o') + Math.round(viewW) + 'x' + Math.round(viewH) + k.toFixed(2);
+    if (!this.vigCache || this.vigCache.key !== key) {
+      const cv = document.createElement('canvas'); cv.width = Math.ceil(viewW * k / 2); cv.height = Math.ceil(viewH * k / 2);
+      const vc = cv.getContext('2d'); vc.scale(k / 2, k / 2);
+      const v = vc.createRadialGradient(viewW / 2, viewH * 0.45, viewH * 0.35, viewW / 2, viewH * 0.5, viewW * 0.75);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, th.cave ? 'rgba(0,0,0,0.45)' : 'rgba(30,20,10,0.22)');
+      vc.fillStyle = v; vc.fillRect(0, 0, viewW, viewH);
+      this.vigCache = { cv, key };
+    }
+    c.drawImage(this.vigCache.cv, 0, 0, viewW, viewH);
+    c.restore();
   }
 
   // Onder het maaiveld een donkere kloof, zodat kuilen diep ogen (in wereldcoördinaten, klopt ook bij inzoomen)
@@ -127,6 +212,15 @@ export class Renderer {
       c.beginPath(); c.moveTo(x1, levelH + 10);
       for (let x = x1; x <= x2; x += 6) c.lineTo(x, y + Math.sin(x * 0.05 + time * 3) * 1.6);
       c.lineTo(x2, levelH + 10); c.closePath(); c.fill();
+      if (!lava) {
+        // Lichtreflectie net onder het oppervlak en schuim langs de randen
+        const rg = c.createLinearGradient(0, y, 0, y + 26); rg.addColorStop(0, 'rgba(220,250,255,0.35)'); rg.addColorStop(1, 'rgba(220,250,255,0)');
+        c.fillStyle = rg; c.fillRect(x1, y, x2 - x1, 26);
+        c.fillStyle = 'rgba(255,255,255,0.75)';
+        for (const ex of [x1, x2]) for (let k = 0; k < 4; k++) { const fx = ex + (ex === x1 ? 1 : -1) * (3 + k * 5), fy = y + Math.sin(time * 4 + k) * 1.5; c.beginPath(); c.arc(fx, fy, 2.6 - k * 0.5, 0, Math.PI * 2); c.fill(); }
+        c.fillStyle = 'rgba(255,255,255,0.18)';
+        for (let x = x1 + 20; x < x2 - 10; x += 53) { const o = Math.sin(time * 0.8 + x) * 8; c.beginPath(); c.ellipse(x + o, y + 14 + (x % 5) * 3, 12, 1.2, 0, 0, Math.PI * 2); c.fill(); }
+      }
       c.strokeStyle = lava ? '#fff0a0' : '#c8f0f0aa'; c.lineWidth = 1.5; c.beginPath();
       for (let x = x1; x <= x2; x += 6) c.lineTo(x, y + Math.sin(x * 0.05 + time * 3) * 1.6);
       c.stroke();
@@ -296,22 +390,38 @@ function groundTile(c, map, cx, cy, theme) {
   const leftOpen = !solidish(map, cx - 1, cy), rightOpen = !solidish(map, cx + 1, cy);
   if (leftOpen) { c.fillStyle = '#3d2a1a55'; c.fillRect(x, y, 3, TILE); }
   if (rightOpen) { c.fillStyle = '#3d2a1a55'; c.fillRect(x + TILE - 3, y, 3, TILE); }
+  // Gelaagde aarde: golvende strepen
+  if (depth >= 1) { c.fillStyle = '#ffffff10'; c.beginPath(); c.moveTo(x, y + 12); for (let i = 0; i <= 4; i++) c.lineTo(x + i * 8, y + 12 + Math.sin((cx * 4 + i) * 0.9 + cy) * 2.5); c.lineTo(x + TILE, y + 16); c.lineTo(x, y + 16); c.closePath(); c.fill(); }
   if (topOpen) {
-    // Grasrand met onregelmatige onderkant en sprietjes
-    c.fillStyle = '#5c8a2e';
-    c.beginPath(); c.moveTo(x, y);
-    for (let i = 0; i <= 4; i++) c.lineTo(x + i * 8, y + 9 + Math.sin(cx * 3.1 + i * 1.7) * 2.5);
-    c.lineTo(x + TILE, y); c.closePath(); c.fill();
-    c.fillStyle = '#8cbc45'; c.fillRect(x, y, TILE + 0.5, 5);
-    c.fillStyle = '#b4d965'; c.fillRect(x, y, TILE + 0.5, 1.6);
-    c.strokeStyle = '#7aab3d'; c.lineWidth = 1.4; c.lineCap = 'round';
-    for (let i = 0; i < 5; i++) {
-      const gx = x + 3 + i * 6.5 + hash(cx, i) * 3, h = 3 + hash(cx * 2, i) * 5;
-      c.beginPath(); c.moveTo(gx, y + 1); c.lineTo(gx + (hash(i, cx) - 0.5) * 3, y - h); c.stroke();
+    // Volle graslaag met golvende onderrand, licht van boven en plukjes sprieten
+    c.fillStyle = '#4e7a28';
+    c.beginPath(); c.moveTo(x - (leftOpen ? 3 : 0), y - 1);
+    for (let i = 0; i <= 8; i++) c.lineTo(x + i * 4, y + 11 + Math.sin(cx * 3.1 + i * 1.3) * 2.6 + (i % 2) * 1.5);
+    c.lineTo(x + TILE + (rightOpen ? 3 : 0), y - 1); c.closePath(); c.fill();
+    const gg = c.createLinearGradient(0, y - 2, 0, y + 9); gg.addColorStop(0, '#b6dc68'); gg.addColorStop(0.5, '#86b844'); gg.addColorStop(1, '#649a34');
+    c.fillStyle = gg; c.beginPath(); c.moveTo(x - (leftOpen ? 3 : 0), y - 1);
+    for (let i = 0; i <= 8; i++) c.lineTo(x + i * 4, y + 7 + Math.sin(cx * 2.3 + i * 1.7) * 1.8);
+    c.lineTo(x + TILE + (rightOpen ? 3 : 0), y - 1); c.closePath(); c.fill();
+    c.fillStyle = '#d4ef8c'; c.fillRect(x, y - 1, TILE + 0.5, 1.5);
+    // Sprieten in plukjes
+    for (let k = 0; k < 3; k++) {
+      const gx = x + 4 + k * 11 + hash(cx, k) * 4, n = 3 + Math.floor(hash(cx * 3, k) * 3);
+      for (let j = 0; j < n; j++) {
+        const h = 5 + hash(cx + j, k * 7) * 7, lean = (j - n / 2) * 1.6;
+        c.fillStyle = j % 2 ? '#7cb23e' : '#9cc94e';
+        c.beginPath(); c.moveTo(gx + j * 1.6 - 1.2, y + 1); c.quadraticCurveTo(gx + j * 1.6 + lean * 0.4, y - h * 0.6, gx + j * 1.6 + lean, y - h); c.quadraticCurveTo(gx + j * 1.6 + lean * 0.3 + 1, y - h * 0.5, gx + j * 1.6 + 1.4, y + 1); c.closePath(); c.fill();
+      }
     }
-    if (hash(cx, 77) > 0.86) { c.fillStyle = hash(cx, 78) > 0.5 ? '#f3d55b' : '#f4f0e0'; c.beginPath(); c.arc(x + 16, y - 5, 2.2, 0, Math.PI * 2); c.fill(); }
-    if (leftOpen) { c.fillStyle = '#8cbc45'; c.beginPath(); c.arc(x + 2, y + 3, 4, 0, Math.PI * 2); c.fill(); }
-    if (rightOpen) { c.fillStyle = '#8cbc45'; c.beginPath(); c.arc(x + TILE - 2, y + 3, 4, 0, Math.PI * 2); c.fill(); }
+    const fl = hash(cx, 77);
+    if (fl > 0.82) {
+      // Bloemetje of paddenstoeltje
+      const fx = x + 8 + hash(cx, 79) * 16;
+      if (fl > 0.94) { c.fillStyle = '#e8dcc0'; c.fillRect(fx - 0.8, y - 5, 1.6, 5); c.fillStyle = '#c0583a'; c.beginPath(); c.ellipse(fx, y - 5, 3.4, 2.2, 0, Math.PI, 0); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(fx - 1, y - 6, 0.6, 0, Math.PI * 2); c.fill(); }
+      else { c.strokeStyle = '#5e8a32'; c.lineWidth = 1; c.beginPath(); c.moveTo(fx, y); c.lineTo(fx, y - 7); c.stroke(); const col = hash(cx, 78) > 0.5 ? '#f3d55b' : '#f4f0e0'; c.fillStyle = col; for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; c.beginPath(); c.arc(fx + Math.cos(a) * 1.8, y - 7 + Math.sin(a) * 1.8, 1.3, 0, Math.PI * 2); c.fill(); } c.fillStyle = '#c87a28'; c.beginPath(); c.arc(fx, y - 7, 1, 0, Math.PI * 2); c.fill(); }
+    }
+    // Overhangende graskrul aan open zijkanten
+    if (leftOpen) { c.fillStyle = '#5e8e30'; c.beginPath(); c.ellipse(x - 1, y + 5, 4.5, 7, 0.3, 0, Math.PI * 2); c.fill(); c.fillStyle = '#8cbc45'; c.beginPath(); c.ellipse(x, y + 2, 4, 4, 0, 0, Math.PI * 2); c.fill(); }
+    if (rightOpen) { c.fillStyle = '#5e8e30'; c.beginPath(); c.ellipse(x + TILE + 1, y + 5, 4.5, 7, -0.3, 0, Math.PI * 2); c.fill(); c.fillStyle = '#8cbc45'; c.beginPath(); c.ellipse(x + TILE, y + 2, 4, 4, 0, 0, Math.PI * 2); c.fill(); }
   }
 }
 
@@ -669,12 +779,30 @@ function snowCaps(c, offset, viewW, baseY, amp, freq, seed) {
 
 function volcano(c, x, y, time) {
   // Rokende vulkaan in de verte (Java)
-  c.fillStyle = '#5e6a66';
-  c.beginPath(); c.moveTo(x - 180, y + 40); c.lineTo(x - 30, y - 120); c.lineTo(x + 30, y - 120); c.lineTo(x + 180, y + 40); c.closePath(); c.fill();
-  c.fillStyle = '#ff7a3a55'; c.beginPath(); c.moveTo(x - 30, y - 120); c.lineTo(x + 30, y - 120); c.lineTo(x + 8, y - 70); c.lineTo(x - 12, y - 90); c.closePath(); c.fill();
+  const vg = c.createLinearGradient(x - 120, 0, x + 120, 0); vg.addColorStop(0, '#6e7a76'); vg.addColorStop(0.55, '#55605c'); vg.addColorStop(1, '#3e4846');
+  c.fillStyle = vg;
+  c.beginPath(); c.moveTo(x - 190, y + 40); c.quadraticCurveTo(x - 80, y - 40, x - 30, y - 118); c.lineTo(x + 30, y - 118); c.quadraticCurveTo(x + 80, y - 40, x + 190, y + 40); c.closePath(); c.fill();
+  // Gloeiende lavastroompjes langs de flank
+  c.strokeStyle = `rgba(255,120,50,${0.45 + Math.sin(time * 2) * 0.15})`; c.lineWidth = 3; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(x - 8, y - 116); c.quadraticCurveTo(x - 24, y - 70, x - 40, y - 30); c.moveTo(x + 10, y - 116); c.quadraticCurveTo(x + 26, y - 80, x + 52, y - 40); c.stroke();
+  const cg = c.createRadialGradient(x, y - 120, 2, x, y - 120, 60); cg.addColorStop(0, 'rgba(255,150,70,0.6)'); cg.addColorStop(1, 'rgba(255,150,70,0)');
+  c.fillStyle = cg; c.beginPath(); c.arc(x, y - 120, 60, 0, Math.PI * 2); c.fill();
   for (let i = 0; i < 6; i++) {
     const t = (time * 0.15 + i / 6) % 1;
     c.fillStyle = `rgba(110,110,115,${0.45 * (1 - t)})`;
     c.beginPath(); c.arc(x + Math.sin(i * 2 + time * 0.3) * 20 + t * 60, y - 130 - t * 120, 16 + t * 34, 0, Math.PI * 2); c.fill();
   }
+}
+
+function mixHex(a, b, t) {
+  const p = s => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
+  const A = p(a.slice(0, 7)), B = p(b.slice(0, 7));
+  return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('');
+}
+
+function haze(c, viewW, y, color) {
+  // Nevelband aan de horizon: verre dingen vervagen
+  const g = c.createLinearGradient(0, y - 70, 0, y + 50);
+  g.addColorStop(0, mixHex(color, '#ffffff', 0.2) + '00'); g.addColorStop(0.55, mixHex(color, '#ffffff', 0.25) + '66'); g.addColorStop(1, mixHex(color, '#ffffff', 0.2) + '00');
+  c.fillStyle = g; c.fillRect(0, y - 70, viewW, 120);
 }

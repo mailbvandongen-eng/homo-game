@@ -17,8 +17,9 @@ export class Fx {
   }
   bubble(x, y) { this.add({ kind: 'bubble', x: x + (Math.random() - 0.5) * 16, y, vx: 0, vy: -30 - Math.random() * 20, life: 0.6, max: 0.6, r: 1.5 + Math.random() * 2, g: 0 }); }
   splash(x, y, n = 12) {
-    for (let i = 0; i < n; i++) this.add({ kind: 'drop', x: x + (Math.random() - 0.5) * 20, y, vx: (Math.random() - 0.5) * 160, vy: -120 - Math.random() * 200, life: 0.6, max: 0.6, r: 2 + Math.random() * 2, g: 900 });
+    for (let i = 0; i < n; i++) this.add({ kind: 'drop', x: x + (Math.random() - 0.5) * 24, y, vx: (Math.random() - 0.5) * 200, vy: -160 - Math.random() * 320, life: 0.8, max: 0.8, r: 1.6 + Math.random() * 3, g: 1000 });
   }
+  ripple(x, y, n = 1) { for (let i = 0; i < n; i++) this.add({ kind: 'ripple', x, y, vx: 0, vy: 0, life: 0.9 + i * 0.25, max: 0.9 + i * 0.25, r: 4, g: 0 }); }
   splat(x, y) { for (let i = 0; i < 8; i++) this.add({ kind: 'drop', x, y, vx: (Math.random() - 0.5) * 140, vy: -60 - Math.random() * 100, life: 0.5, max: 0.5, r: 2, g: 800, color: '#e8902e' }); }
   text(x, y, str, color = '#fff6d0') { this.texts.push({ x, y, str, color, life: 0.9 }); }
 
@@ -36,6 +37,7 @@ export class Fx {
       if (p.kind === 'dust') { c.fillStyle = '#e8d6ae'; c.beginPath(); c.arc(p.x, p.y, p.r * (1.6 - a * 0.6), 0, Math.PI * 2); c.fill(); }
       else if (p.kind === 'star') { star(c, p.x, p.y, 4.5, '#ffe27a'); }
       else if (p.kind === 'spark') { c.fillStyle = p.color; c.fillRect(p.x - 1.5, p.y - 1.5, 3, 3); }
+      else if (p.kind === 'ripple') { const k = 1 - p.life / p.max; c.strokeStyle = '#e8ffff'; c.lineWidth = 1.5; c.beginPath(); c.ellipse(p.x, p.y, 6 + k * 40, 2 + k * 7, 0, 0, Math.PI * 2); c.stroke(); }
       else if (p.kind === 'bubble') { c.strokeStyle = '#e8ffff'; c.lineWidth = 1; c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.stroke(); }
       else if (p.kind === 'drop') { c.fillStyle = p.color || '#bfeaf0'; c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.fill(); }
       else if (p.kind === 'wind') { c.strokeStyle = '#ffffff'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(p.x - Math.sign(p.vx) * 26, p.y); c.stroke(); }

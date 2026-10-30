@@ -12,7 +12,7 @@ import level24 from './levels/w2-4.js';
 import { SPECIES } from './species.js';
 
 // Ophogen bij elke publicatie: zo zie je op het titelscherm of je de nieuwste versie hebt.
-export const VERSION = '2026-10-31a';
+export const VERSION = '2026-10-31b';
 
 const LEVELS = [level11, level12, level13, level14, level21, level22, level23, level24];
 const $ = id => document.getElementById(id);
@@ -63,6 +63,7 @@ const game = new Game(canvas, input, audio, ui);
 window.game = game; // handig voor testen
 game.load(LEVELS[0]);
 game.state = 'title';
+audio.setAmbience('savanna');
 show('title');
 
 function startLevel(i) {

@@ -622,3 +622,76 @@ export class Gnu extends Enemy {
 }
 
 export const ENEMY_TYPES = { hyena: Hyena, snake: Snake, vulture: Vulture, warthog: Warthog, baboon: Baboon, leopard: Leopard, bat: Bat, stalactite: Stalactite, wolf: Wolf, varaan: Varaan, sabre: Sabre, gnu: Gnu };
+
+// ------------------------------------------------------------------
+// Nieuwe tekeningen voor de viervoeters (gedeelde motor in art.js)
+// ------------------------------------------------------------------
+import { quad, groundShadow } from './art.js';
+
+function drawQuadEnemy(e, c, time, o) {
+  c.save(); c.globalAlpha = e.alpha();
+  groundShadow(c, e.cx, e.y + e.h, e.w * 0.6);
+  c.translate(Math.round(e.cx), Math.round(e.y + e.h));
+  c.scale(e.dir * (o.scale || 1), e.squash() * (o.scale || 1));
+  quad(c, { seed: e.seedN ?? (e.seedN = Math.random() * 10), ...o }, time);
+  c.restore();
+}
+
+Hyena.prototype.draw = function (c, time) {
+  const moving = this.fleeing || this.speed > 0;
+  drawQuadEnemy(this, c, time, {
+    L: 24, H: 10, bodyH: 12, slope: 6, neck: 3,
+    base: '#b8935c', light: '#dcbb84', dark: '#3a2a1a', belly: '#d2b582', spot: '#5b3f25', pattern: 'spots',
+    head: 'hyena', tail: 'brush', tailColor: '#5a4128', mane: '#4a321e', eye: '#e0b040',
+    phase: this.t * (this.fleeing ? 30 : this.speed / 7), stride: moving ? (this.fleeing ? 1 : 0.65) : 0,
+    eyeOpen: this.fleeing ? 0.4 : undefined, mouth: this.fleeing ? 0.6 : 0,
+  });
+};
+Wolf.prototype.draw = function (c, time) {
+  drawQuadEnemy(this, c, time, {
+    L: 25, H: 11, bodyH: 10, slope: 2, neck: 4,
+    base: '#8c8780', light: '#c4beb4', dark: '#2a2826', belly: '#d8d2c6', spot: '#5a5650', pattern: 'bristle',
+    head: 'dog', tail: 'brush', tailColor: '#7a7570', eye: '#f2c84b',
+    phase: this.t * (this.fleeing ? 30 : this.speed / 7), stride: this.fleeing ? 1 : 0.7,
+    mouth: this.fleeing ? 0.5 : 0,
+  });
+};
+Warthog.prototype.draw = function (c, time) {
+  const charge = this.state === 'charge', scrape = this.state === 'scrape';
+  drawQuadEnemy(this, c, time, {
+    L: 24, H: 8, bodyH: 15, slope: 3, neck: 2, headSize: 1.05,
+    base: '#7d6858', light: '#a08a78', dark: '#2a201a', belly: '#6a5848', spot: '#3b2b20', pattern: 'bristle',
+    head: 'pig', tail: 'whip', mane: '#3b2b20', eye: scrape || charge ? '#ff6b4a' : '#3a2010', angry: scrape || charge,
+    phase: this.t * (charge ? 26 : 8), stride: charge ? 1 : this.state === 'walk' ? 0.5 : scrape ? 0.25 : 0,
+    headDown: charge || scrape ? 0.4 : 0, eyeOpen: this.state === 'dazed' ? 0.2 : undefined,
+  });
+  if (this.state === 'dazed') { c.fillStyle = '#ffe27a'; for (let i = 0; i < 3; i++) { const a = time * 5 + i * 2.1; c.beginPath(); c.arc(this.cx + this.dir * 12 + Math.cos(a) * 9, this.y - 4 + Math.sin(a) * 3, 2, 0, Math.PI * 2); c.fill(); } }
+};
+Leopard.prototype.draw = function (c, time) {
+  const st = this.state;
+  drawQuadEnemy(this, c, time, {
+    L: 28, H: 9, bodyH: 10, slope: -1, neck: 4,
+    base: '#dcaa52', light: '#f2cf86', dark: '#3a2410', belly: '#f4e2b8', spot: '#4a2e10', pattern: 'rosettes',
+    head: 'cat', tail: 'long', eye: st === 'crouch' || st === 'pounce' ? '#ffe45a' : '#c9b04a', angry: st === 'crouch',
+    phase: this.t * 18, stride: st === 'pounce' ? 0.9 : 0, crouch: st === 'hide' ? 0.55 : st === 'crouch' ? 0.95 : 0,
+    mouth: st === 'crouch' || st === 'pounce' ? 0.6 : 0, eyeOpen: st === 'recover' ? 0.25 : undefined,
+  });
+};
+Sabre.prototype.draw = function (c, time) {
+  const st = this.state;
+  drawQuadEnemy(this, c, time, {
+    L: 30, H: 9, bodyH: 12, slope: 2, neck: 4, headSize: 1.1,
+    base: '#b88a52', light: '#d8ac72', dark: '#2e1e10', belly: '#e2c69a', spot: '#6a4a28', pattern: 'spots',
+    head: 'cat', tail: 'short', fangs: true, eye: st === 'crouch' || st === 'pounce' ? '#ffe45a' : '#c9b04a', angry: st === 'crouch',
+    phase: this.t * 18, stride: st === 'pounce' ? 0.9 : 0, crouch: st === 'hide' ? 0.5 : st === 'crouch' ? 0.95 : 0,
+    mouth: st === 'crouch' || st === 'pounce' ? 0.7 : 0, eyeOpen: st === 'recover' ? 0.25 : undefined,
+  });
+};
+Gnu.prototype.draw = function (c, time) {
+  drawQuadEnemy(this, c, time, {
+    L: 28, H: 13, bodyH: 13, slope: 6, neck: 2,
+    base: '#5c5a64', light: '#7c7a86', dark: '#1c1a1e', belly: '#6a6672', spot: '#2c2a30', pattern: 'stripes',
+    head: 'gnu', tail: 'tuft', tuft: '#1c1a1e', mane: '#1c1a1e',
+    phase: this.t * 24, stride: 1,
+  });
+};

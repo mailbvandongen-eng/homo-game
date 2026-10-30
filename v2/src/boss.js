@@ -222,3 +222,53 @@ export class Lion extends GiantHyena {
     }
   }
 }
+
+// ------------------------------------------------------------------
+// Nieuwe tekeningen voor de eindbazen (gedeelde motor in art.js)
+// ------------------------------------------------------------------
+import { quad, groundShadow } from './art.js';
+
+function bossPose(b) {
+  const st = b.state, charging = st === 'charge', low = st === 'growl' || st === 'aim';
+  return {
+    phase: b.t * (charging ? 20 : 7), stride: charging ? 1 : b.vx !== 0 ? 0.6 : 0,
+    headDown: low ? 0.5 : 0, crouch: low ? 0.35 : 0, angry: low || charging || st === 'aim',
+    mouth: low || charging || st === 'roar' ? 0.9 : 0, eyeOpen: st === 'dazed' ? 0.15 : undefined,
+  };
+}
+function bossExtras(b, c, time) {
+  if (b.state === 'dazed') {
+    c.fillStyle = '#ffe27a';
+    for (let i = 0; i < 4; i++) { const a = time * 5 + i * 1.6; c.beginPath(); c.arc(b.cx + Math.cos(a) * 22, b.y - 6 + Math.sin(a) * 5, 3, 0, Math.PI * 2); c.fill(); }
+    c.fillStyle = `rgba(255,236,160,${0.6 + Math.sin(time * 8) * 0.3})`;
+    c.beginPath(); c.moveTo(b.cx, b.y - 18); c.lineTo(b.cx - 8, b.y - 30); c.lineTo(b.cx + 8, b.y - 30); c.closePath(); c.fill();
+  }
+}
+GiantHyena.prototype.draw = function (c, time) {
+  if (this.invuln > 0 && Math.floor(time * 14) % 2 === 0) return;
+  groundShadow(c, this.cx, this.y + this.h, 56, 0.35);
+  c.save(); c.translate(Math.round(this.cx), Math.round(this.y + this.h));
+  c.scale(this.dir * 2.05, 2.05);
+  if (this.state === 'leap') c.rotate(Math.max(-0.3, Math.min(0.3, this.vy / 2000)));
+  if (this.state === 'dazed') c.rotate(Math.sin(time * 8) * 0.05);
+  const p = bossPose(this);
+  quad(c, { seed: 4, L: 24, H: 10, bodyH: 13, slope: 7, neck: 3, headSize: 1.08,
+    base: '#a8824e', light: '#d0aa72', dark: '#2a1c10', belly: '#c8a874', spot: '#4e3820', pattern: 'spots',
+    head: 'hyena', tail: 'brush', tailColor: '#4a3420', mane: '#3d2a17', eye: p.angry ? '#ff5a3a' : '#f2d36b', ...p }, time);
+  c.restore();
+  bossExtras(this, c, time);
+};
+Lion.prototype.draw = function (c, time) {
+  if (this.invuln > 0 && Math.floor(time * 14) % 2 === 0) return;
+  groundShadow(c, this.cx, this.y + this.h, 58, 0.35);
+  c.save(); c.translate(Math.round(this.cx), Math.round(this.y + this.h));
+  c.scale(this.dir * 1.85, 1.85);
+  if (this.state === 'leap') c.rotate(Math.max(-0.3, Math.min(0.3, this.vy / 2000)));
+  if (this.state === 'dazed') c.rotate(Math.sin(time * 8) * 0.05);
+  const p = bossPose(this);
+  quad(c, { seed: 7, L: 30, H: 11, bodyH: 13, slope: 1, neck: 3, headSize: 1.15,
+    base: '#c9974e', light: '#e8c07c', dark: '#2e1c0c', belly: '#e8c890', head: 'lion', mane: '#7a4a22',
+    tail: 'tuft', tuft: '#4a2a12', eye: p.angry ? '#ff7a3a' : '#f2d36b', ...p }, time);
+  c.restore();
+  bossExtras(this, c, time);
+};

@@ -1,4 +1,5 @@
 import { TILE } from './config.js';
+import { taper, mix, eye, groundShadow } from './art.js';
 
 // Bewegende dingen waar je op kunt staan. Elk heeft:
 //  x, top, w            standvlak
@@ -155,27 +156,35 @@ export class Stegodon extends Log {
   update(dt) { super.update(dt); this.top = this.base + Math.abs(Math.sin(this.t * 4)) * -1.5; }
   draw(c, time) {
     const x = this.x, y = this.top, w = this.w, d = this.dir;
+    groundShadow(c, x + w / 2, y + 78, 62, 0.25);
     c.save(); c.translate(x + w / 2, y); c.scale(d, 1);
-    const o = '#2a2420', skin = '#7d7268', light = '#9a8f84', ph = this.t * 4;
-    // Poten
-    for (const [lx, off] of [[-38, 0], [-22, Math.PI], [22, Math.PI / 2], [38, Math.PI * 1.5]]) {
+    const o = '#2a2420', skin = '#857a70', light = '#aaa094', ph = this.t * 4;
+    const leg = (lx, off, far) => {
       const s = Math.sin(ph + off) * 6;
-      c.fillStyle = o; c.fillRect(lx - 7 + s * 0.5, 30, 14, 46); c.fillStyle = skin; c.fillRect(lx - 5.5 + s * 0.5, 30, 11, 44);
-    }
-    // Romp
-    c.fillStyle = o; c.beginPath(); c.ellipse(0, 26, 58, 30, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = skin; c.beginPath(); c.ellipse(0, 26, 56, 28, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = light; c.beginPath(); c.ellipse(-6, 10, 40, 10, 0, 0, Math.PI * 2); c.fill();
-    // Kop, oor, slurf en lange slagtanden
-    c.fillStyle = o; c.beginPath(); c.ellipse(56, 26, 20, 19, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = skin; c.beginPath(); c.ellipse(56, 26, 18, 17, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#6a5f56'; c.beginPath(); c.ellipse(46, 26, 10, 14, -0.2, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = o; c.lineWidth = 9; c.lineCap = 'round'; c.beginPath(); c.moveTo(68, 34); c.quadraticCurveTo(78, 56 + Math.sin(ph) * 3, 72, 72); c.stroke();
-    c.strokeStyle = skin; c.lineWidth = 6.5; c.beginPath(); c.moveTo(68, 34); c.quadraticCurveTo(78, 56 + Math.sin(ph) * 3, 72, 72); c.stroke();
-    c.strokeStyle = '#f2ead6'; c.lineWidth = 5; c.beginPath(); c.moveTo(64, 40); c.quadraticCurveTo(88, 52, 96, 36); c.stroke();
-    c.fillStyle = '#1a1410'; c.beginPath(); c.arc(62, 20, 2, 0, Math.PI * 2); c.fill();
+      c.fillStyle = o; taper(c, lx, 34, lx + s * 0.5, 74, 17, 14); c.fill();
+      c.fillStyle = far ? mix(skin, o, 0.35) : skin; taper(c, lx, 34, lx + s * 0.5, 74, 14, 11); c.fill();
+      c.fillStyle = mix(skin, '#ffffff', 0.25); c.beginPath(); c.ellipse(lx + s * 0.5, 76, 7, 2.5, 0, 0, Math.PI * 2); c.fill();
+    };
+    leg(-22, Math.PI, true); leg(38, Math.PI * 1.5, true);
+    const body = () => { c.beginPath(); c.ellipse(0, 26, 57, 30, 0, 0, Math.PI * 2); };
+    body(); c.lineWidth = 3; c.strokeStyle = o; c.stroke();
+    const g = c.createLinearGradient(0, -4, 0, 56); g.addColorStop(0, light); g.addColorStop(0.5, skin); g.addColorStop(1, mix(skin, o, 0.4));
+    body(); c.fillStyle = g; c.fill();
+    c.strokeStyle = mix(skin, o, 0.3); c.lineWidth = 1; for (let i = -40; i < 40; i += 9) { c.beginPath(); c.moveTo(i, 10); c.quadraticCurveTo(i + 3, 26, i - 1, 44); c.stroke(); }
+    leg(-38, 0, false); leg(22, Math.PI / 2, false);
+    // Kop met oor, slurf en lange slagtanden
+    const head = () => { c.beginPath(); c.ellipse(56, 24, 19, 18, 0, 0, Math.PI * 2); };
+    head(); c.lineWidth = 3; c.strokeStyle = o; c.stroke();
+    const hg = c.createLinearGradient(40, 6, 70, 42); hg.addColorStop(0, light); hg.addColorStop(1, skin); head(); c.fillStyle = hg; c.fill();
+    c.fillStyle = mix(skin, o, 0.25); c.beginPath(); c.ellipse(44, 26, 11, 15, -0.2, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = o; c.lineWidth = 10; c.lineCap = 'round'; c.beginPath(); c.moveTo(68, 32); c.quadraticCurveTo(80, 54 + Math.sin(ph) * 4, 72, 72); c.stroke();
+    c.strokeStyle = skin; c.lineWidth = 7; c.beginPath(); c.moveTo(68, 32); c.quadraticCurveTo(80, 54 + Math.sin(ph) * 4, 72, 72); c.stroke();
+    c.strokeStyle = o; c.lineWidth = 7; c.beginPath(); c.moveTo(62, 40); c.quadraticCurveTo(90, 54, 99, 34); c.stroke();
+    c.strokeStyle = '#f6eedc'; c.lineWidth = 4.5; c.beginPath(); c.moveTo(62, 40); c.quadraticCurveTo(90, 54, 99, 34); c.stroke();
+    eye(c, 61, 18, 2.6, '#3a2a1a', 1);
     c.restore();
   }
+
 }
 
 export const PLATFORM_TYPES = { log: Log, croc: Croc, hippo: Hippo, stegodon: Stegodon };
