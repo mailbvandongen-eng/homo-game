@@ -244,17 +244,97 @@ function bossExtras(b, c, time) {
     c.beginPath(); c.moveTo(b.cx, b.y - 18); c.lineTo(b.cx - 8, b.y - 30); c.lineTo(b.cx + 8, b.y - 30); c.closePath(); c.fill();
   }
 }
+// Reuzenhyena als echt monster: massieve schouderbult, lage kop, grommende bek vol tanden
+import { cel, INK, taper as tpr } from './art.js';
 GiantHyena.prototype.draw = function (c, time) {
   if (this.invuln > 0 && Math.floor(time * 14) % 2 === 0) return;
-  groundShadow(c, this.cx, this.y + this.h, 56, 0.35);
+  groundShadow(c, this.cx, this.y + this.h, 62, 0.4);
+  const st = this.state, charging = st === 'charge', low = st === 'growl' || st === 'aim';
+  const snarl = charging || low || st === 'roar' ? 1 : 0.38 + Math.sin(time * 3) * 0.06;
+  const mouth = st === 'roar' ? 1 + Math.sin(time * 30) * 0.05 : snarl;
+  const ph = this.t * (charging ? 16 : 6), stride = charging ? 1 : this.vx !== 0 ? 0.55 : 0;
+  const breathe = Math.sin(time * (low ? 9 : 2.5)) * (low ? 1.5 : 1);
+  const C = { base: '#a37a46', dark: '#5c3e20', light: '#cfa468', spot: '#3a2614', mane: '#2a1a0c' };
   c.save(); c.translate(Math.round(this.cx), Math.round(this.y + this.h));
-  c.scale(this.dir * 2.05, 2.05);
-  if (this.state === 'leap') c.rotate(Math.max(-0.3, Math.min(0.3, this.vy / 2000)));
-  if (this.state === 'dazed') c.rotate(Math.sin(time * 8) * 0.05);
-  const p = bossPose(this);
-  quad(c, { seed: 4, L: 24, H: 10, bodyH: 13, slope: 7, neck: 3, headSize: 1.08,
-    base: '#a8824e', light: '#d0aa72', dark: '#2a1c10', belly: '#c8a874', spot: '#4e3820', pattern: 'spots',
-    head: 'hyena', tail: 'brush', tailColor: '#4a3420', mane: '#3d2a17', eye: p.angry ? '#ff5a3a' : '#f2d36b', ...p }, time);
+  c.scale(this.dir * 0.72, 0.72);
+  if (st === 'leap') c.rotate(Math.max(-0.3, Math.min(0.3, this.vy / 2000)));
+  if (st === 'dazed') c.rotate(Math.sin(time * 8) * 0.05);
+  const by = -Math.abs(Math.sin(ph)) * stride * 3 + breathe * 0.4;
+  c.translate(0, by);
+  // Poten: dik, met klauwen
+  const leg = (x, y, phase, front, far) => {
+    const sw = Math.sin(phase) * stride * 0.7, up = Math.max(0, Math.cos(phase)) * stride;
+    const kx = x + Math.sin(sw) * 20 + (front ? 2 : -4), ky = y + (front ? 26 : 22) - up * 6;
+    const fx = kx + (front ? 2 : 6) + Math.sin(sw) * 6, fy = -2 - up * 8;
+    const b = far ? '#7a5a34' : C.base, d = far ? '#3e2814' : C.dark, l = far ? '#9a764a' : C.light;
+    cel(c, () => tpr(c, kx, ky, fx, fy, front ? 11 : 8, front ? 8 : 6.5), b, d, l, 2.2, 2.2);
+    cel(c, () => tpr(c, x, y, kx, ky, front ? 20 : 18, front ? 12 : 9), b, d, l, 3, 2.2);
+    c.fillStyle = INK; c.beginPath(); c.ellipse(fx + 3, fy, 9, 4.2, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = far ? '#5a4024' : '#7a5632'; c.beginPath(); c.ellipse(fx + 3, fy - 0.8, 7.4, 2.8, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#e8dcc0'; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(fx + 7 + k * 2.4, fy - 1); c.lineTo(fx + 10 + k * 2.4, fy + 2); c.lineTo(fx + 8 + k * 2.4, fy + 1); c.closePath(); c.fill(); }
+  };
+  leg(-30, -30, ph + Math.PI + 0.6, false, true);
+  leg(20, -46, ph + 0.6, true, true);
+  // Korte, ruige staart
+  cel(c, () => { c.beginPath(); c.moveTo(-40, -32); c.bezierCurveTo(-50, -34, -58, -26, -56, -16); c.bezierCurveTo(-52, -14, -48, -20, -44, -24); c.closePath(); }, C.mane, '#120a04', '#4a3018', 1.5, 2);
+  // Romp: hoge gespierde schouderbult, aflopende rug, smalle heupen
+  const body = () => { c.beginPath(); c.moveTo(-40, -28); c.bezierCurveTo(-42, -42, -28, -48, -12, -56); c.bezierCurveTo(0, -70, 14, -82, 28, -80);
+    c.bezierCurveTo(42, -78, 48, -64, 46, -48); c.bezierCurveTo(44, -32, 38, -22, 26, -18); c.bezierCurveTo(10, -14, -12, -16, -28, -18); c.bezierCurveTo(-36, -19, -40, -22, -40, -28); c.closePath(); };
+  cel(c, body, C.base, C.dark, C.light, 6, 0);
+  c.save(); body(); c.clip();
+  c.fillStyle = C.spot;
+  for (const [x, y, r] of [[-30, -32, 3.4], [-20, -40, 4], [-8, -36, 3.8], [2, -50, 4.4], [12, -40, 4], [-14, -26, 3], [24, -58, 3.6], [32, -40, 3.4], [-2, -26, 2.8], [16, -64, 3.4], [36, -28, 3]]) { c.beginPath(); c.ellipse(x, y, r * 1.2, r, 0.3, 0, Math.PI * 2); c.fill(); }
+  // Littekens
+  c.strokeStyle = '#d8b88a'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(4, -56); c.lineTo(14, -46); c.moveTo(8, -58); c.lineTo(17, -49); c.stroke();
+  // Buik en spierlijn in de schaduw
+  c.fillStyle = C.dark; c.globalAlpha = 0.5; c.beginPath(); c.ellipse(0, -15, 34, 6, 0, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
+  c.strokeStyle = C.dark; c.lineWidth = 1.6; c.beginPath(); c.moveTo(30, -64); c.quadraticCurveTo(22, -44, 30, -26); c.stroke();
+  c.restore();
+  body(); c.lineJoin = 'round'; c.lineWidth = 2.6; c.strokeStyle = INK; c.stroke();
+  // Borstelige manen over nek en schouders
+  c.fillStyle = C.mane;
+  c.beginPath(); c.moveTo(-14, -47);
+  for (let i = 0; i <= 12; i++) { const t = i / 12, x = -14 + t * 58, y = -56 - Math.sin(t * Math.PI * 0.9) * 26 + t * 6, h = 7 + Math.sin(i * 2.3) * 3 + (low ? 4 : 0); c.lineTo(x - 2, y - h - Math.sin(time * 8 + i) * 0.8); c.lineTo(x + 2, y); }
+  c.lineTo(44, -60); c.lineTo(-12, -50); c.closePath(); c.fill(); c.lineWidth = 1.6; c.strokeStyle = INK; c.stroke();
+  leg(-24, -28, ph + Math.PI, false, false);
+  leg(28, -44, ph, true, false);
+  // Kop: groot, laag en vooruit
+  const hd = low ? 10 : charging ? 6 : 2;
+  c.save(); c.translate(44, -50 + hd); c.scale(1.3, 1.3); c.rotate(low ? 0.2 : charging ? 0.12 : 0.04);
+  // Onderkaak (draait open)
+  c.save(); c.translate(2, 4); c.rotate(mouth * 0.42);
+  c.fillStyle = '#4a1210'; c.beginPath(); c.moveTo(2, -2); c.lineTo(38, -2); c.lineTo(36, 6); c.lineTo(2, 6); c.closePath(); c.fill();
+  c.fillStyle = '#f4ecd6';
+  for (let i = 0; i < 6; i++) { const x = 10 + i * 4.6, h = i === 4 ? 8 : 3.5; c.beginPath(); c.moveTo(x, 1); c.lineTo(x + 1.6, 1 - h); c.lineTo(x + 3.2, 1); c.closePath(); c.fill(); }
+  cel(c, () => { c.beginPath(); c.moveTo(-2, 0); c.lineTo(38, 1); c.bezierCurveTo(41, 3, 40, 8, 35, 9); c.lineTo(2, 10); c.bezierCurveTo(-3, 9, -4, 3, -2, 0); c.closePath(); }, C.base, C.dark, C.light, 2, 2.2);
+  c.restore();
+  // Mondholte
+  c.fillStyle = '#3a0c0a'; c.beginPath(); c.moveTo(6, 2); c.lineTo(40, 0); c.lineTo(38, 6 + mouth * 14); c.lineTo(6, 6 + mouth * 6); c.closePath(); c.fill();
+  c.fillStyle = '#9a2a30'; c.beginPath(); c.ellipse(20, 6 + mouth * 8, 10, 3 + mouth * 2, 0.15, 0, Math.PI * 2); c.fill();
+  // Schedel en snuit met opgetrokken lip
+  const skull = () => { c.beginPath(); c.moveTo(-10, -2); c.bezierCurveTo(-12, -18, 2, -26, 16, -24); c.bezierCurveTo(26, -22, 32, -16, 38, -12); c.bezierCurveTo(46, -10, 48, -4, 44, -1);
+    c.lineTo(40, 1 - snarl * 2); c.bezierCurveTo(30, 2 - snarl * 4, 18, 4 - snarl * 3, 8, 5); c.bezierCurveTo(0, 6, -8, 6, -10, -2); c.closePath(); };
+  cel(c, skull, C.base, C.dark, C.light, 3.4, 2.6);
+  // Tandvlees en bovenste tanden met grote hoektand
+  c.fillStyle = '#c0505a'; c.beginPath(); c.moveTo(12, 3 - snarl * 2); c.quadraticCurveTo(28, 0 - snarl * 4, 41, 0 - snarl * 1.5); c.lineTo(40, 2); c.quadraticCurveTo(26, 4, 12, 5); c.closePath(); c.fill();
+  c.fillStyle = '#f6eed8'; c.strokeStyle = INK; c.lineWidth = 0.9;
+  for (let i = 0; i < 6; i++) { const x = 13 + i * 4.6, h = i === 4 ? 11 : 4; c.beginPath(); c.moveTo(x, 3); c.lineTo(x + 1.7, 3 + h); c.lineTo(x + 3.4, 3); c.closePath(); c.fill(); if (i === 4) c.stroke(); }
+  // Kwijl
+  if (snarl > 0.5) { const d = (time * 1.5) % 1; c.fillStyle = 'rgba(230,240,255,0.75)'; c.beginPath(); c.ellipse(30, 10 + d * 14, 1.3, 2.4 + d * 2, 0, 0, Math.PI * 2); c.fill(); }
+  // Neus en snuitrimpels
+  c.fillStyle = INK; c.beginPath(); c.ellipse(44, -6, 4, 3.2, 0.2, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#5a5a5a'; c.beginPath(); c.ellipse(43, -7.2, 1.4, 0.8, 0.2, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = INK; c.lineWidth = 1.3; c.lineCap = 'round';
+  for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(26 + k * 4, -16 + k); c.quadraticCurveTo(28 + k * 4, -13 + k, 27 + k * 4, -10 + k); c.stroke(); }
+  // Oog: klein, rood gloeiend, onder een boze rimpel
+  const glow = c.createRadialGradient(16, -14, 0.5, 16, -14, 7); glow.addColorStop(0, 'rgba(255,90,50,0.7)'); glow.addColorStop(1, 'rgba(255,90,50,0)');
+  if (st !== 'dazed') { c.fillStyle = glow; c.beginPath(); c.arc(16, -14, 7, 0, Math.PI * 2); c.fill(); }
+  c.fillStyle = st === 'dazed' ? '#f0e6d0' : '#ff4a2a'; c.beginPath(); c.ellipse(16, -14, 3.6, 2.2, -0.15, 0, Math.PI * 2); c.fill();
+  if (st !== 'dazed') { c.fillStyle = '#ffd27a'; c.beginPath(); c.arc(16.6, -14.2, 1, 0, Math.PI * 2); c.fill(); }
+  c.fillStyle = INK; c.beginPath(); c.moveTo(9, -19); c.lineTo(22, -15); c.lineTo(21, -19); c.quadraticCurveTo(14, -22, 9, -19); c.fill();
+  // Kleine oren, plat naar achteren
+  cel(c, () => { c.beginPath(); c.moveTo(-2, -20); c.quadraticCurveTo(-16, -30, -18, -20); c.quadraticCurveTo(-10, -16, -2, -16); c.closePath(); }, C.dark, '#2a1a0c', C.base, 1.2, 1.8);
+  c.restore();
   c.restore();
   bossExtras(this, c, time);
 };
