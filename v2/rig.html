@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Proef: nieuwe habilis (aanpak A)</title>
+<style>body{margin:0;background:#1d2b2c;color:#f2e6c8;font-family:system-ui,sans-serif}h1{font-size:18px;margin:12px 16px 4px}p{margin:0 16px 8px;font-size:13px;color:#c8d4c8}canvas{display:block;width:100%}</style>
+</head><body>
+<h1>Proef aanpak A: met de hand getekende vormen + skelet</h1>
+<p>Links groot (rust, ademt). Daaronder: lopen, rennen, springen, vallen, gooien, juichen. Rechtsonder ter vergelijking de huidige versie op dezelfde grootte.</p>
+<canvas id="c"></canvas>
+<script type="module">
+import { drawRig, pose } from './src/rig.js';
+import { Player } from './src/player.js';
+const cv = document.getElementById('c'), c = cv.getContext('2d');
+function size() { const w = Math.min(innerWidth, 1100), h = Math.round(w * 0.62); cv.width = w * devicePixelRatio; cv.height = h * devicePixelRatio; cv.style.height = h + 'px'; return [w, h]; }
+let [W, H] = size(); addEventListener('resize', () => [W, H] = size());
+const old = new Player(0, 0);
+function frame(now) {
+  const t = now / 1000;
+  c.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#a8d4d8'); g.addColorStop(1, '#e8dcae'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  const ground = (y) => { c.fillStyle = '#8cbc45'; c.fillRect(0, y, W, 3); };
+  // Groot
+  const gy1 = H * 0.5; ground(gy1);
+  c.save(); c.translate(W * 0.16, gy1); const S = gy1 / 140; c.scale(S, S); drawRig(c, 'habilis', pose('idle', t * 2), { blink: (t % 4) < 0.12 }); c.restore();
+  c.save(); c.translate(W * 0.42, gy1); const S2 = gy1 / 140; c.scale(S2, S2); drawRig(c, 'habilis', pose('walk', t * 7)); c.restore();
+  c.fillStyle = '#123'; c.font = '13px system-ui'; c.fillText('rust (groot)', W * 0.1, gy1 + 22); c.fillText('lopen (groot)', W * 0.37, gy1 + 22);
+  // Klein: zoals in het spel (ca. 52 px hoog)
+  const gy2 = H * 0.9; ground(gy2);
+  const names = ['walk', 'run', 'jump', 'fall', 'throw', 'cheer'];
+  names.forEach((n, i) => { c.save(); c.translate(W * (0.06 + i * 0.1), gy2); c.scale(0.5, 0.5); drawRig(c, 'habilis', pose(n, t * (n === 'run' ? 11 : n === 'throw' ? 3 : 7)), { tool: n === 'throw' ? 'stone' : null }); c.restore(); c.fillStyle = '#123'; c.fillText(n, W * (0.04 + i * 0.1), gy2 + 18); });
+  // Oude versie ter vergelijking
+  c.save(); c.translate(W * 0.75, gy1); c.scale(gy1 / 140 * 120 / 52, gy1 / 140 * 120 / 52); old.x = -old.w / 2; old.y = -old.h; old.onGround = true; old.draw(c, t); c.restore();
+  c.fillStyle = '#123'; c.fillText('huidige versie (oud)', W * 0.7, gy1 + 22);
+  c.save(); c.translate(W * 0.8, gy2); old.draw(c, t); c.restore(); c.fillText('oud, spelgrootte', W * 0.75, gy2 + 18);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script></body></html>
