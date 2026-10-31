@@ -5,7 +5,7 @@ self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=
 self.addEventListener("fetch",event=>{
   if(event.request.method!=="GET")return;
   // De nieuwe versie in v2/ wordt nog ontwikkeld en mag niet uit deze cache komen.
-  if(new URL(event.request.url).pathname.includes("/v2/"))return;
+  if(/\/v[23]\//.test(new URL(event.request.url).pathname))return;
   const request=event.request;
   if(request.mode==="navigate"||request.destination==="document"){
     event.respondWith(fetch(request).then(response=>{

@@ -633,7 +633,7 @@ export class Game {
   updateCamera(dt) {
     if (this.finishing !== null) {
       // Inzoomen op de juichende stam
-      this.zoom += (1.5 - this.zoom) * Math.min(1, dt * 2.5);
+      this.zoom += ((this.pixel ? 1 : 1.5) - this.zoom) * Math.min(1, dt * 2.5);
       const vw = this.viewW / this.zoom, vh = this.viewH / this.zoom;
       const tx = this.finish.x + 140 - vw / 2, ty = this.finish.y - 70 - vh / 2;
       this.camX += (tx - this.camX) * Math.min(1, dt * 3);
@@ -726,7 +726,13 @@ export class Game {
     c.setTransform(kb, 0, 0, kb, 0, 0);
     this.renderer.atmosphere(c, fgTheme, camX, camY, this.viewW, this.viewH, this.time);
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    if (this.state !== 'title') { this.drawHud(c); this.drawTouch(c); }
+    if (this.state !== 'title') this.drawHud(c);
+    this.drawUI(c);
+  }
+
+  // Knoppen, meldingen en titels in schermpixels (gedeeld met de pixelversie)
+  drawUI(c) {
+    if (this.state !== 'title') this.drawTouch(c);
     if (this.arenaOn && this.boss) this.drawBossBar(c);
     if (this.state === 'intro' && this.introT < 1.4) this.drawIntro(c);
     if (this.banner && this.state === 'play') this.drawBanner(c);
@@ -909,7 +915,7 @@ function wrap(c, text, maxW) {
   return out;
 }
 
-function drawFlyingSpear(c, s) {
+export function drawFlyingSpear(c, s) {
   c.save(); c.translate(s.x + s.w / 2, s.y + 3); c.rotate(Math.atan2(s.vy, s.vx * s.dir) * s.dir); c.scale(s.dir, 1);
   c.strokeStyle = '#22140a'; c.lineWidth = 4.2; c.lineCap = 'round'; c.beginPath(); c.moveTo(-18, 0); c.lineTo(15, 0); c.stroke();
   c.strokeStyle = '#b08850'; c.lineWidth = 2.4; c.beginPath(); c.moveTo(-18, 0); c.lineTo(15, 0); c.stroke();
@@ -924,7 +930,7 @@ function drawStuckSpear(c, P, time) {
   c.strokeStyle = '#e0c48a'; c.lineWidth = 1; c.beginPath(); c.moveTo(0, -1); c.lineTo(-30, -1.6 + wob); c.stroke();
   c.restore();
 }
-function drawFootprints(c, x, y) {
+export function drawFootprints(c, x, y) {
   // Afdrukken van blote voeten in het slik
   for (let i = 0; i < 7; i++) {
     const fx = x - 60 + i * 20, fy = y - 1.5 + (i % 2) * 1.2;
@@ -933,7 +939,7 @@ function drawFootprints(c, x, y) {
   }
 }
 
-function toolIcon(c, tool, x, y, s, time) {
+export function toolIcon(c, tool, x, y, s, time) {
   c.save(); c.translate(x, y); c.scale(s, s);
   if (tool === 'spear') {
     c.rotate(-0.7); c.strokeStyle = '#6a4a28'; c.lineWidth = 2.4; c.lineCap = 'round'; c.beginPath(); c.moveTo(0, 11); c.lineTo(0, -8); c.stroke();

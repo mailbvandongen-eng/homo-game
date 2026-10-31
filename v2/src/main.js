@@ -14,9 +14,10 @@ import level32 from './levels/w3-2.js';
 import level33 from './levels/w3-3.js';
 import level34 from './levels/w3-4.js';
 import { SPECIES } from './species.js';
+import { installPixel } from './pixelmode.js';
 
 // Ophogen bij elke publicatie: zo zie je op het titelscherm of je de nieuwste versie hebt.
-export const VERSION = '2026-10-31j';
+export const VERSION = '2026-11-01a';
 
 const LEVELS = [level11, level12, level13, level14, level21, level22, level23, level24, level31, level32, level33, level34];
 const $ = id => document.getElementById(id);
@@ -64,6 +65,7 @@ const ui = {
 };
 
 const game = new Game(canvas, input, audio, ui);
+if (window.PIXEL_MODE) installPixel(game);   // v3: dezelfde game in pixel art
 window.game = game; // handig voor testen
 game.load(LEVELS[0]);
 game.state = 'title';

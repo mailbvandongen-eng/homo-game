@@ -25,3 +25,13 @@ Wereld 2 (Homo erectus) is compleet: 2-1 De eerste handbijl (Kokiselei), 2-2 Bui
 Wereld 3 (Homo heidelbergensis) is compleet: 3-1 De krijtkust (Boxgrove), 3-2 De heuvels van Atapuerca, 3-3 De put van de botten (Sima de los Huesos), 3-4 De speren van Schöningen. Nieuw: slik, rollende rotsblokken, holenberen, neushoorns, verticale grot, werpspeer die in kleiwanden blijft steken, eindbaas Homotherium.
 - `v2/src/player.js`, `game.js`, `render.js`, `audio.js`, `input.js`
 - `?debug` achter de URL toont de botsingsvakken
+
+## Pixelversie (v3): `v3/`
+
+Dezelfde game (levels, besturing en gameplay uit `v2/src`) met een andere tekenlaag: `v2/src/pixelmode.js`.
+De pagina `v3/index.html` zet `window.PIXEL_MODE = true` en laadt `../v2/src/main.js`.
+
+- Interne resolutie ~300 px hoog, vergroot met hele pixels; tegels van 24x24
+- Tegels, lucht, heuvels, water/lava, duisternis en HUD handgemaakt in pixels per landschap (paletten in `PAL`)
+- Figuren, dieren en bomen: hun vectortekening wordt omgezet naar pixels (harde rand, minder kleuren, 1px omlijning)
+- Teksten, knoppen en banners op een scherp overlay-canvas (`#ui`)
