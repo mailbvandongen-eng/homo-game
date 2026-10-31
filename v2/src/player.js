@@ -1,6 +1,7 @@
 import { TILE, PHYS, MAX_STONES } from './config.js';
 import { moveBody, T } from './level.js';
-import { taper, eye, mix, groundShadow, paintLight } from './art.js';
+import { groundShadow } from './art.js';
+import { drawRig, rigLook, gamePose } from './rig.js';
 
 export class Player {
   constructor(x, y, look = null) {
@@ -192,169 +193,32 @@ export class Player {
   }
 
   // ---------- tekenen ----------
-  // Rayman-achtige stijl: grote kop met expressieve ogen, taps toelopende ledematen, licht van boven.
+  // Getekende pop met skelet (rig.js): houding volgt de toestand van het spel.
   draw(c, time) {
     if (this.invuln > 0 && !this.dead && Math.floor(time * 16) % 2 === 0) return;
-    const L = this.look, air = !this.onGround && !this.cheer, hanging = !!this.hang;
-    if (!air && !this.dead && !hanging) groundShadow(c, this.cx, this.bottom, 15 * L.size, 0.3);
-    c.save();
-    c.translate(Math.round(this.cx), Math.round(this.bottom - (this.hop || 0)));
-    if (L.size !== 1) c.scale(L.size, L.size);
-    if (this.dead) { c.translate(0, -22); c.rotate(Math.min(this.deadT * 6, Math.PI)); c.translate(0, 22); }
-    c.scale(this.face * this.sx, this.sy);
-
-    const speed = Math.abs(this.vx), moving = !air && speed > 10;
-    const runAmt = Math.min(1, Math.max(0, (speed - PHYS.walk * 0.7) / (PHYS.run - PHYS.walk * 0.7)));
-    const ph = this.anim, swing = moving ? 0.55 + 0.35 * runAmt : 0;
-    const bob = moving ? -Math.abs(Math.sin(ph)) * (1.5 + runAmt * 1.6) : Math.sin(time * 2.4) * 0.7;
-    let lean = moving ? 0.1 + runAmt * 0.2 : 0.04;
-    if (this.skidding) lean = -0.22;
-    if (air) lean = this.vy < 0 ? 0.1 : -0.04;
-    if (hanging) lean = -this.hang.omega * 0.08;
-    c.translate(0, bob);
-
-    const outline = '#2c1d15', fur = L.fur, skin = L.skin, limbBack = L.limb, hair = L.hair;
-    const tall = L.tall ? 1.12 : 1;
-    // Ledematen: dik bij de aanzet, smaller naar de pols/enkel
-    // Ledematen: fijne donkere rand, licht van links, donkerder aan de schaduwkant
-    const seg = (x1, y1, x2, y2, w1, w2, col) => {
-      c.fillStyle = mix(outline, col, 0.35); taper(c, x1, y1, x2, y2, w1 + 1.2, w2 + 1.2); c.fill();
-      const g = c.createLinearGradient(Math.min(x1, x2) - w1 / 2, 0, Math.max(x1, x2) + w1 / 2, 0);
-      g.addColorStop(0, mix(col, '#ffe6c8', 0.22)); g.addColorStop(1, mix(col, outline, 0.25));
-      c.fillStyle = g; taper(c, x1, y1, x2, y2, w1, w2); c.fill();
+    const look = rigLook(this.look), air = !this.onGround && !this.cheer, hanging = !!this.hang;
+    if (!air && !this.dead && !hanging) groundShadow(c, this.cx, this.bottom, 15 * this.look.size, 0.3);
+    const speed = Math.abs(this.vx);
+    const st = {
+      time, seed: (this.phase || 0) + this.x * 0.003, dead: this.dead, hang: hanging ? this.hang.omega : 0, cheer: this.cheer,
+      air, vy: this.vy, skid: this.skidding, speed: this.onGround ? speed : 0, phase: this.anim,
+      run: Math.min(1, Math.max(0, (speed - PHYS.walk * 0.7) / (PHYS.run - PHYS.walk * 0.7))),
+      throwK: this.throwAnim > 0 ? 1 - this.throwAnim / 0.25 : 0,
     };
-    const leg = (side) => {
-      const hip = [side * 3, -21 * tall];
-      let a, bend;
-      if (hanging) { a = side * 0.15 - this.hang.omega * 0.25 + Math.sin(this.anim + side) * 0.1; bend = 0.25; }
-      else if (air) { if (this.vy < 0) { a = side > 0 ? 0.9 : -0.25; bend = side > 0 ? 1.4 : 0.4; } else { a = side > 0 ? 0.35 : -0.3; bend = 0.35; } }
-      else if (this.skidding) { a = 0.55; bend = 0.15; }
-      else if (moving) { const sn = Math.sin(ph + (side > 0 ? 0 : Math.PI)); a = sn * swing; bend = Math.max(0, Math.cos(ph + (side > 0 ? 0 : Math.PI))) * (0.9 + runAmt * 0.6); }
-      else { a = side * 0.08; bend = 0.05; }
-      const l1 = 11 * tall, l2 = 11 * tall;
-      const knee = [hip[0] + Math.sin(a) * l1, hip[1] + Math.cos(a) * l1];
-      const foot = [knee[0] + Math.sin(a - bend) * l2, knee[1] + Math.cos(a - bend) * l2];
-      const col = side > 0 ? skin : limbBack;
-      seg(hip[0], hip[1], knee[0], knee[1], 7.6, 4.8, col);
-      seg(knee[0], knee[1], foot[0], foot[1], 5.0, 2.8, col);
-      // Voet
-      c.fillStyle = mix(outline, col, 0.35); c.beginPath(); c.ellipse(foot[0] + 3, foot[1] - 0.4, 5.4, 2.1, 0.05, 0, Math.PI * 2); c.fill();
-      c.fillStyle = side > 0 ? mix(skin, outline, 0.15) : mix(limbBack, outline, 0.25); c.beginPath(); c.ellipse(foot[0] + 3, foot[1] - 0.8, 4.5, 1.4, 0.05, 0, Math.PI * 2); c.fill();
-    };
-    const arm = (side) => {
-      const sh = [side * 2 + 1, -35 * tall];
-      let a, bend;
-      if (hanging) { a = Math.PI - 0.12 * side; bend = 0; }
-      else if (this.cheer) { a = Math.PI - 0.45 * side + Math.sin(time * 9 + side + this.x) * 0.35; bend = 0.3 * side; }
-      else if (this.throwAnim > 0 && side > 0) { const t = 1 - this.throwAnim / 0.25; a = -2.2 + t * 3.6; bend = -0.3; }
-      else if (air) { if (this.vy < 0) { a = side > 0 ? 2.5 : -0.9; bend = side > 0 ? 0.3 : -0.4; } else { a = side > 0 ? 1.9 : -1.6; bend = 0.2; } }
-      else if (this.skidding) { a = 1.2; bend = -0.3; }
-      else if (moving) { a = Math.sin(ph + (side > 0 ? Math.PI : 0)) * swing * 0.9; bend = -0.35 - runAmt * 0.7; }
-      else { a = 0.1 * side + Math.sin(time * 2.4) * 0.03; bend = -0.15; }
-      const l = 9.5 * tall;
-      const elbow = [sh[0] + Math.sin(a) * l, sh[1] + Math.cos(a) * l];
-      const hand = [elbow[0] + Math.sin(a - bend) * l, elbow[1] + Math.cos(a - bend) * l];
-      const col = side > 0 ? skin : limbBack;
-      seg(sh[0], sh[1], elbow[0], elbow[1], 6, 4.4, col);
-      seg(elbow[0], elbow[1], hand[0], hand[1], 4.4, 3.4, col);
-      c.fillStyle = mix(outline, col, 0.35); c.beginPath(); c.ellipse(hand[0], hand[1] + 0.4, 2.7, 3.1, a, 0, Math.PI * 2); c.fill();
-      c.fillStyle = mix(col, '#ffe0c0', 0.12); c.beginPath(); c.ellipse(hand[0], hand[1] + 0.4, 2.1, 2.5, a, 0, Math.PI * 2); c.fill();
-      this.drawTool(c, side, hand, a, bend, hanging, time);
-    };
-
-    arm(-1); leg(-1);
-    c.save(); c.translate(0, -21 * tall); c.rotate(lean); c.translate(0, 21 * tall);
-    // Romp: peervorm met vacht, buik en licht van boven
-    const ty = -29 * tall;
-    const torso = () => { c.beginPath(); c.moveTo(-8, ty - 9); c.bezierCurveTo(-13, ty - 3, -12, ty + 9, -6, ty + 12); c.bezierCurveTo(0, ty + 14, 9, ty + 12, 10, ty + 5); c.bezierCurveTo(11, ty - 4, 7, ty - 12, 0, ty - 12); c.bezierCurveTo(-4, ty - 12, -6, ty - 11, -8, ty - 9); c.closePath(); };
-    torso(); c.lineWidth = 1.2; c.strokeStyle = mix(outline, fur, 0.3); c.stroke();
-    const tg = c.createLinearGradient(-10, ty - 12, 8, ty + 12); tg.addColorStop(0, mix(fur, '#ffffff', 0.1)); tg.addColorStop(0.55, fur); tg.addColorStop(1, mix(fur, outline, 0.4));
-    torso(); c.fillStyle = tg; c.fill();
-    c.save(); torso(); c.clip();
-    c.fillStyle = mix(skin, '#ffe8c8', 0.15); c.globalAlpha = 0.85; c.beginPath(); c.ellipse(4, ty + 1, 4.6, 7, 0.15, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
-    torso(); paintLight(c, 0, ty, 11, 12, mix(fur, '#ffe0b0', 0.45), mix(fur, outline, 0.6), 38, 4);
-    c.restore();
-    // Vachtplukjes op de rug
-    // Zachte vachtrand langs de rug
-    c.fillStyle = mix(fur, outline, 0.25);
-    for (let i = 0; i < 5; i++) { c.beginPath(); c.ellipse(-9.5 + i * 0.4, ty - 7 + i * 4, 2.4, 1.3, -0.6, 0, Math.PI * 2); c.fill(); }
-    // Lendendoek van huid
-    c.fillStyle = '#5e3f22'; c.beginPath(); c.moveTo(-8, ty + 7); c.quadraticCurveTo(1, ty + 11, 10, ty + 7); c.lineTo(9, ty + 14); c.quadraticCurveTo(3, ty + 17, -1, ty + 15); c.quadraticCurveTo(-5, ty + 17, -7, ty + 13); c.closePath(); c.fill();
-    c.fillStyle = '#8a6238'; c.beginPath(); c.moveTo(-6, ty + 8); c.quadraticCurveTo(1, ty + 11, 8, ty + 8); c.lineTo(8, ty + 10); c.quadraticCurveTo(1, ty + 13, -6, ty + 10); c.closePath(); c.fill();
-    this.drawHead(c, -45 * tall, time, outline, skin, limbBack, hair);
-    c.restore();
-    leg(1); arm(1);
-    c.restore();
-  }
-
-  drawHead(c, hy, time, outline, skin, limbBack, hair) {
-    const L = this.look;
     // Knipperen af en toe
     this.blinkT = (this.blinkT ?? 2 + Math.random() * 3) - 1 / 60;
     if (this.blinkT < -0.12) this.blinkT = 2.5 + Math.random() * 3.5;
-    const blink = this.blinkT < 0 ? 0.05 : 1;
-    const flat = L.flat, mz = flat ? 7 : 9.5;
-    // Kop: ronde schedel + snuit, met contour
-    const skull = () => { c.beginPath(); c.ellipse(1.5, hy, flat ? 10.5 : 10, flat ? 10 : 9.4, 0, 0, Math.PI * 2); };
-    const muzzle = () => { c.beginPath(); c.ellipse(mz, hy + 4.5, flat ? 5.5 : 6.6, 5, 0.12, 0, Math.PI * 2); };
-    c.lineWidth = 1.2; c.strokeStyle = mix(outline, skin, 0.3); skull(); c.stroke(); muzzle(); c.stroke();
-    const hg = c.createLinearGradient(-8, hy - 10, 8, hy + 10); hg.addColorStop(0, mix(skin, '#ffffff', 0.1)); hg.addColorStop(1, mix(skin, outline, 0.3));
-    skull(); c.fillStyle = hg; c.fill();
-    skull(); paintLight(c, 0, hy, 10, 9, mix(skin, '#fff0d8', 0.5), mix(skin, outline, 0.6), 0);
-    muzzle(); c.fillStyle = mix(skin, '#f0c8a0', 0.25); c.fill();
-    muzzle(); paintLight(c, mz, hy + 4, 6, 5, mix(skin, '#fff0d8', 0.4), mix(skin, outline, 0.5), 0);
-    // Schaduw onder de wenkbrauw: diepere oogkas
-    c.fillStyle = mix(skin, outline, 0.5); c.globalAlpha = 0.45; c.beginPath(); c.ellipse(7.2, hy + 0.4, 4.2, 3.2, 0, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
-    // Oor
-    c.fillStyle = mix(outline, limbBack, 0.35); c.beginPath(); c.ellipse(-4, hy + 1, 3.1, 4.1, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = limbBack; c.beginPath(); c.ellipse(-4, hy + 1, 2.3, 3.3, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = mix(limbBack, '#d08070', 0.3); c.beginPath(); c.ellipse(-3.6, hy + 1.4, 1.1, 1.8, 0, 0, Math.PI * 2); c.fill();
-    // Haar: plukken die meewiegen
-    const sw = Math.sin(time * 3 + this.x * 0.01) * 0.8 + (this.vx || 0) * -0.004;
-    c.fillStyle = hair;
-    c.beginPath(); c.moveTo(-8, hy + 4); c.quadraticCurveTo(-11, hy - 8, 0, hy - 10.5); c.quadraticCurveTo(9, hy - 11, 11, hy - 4);
-    c.lineTo(5, hy - 4.5); c.quadraticCurveTo(0, hy - 3.5, -2, hy + 2); c.quadraticCurveTo(-5, hy - 1, -8, hy + 4); c.closePath(); c.fill();
-    for (let i = 0; i < 2; i++) { c.beginPath(); c.moveTo(-5 + i * 5, hy - 9.5); c.quadraticCurveTo(-7 + i * 5 + sw, hy - 13.5, -9.5 + i * 5 + sw * 1.5, hy - 12); c.lineTo(-3 + i * 5, hy - 9); c.fill(); }
-    c.fillStyle = mix(hair, '#ffffff', 0.15); c.beginPath(); c.ellipse(1, hy - 8.5, 4, 1.4, -0.1, 0, Math.PI * 2); c.fill();
-    if (L.crest) {
-      c.fillStyle = outline; c.beginPath(); c.moveTo(-8, hy - 4); c.quadraticCurveTo(-2, hy - 19, 8, hy - 10); c.lineTo(6, hy - 5); c.closePath(); c.fill();
-      c.fillStyle = mix(skin, outline, 0.4); c.beginPath(); c.moveTo(-6, hy - 5); c.quadraticCurveTo(-1, hy - 16, 6, hy - 9); c.lineTo(5, hy - 6); c.closePath(); c.fill();
-    }
-    // Wenkbrauwboog
-    c.fillStyle = mix(skin, outline, 0.45); c.beginPath(); c.ellipse(7, hy - 2.6, 5.6, 1.9, 0.1, 0, Math.PI * 2); c.fill();
-    // Groot oog met glans
-    const scared = this.dead || this.invuln > 1;
-    eye(c, 7.6, hy + 0.9, 2.6, '#4a2c16', scared ? 1 : blink);
-    // Neus en mond
-    c.fillStyle = mix(skin, outline, 0.55); c.beginPath(); c.ellipse(mz + (flat ? 4 : 5), hy + 2.6, 1.6, 1.1, 0, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = '#5a2e1e'; c.lineWidth = 1.3; c.lineCap = 'round'; c.beginPath();
-    if (this.cheer) { c.fillStyle = '#5a2a1c'; c.ellipse(mz + 1.5, hy + 7, 2.8, 2.3, 0, 0, Math.PI * 2); c.fill(); }
-    else if (scared) { c.arc(mz + 1.5, hy + 7, 1.6, 0, Math.PI * 2); c.stroke(); }
-    else if (L.crest) { const chew = Math.sin(this.anim * 6) * 1.2; c.moveTo(mz - 1, hy + 7 + chew); c.lineTo(mz + 4, hy + 6.5 + chew); c.stroke(); }
-    else { c.moveTo(mz - 1.5, hy + 6.5); c.quadraticCurveTo(mz + 1.5, hy + 8, mz + 4.5, hy + 6); c.stroke(); }
-  }
-
-  // Handbijl of fakkel in de voorste hand
-  drawTool(c, side, hand, a, bend, hanging, time) {
-    if (side < 0 || hanging) return;
-    if (this.tool === 'axe') {
-      c.save(); c.translate(hand[0], hand[1]); c.rotate(a - bend + Math.PI);
-      c.fillStyle = '#3a3226'; c.beginPath(); c.moveTo(0, -2); c.quadraticCurveTo(6.5, 3, 1, 15); c.quadraticCurveTo(-5.5, 3, 0, -2); c.fill();
-      c.fillStyle = '#c4ad82'; c.beginPath(); c.moveTo(0, -1); c.quadraticCurveTo(5, 3, 1, 13); c.quadraticCurveTo(-4, 3, 0, -1); c.fill();
-      c.fillStyle = '#ecdcb4'; c.beginPath(); c.moveTo(0, 1); c.lineTo(2.2, 4.5); c.lineTo(0, 8); c.closePath(); c.fill();
-      c.restore();
-    } else if (this.tool === 'torch') {
-      c.save(); c.translate(hand[0], hand[1]); c.rotate(this.throwAnim > 0 ? 0.9 : 0.25);
-      c.strokeStyle = '#4a2f1a'; c.lineWidth = 3.2; c.lineCap = 'round'; c.beginPath(); c.moveTo(0, 4); c.lineTo(0, -14); c.stroke();
-      const f = Math.sin(time * 18) * 1.5;
-      const gl = c.createRadialGradient(0, -20, 1, 0, -20, 18); gl.addColorStop(0, 'rgba(255,200,90,0.55)'); gl.addColorStop(1, 'rgba(255,160,60,0)');
-      c.fillStyle = gl; c.beginPath(); c.arc(0, -20, 18, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#ff7a22'; c.beginPath(); c.moveTo(-4.5, -13); c.quadraticCurveTo(-3 + f, -23, 0, -28); c.quadraticCurveTo(3 + f, -23, 4.5, -13); c.closePath(); c.fill();
-      c.fillStyle = '#ffe07a'; c.beginPath(); c.moveTo(-2, -14); c.quadraticCurveTo(-1 + f, -19, 0, -22); c.quadraticCurveTo(1 + f, -19, 2, -14); c.closePath(); c.fill();
-      c.restore();
-    } else if (this.throwAnim > 0.12) {
-      c.fillStyle = '#8d8778'; c.beginPath(); c.arc(hand[0], hand[1], 3.2, 0, Math.PI * 2); c.fill();
-    }
+    const S = 0.44 * this.look.size;
+    c.save();
+    c.translate(Math.round(this.cx), Math.round(this.bottom - (this.hop || 0) + (hanging ? 7 : 0)));
+    if (this.dead) { c.translate(0, -22); c.rotate(Math.min(this.deadT * 6, Math.PI)); c.translate(0, 22); }
+    c.scale(this.face * this.sx * S, this.sy * S);
+    const tool = this.tool || (this.throwAnim > 0.08 ? 'stone' : null);
+    drawRig(c, look, gamePose(st), {
+      tool, time, blink: this.blinkT < 0, eyes: this.dead ? 'closed' : null,
+      mouth: this.cheer || this.invuln > 1 ? 'open' : null, chew: !!this.look.crest,
+    });
+    c.restore();
   }
 }
 

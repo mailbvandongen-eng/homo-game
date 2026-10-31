@@ -541,6 +541,8 @@ export class Game {
   bossDefeated(b) {
     const A = this.level.arena;
     this.bossBeaten = true; this.arenaOn = false;
+    // Vallende stenen van de baas verdwijnen meteen: na de overwinning geen schade meer
+    this.enemies = this.enemies.filter(e => !(e instanceof Stalactite && e.shadow));
     this.setColumn(A.exit, A.exitRows, T.EMPTY);
     this.setColumn(A.gate, A.gateRows, T.EMPTY);
     this.audio.stopSong(); this.audio.play('win');
