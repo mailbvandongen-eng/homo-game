@@ -279,6 +279,13 @@ function drawTool(c, tool, O, time, undo = 0) {
   if (tool === 'stone') {
     c.fillStyle = '#6c6a64'; c.beginPath(); c.ellipse(1, 8, 4.2, 3.6, 0.3, 0, Math.PI * 2); c.fill(); c.strokeStyle = O; c.lineWidth = 1.4; c.stroke();
     c.fillStyle = '#a8a49a'; c.beginPath(); c.ellipse(0, 7, 1.6, 1, 0.3, 0, Math.PI * 2); c.fill();
+  } else if (tool === 'spear') {
+    // Lange houten speer (Schöningen): punt omhoog en naar voren
+    c.save(); c.rotate(undo + Math.PI - 0.5);
+    c.strokeStyle = O; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(0, -30); c.lineTo(0, 62); c.stroke();
+    c.strokeStyle = '#b08850'; c.lineWidth = 3; c.beginPath(); c.moveTo(0, -30); c.lineTo(0, 62); c.stroke();
+    c.fillStyle = '#e0c48a'; c.beginPath(); c.moveTo(-2.4, 58); c.lineTo(0, 70); c.lineTo(2.4, 58); c.closePath(); c.fill();
+    c.restore();
   } else if (tool === 'axe') {
     // Handbijl: druppelvormige, aan twee kanten bewerkte steen
     const axe = new Path2D('M 1 4 C 9 8 11 18 3 27 C -5 18 -6 9 1 4 Z');

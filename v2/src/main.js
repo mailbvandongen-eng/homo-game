@@ -9,12 +9,16 @@ import level21 from './levels/w2-1.js';
 import level22 from './levels/w2-2.js';
 import level23 from './levels/w2-3.js';
 import level24 from './levels/w2-4.js';
+import level31 from './levels/w3-1.js';
+import level32 from './levels/w3-2.js';
+import level33 from './levels/w3-3.js';
+import level34 from './levels/w3-4.js';
 import { SPECIES } from './species.js';
 
 // Ophogen bij elke publicatie: zo zie je op het titelscherm of je de nieuwste versie hebt.
-export const VERSION = '2026-10-31h';
+export const VERSION = '2026-10-31i';
 
-const LEVELS = [level11, level12, level13, level14, level21, level22, level23, level24];
+const LEVELS = [level11, level12, level13, level14, level21, level22, level23, level24, level31, level32, level33, level34];
 const $ = id => document.getElementById(id);
 const canvas = $('game');
 const input = new Input(canvas);

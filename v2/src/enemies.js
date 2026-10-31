@@ -595,7 +595,7 @@ export class Sabre extends Leopard {
 
 // ---------------- Gnoe: deel van een stormende kudde; rent door, spring erop of klim weg ----------------
 export class Gnu extends Enemy {
-  constructor(x, y, o = {}) { super(x, y, 46, 30); this.dir = 1; this.speed = o.speed || 300 + Math.random() * 40; this.active = true; }
+  constructor(x, y, o = {}) { super(x, y, 46, 30); this.dir = 1; this.speed = o.speed || 300 + Math.random() * 40; this.active = true; this.skin = o.skin; }
   scare(dir, game) { if (!this.fleeing) { this.fleeing = true; this.fleeT = 0; this.fleeDir = 1; game.fx.stars(this.cx, this.y); } }
   update(dt, game) {
     this.t += dt;
@@ -621,12 +621,111 @@ export class Gnu extends Enemy {
   }
 }
 
-export const ENEMY_TYPES = { hyena: Hyena, snake: Snake, vulture: Vulture, warthog: Warthog, baboon: Baboon, leopard: Leopard, bat: Bat, stalactite: Stalactite, wolf: Wolf, varaan: Varaan, sabre: Sabre, gnu: Gnu };
+// ---------------- Wereld 3 ----------------
+// Rotsblok dat van een helling rolt. Niet op springen; een handbijl of speer slaat hem kapot.
+export class Boulder extends Enemy {
+  constructor(x, y, o = {}) { super(x, y, 30, 30); this.stompable = false; this.immune = true; this.axeOnly = true; this.dir = o.dir || -1; this.rot = 0; this.active = true; this.vy = 0; }
+  scare(dir, game) { if (this.gone) return; this.gone = true; game.fx.debris(this.cx, this.y + 15); game.fx.debris(this.cx, this.y + 8); game.audio.play('break'); }
+  update(dt, game) {
+    this.t += dt;
+    this.vx = this.dir * 165; this.vy = Math.min(this.vy + 1900 * dt, 800);
+    const vyBefore = this.vy;
+    const r = moveBody(this, dt, game.map);
+    if (r.landed && vyBefore > 250) { this.vy = -vyBefore * 0.35; game.shake(2); game.audio.play('thud'); }
+    if (r.wall) this.scare(0, game);
+    this.rot += this.vx * dt / 15;
+    if (this.y > game.level.pxH + 40 || Math.abs(this.cx - game.player.cx) > 1400) this.gone = true;
+    if (Math.random() < dt * 8 && r.landed) game.fx.dust(this.cx, this.y + this.h, -this.dir, 1);
+  }
+  draw(c) {
+    c.save(); c.translate(this.cx, this.y + this.h / 2); c.rotate(this.rot);
+    cel(c, () => { c.beginPath(); for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2, r = 15 + Math.sin(i * 2.7) * 1.8; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.closePath(); }, '#9a8a72', '#5e5242', '#c8b898', 4, 2);
+    c.strokeStyle = '#4a4034'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(-6, -8); c.lineTo(0, -1); c.lineTo(-3, 7); c.moveTo(0, -1); c.lineTo(8, 2); c.stroke();
+    c.restore();
+  }
+}
+// Bron van rollende rotsblokken bovenaan een helling
+export class RockSpawner extends Enemy {
+  constructor(x, y, o = {}) { super(x, y, 30, 20); this.every = o.every || 2.6; this.timer = 0.6; this.dir = o.dir || -1; this.alwaysNear = true; }
+  harmful() { return false; }
+  hitbox() { return { x: -9999, y: -9999, w: 0, h: 0 }; }
+  update(dt, game) {
+    this.timer -= dt;
+    if (this.timer <= 0 && !game.player.dead) { this.timer = this.every; game.enemies.push(new Boulder(this.cx, this.y + this.h, { dir: this.dir })); game.audio.play('rumble2'); }
+  }
+  draw(c) {
+    c.fillStyle = '#7a6c58';
+    for (const [dx, dy, r] of [[-12, -4, 8], [4, -6, 10], [16, -3, 7], [-2, -14, 7]]) { c.beginPath(); c.arc(this.cx + dx, this.y + this.h + dy, r, 0, Math.PI * 2); c.fill(); }
+  }
+}
+
+// Holenbeer (Ursus deningeri): sjokt rond, gaat op de achterpoten staan en slaat dan toe
+export class CaveBear extends Enemy {
+  constructor(x, y, o = {}) { super(x, y, 52, 38); this.state = 'walk'; this.timer = 0; this.cool = 0.6; this.dir = o.dir || -1; }
+  hitbox() {
+    if (this.state === 'rear') return { x: this.x + 8, y: this.y - 24, w: this.w - 16, h: this.h + 24 };
+    if (this.state === 'slam') return { x: this.x + (this.dir > 0 ? 10 : -26), y: this.y + 4, w: this.w + 16, h: this.h - 4 };
+    return { x: this.x + 4, y: this.y + 6, w: this.w - 8, h: this.h - 6 };
+  }
+  update(dt, game) {
+    this.t += dt;
+    if (this.fleeing) return this.updateFlee(dt);
+    const p = game.player, dx = p.cx - this.cx, dy = p.bottom - (this.y + this.h);
+    this.cool = Math.max(0, this.cool - dt);
+    if (this.state === 'walk') {
+      this.walk(dt, game, 32);
+      if (this.cool <= 0 && Math.abs(dx) < 120 && Math.sign(dx) === this.dir && Math.abs(dy) < 50 && !p.dead) { this.state = 'rear'; this.timer = 0.75; this.walk(0, game, 0); game.audio.play('bear'); }
+    } else if (this.state === 'rear') {
+      this.walk(dt, game, 0); this.timer -= dt;
+      if (this.timer <= 0) { this.state = 'slam'; this.timer = 0.3; game.shake(5); game.fx.dust(this.cx + this.dir * 26, this.y + this.h, this.dir, 6); game.audio.play('thud'); }
+    } else if (this.state === 'slam') {
+      this.walk(dt, game, 0); this.timer -= dt;
+      if (this.timer <= 0) { this.state = 'recover'; this.timer = 0.9; }
+    } else if (this.state === 'recover') {
+      this.walk(dt, game, 0); this.timer -= dt;
+      if (this.timer <= 0) { this.state = 'walk'; this.cool = 1.5; }
+    }
+  }
+  draw(c, time) {
+    const st = this.state, rear = st === 'rear' ? Math.min(1, (0.75 - this.timer) * 4) : st === 'slam' ? Math.max(0, this.timer / 0.3) * 0.4 : 0;
+    c.save(); c.globalAlpha = this.alpha();
+    groundShadowQ(c, this.cx, this.y + this.h, 32);
+    c.translate(Math.round(this.cx - this.dir * 14 * rear), Math.round(this.y + this.h));
+    c.scale(this.dir * 1.25, this.squash() * 1.25);
+    c.translate(-14, 0); c.rotate(-rear * 0.95); c.translate(14, 0);
+    quadQ(c, { seed: 2, L: 22, H: 9, bodyH: 17, slope: -3, neck: 2, headSize: 1.15,
+      base: '#6a4a30', light: '#9a7048', dark: '#2a1a0e', belly: '#7a5a3c', pattern: 'bristle', spot: '#3a2414',
+      head: 'bear', tail: 'short', eye: st === 'rear' || st === 'slam' ? '#ff5a3a' : '#2a1a10', angry: st !== 'walk',
+      phase: this.t * 6, stride: st === 'walk' ? 0.55 : 0, mouth: st === 'rear' || st === 'slam' ? 1 : 0, eyeOpen: st === 'recover' ? 0.3 : undefined }, time);
+    c.restore();
+  }
+}
+
+// Neushoorn (Stephanorhinus): als het wrattenzwijn, maar groter en met hoorns
+export class Rhino extends Warthog {
+  constructor(x, y, o = {}) { super(x, y, o); this.x += this.w / 2; this.y += this.h; this.w = 58; this.h = 38; this.x -= this.w / 2; this.y -= this.h; }
+  draw(c, time) {
+    const charge = this.state === 'charge', scrape = this.state === 'scrape';
+    c.save(); c.globalAlpha = this.alpha();
+    groundShadowQ(c, this.cx, this.y + this.h, 34);
+    c.translate(Math.round(this.cx), Math.round(this.y + this.h)); c.scale(this.dir * 1.35, this.squash() * 1.35);
+    quadQ(c, { seed: 5, L: 26, H: 8, bodyH: 18, slope: 1, neck: 1, headSize: 1.05,
+      base: '#8a8478', light: '#b0aa9c', dark: '#2e2a24', belly: '#7a7468', pattern: 'bristle', spot: '#5a5448',
+      head: 'rhino', tail: 'whip', eye: scrape || charge ? '#ff6b4a' : '#2a1a10', angry: scrape || charge,
+      phase: this.t * (charge ? 22 : 7), stride: charge ? 1 : this.state === 'walk' ? 0.5 : 0.2, headDown: charge || scrape ? 0.45 : 0.1,
+      eyeOpen: this.state === 'dazed' ? 0.2 : undefined }, time);
+    c.restore();
+    if (this.state === 'dazed') { c.fillStyle = '#ffe27a'; for (let i = 0; i < 3; i++) { const a = time * 5 + i * 2.1; c.beginPath(); c.arc(this.cx + this.dir * 16 + Math.cos(a) * 10, this.y - 6 + Math.sin(a) * 3, 2.2, 0, Math.PI * 2); c.fill(); } }
+  }
+}
+
+export const ENEMY_TYPES = { hyena: Hyena, snake: Snake, vulture: Vulture, warthog: Warthog, baboon: Baboon, leopard: Leopard, bat: Bat, stalactite: Stalactite, wolf: Wolf, varaan: Varaan, sabre: Sabre, gnu: Gnu, boulder: RockSpawner, bear: CaveBear, rhino: Rhino };
 
 // ------------------------------------------------------------------
 // Nieuwe tekeningen voor de viervoeters (gedeelde motor in art.js)
 // ------------------------------------------------------------------
-import { quad, groundShadow } from './art.js';
+import { quad, groundShadow, cel } from './art.js';
+const quadQ = (...a) => quad(...a), groundShadowQ = (...a) => groundShadow(...a);
 
 function drawQuadEnemy(e, c, time, o) {
   c.save(); c.globalAlpha = e.alpha();
@@ -688,6 +787,9 @@ Sabre.prototype.draw = function (c, time) {
   });
 };
 Gnu.prototype.draw = function (c, time) {
+  if (this.skin === 'horse') return drawQuadEnemy(this, c, time, {
+    L: 28, H: 15, bodyH: 13, slope: 2, neck: 6, base: '#9a6a3c', light: '#c8955e', dark: '#2a1a0c', belly: '#c8a87a', mane: '#3a2414',
+    head: 'horse', tail: 'tuft', tuft: '#3a2414', phase: this.t * 24, stride: 1 });
   drawQuadEnemy(this, c, time, {
     L: 28, H: 13, bodyH: 13, slope: 6, neck: 2,
     base: '#5c5a64', light: '#7c7a86', dark: '#1c1a1e', belly: '#6a6672', spot: '#2c2a30', pattern: 'stripes',

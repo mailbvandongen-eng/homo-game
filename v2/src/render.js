@@ -3,6 +3,9 @@ import { T } from './level.js';
 import { leafCluster, frond, WIND, bakeTree, drawBakedTree } from './art.js';
 
 const CHUNK = 16; // tegels per voorgetekend stuk
+// Welke bomen bij welk landschap horen
+const PAL_OF = { forest: 'forest', java: 'java', dmanisi: 'dmanisi', coast: 'temperate', lake: 'temperate', hills: 'hills' };
+const KIND_OF = { forest: 'broad', java: 'jungle', dmanisi: 'broad', coast: 'broad', lake: 'broad', hills: 'broad' };
 
 // Deterministische "willekeur" zodat het landschap elke keer hetzelfde is.
 export function hash(a, b = 0) { const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return n - Math.floor(n); }
@@ -20,6 +23,18 @@ const THEMES = {
     forest: true, jungle: true,
   },
   cave: { cave: true },
+  coast: {
+    sky: ['#7aa6c4', '#c2d6dc', '#ece6cc'], sun: '#fff6dc',
+    far: '#e4e0d2', farTop: '#ffffff', mid: '#93a874', midDark: '#6f8a58', near: '#88a260', acacia: '#4a6a3c', mesa: true,
+  },
+  hills: {
+    sky: ['#6aa6d0', '#bcd8dc', '#f2dcaa'], sun: '#fff0c0',
+    far: '#b89c78', farTop: '#d2bc96', mid: '#a6a066', midDark: '#7e8a4c', near: '#9a9a58', acacia: '#56683a',
+  },
+  lake: {
+    sky: ['#6c9cc0', '#bcd2d4', '#e6dcb8'], sun: '#fff4d0',
+    far: '#7e9488', farTop: '#9cb0a2', mid: '#6e8e58', midDark: '#58784a', near: '#6c8c50', acacia: '#3e5e34', forest: true,
+  },
   grassland: {
     sky: ['#6aaad6', '#bfdcd2', '#f6dc9c'], sun: '#fff2b8',
     far: '#a9b5a2', farTop: '#c2cab6', mid: '#c4b46a', midDark: '#a89a52', near: '#b8a85c', acacia: '#6a7a40',
@@ -58,8 +73,8 @@ export class Renderer {
     return T;
   }
   levelTree(c, d, theme, time) {
-    const pal = theme === 'forest' ? 'forest' : theme === 'java' ? 'java' : theme === 'dmanisi' ? 'dmanisi' : 'savanna';
-    const kind = theme === 'forest' || theme === 'dmanisi' ? 'broad' : theme === 'java' ? 'jungle' : 'acacia';
+    const pal = PAL_OF[theme] || 'savanna';
+    const kind = KIND_OF[theme] || 'acacia';
     const T = this.tree(kind, pal, Math.floor(d.x / 7) % 5, 150);
     drawBakedTree(c, T, d.x, d.y, (d.scale || 1) * 0.95, time);
   }
@@ -136,8 +151,8 @@ export class Renderer {
       if (hash(i, 9) < (th.forest ? 0.05 : 0.35)) continue;
       const wx = i * 230 + hash(i, 4) * 120, x = wx - camX * 0.3;
       // Bomen in de verte: zelfde techniek, maar vervaagd in de nevel
-      const pal = theme === 'forest' ? 'forest' : theme === 'java' ? 'java' : theme === 'dmanisi' ? 'dmanisi' : 'savanna';
-      const kind = th.forest ? (theme === 'java' ? 'jungle' : 'broad') : 'acacia';
+      const pal = PAL_OF[theme] || 'savanna';
+      const kind = KIND_OF[theme] || 'acacia';
       const T = this.tree(kind, pal, 10 + (i & 3), 90, 0.42, th.sky[1]);
       drawBakedTree(c, T, x, midY + 8 - ridgeH(wx, 20, 0.006, 3), (th.forest ? 0.9 : 0.7) + hash(i, 5) * 0.35, time + i);
     }
@@ -324,6 +339,8 @@ export class Renderer {
       else if (t === T.ROCK) rockTile(c, map, cx, cy);
       else if (t === T.BRANCH) branchTile(c, map, cx, cy);
       else if (t === T.THORNS) (theme === 'cave' ? stalagmiteTile : thornTile)(c, cx, cy);
+      else if (t === T.MUD) mudTile(c, map, cx, cy);
+      else if (t === T.CLAY) clayTile(c, map, cx, cy);
     }
     return cv;
   }
@@ -454,7 +471,7 @@ function groundTile(c, map, cx, cy, theme) {
   if (theme === 'cave') return caveFloorTile(c, map, cx, cy);
   const x = cx * TILE, y = cy * TILE;
   const above = map.get(cx, cy - 1);
-  const topOpen = above !== T.GROUND && above !== T.ROCK && above !== T.CRUMBLE && above !== T.BUMP;
+  const topOpen = above !== T.GROUND && above !== T.ROCK && above !== T.CRUMBLE && above !== T.BUMP && above !== T.MUD && above !== T.CLAY;
   // Hoe diep onder het oppervlak (voor kleurverloop)
   let depth = 0; while (depth < 6 && map.get(cx, cy - depth - 1) === T.GROUND) depth++;
   const soil = ['#a8743f', '#966536', '#83582f', '#734d2a', '#654427', '#5a3d24', '#513722'][depth];
@@ -832,7 +849,7 @@ function caveBackground(c, camX, camY, viewW, viewH, time) {
 function caveFloorTile(c, map, cx, cy) {
   const x = cx * TILE, y = cy * TILE;
   const above = map.get(cx, cy - 1);
-  const topOpen = above !== T.GROUND && above !== T.ROCK && above !== T.CRUMBLE && above !== T.BUMP;
+  const topOpen = above !== T.GROUND && above !== T.ROCK && above !== T.CRUMBLE && above !== T.BUMP && above !== T.MUD && above !== T.CLAY;
   let depth = 0; while (depth < 4 && map.get(cx, cy - depth - 1) === T.GROUND) depth++;
   c.fillStyle = ['#6a5a4a', '#5a4c3f', '#4c4036', '#41372f', '#382f29'][depth]; c.fillRect(x, y, TILE + 0.5, TILE + 0.5);
   for (let k = 0; k < 3; k++) { const r = hash(cx * 3 + k, cy); if (r < 0.4) continue; c.fillStyle = r > 0.8 ? '#8a7a66' : '#00000026'; c.beginPath(); c.ellipse(x + 4 + hash(cx, cy * 7 + k) * 24, y + 6 + hash(cx * 5 + k, cy) * 22, 2 + r * 2, 1.5 + r, 0, 0, Math.PI * 2); c.fill(); }
@@ -894,4 +911,27 @@ function haze(c, viewW, y, color) {
   const g = c.createLinearGradient(0, y - 70, 0, y + 50);
   g.addColorStop(0, mixHex(color, '#ffffff', 0.2) + '00'); g.addColorStop(0.55, mixHex(color, '#ffffff', 0.25) + '66'); g.addColorStop(1, mixHex(color, '#ffffff', 0.2) + '00');
   c.fillStyle = g; c.fillRect(0, y - 70, viewW, 120);
+}
+
+function mudTile(c, map, cx, cy) {
+  // Nat slik: donker, glanzend, met plasjes
+  const x = cx * TILE, y = cy * TILE;
+  c.fillStyle = '#5a4430'; c.fillRect(x, y, TILE + 0.5, TILE + 0.5);
+  c.fillStyle = '#3e2e20'; c.fillRect(x, y + 10, TILE + 0.5, TILE - 10);
+  c.fillStyle = '#6e5640'; c.fillRect(x, y, TILE + 0.5, 5);
+  c.fillStyle = 'rgba(200,220,230,0.45)'; c.fillRect(x, y, TILE + 0.5, 1.4);
+  if (hash(cx, cy) > 0.4) { c.fillStyle = 'rgba(150,180,200,0.45)'; c.beginPath(); c.ellipse(x + 8 + hash(cx, 3) * 16, y + 3, 6, 1.4, 0, 0, Math.PI * 2); c.fill(); }
+  c.fillStyle = '#2e2218'; for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(x + 5 + hash(cx, k) * 22, y + 14 + hash(k, cx) * 14, 1.6, 0, Math.PI * 2); c.fill(); }
+}
+
+function clayTile(c, map, cx, cy) {
+  // Kleiwand: zachte, gelaagde aarde (speren blijven erin steken)
+  const x = cx * TILE, y = cy * TILE;
+  const up = map.get(cx, cy - 1) === T.CLAY, left = map.get(cx - 1, cy) === T.CLAY, right = map.get(cx + 1, cy) === T.CLAY;
+  c.fillStyle = '#a0683e'; c.fillRect(x, y, TILE + 0.5, TILE + 0.5);
+  for (let k = 0; k < 4; k++) { c.fillStyle = k % 2 ? '#b07448' : '#8a5634'; c.fillRect(x, y + 3 + k * 8 + Math.sin(cx + k) * 1.5, TILE + 0.5, 3); }
+  c.strokeStyle = '#5a3a20'; c.lineWidth = 1; c.beginPath(); c.moveTo(x + 6 + hash(cx, cy) * 10, y + 4); c.quadraticCurveTo(x + 10, y + 16, x + 4 + hash(cy, cx) * 14, y + 28); c.stroke();
+  if (!left) { c.fillStyle = '#6e4428'; c.fillRect(x, y, 3, TILE); }
+  if (!right) { c.fillStyle = '#6e4428'; c.fillRect(x + TILE - 3, y, 3, TILE); }
+  if (!up) { c.fillStyle = '#86b044'; c.fillRect(x, y - 1, TILE + 0.5, 4); c.fillStyle = '#b4d868'; c.fillRect(x, y - 1, TILE + 0.5, 1.4); }
 }

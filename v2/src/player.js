@@ -58,7 +58,8 @@ export class Player {
     if (dir !== 0) {
       this.face = dir;
       const turning = this.vx !== 0 && Math.sign(this.vx) !== dir;
-      const a = !this.onGround ? PHYS.airAccel : turning ? PHYS.skid : PHYS.accel;
+      const slick = this.onGround && this.groundTile === T.MUD;
+      const a = (!this.onGround ? PHYS.airAccel : turning ? PHYS.skid : PHYS.accel) * (slick ? 0.3 : 1);
       const before = Math.abs(this.vx);
       this.vx += dir * a * dt;
       // Nooit sneller dan het maximum; zat je erboven (na rennen), dan rustig afremmen.
@@ -70,7 +71,7 @@ export class Player {
       } else this.skidding = false;
     } else {
       this.skidding = false;
-      const f = this.onGround ? PHYS.friction : PHYS.friction * 0.25;
+      const f = (this.onGround ? PHYS.friction : PHYS.friction * 0.25) * (this.onGround && this.groundTile === T.MUD ? 0.1 : 1);
       const s = Math.abs(this.vx) - f * dt;
       this.vx = s <= 0 ? 0 : Math.sign(this.vx) * s;
     }
@@ -118,6 +119,8 @@ export class Player {
     if (r.landed) {
       this.jumping = false;
       const tile = map.get(r.groundX, r.groundY);
+      this.groundTile = tile;
+      if (tile === T.MUD && Math.abs(this.vx) > 60 && Math.random() < dt * 10) game.fx.splat(this.cx - this.face * 6, this.bottom - 2, '#4a3220', 2);
       if (tile === T.SPRING || tile === T.BOUNCY) {
         this.vy = -(tile === T.SPRING ? PHYS.springV : PHYS.branchV) * (input.jumpHeld ? 1.1 : 1);
         this.onGround = false; this.jumping = false;

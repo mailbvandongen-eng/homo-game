@@ -352,3 +352,23 @@ Lion.prototype.draw = function (c, time) {
   c.restore();
   bossExtras(this, c, time);
 };
+
+// Dolktandkat (Homotherium): hoge schouders, aflopende rug, korte staart, lange platte hoektanden.
+// Gedrag als de leeuw; een speer tijdens het grommen of mikken laat hem schrikken.
+export class Scimitar extends Lion {
+  constructor(x, y, arena) { super(x, y, arena); this.title = 'DOLKTANDKAT · Homotherium'; }
+}
+Scimitar.prototype.draw = function (c, time) {
+  if (this.invuln > 0 && Math.floor(time * 14) % 2 === 0) return;
+  groundShadow(c, this.cx, this.y + this.h, 58, 0.38);
+  c.save(); c.translate(Math.round(this.cx), Math.round(this.y + this.h));
+  c.scale(this.dir * 1.9, 1.9);
+  if (this.state === 'leap') c.rotate(Math.max(-0.3, Math.min(0.3, this.vy / 2000)));
+  if (this.state === 'dazed') c.rotate(Math.sin(time * 8) * 0.05);
+  const p = bossPose(this);
+  quad(c, { seed: 9, L: 28, H: 13, bodyH: 13, slope: 9, neck: 4, headSize: 1.15,
+    base: '#b08a58', light: '#d6b07c', dark: '#2e1c0c', belly: '#d8bc90', pattern: 'spots', spot: '#7a5a34',
+    head: 'cat', fangs: true, tail: 'short', eye: p.angry ? '#ff7a3a' : '#e8c84a', ...p }, time);
+  c.restore();
+  bossExtras(this, c, time);
+};

@@ -207,6 +207,10 @@ export class Audio {
       case 'ignite': this.noise(t, 0.6, 0.3, 'bandpass', 700, 2200, d); [62, 67, 71, 74].forEach((n, k) => this.marimba(midi(n), t + 0.12 + k * 0.09, 0.15, d)); break;
       case 'windwarn': this.noise(t, 0.7, 0.1, 'bandpass', 600, 1500, d); break;
       case 'wind': this.noise(t, 1.8, 0.22, 'bandpass', 450, 1000, d, 0.6); break;
+      case 'rumble2': this.noise(t, 0.9, 0.18, 'lowpass', 220, 90, d); break;
+      case 'thud': { const g = c.createGain(); this.env(g, t, 0.002, 0.3, 0.2); g.connect(d); this.osc('sine', 80, t, 0.22, g, 0.5); this.noise(t, 0.12, 0.2, 'lowpass', 500, 0, d); break; }
+      case 'bear': this.noise(t, 0.9, 0.45, 'lowpass', 380, 120, d); this.tone(75, 0.8, 'sawtooth', 0.12, t, d, 0.7); this.tone(110, 0.6, 'sawtooth', 0.05, t + 0.05, d, 0.7); break;
+      case 'stick': { const g = c.createGain(); this.env(g, t, 0.002, 0.3, 0.12); g.connect(d); this.osc('triangle', 220, t, 0.14, g, 0.6); this.noise(t, 0.08, 0.25, 'lowpass', 900, 0, d); break; }
       case 'rumble': this.noise(t, 1.6, 0.4, 'lowpass', 180, 70, d); this.tone(42, 1.5, 'sine', 0.3, t, d, 0.9); break;
     }
   }
@@ -215,6 +219,29 @@ export class Audio {
 // Akkoorden per maat (MIDI), melodie in zestienden (0 = rust), bas als stap boven de grondtoon per zestiende.
 const KICK4 = 'x...x...x...x...', SHAKE = '..x...x...x...x.', SLAP = '....x.......x...';
 const SONGS = {
+  coast: { bpm: 100, swing: 0.08, lead: 'pluck', padVol: 0.055,
+    chords: [[50, 54, 57], [55, 59, 62], [52, 55, 59], [57, 61, 64]],
+    bass: [0, null, null, 7, null, null, 12, null, 0, null, null, 7, null, 5, null, null],
+    melody: [62, 0, 66, 0, 69, 0, 71, 69, 67, 0, 66, 0, 64, 0, 0, 0, 66, 0, 69, 0, 74, 0, 73, 71, 69, 0, 0, 0, 0, 0, 0, 0],
+    arp: [0, null, 1, null, 2, null, 1, null, 0, null, 1, null, 2, null, 1, null],
+    drums: { kick: 'x.......x.......', shaker: '..x...x...x...x.', tom: '..............x.' } },
+  hills: { bpm: 112, swing: 0.1, lead: 'pluck', padVol: 0.05,
+    chords: [[52, 55, 59], [48, 52, 55], [50, 53, 57], [47, 50, 54]],
+    bass: [0, null, 7, null, 0, null, 7, null, 0, null, 7, null, 12, null, 10, null],
+    melody: [64, 0, 67, 69, 71, 0, 69, 67, 69, 0, 67, 64, 62, 0, 0, 0, 64, 0, 67, 0, 72, 71, 69, 67, 66, 0, 67, 0, 64, 0, 0, 0],
+    arp: [0, 2, 1, 2, 0, 2, 1, 2, 0, 2, 1, 2, 0, 2, 1, 2],
+    drums: { kick: 'x...x...x...x...', slap: '....x.......x...', shaker: 'x.x.x.x.x.x.x.x.' } },
+  deep: { bpm: 66, lead: 'pluck', padVol: 0.08,
+    chords: [[40, 43, 47], [41, 44, 48], [38, 41, 45], [40, 43, 46]],
+    bass: [0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+    melody: [64, 0, 0, 0, 0, 0, 67, 0, 0, 0, 0, 0, 65, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 62, 0, 0, 0, 0, 0, 0, 0],
+    arp: [0, null, null, null, null, null, 2, null, null, null, 1, null, null, null, null, null] },
+  lake: { bpm: 96, swing: 0.12, lead: 'marimba', padVol: 0.05,
+    chords: [[55, 59, 62], [52, 55, 59], [48, 52, 55], [50, 54, 57]],
+    bass: [0, null, null, null, 7, null, null, null, 0, null, null, null, 7, null, null, null],
+    melody: [67, 0, 71, 0, 74, 0, 72, 0, 71, 0, 69, 0, 67, 0, 0, 0, 64, 0, 67, 0, 71, 0, 72, 71, 69, 0, 0, 0, 0, 0, 0, 0],
+    arp: [0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1],
+    drums: { kick: 'x.......x.......', shaker: '..x...x...x...x.' } },
   savanna: { bpm: 104, swing: 0.12, lead: 'marimba', padVol: 0.045,
     chords: [[55, 59, 62], [60, 64, 67], [52, 55, 59], [57, 60, 64]],
     bass: [0, null, null, 7, null, null, 12, null, 0, null, 7, null, null, 5, null, null],
@@ -276,6 +303,9 @@ const SONGS = {
 };
 
 const AMBIENCE = {
+  coast: { every: 1.5, sounds: ['bird', 'water', 'wind', 'water', 'dove'] },
+  hills: { every: 1.4, sounds: ['cricket', 'cricket', 'bird', 'wind'] },
+  lake: { every: 1.3, sounds: ['bird', 'bird', 'water', 'dove', 'cricket'] },
   savanna: { every: 1.6, sounds: ['bird', 'bird', 'cricket', 'dove', 'wind'] },
   grassland: { every: 1.6, sounds: ['bird', 'cricket', 'cricket', 'dove', 'wind'] },
   gorge: { every: 1.8, sounds: ['bird', 'water', 'water', 'dove', 'cricket'] },

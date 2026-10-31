@@ -20,7 +20,7 @@ export class Fx {
     for (let i = 0; i < n; i++) this.add({ kind: 'drop', x: x + (Math.random() - 0.5) * 24, y, vx: (Math.random() - 0.5) * 200, vy: -160 - Math.random() * 320, life: 0.8, max: 0.8, r: 1.6 + Math.random() * 3, g: 1000 });
   }
   ripple(x, y, n = 1) { for (let i = 0; i < n; i++) this.add({ kind: 'ripple', x, y, vx: 0, vy: 0, life: 0.9 + i * 0.25, max: 0.9 + i * 0.25, r: 4, g: 0 }); }
-  splat(x, y) { for (let i = 0; i < 8; i++) this.add({ kind: 'drop', x, y, vx: (Math.random() - 0.5) * 140, vy: -60 - Math.random() * 100, life: 0.5, max: 0.5, r: 2, g: 800, color: '#e8902e' }); }
+  splat(x, y, color = '#e8902e', n = 8) { for (let i = 0; i < n; i++) this.add({ kind: 'drop', x, y, vx: (Math.random() - 0.5) * 140, vy: -60 - Math.random() * 100, life: 0.5, max: 0.5, r: 2, g: 800, color }); }
   text(x, y, str, color = '#fff6d0') { this.texts.push({ x, y, str, color, life: 0.9 }); }
 
   update(dt) {

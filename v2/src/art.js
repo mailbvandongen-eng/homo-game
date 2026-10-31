@@ -225,6 +225,9 @@ function drawHead(c, o, x, y, time) {
   else if (H === 'cat' || H === 'lion') { ear(-6, -9, -0.4, 3.2, 3.6); ear(1, -10.5, 0.2, 3.2, 3.6); }
   else if (H === 'pig') { ear(-4, -9, -0.6, 3, 5); }
   else if (H === 'gnu') { ear(-5, -6, -1.1, 2, 4.5); }
+  else if (H === 'bear') { ear(-6, -9, -0.3, 3.4, 3.4); ear(1, -10.5, 0.2, 3.4, 3.4); }
+  else if (H === 'rhino') { ear(-6, -8, -0.5, 2.4, 4.6); }
+  else if (H === 'horse') { ear(-4, -12, -0.2, 2, 5); }
   // Schedel + snuit
   if (H === 'hyena' || H === 'dog') {
     const sn = H === 'dog' ? 15 : 12;
@@ -247,6 +250,26 @@ function drawHead(c, o, x, y, time) {
     c.fillStyle = mix(base, dark, 0.4); c.beginPath(); c.arc(4, 3, 2.4, 0, Math.PI * 2); c.arc(8, -1, 1.8, 0, Math.PI * 2); c.fill();
     c.strokeStyle = '#f6efdc'; c.lineWidth = 2.4; c.lineCap = 'round'; c.beginPath(); c.moveTo(10, 6); c.quadraticCurveTo(14, 3, 12, -3); c.stroke();
     eye(c, 1, -3, 2.1, o.eye || '#3a2010', open, o.angry);
+  } else if (H === 'bear') {
+    // Brede kop met hoog voorhoofd en lange snuit (holenbeer)
+    fillShape(() => { c.beginPath(); c.moveTo(-9, 4); c.bezierCurveTo(-12, -8, -4, -12, 4, -10); c.bezierCurveTo(10, -8, 13, -4, 17, -2); c.bezierCurveTo(21, 0, 21, 5, 17, 6 + mouth * 3); c.bezierCurveTo(10, 8, 0, 9, -9, 4); c.closePath(); }, base);
+    fillShape(() => { c.beginPath(); c.ellipse(14, 2, 6.5, 4.4, 0.1, 0, Math.PI * 2); }, o.muzzle || mix(base, '#d8b890', 0.45));
+    c.fillStyle = INK; c.beginPath(); c.ellipse(19.5, 0, 2.6, 2, 0, 0, Math.PI * 2); c.fill();
+    if (mouth > 0.1) { c.fillStyle = '#4a1210'; c.beginPath(); c.moveTo(8, 6); c.quadraticCurveTo(14, 8 + mouth * 7, 19, 5); c.closePath(); c.fill(); c.fillStyle = '#f4ecd6'; c.beginPath(); c.moveTo(16, 5.5); c.lineTo(17, 9 + mouth * 2); c.lineTo(18.2, 5.5); c.fill(); c.beginPath(); c.moveTo(10, 6); c.lineTo(11, 8.5 + mouth * 2); c.lineTo(12, 6); c.fill(); }
+    eye(c, 4, -3, 1.9, o.eye || '#3a2010', open, o.angry);
+  } else if (H === 'rhino') {
+    // Lange kop met twee hoorns (Stephanorhinus)
+    fillShape(() => { c.beginPath(); c.moveTo(-8, -6); c.bezierCurveTo(0, -10, 10, -8, 18, -2); c.bezierCurveTo(24, 2, 24, 8, 18, 9); c.bezierCurveTo(8, 11, -4, 9, -8, 3); c.closePath(); }, base);
+    cel(c, () => { c.beginPath(); c.moveTo(14, -3); c.quadraticCurveTo(22, -16, 20, -24); c.quadraticCurveTo(24, -14, 21, -1); c.closePath(); }, '#d8ccb0', '#8a7c62', '#f2ead6', 1, 1.4);
+    cel(c, () => { c.beginPath(); c.moveTo(6, -7); c.quadraticCurveTo(10, -14, 9, -18); c.quadraticCurveTo(13, -12, 11, -6); c.closePath(); }, '#d8ccb0', '#8a7c62', '#f2ead6', 1, 1.4);
+    c.strokeStyle = mix(base, '#140a04', 0.4); c.lineWidth = 1; c.beginPath(); c.moveTo(-2, 0); c.quadraticCurveTo(4, 3, 10, 1); c.moveTo(-4, 4); c.quadraticCurveTo(2, 7, 8, 6); c.stroke();
+    eye(c, 0, -3, 1.5, o.eye || '#2a1a10', open, o.angry);
+  } else if (H === 'horse') {
+    // Langgerekte paardenkop met manen
+    fillShape(() => { c.beginPath(); c.moveTo(-6, -8); c.bezierCurveTo(2, -12, 8, -6, 16, 4); c.bezierCurveTo(20, 9, 17, 14, 12, 13); c.bezierCurveTo(6, 12, 0, 6, -6, 2); c.closePath(); }, base);
+    c.fillStyle = INK; c.beginPath(); c.ellipse(15, 9, 1.6, 1.2, 0.6, 0, Math.PI * 2); c.fill();
+    c.fillStyle = o.mane || INK; c.beginPath(); c.moveTo(-8, -6); c.lineTo(-2, -12); c.lineTo(-1, -6); c.closePath(); c.fill();
+    eye(c, 2, -4, 1.7, '#2a1a10', open);
   } else if (H === 'gnu') {
     fillShape(() => { c.beginPath(); c.moveTo(-6, -6); c.bezierCurveTo(0, -10, 6, -6, 14, 6); c.bezierCurveTo(16, 10, 12, 13, 8, 11); c.bezierCurveTo(2, 8, -6, 4, -6, -6); c.closePath(); }, grad(-9, 12));
     c.strokeStyle = '#e8e0cc'; c.lineWidth = 2.2; c.lineCap = 'round';
@@ -313,6 +336,8 @@ export const TREE_PALETTES = {
   forest: { bark: ['#24302a', '#435246', '#748a74'], leaf: ['#12302a', '#1f4a3c', '#33695a', '#5d9474', '#a6d0a0'] },
   java: { bark: ['#2a2a1e', '#4a4a34', '#7a7656'], leaf: ['#123a20', '#1e5a2c', '#2f7a3a', '#5aa04a', '#a6d47a'] },
   dmanisi: { bark: ['#33281e', '#5a4a38', '#8a7a62'], leaf: ['#25391e', '#38562a', '#557a36', '#86a64e', '#c4d68a'] },
+  temperate: { bark: ['#2e2a24', '#5a5248', '#9a9284'], leaf: ['#1e3a20', '#2e5a2c', '#47783c', '#76a252', '#b8d888'] },
+  hills: { bark: ['#3a2c1e', '#5e4a34', '#8e7656'], leaf: ['#2e3a1c', '#46562a', '#64763a', '#8e9c52', '#c6c88a'] },
 };
 
 const R2 = (a, b) => { const n = Math.sin(a * 91.7 + b * 47.3) * 24634.6345; return n - Math.floor(n); };

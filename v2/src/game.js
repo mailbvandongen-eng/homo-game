@@ -8,7 +8,7 @@ import { Renderer, drawPickup, drawTree, drawCampfire, drawStoneCache, drawFoodC
 import { PLATFORM_TYPES } from './platforms.js';
 import { WIND } from './art.js';
 import { SPECIES } from './species.js';
-import { GiantHyena, Lion } from './boss.js';
+import { GiantHyena, Lion, Scimitar } from './boss.js';
 import { Stalactite, Gnu } from './enemies.js';
 
 const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -76,7 +76,7 @@ export class Game {
 
   spawnAll(fromCheckpoint = false) {
     const L = this.level;
-    this.enemies = []; this.stonesFlying = []; this.projectiles = [];
+    this.enemies = []; this.stonesFlying = []; this.projectiles = []; this.spears = []; this.stuckSpears = [];
     this.arenaOn = false; this.boss = null;
     if (!fromCheckpoint) { this.pickups = []; this.decor = []; this.fires = []; this.meets = []; this.met = new Set(); this.banner = null; }
     this.stampedes = [];
@@ -95,7 +95,7 @@ export class Game {
         else if (e.type === 'meet') {
           // Een groepje van een andere soort: vriendelijk, ze doen hun eigen ding
           const sp = SPECIES[e.species];
-          const group = (e.offsets || [0, 40, 76]).map((dx, i) => {
+          const group = e.trace ? [] : (e.offsets || [0, 40, 76]).map((dx, i) => {
             const n = new Player(e.x + dx, e.y, { ...sp.look, size: (sp.look.size || 1) * (e.sizes?.[i] ?? 1) });
             n.face = -1; n.phase = i * 2.1; n.idle = e.idle?.[i] || 'chew';
             return n;
@@ -109,7 +109,7 @@ export class Game {
     const be = L.entities.find(e => e.type === 'boss');
     if (be && !this.bossBeaten) {
       const A = L.arena;
-      const Boss = L.boss === 'lion' ? Lion : GiantHyena;
+      const Boss = L.boss === 'lion' ? Lion : L.boss === 'homotherium' ? Scimitar : GiantHyena;
       this.boss = new Boss(be.x, be.y, { x1: A.x1 * TILE, x2: (A.x2 + 1) * TILE, ceil: (L.h - A.ceil) * TILE });
       this.enemies.push(this.boss);
     }
@@ -177,6 +177,7 @@ export class Game {
   }
 
   throwStone() {
+    if (this.player.tool === 'spear') return this.throwSpear();
     if (this.player.tool) return this.swing();
     if (this.stones <= 0) { this.fx.text(this.player.cx, this.player.y - 6, 'geen stenen'); return; }
     if (this.stonesFlying.length >= 2) return;
@@ -185,6 +186,42 @@ export class Game {
     this.stonesFlying.push({ x: p.cx + p.face * 10 - 5, y: p.y + 10, w: 10, h: 10, vx: p.face * 400 + p.vx * 0.35, vy: -240, bounces: 0, life: 1.6, spin: 0 });
     p.throwAnim = 0.25;
     this.audio.play('throw');
+  }
+
+  // Werpspeer: vliegt bijna recht, verjaagt dieren en blijft steken in kleiwanden (dan kun je erop staan)
+  throwSpear() {
+    const p = this.player;
+    if ((p.swingCd || 0) > 0 || this.spears.length) return;
+    p.swingCd = 0.4; p.throwAnim = 0.25;
+    this.spears.push({ x: p.cx + p.face * 4 - 17, y: p.y + 12, w: 34, h: 6, vx: p.face * 560 + p.vx * 0.3, vy: -50, life: 1.6, dir: p.face });
+    this.audio.play('throw');
+  }
+  updateSpears(dt) {
+    for (const s of this.spears) {
+      s.life -= dt; s.vy += 260 * dt;
+      const steps = 3;
+      for (let k = 0; k < steps && s.life > 0; k++) {
+        s.x += s.vx * dt / steps; s.y += s.vy * dt / steps;
+        const tipX = s.dir > 0 ? s.x + s.w : s.x, tipY = s.y + 3, cx = Math.floor(tipX / TILE), cy = Math.floor(tipY / TILE), t = this.map.get(cx, cy);
+        if (t === T.CLAY) {
+          // Steekt in de wand: wordt een opstapje dat uit de wand steekt
+          const face = s.dir > 0 ? cx * TILE : (cx + 1) * TILE;
+          const plat = { kind: 'spear', dir: s.dir, x: s.dir > 0 ? face - 34 : face, w: 34, top: tipY - 2, dx: 0, dy: 0, wob: 0.4,
+            standable() { return true; }, update(dt) { this.wob = Math.max(0, this.wob - dt); },
+            draw(c, time) { drawStuckSpear(c, this, time); } };
+          this.stuckSpears.push(plat); this.platforms.push(plat);
+          if (this.stuckSpears.length > 6) { const old = this.stuckSpears.shift(); this.platforms = this.platforms.filter(q => q !== old); }
+          this.fx.dust(face, tipY, -s.dir, 3); this.audio.play('stick'); s.life = 0; break;
+        }
+        if (this.map.solidAt(cx, cy)) { this.fx.dust(tipX, tipY, -s.dir, 3); this.audio.play('hit'); s.life = 0; break; }
+        for (const e of this.enemies) {
+          if (e.fleeing || !e.active || !e.harmful?.() && !e.isBoss) continue;
+          if (overlap(s, e.hitbox())) { if (e.isBoss || !e.immune || e.axeOnly) e.scare(s.dir, this); this.audio.play('hit'); s.life = 0; break; }
+        }
+      }
+      if (s.y > this.level.pxH) s.life = 0;
+    }
+    this.spears = this.spears.filter(s => s.life > 0);
   }
 
   // Handbijl of fakkel: korte zwaai voor je. Verjaagt dieren, breekt gebarsten rots, slaat vruchten weg.
@@ -198,7 +235,7 @@ export class Game {
     for (const e of this.enemies) {
       if (e.fleeing || !e.active) continue;
       if (!overlap(box, e.hitbox())) continue;
-      if (e.isBoss) e.scare(p.face, this); else if (!e.immune) e.scare(p.face, this);
+      if (e.isBoss) e.scare(p.face, this); else if (!e.immune || e.axeOnly) e.scare(p.face, this);
       this.audio.play('hit');
     }
     for (const pl of this.platforms) { const hz = pl.hazard?.() || (pl.headX && pl.state === 'warn' ? { x: pl.headX() - 4, y: pl.top - 26, w: 38, h: 34 } : null); if (hz && overlap(box, hz)) pl.scare?.(this); }
@@ -314,6 +351,7 @@ export class Game {
     this.updateProjectiles(dt);
     this.updateArena();
     this.updateStones(dt);
+    this.updateSpears(dt);
     this.updatePickups(dt);
 
     // Voorraadplek met stenen = checkpoint (habilis kende nog geen vuur)
@@ -377,7 +415,8 @@ export class Game {
     const left = this.camX - 64, right = this.camX + this.viewW + 64;
     for (const e of this.enemies) {
       if (e.gone) continue;
-      if (!e.active) { if (e.x + e.w > left && e.x < right) e.active = true; else continue; }
+      if (!e.active) { if ((e.x + e.w > left && e.x < right) || (e.alwaysNear && Math.abs(e.cx - p.cx) < 760)) e.active = true; else continue; }
+      if (e.alwaysNear && Math.abs(e.cx - p.cx) > 900) continue;
       e.update(dt, this);
       if (e.y > this.level.pxH + 64) { e.gone = true; continue; }
       if (e.fleeing || p.dead) continue;
@@ -486,7 +525,7 @@ export class Game {
         const x = this.camX - 60;
         let y = null; const cx = Math.floor(x / TILE);
         for (let cy = 0; cy < this.map.h; cy++) if (this.map.solidAt(cx, cy)) { y = cy * TILE; break; }
-        if (y !== null) this.enemies.push(new Gnu(x, y));
+        if (y !== null) this.enemies.push(new Gnu(x, y, { skin: s.kind }));
         if (Math.random() < 0.5) this.shake(2);
       }
     }
@@ -615,7 +654,7 @@ export class Game {
     if (p.y < top) ty = p.y - this.viewH * 0.28;
     else if (p.bottom > bottom && p.onGround) ty = p.bottom - this.viewH * 0.62;
     else if (p.bottom > this.camY + this.viewH * 0.8) ty = p.bottom - this.viewH * 0.8;
-    this.camY += (ty - this.camY) * Math.min(1, dt * 5);
+    this.camY += (ty - this.camY) * Math.min(1, dt * (p.vy > 300 ? 12 : 5));
     this.camX = Math.max(0, Math.min(this.level.pxW - this.viewW, this.camX));
     this.camY = Math.max(0, Math.min(this.level.pxH - this.viewH, this.camY));
     if (this.arenaOn) {
@@ -658,7 +697,7 @@ export class Game {
       else drawPickup(c, k2, this.time);
     }
     if (this.npcs && this.finish && vis(this.finish.x, 420)) for (const n of this.npcs) n.draw(c, this.time + n.x);
-    for (const m of this.meets) if (vis(m.x, 200)) for (const n of m.group) n.draw(c, this.time + n.phase);
+    for (const m of this.meets) if (vis(m.x, 200)) { if (m.trace) drawFootprints(c, m.x, m.y); for (const n of m.group) n.draw(c, this.time + n.phase); }
     for (const pl of this.platforms) if (vis(pl.x, 140)) pl.draw(c, this.time);
     for (const e of this.enemies) if (e.active || vis(e.x)) e.draw(c, this.time);
     for (const s of this.stonesFlying) {
@@ -666,6 +705,7 @@ export class Game {
       c.fillStyle = '#2a2c30'; c.beginPath(); c.moveTo(-5, 1); c.lineTo(-2, -5); c.lineTo(4, -4); c.lineTo(5, 2); c.lineTo(0, 5); c.closePath(); c.fill();
       c.fillStyle = '#7d8590'; c.beginPath(); c.arc(-1, -1, 2, 0, Math.PI * 2); c.fill(); c.restore();
     }
+    for (const s of this.spears) drawFlyingSpear(c, s);
     for (const q of this.projectiles) {
       c.save(); c.translate(q.x + 6, q.y + 6); c.rotate(q.spin);
       c.fillStyle = '#7a3e10'; c.beginPath(); c.arc(0, 0, 6.5, 0, Math.PI * 2); c.fill();
@@ -867,9 +907,36 @@ function wrap(c, text, maxW) {
   return out;
 }
 
+function drawFlyingSpear(c, s) {
+  c.save(); c.translate(s.x + s.w / 2, s.y + 3); c.rotate(Math.atan2(s.vy, s.vx * s.dir) * s.dir); c.scale(s.dir, 1);
+  c.strokeStyle = '#22140a'; c.lineWidth = 4.2; c.lineCap = 'round'; c.beginPath(); c.moveTo(-18, 0); c.lineTo(15, 0); c.stroke();
+  c.strokeStyle = '#b08850'; c.lineWidth = 2.4; c.beginPath(); c.moveTo(-18, 0); c.lineTo(15, 0); c.stroke();
+  c.fillStyle = '#d8c090'; c.beginPath(); c.moveTo(14, -2); c.lineTo(20, 0); c.lineTo(14, 2); c.closePath(); c.fill();
+  c.restore();
+}
+function drawStuckSpear(c, P, time) {
+  const wob = Math.sin(time * 40) * P.wob * 2;
+  c.save(); c.translate(P.dir > 0 ? P.x + P.w : P.x, P.top + 2); c.rotate(wob * 0.02); c.scale(P.dir, 1);
+  c.strokeStyle = '#22140a'; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(4, 0); c.lineTo(-36, -1 + wob); c.stroke();
+  c.strokeStyle = '#b08850'; c.lineWidth = 3; c.beginPath(); c.moveTo(4, 0); c.lineTo(-36, -1 + wob); c.stroke();
+  c.strokeStyle = '#e0c48a'; c.lineWidth = 1; c.beginPath(); c.moveTo(0, -1); c.lineTo(-30, -1.6 + wob); c.stroke();
+  c.restore();
+}
+function drawFootprints(c, x, y) {
+  // Afdrukken van blote voeten in het slik
+  for (let i = 0; i < 7; i++) {
+    const fx = x - 60 + i * 20, fy = y - 1.5 + (i % 2) * 1.2;
+    c.fillStyle = 'rgba(30,18,10,0.55)'; c.beginPath(); c.ellipse(fx, fy, 6, 1.8, 0, 0, Math.PI * 2); c.fill();
+    for (let k = 0; k < 4; k++) { c.beginPath(); c.arc(fx + 6 + k * 0.6, fy - 1.4 + k * 0.8, 0.9, 0, Math.PI * 2); c.fill(); }
+  }
+}
+
 function toolIcon(c, tool, x, y, s, time) {
   c.save(); c.translate(x, y); c.scale(s, s);
-  if (tool === 'axe') {
+  if (tool === 'spear') {
+    c.rotate(-0.7); c.strokeStyle = '#6a4a28'; c.lineWidth = 2.4; c.lineCap = 'round'; c.beginPath(); c.moveTo(0, 11); c.lineTo(0, -8); c.stroke();
+    c.fillStyle = '#e0c48a'; c.beginPath(); c.moveTo(-2.4, -7); c.lineTo(0, -13); c.lineTo(2.4, -7); c.closePath(); c.fill();
+  } else if (tool === 'axe') {
     c.rotate(-0.5);
     c.fillStyle = '#3a3226'; c.beginPath(); c.moveTo(0, -9); c.quadraticCurveTo(8, -1, 1, 10); c.quadraticCurveTo(-7, -1, 0, -9); c.fill();
     c.fillStyle = '#c9b183'; c.beginPath(); c.moveTo(0, -7.5); c.quadraticCurveTo(6, -1, 1, 8); c.quadraticCurveTo(-5, -1, 0, -7.5); c.fill();

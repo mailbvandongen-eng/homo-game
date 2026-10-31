@@ -25,6 +25,24 @@ export const SPECIES = {
     text: 'Leefde in Zuid-Afrika tegelijk met vroege Homo, onder meer bij Swartkrans. Net als boisei: grote kiezen en een schedelkam. In Swartkrans ligt ook een schedel van robustus met twee gaatjes: tandafdrukken van een luipaard.',
     look: { fur: '#5a3e2c', hair: '#2e1d12', skin: '#8a6040', limb: '#74503a', crest: true, size: 0.98 },
   },
+  heidelbergensis: {
+    name: 'Homo heidelbergensis', nick: '"Mens van Heidelberg"',
+    when: 'circa 700.000 – 200.000 jaar geleden', where: 'Afrika en Europa',
+    text: 'Groot en sterk, met een flink brein. Genoemd naar een kaak uit Mauer bij Heidelberg (1907). Welke fossielen bij deze soort horen wordt veel besproken; sommigen gebruiken voor de Afrikaanse vormen de naam Homo bodoensis.',
+    look: { fur: '#7a5638', hair: '#2e1c10', skin: '#b88660', limb: '#946646', flat: true, size: 1.18, tall: true },
+  },
+  antecessor: {
+    name: 'Sporen van Homo antecessor', nick: '"Pionier"',
+    when: 'circa 850.000 jaar geleden', where: 'Happisburgh, Engeland',
+    text: 'In 2013 spoelde de zee bij Happisburgh voetafdrukken bloot van een groepje volwassenen en kinderen, ongeveer 850.000 jaar oud. Mogelijk van Homo antecessor, bekend uit Atapuerca. Binnen een paar weken had de zee ze weer weggespoeld; ze zijn alleen gefotografeerd.',
+    look: {},
+  },
+  sima: {
+    name: 'De Sima-mensen', nick: '"Vroege Neanderthaler-lijn"',
+    when: 'circa 430.000 jaar geleden', where: 'Atapuerca, Spanje',
+    text: 'Uit hun botten is DNA gehaald, het oudste menselijke DNA dat we kennen. Daaruit blijkt dat ze bij de vroege voorouders van de Neanderthalers horen. Ze hadden al een paar typische Neanderthaler-kenmerken, zoals in hun gebit en kaak.',
+    look: { fur: '#6e4c34', hair: '#3a2214', skin: '#c49470', limb: '#9a6a4a', flat: true, size: 1.08 },
+  },
   erectus: {
     name: 'Homo erectus', nick: '"Rechtopgaande mens"',
     when: 'circa 1,9 miljoen – 110.000 jaar geleden', where: 'Afrika en Azië',

@@ -21,5 +21,7 @@ Een volledige herbouw als platformspel: strakke besturing (variabele springhoogt
 Wereld 1 (Homo habilis) is compleet: 1-1 Eerste stappen, 1-2 De rivierkloof, 1-3 Het galerijbos, 1-4 De grot van de reuzenhyena.
 
 Wereld 2 (Homo erectus) is compleet: 2-1 De eerste handbijl (Kokiselei), 2-2 Buiten Afrika (Dmanisi), 2-3 De vulkanen van Java, 2-4 Het vuur (Swartkrans/Wonderwerk). Nieuw: handbijl, gebarsten rots, stormloop, wind, lava, vulkaanbommen, Stegodon, fakkel en kampvuren, eindbaas leeuw.
+
+Wereld 3 (Homo heidelbergensis) is compleet: 3-1 De krijtkust (Boxgrove), 3-2 De heuvels van Atapuerca, 3-3 De put van de botten (Sima de los Huesos), 3-4 De speren van Schöningen. Nieuw: slik, rollende rotsblokken, holenberen, neushoorns, verticale grot, werpspeer die in kleiwanden blijft steken, eindbaas Homotherium.
 - `v2/src/player.js`, `game.js`, `render.js`, `audio.js`, `input.js`
 - `?debug` achter de URL toont de botsingsvakken
