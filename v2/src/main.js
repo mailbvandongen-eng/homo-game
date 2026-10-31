@@ -16,7 +16,7 @@ import level34 from './levels/w3-4.js';
 import { SPECIES } from './species.js';
 
 // Ophogen bij elke publicatie: zo zie je op het titelscherm of je de nieuwste versie hebt.
-export const VERSION = '2026-10-31i';
+export const VERSION = '2026-10-31j';
 
 const LEVELS = [level11, level12, level13, level14, level21, level22, level23, level24, level31, level32, level33, level34];
 const $ = id => document.getElementById(id);

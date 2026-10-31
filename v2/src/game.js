@@ -830,10 +830,11 @@ export class Game {
     const pill = (x, y, w) => { c.fillStyle = '#0f1d1fa8'; c.beginPath(); c.roundRect(x, y, w, 30, 15); c.fill(); };
     c.font = '800 15px system-ui, sans-serif'; c.textBaseline = 'middle';
     // Hartjes en levens
-    pill(sl, st, 136);
-    for (let i = 0; i < MAX_HEARTS; i++) heart(c, sl + 18 + i * 22, st + 15, i < this.hearts);
-    miniHead(c, sl + 90, st + 15);
-    c.fillStyle = '#fff1c4'; c.fillText('×' + this.lives, sl + 102, st + 16);
+    pill(sl, st, 168);
+    for (let i = 0; i < MAX_HEARTS; i++) heart(c, sl + 17 + i * 19.5, st + 15, i < this.hearts);
+    miniHead(c, sl + 123, st + 15);
+    c.fillStyle = '#fff1c4'; c.fillText('×' + this.lives, sl + 135, st + 16);
+    c.save(); c.translate(32, 0);
     // Botjes
     pill(sl + 144, st, 72);
     c.save(); c.translate(sl + 162, st + 15); c.scale(0.8, 0.8); drawPickup(c, { type: 'bone', x: 0, y: 0 }, 0); c.restore();
@@ -845,6 +846,7 @@ export class Game {
     // Artefacten
     pill(sl + 292, st, 84);
     for (let i = 0; i < 3; i++) artifactIcon(c, sl + 312 + i * 24, st + 15, 1, i < this.artifacts.size);
+    c.restore();
     c.textBaseline = 'alphabetic';
   }
 

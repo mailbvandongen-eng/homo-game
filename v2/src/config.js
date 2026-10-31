@@ -34,5 +34,5 @@ export const PHYS_BASE = { ...PHYS };
 export function applyPhys(over = {}) { Object.assign(PHYS, PHYS_BASE, over); }
 
 export const START_LIVES = 5;
-export const MAX_HEARTS = 3;
+export const MAX_HEARTS = 5;
 export const MAX_STONES = 9;
