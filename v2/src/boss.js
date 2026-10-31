@@ -256,7 +256,7 @@ GiantHyena.prototype.draw = function (c, time) {
   const breathe = Math.sin(time * (low ? 9 : 2.5)) * (low ? 1.5 : 1);
   const C = { base: '#a37a46', dark: '#5c3e20', light: '#cfa468', spot: '#3a2614', mane: '#2a1a0c' };
   c.save(); c.translate(Math.round(this.cx), Math.round(this.y + this.h));
-  c.scale(this.dir * 0.72, 0.72);
+  c.scale(this.dir * 1.1, 1.1);
   if (st === 'leap') c.rotate(Math.max(-0.3, Math.min(0.3, this.vy / 2000)));
   if (st === 'dazed') c.rotate(Math.sin(time * 8) * 0.05);
   const by = -Math.abs(Math.sin(ph)) * stride * 3 + breathe * 0.4;
