@@ -310,6 +310,13 @@ export class Game {
       this.fx.update(dt);
       return;
     }
+    // Uitlegvenster (ontmoeting, handbijl): het spel staat stil tot je zelf verdergaat
+    if (this.banner && this.banner.hold && this.state === 'play') {
+      this.banner.t += dt;
+      if (this.banner.t > 0.7 && (inp.any || inp.jump || inp.throw)) { this.banner.hold = false; this.banner.t = 6.5; this.lastInput = { ...inp, jump: false, jumpSolid: false, throw: false }; }
+      this.fx.update(dt);
+      return;
+    }
     if (this.state === 'intro') {
       this.introT += dt;
       if (this.introT > 1.4) this.state = 'play';
@@ -374,7 +381,7 @@ export class Game {
       for (const n of m.group) this.updateNpc(n, dt);
       if (!m.seen && Math.abs(p.cx - m.x) < 220) {
         m.seen = true; this.met.add(m.species);
-        this.banner = { sp: SPECIES[m.species], t: 0 };
+        this.banner = { sp: SPECIES[m.species], t: 0, hold: true };
         this.audio.play('meet'); this.ui.met?.(m.species);
       }
     }
@@ -488,7 +495,7 @@ export class Game {
       } else if (k.type === 'handaxe') {
         p.tool = 'axe'; this.toolFound = true;
         this.audio.play('artifact'); this.fx.sparkle(k.x, k.y, '#ffe27a');
-        this.banner = { sp: { name: 'Handbijl', nick: '"Acheuléen"', when: 'circa 1,76 miljoen jaar geleden', text: 'Je hebt een handbijl! Druk op de actieknop (X of de knop rechts) om te hakken: dieren schrikken weg en gebarsten rots breekt. Handbijlen waren eeuwenlang het belangrijkste gereedschap van erectus.' }, t: 0 };
+        this.banner = { hold: true, sp: { name: 'Handbijl', nick: '"Acheuléen"', when: 'circa 1,76 miljoen jaar geleden', text: 'Je hebt een handbijl! Druk op de actieknop (X of de knop rechts) om te hakken: dieren schrikken weg en gebarsten rots breekt. Handbijlen waren eeuwenlang het belangrijkste gereedschap van erectus.' }, t: 0 };
       } else if (k.type === 'artifact') {
         this.artifacts.add(k.id ?? k.x);
         this.audio.play('artifact'); this.fx.sparkle(k.x, k.y, '#ffe27a'); this.fx.sparkle(k.x, k.y, '#ffffff');
@@ -827,12 +834,12 @@ export class Game {
 
   drawBanner(c) {
     const b = this.banner, sp = b.sp;
-    const a = Math.min(1, b.t * 4, (7 - b.t) * 2);
+    const a = b.hold ? Math.min(1, b.t * 4) : Math.min(1, b.t * 4, (7 - b.t) * 2);
     const w = Math.min(520, this.W - 40), x = (this.W - w) / 2, y = this.safe.t + 44;
     c.globalAlpha = a;
     c.font = '13px system-ui, sans-serif';
     const lines = wrap(c, sp.text, w - 28);
-    const h = 58 + lines.length * 17;
+    const h = 58 + lines.length * 17 + (b.hold ? 24 : 0);
     c.fillStyle = '#10221fe6'; c.beginPath(); c.roundRect(x, y, w, h, 14); c.fill();
     c.strokeStyle = '#f6cf7588'; c.lineWidth = 1; c.stroke();
     c.fillStyle = '#f6cf75'; c.font = '800 11px system-ui, sans-serif'; c.fillText('ONTMOETING · ' + sp.when.toUpperCase(), x + 14, y + 20);
@@ -841,6 +848,10 @@ export class Game {
     c.fillStyle = '#cfe1c8'; c.font = 'italic 13px system-ui, sans-serif'; c.fillText(sp.nick, x + 24 + nameW, y + 42);
     c.fillStyle = '#e8e2c8'; c.font = '13px system-ui, sans-serif';
     lines.forEach((l, i) => c.fillText(l, x + 14, y + 62 + i * 17));
+    if (b.hold && b.t > 0.7) {
+      c.globalAlpha = a * (0.65 + Math.sin(this.time * 4) * 0.35); c.fillStyle = '#f6cf75'; c.font = '800 12px system-ui, sans-serif'; c.textAlign = 'right';
+      c.fillText(this.input.touchMode ? '▶ Tik om verder te spelen' : '▶ Druk op een toets om verder te spelen', x + w - 14, y + h - 10); c.textAlign = 'left';
+    }
     c.globalAlpha = 1;
   }
 

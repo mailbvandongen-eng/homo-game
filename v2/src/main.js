@@ -17,7 +17,7 @@ import { SPECIES } from './species.js';
 import { installPixel } from './pixelmode.js';
 
 // Ophogen bij elke publicatie: zo zie je op het titelscherm of je de nieuwste versie hebt.
-export const VERSION = '2026-11-01e';
+export const VERSION = '2026-11-01f';
 
 const LEVELS = [level11, level12, level13, level14, level21, level22, level23, level24, level31, level32, level33, level34];
 const $ = id => document.getElementById(id);
