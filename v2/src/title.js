@@ -156,8 +156,10 @@ export class TitleScene {
       this.homF = f;
       const S = 64, cv = this.homCv || (this.homCv = document.createElement('canvas')); cv.width = S; cv.height = S;
       const g = cv.getContext('2d', { willReadFrequently: true });
-      const p = pose('sit', t); p.hF = 1.55; p.hB = 1.5; p.kF = 1.35 + Math.sin(t * 2) * 0.25; p.kB = 1.35 - Math.sin(t * 2) * 0.25; p.aF = 0; p.aB = 0;
-      p.sB = 2.8; p.eB = 0.2 + Math.sin(t * 7) * 0.45; p.sF = 0.55; p.eF = 0.6; p.lean = 0.05; p.neck = -0.1;
+      // Schrijlings op de tak: billen erop, benen hangen aan weerszijden naar beneden, één hand op de tak
+      const p = pose('idle', t); p.root = 0; p.lean = 0.08; p.neck = -0.12 + Math.sin(t * 0.8) * 0.05;
+      const sw = Math.sin(t * 2) * 0.2; p.hF = 1.4; p.kF = 1.35 + sw; p.aF = -0.1; p.hB = 1.3; p.kB = 1.25 - sw; p.aB = -0.1;
+      p.sB = 0.3; p.eB = 0.3; p.sF = 2.6 + Math.sin(t * 7) * 0.25; p.eF = -0.4;
       g.save(); g.translate(S / 2, S - 6); g.scale(-0.33, 0.33);
       drawRig(g, rigLook(SPECIES.habilis.look || {}), p, { time: t, mouth: 'open' });
       g.restore();
@@ -169,6 +171,8 @@ export class TitleScene {
       for (const i of out) { d[i * 4] = 26; d[i * 4 + 1] = 15; d[i * 4 + 2] = 8; d[i * 4 + 3] = 255; }
       g.putImageData(img, 0, 0);
     }
-    c.drawImage(this.homCv, Math.round(x - 32), Math.round(y - 64 + 6 + this.homDy));
+    // Heup (44 eenheden boven de voeten, schaal 0,33) net boven de bovenkant van de tak
+    const legs = rigLook(SPECIES.habilis.look || {}).legs || 1, hipY = 64 - 6 - 44 * legs * 0.33;
+    c.drawImage(this.homCv, Math.round(x - 32), Math.round(y - hipY - 5));
   }
 }
