@@ -1,0 +1,26 @@
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:system-ui,sans-serif}
+canvas{position:fixed;inset:0;width:100vw;height:100vh;image-rendering:pixelated}
+.ui{position:fixed;inset:0;display:grid;grid-template-rows:1fr auto;pointer-events:none}
+.mid{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:14vh;gap:10px}
+.sub{color:#fffbe6;font-weight:800;font-size:clamp(13px,2.2vw,19px);text-shadow:0 2px 0 #2a4a1e,0 0 8px #2a4a1e;letter-spacing:.04em;position:absolute;top:39vh;left:0;right:0;text-align:center}
+.row{display:flex;gap:12px;pointer-events:auto}
+.btn{font:900 clamp(16px,2.8vw,22px) system-ui,sans-serif;padding:12px 26px;border-radius:12px;border:3px solid #2a1a0c;cursor:pointer;box-shadow:0 5px 0 #2a1a0c, inset 0 3px 0 #ffffff70}
+.play{background:linear-gradient(#ffe46a,#ffb830);color:#3a1e0c}
+.map{background:linear-gradient(#9ad45a,#5aa046);color:#163a10}
+.icons{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:12px;display:flex;gap:8px;pointer-events:auto}
+.ic{width:42px;height:42px;border-radius:50%;border:3px solid #2a1a0c;background:#fffbe6;font-size:19px;display:grid;place-items:center;box-shadow:0 3px 0 #2a1a0c}
+.ver{position:fixed;left:14px;bottom:14px;color:#fffbe6;font:700 12px system-ui;text-shadow:0 1px 0 #2a1a0c}
+</style></head><body>
+<canvas id="c"></canvas>
+<div class="sub">Van de eerste mens tot Mars</div>
+<div class="ui"><div class="mid"><div class="row"><button class="btn play">▶ Spelen</button><button class="btn map"><span style="display:inline-flex;vertical-align:-3px;margin-right:6px"><svg viewBox="0 0 12 12" width="22" height="22" shape-rendering="crispEdges"><rect x="1" y="2" width="3" height="8" fill="#fffbe6"/><rect x="4" y="1" width="4" height="8" fill="#e8dca8"/><rect x="8" y="2" width="3" height="8" fill="#fffbe6"/><rect x="5" y="3" width="1" height="1" fill="#c0302a"/><rect x="6" y="4" width="1" height="1" fill="#c0302a"/><rect x="6" y="6" width="1" height="1" fill="#c0302a"/><rect x="1" y="2" width="10" height="1" fill="#2a1a0c"/><rect x="1" y="9" width="10" height="1" fill="#2a1a0c"/></svg></span>Kies level</button></div></div></div>
+<div class="icons"><div class="ic"><svg viewBox="0 0 12 12" width="22" height="22" shape-rendering="crispEdges"><rect x="3" y="2" width="1" height="7" fill="#2a1a0c"/><rect x="4" y="2" width="5" height="1" fill="#2a1a0c"/><rect x="8" y="2" width="1" height="6" fill="#2a1a0c"/><rect x="1" y="8" width="3" height="2" fill="#2a1a0c"/><rect x="6" y="7" width="3" height="2" fill="#2a1a0c"/></svg></div><div class="ic"><svg viewBox="0 0 12 12" width="22" height="22" shape-rendering="crispEdges"><rect x="1" y="4" width="3" height="4" fill="#2a1a0c"/><rect x="4" y="3" width="1" height="6" fill="#2a1a0c"/><rect x="5" y="2" width="1" height="8" fill="#2a1a0c"/><rect x="7" y="4" width="1" height="4" fill="#2a1a0c"/><rect x="9" y="3" width="1" height="6" fill="#2a1a0c"/></svg></div><div class="ic"><svg viewBox="0 0 12 12" width="22" height="22" shape-rendering="crispEdges"><rect x="1" y="4" width="10" height="7" fill="#2a1a0c"/><rect x="1" y="1" width="10" height="2" fill="#2a1a0c"/><rect x="2" y="5" width="8" height="5" fill="#fffbe6"/><rect x="3" y="1" width="1" height="2" fill="#fffbe6"/><rect x="6" y="1" width="1" height="2" fill="#fffbe6"/><rect x="9" y="1" width="1" height="2" fill="#fffbe6"/><rect x="4" y="6" width="1" height="3" fill="#2a1a0c"/><rect x="5" y="7" width="2" height="1" fill="#2a1a0c"/></svg></div><div class="ic"><svg viewBox="0 0 12 12" width="22" height="22" shape-rendering="crispEdges"><rect x="3" y="2" width="5" height="1" fill="#2a1a0c"/><rect x="2" y="3" width="1" height="6" fill="#2a1a0c"/><rect x="3" y="9" width="5" height="1" fill="#2a1a0c"/><rect x="8" y="3" width="1" height="2" fill="#2a1a0c"/><rect x="8" y="7" width="1" height="2" fill="#2a1a0c"/><rect x="9" y="1" width="1" height="4" fill="#2a1a0c"/><rect x="7" y="4" width="3" height="1" fill="#2a1a0c"/></svg></div></div>
+<div class="ver">versie 0.29.0</div>
+<script type="module">
+import { TitleScene, TH } from '../v2/src/title.js';
+const cv = document.getElementById('c'), c = cv.getContext('2d'), sc = new TitleScene();
+const loop = now => { const W = Math.round(TH * innerWidth / innerHeight); if (cv.width !== W) { cv.width = W; cv.height = TH; } sc.draw(c, W, (window.T ?? now / 1000)); requestAnimationFrame(loop); };
+requestAnimationFrame(loop);
+</script></body></html>
