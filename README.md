@@ -26,7 +26,9 @@ Wereld 3 (Homo heidelbergensis) is compleet: 3-1 De krijtkust (Boxgrove), 3-2 De
 - `v2/src/player.js`, `game.js`, `render.js`, `audio.js`, `input.js`
 - `?debug` achter de URL toont de botsingsvakken
 
-## Pixelversie (v3): `v3/`
+## Pixelversie (v3): `v3/` — het hoofdspel
+
+`/homo-game/` stuurt door naar `v3/`. De allereerste versie staat nog in `legacy/`.
 
 Dezelfde game (levels, besturing en gameplay uit `v2/src`) met een andere tekenlaag: `v2/src/pixelmode.js`.
 De pagina `v3/index.html` zet `window.PIXEL_MODE = true` en laadt `../v2/src/main.js`.
@@ -35,3 +37,5 @@ De pagina `v3/index.html` zet `window.PIXEL_MODE = true` en laadt `../v2/src/mai
 - Tegels, lucht, heuvels, water/lava, duisternis en HUD handgemaakt in pixels per landschap (paletten in `PAL`)
 - Figuren, dieren en bomen: hun vectortekening wordt omgezet naar pixels (harde rand, minder kleuren, 1px omlijning)
 - Teksten, knoppen en banners op een scherp overlay-canvas (`#ui`)
+
+- Viervoeters en eindbazen zijn handgemaakte pixelsprites uit `v2/src/pixelanimals.js` (één generator, per soort eigen bouw)

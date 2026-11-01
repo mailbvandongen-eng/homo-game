@@ -7,6 +7,7 @@ import { TILE } from './config.js';
 import { T } from './level.js';
 import { drawPickup, drawStoneCache, drawCampfire, drawFoodCache, drawLiana, drawCave, drawShelter, flintIcon, artifactIcon } from './render.js';
 import { drawFlyingSpear, drawFootprints, toolIcon } from './game.js';
+import { drawAnimal } from './pixelanimals.js';
 
 export const PS = 0.75;           // pixels per wereldeenheid
 const PT = TILE * PS;             // 24 pixels per tegel
@@ -74,7 +75,7 @@ class PixelView {
     this.g = game;
     this.scratch = document.createElement('canvas'); this.sc = this.scratch.getContext('2d', { willReadFrequently: true });
     this.outCv = document.createElement('canvas'); this.oc = this.outCv.getContext('2d');
-    this.cache = new Map(); this.chunks = new Map(); this.tiles = new Map();
+    this.cache = new Map(); this.chunks = new Map(); this.tiles = new Map(); this.objCache = new WeakMap(); this.nullCtx = null;
     this.ui = document.getElementById('ui');
     this.uc = this.ui ? this.ui.getContext('2d') : null;
     this.build();
@@ -135,6 +136,24 @@ class PixelView {
     });
   }
 
+  // Bewegende figuur, maar hooguit ~12x per seconde opnieuw omgezet (zoals echte pixel-animatie).
+  // Tussendoor wordt het laatste beeld op de nieuwe plek gezet. Dat spaart veel rekenwerk (en houdt de muziek strak).
+  liveObj(c, obj, x, y, w, h, fn, fps = 12) {
+    let m = this.objCache.get(obj);
+    const now = this.g.time;
+    const rx = x - (obj.x ?? 0), ry = y - (obj.y ?? obj.top ?? 0);
+    if (!m || now - m.t >= 1 / fps || now < m.t || m.face !== obj.face || m.dir !== obj.dir) {
+      if (!m) { m = { cv: document.createElement('canvas') }; this.objCache.set(obj, m); }
+      const ox = Math.floor(x * PS) - 2, oy = Math.floor(y * PS) - 2;
+      this.live(this.nullCtx, x, y, w, h, fn);
+      const pw = this.lastW, ph = this.lastH;
+      if (m.cv.width < pw || m.cv.height < ph) { m.cv.width = Math.max(pw, m.cv.width); m.cv.height = Math.max(ph, m.cv.height); }
+      const mc = m.cv.getContext('2d'); mc.clearRect(0, 0, m.cv.width, m.cv.height); mc.drawImage(this.outCv, 0, 0, pw, ph, 0, 0, pw, ph);
+      Object.assign(m, { t: now, pw, ph, ox: ox - Math.round(((obj.x ?? 0) - 0) * PS), oy: oy - Math.round((obj.y ?? obj.top ?? 0) * PS), face: obj.face, dir: obj.dir });
+    }
+    c.drawImage(m.cv, 0, 0, m.pw, m.ph, Math.round((obj.x ?? 0) * PS) + m.ox, Math.round((obj.y ?? obj.top ?? 0) * PS) + m.oy, m.pw, m.ph);
+  }
+
   // Elk beeld opnieuw: een bewegende figuur omzetten naar pixels en tekenen
   live(c, x, y, w, h, fn) {
     const ox = Math.floor(x * PS) - 2, oy = Math.floor(y * PS) - 2;
@@ -149,7 +168,8 @@ class PixelView {
     sc.setTransform(1, 0, 0, 1, 0, 0);
     this.oc.clearRect(0, 0, pw, ph);
     this.oc.putImageData(pixelize(sc.getImageData(0, 0, pw, ph)), 0, 0);
-    c.drawImage(this.outCv, 0, 0, pw, ph, ox, oy, pw, ph);
+    this.lastW = pw; this.lastH = ph;
+    if (c) c.drawImage(this.outCv, 0, 0, pw, ph, ox, oy, pw, ph);
   }
 
   // ---------- Tegels (24x24) ----------
@@ -375,15 +395,15 @@ class PixelView {
       c.drawImage(e.cv, Math.round(k.x * PS + e.ox), Math.round(k.y * PS + e.oy + Math.sin(t * 3 + k.x * 0.05) * 2));
     }
     // Figuren: stam, ontmoetingen, platforms, dieren, speler
-    const fig = (o, drawFn, mx = 46, top = 60, bot = 6) => this.live(c, o.x - mx, o.y - top, o.w + mx * 2, o.h + top + bot, drawFn);
+    const fig = (o, drawFn, mx = 46, top = 60, bot = 6, fps = 12) => this.liveObj(c, o, o.x - mx, o.y - top, o.w + mx * 2, o.h + top + bot, drawFn, fps);
     if (g.npcs && g.finish && vis(g.finish.x, 420)) for (const n of g.npcs) fig(n, cc => n.draw(cc, t + n.x), 40, 40, 4);
     for (const m of g.meets) if (vis(m.x, 200)) { if (m.trace) this.live(c, m.x - 70, m.y - 10, 150, 14, cc => drawFootprints(cc, m.x, m.y)); for (const n of m.group) fig(n, cc => n.draw(cc, t + n.phase), 40, 40, 4); }
-    for (const pl of g.platforms) if (vis(pl.x, 160)) this.live(c, pl.x - 90, pl.top - 50, (pl.w || 100) + 180, 140, cc => pl.draw(cc, t));
-    for (const e of g.enemies) if (e.active || vis(e.x)) { const big = e.isBoss ? 130 : 46; fig(e, cc => e.draw(cc, t), big, big + 20, 8); }
+    for (const pl of g.platforms) if (vis(pl.x, 160)) { if (pl.kind === 'spear') this.live(c, pl.x - 10, pl.top - 12, pl.w + 20, 24, cc => pl.draw(cc, t)); else this.liveObj(c, pl, pl.x - 90, pl.top - 50, (pl.w || 100) + 180, 140, cc => pl.draw(cc, t), 10); }
+    for (const e of g.enemies) if (e.active || vis(e.x)) { if (drawAnimal(c, e, PS, t)) continue; const big = e.isBoss ? 130 : 46; fig(e, cc => e.draw(cc, t), big, big + 20, 8); }
     for (const s of g.stonesFlying) { c.fillStyle = INK; c.fillRect(Math.round((s.x + 1) * PS), Math.round((s.y + 1) * PS), 7, 7); c.fillStyle = '#7d8590'; c.fillRect(Math.round((s.x + 2) * PS), Math.round((s.y + 2) * PS), 5, 5); c.fillStyle = '#c0c8d0'; c.fillRect(Math.round((s.x + 2) * PS), Math.round((s.y + 2) * PS), 2, 2); }
     for (const s of g.spears) this.live(c, s.x - 10, s.y - 20, s.w + 20, 40, cc => drawFlyingSpear(cc, s));
     for (const q of g.projectiles) { const x = Math.round((q.x + 6) * PS), y = Math.round((q.y + 6) * PS); c.fillStyle = INK; c.fillRect(x - 3, y - 3, 7, 7); c.fillStyle = '#e8902e'; c.fillRect(x - 2, y - 2, 5, 5); c.fillStyle = '#ffd07a'; c.fillRect(x - 2, y - 2, 2, 2); }
-    if (g.state !== 'title') { const p = g.player; if (!p.dead && p.onGround) { c.fillStyle = '#0000003a'; c.fillRect(Math.round((p.cx - 12) * PS), Math.round(p.bottom * PS) - 1, Math.round(24 * PS), 2); } fig(p, cc => p.draw(cc, t), 46, 48, 8); }
+    if (g.state !== 'title') { const p = g.player; if (!p.dead && p.onGround) { c.fillStyle = '#0000003a'; c.fillRect(Math.round((p.cx - 12) * PS), Math.round(p.bottom * PS) - 1, Math.round(24 * PS), 2); } fig(p, cc => p.draw(cc, t), 46, 48, 8, 15); }
     this.water(c, g.map, camX, t);
     this.particles(c);
     c.restore();

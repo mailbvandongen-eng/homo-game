@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "Homo Game — de lange reis",
+  "short_name": "Homo Game",
+  "description": "Een pixel-platformspel over de menselijke stamboom.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#101b21",
+  "theme_color": "#14242a",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

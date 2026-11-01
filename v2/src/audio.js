@@ -117,8 +117,9 @@ export class Audio {
     const s = this.song;
     if (s) {
       const sixteenth = 60 / s.bpm / 4;
-      if (this.next < c.currentTime) this.next = c.currentTime + 0.05;
-      while (this.next < c.currentTime + 0.15) {
+      if (this.next < c.currentTime - 0.1) this.next = c.currentTime + 0.05;
+      // Ruime vooruitplanning: ook als het beeld even hapert, blijft de muziek op tempo
+      while (this.next < c.currentTime + 0.4) {
         const i = this.step, t = this.next + ((i % 2) ? sixteenth * (s.swing || 0) : 0);
         const bar = Math.floor(i / 16) % s.chords.length, pos = i % 16, chord = s.chords[bar];
         const dest = this.musicGain;
