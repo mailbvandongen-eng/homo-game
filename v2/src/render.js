@@ -72,6 +72,9 @@ export class Renderer {
     if (!T) { T = bakeTree({ kind, palette, seed, height, haze, hazeColor }, Math.min(2.5, this.k)); this.trees.set(key, T); }
     return T;
   }
+  // Dezelfde boom als hieronder, maar alleen de gebakken gegevens (voor de pixelversie)
+  levelTreeSpec(d, theme) { return this.tree(KIND_OF[theme] || 'acacia', PAL_OF[theme] || 'savanna', Math.floor(d.x / 7) % 5, 150); }
+  bigTreeSpec(d) { return this.tree('broad', 'forest', 2 + Math.floor(d.x / 11) % 3, Math.round(d.height * 32 * 1.55)); }
   levelTree(c, d, theme, time) {
     const pal = PAL_OF[theme] || 'savanna';
     const kind = KIND_OF[theme] || 'acacia';

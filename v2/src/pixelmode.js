@@ -123,6 +123,18 @@ class PixelView {
     return e;
   }
 
+  // Boom: het kader wordt uit de boom zelf berekend, zodat de kruin nooit wordt afgesneden
+  cachedTree(key, Tr, x, y, s) {
+    let x1 = Tr.tx, y1 = Tr.ty, x2 = Tr.tx + Tr.tw, y2 = Tr.ty + Tr.th;
+    for (const m of Tr.masses) { x1 = Math.min(x1, m.x - 8); y1 = Math.min(y1, m.y - 8); x2 = Math.max(x2, m.x + m.w + 8); y2 = Math.max(y2, m.y + m.h + 8); }
+    return this.cached(key, x + x1 * s, y + y1 * s, (x2 - x1) * s, (y2 - y1) * s, cc => {
+      cc.save(); cc.translate(x, y); cc.scale(s, s);
+      cc.drawImage(Tr.trunk, Tr.tx, Tr.ty, Tr.tw, Tr.th);
+      for (const m of Tr.masses) cc.drawImage(m.cv, m.x, m.y, m.w, m.h);
+      cc.restore();
+    });
+  }
+
   // Elk beeld opnieuw: een bewegende figuur omzetten naar pixels en tekenen
   live(c, x, y, w, h, fn) {
     const ox = Math.floor(x * PS) - 2, oy = Math.floor(y * PS) - 2;
@@ -267,7 +279,7 @@ class PixelView {
       if (hash(i, 9) < (p.jungle ? 0.05 : 0.35)) continue;
       const T2 = g.renderer.tree(p.tree[0], p.tree[1], 10 + (i & 3), 90, 0.42, p.sky[2]);
       const wx = i * 230 + hash(i, 4) * 120, s = 0.75 + hash(i, 5) * 0.3;
-      const e = this.cached(`bt|${p.tree[0]}|${p.tree[1]}|${i & 3}|${p.sky[2]}|${s.toFixed(2)}`, -120 * s, -170 * s, 240 * s, 176 * s, cc => { cc.save(); cc.scale(s, s); cc.drawImage(T2.trunk, T2.tx, T2.ty, T2.tw, T2.th); for (const m of T2.masses) cc.drawImage(m.cv, m.x, m.y, m.w, m.h); cc.restore(); });
+      const e = this.cachedTree(`bt|${p.tree[0]}|${p.tree[1]}|${i & 3}|${p.sky[2]}|${s.toFixed(2)}`, T2, 0, 0, s);
       c.drawImage(e.cv, Math.round((wx - camX * 0.3) * PS + e.ox), yOf(0.3, 30) + Math.round(e.oy));
     }
     this.ridge(c, camX * PS * 0.55, yOf(0.55, 16), 6, 0.04, p.near, false, 11);
@@ -340,8 +352,11 @@ class PixelView {
     const pitTop = Math.round((L.pxH - 3 * TILE + 8) * PS);
     for (const [k, col] of [[0, '#4a3420'], [6, '#2e2014'], [16, '#1a120c'], [30, '#0c0806']]) { c.fillStyle = col; c.fillRect(cpx, pitTop + k, this.W, this.H); }
     // Bomen en finish-decor (één keer gepixeld)
-    for (const d of g.decor) if (d.type === 'tree' && vis(d.x, 220)) { const e = this.cached(`tree|${d.x}|${L.id}`, d.x - 130, d.y - 175, 260, 182, cc => g.renderer.levelTree(cc, d, L.theme, 0)); c.drawImage(e.cv, Math.round(e.ox), Math.round(e.oy)); }
-    for (const d of g.decor) if (d.type === 'bigtree' && vis(d.x, 300)) { const h = d.height * TILE * 1.6; const e = this.cached(`big|${d.x}|${L.id}`, d.x - 190, d.y - h - 40, 380, h + 48, cc => g.renderer.bigTree(cc, d, 0)); c.drawImage(e.cv, Math.round(e.ox), Math.round(e.oy)); }
+    for (const d of g.decor) if ((d.type === 'tree' || d.type === 'bigtree') && vis(d.x, 420)) {
+      const big = d.type === 'bigtree';
+      const e = this.cachedTree(`${d.type}|${d.x}|${L.id}`, big ? g.renderer.bigTreeSpec(d) : g.renderer.levelTreeSpec(d, L.theme), d.x, d.y, big ? 1 : (d.scale || 1) * 0.95);
+      c.drawImage(e.cv, Math.round(e.ox), Math.round(e.oy));
+    }
     if (g.finish && vis(g.finish.x, 420)) { const f = g.finish, shelter = g.def.finishScene === 'shelter'; const e = this.cached(`fin|${L.id}`, f.x - 40, f.y - 300, 480, 304, cc => { shelter ? drawShelter(cc, f.x + 190, f.y) : drawCave(cc, f.x + 150, f.y, 0); drawFoodCache(cc, f.x + 122, f.y); }); c.drawImage(e.cv, Math.round(e.ox), Math.round(e.oy)); }
     // Tegels
     const theme = L.theme, CH = 16;
