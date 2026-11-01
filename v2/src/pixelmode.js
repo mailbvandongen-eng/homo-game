@@ -254,6 +254,11 @@ class PixelView {
     });
     return this.tileSprite(`g|${theme}|${top}|${Math.min(depth, 3)}|${seed % 4}|${left}|${right}`, (x, y) => {
       const gr = p.grass, dt = p.dirt;
+      if (top && (left || right)) {   // afgeronde rand: de hoek loopt schuin af naar de kuil
+        const ex = left ? x : PT - 1 - x, cut = Math.max(0, 7 - y - (y > 2 ? 1 : 0));
+        if (ex < cut) return null;
+        if (ex < cut + 2 && y < 12) return ex === cut ? gr[3] : gr[1];
+      }
       if (top) {
         const edge = 8 + ((x * 7 + seed) % 4 === 0 ? 2 : 0) + ((x * 3 + seed) % 5 === 0 ? 1 : 0) - ((x * 5 + seed) % 7 === 0 ? 1 : 0);
         if (y === 0) return gr[0];
@@ -307,6 +312,47 @@ class PixelView {
     });
   }
 
+  // Kuilranden: schuin aflopende wand (talud) die naar beneden donkerder wordt, met klimop en wortels
+  pitBanks(map, theme) {
+    if (this._pbMap === map) return this._pb;
+    const p = PAL[theme] || PAL.savanna, out = [];
+    this._pbMap = map; this._pb = out;
+    if (p.cave) return out;
+    const dt = p.dirt, gr = p.grass, ivy = ['#7ab042', '#4e8a2e', '#355a20'];
+    const darken = (col, k) => { const v = [1, 3, 5].map(i => parseInt(col.slice(i, i + 2), 16)); return '#' + v.map(n => Math.round(n * (1 - k) + 16 * k).toString(16).padStart(2, '0')).join(''); };
+    for (let cy = 0; cy < map.h; cy++) for (let cx = 0; cx < map.w; cx++) {
+      const t = map.get(cx, cy); if (t !== T.GROUND && t !== T.MUD) continue;
+      if (map.solidAt(cx, cy - 1)) continue;                       // alleen vanaf de bovenste tegel
+      for (const dir of [-1, 1]) {
+        if (map.get(cx + dir, cy) !== T.EMPTY) continue;
+        let len = 0; while (cy + len < map.h && map.solidAt(cx, cy + len) && map.get(cx + dir, cy + len) === T.EMPTY) len++;
+        if (len < 2) continue;
+        const Hb = len * PT + (cy + len >= map.h ? 30 : 0), Wb = 38, seed = cx * 7 + cy;
+        const wedge = y => Math.min(30, 2 + y * 0.55) + Math.sin(y * 0.35 + seed) * 1.5 + (hash(Math.floor(y / 5), seed) - 0.5) * 2;
+        const cv = bake(Wb, Hb, (xx, y) => {
+          const x = dir > 0 ? xx : Wb - 1 - xx;                      // x = afstand vanaf de wand de kuil in
+          const k = Math.min(0.8, Math.max(0, (y - 6) / (PT * 3)));                  // dieper = donkerder
+          // Klimop en wortels die over de rand hangen
+          for (let s2 = 0; s2 < 7; s2++) {
+            const sx = Math.floor(hash(s2, seed) * 12), sl = 12 + Math.floor(hash(s2, seed + 3) * 40), isRoot = s2 >= 5;
+            const vx = sx + Math.round(Math.sin(y * 0.25 + s2) * 1) + Math.floor(y * 0.12);
+            if (y < sl && x === vx) return isRoot ? '#6a4a2c' : ivy[1];
+            if (!isRoot && y < sl && y > 2 && (y + s2) % 3 === 0 && (x === vx + 1 || x === vx - 1 || (y % 6 === 0 && x === vx + 2))) return (y + x) % 5 < 2 ? ivy[0] : (y % 2 ? ivy[1] : ivy[2]);
+          }
+          // Graslip die een stukje over de rand krult
+          if (y < 4 && x < 3 + (y < 2 ? 1 : 0)) return y === 0 ? gr[0] : gr[2];
+          const w = wedge(y);
+          if (x > w) return null;
+          if (x > w - 1) return darken(dt[3], k);
+          if ((x * 5 + y * 3 + seed) % 23 === 0) return darken(dt[4], k);   // steentjes
+          const lay = Math.floor((y + x * 0.4) / 6) % 2;
+          return darken(x > w - 4 ? dt[2] : lay ? dt[1] : dt[2], k * 0.9 + 0.1);
+        }, null);
+        out.push({ cv, wx: (cx + 0.5) * TILE, x: dir > 0 ? (cx + 1) * PT - 1 : cx * PT - Wb + 1, y: cy * PT - 1 });
+      }
+    }
+    return out;
+  }
   barTrees(map) {
     if (this._btMap === map) return this._bt;
     const out = [];
@@ -634,8 +680,17 @@ class PixelView {
     c.save(); c.translate(-cpx, -cpy);
     const vis = (x, m = 120) => x > camX - m && x < camX + g.viewW + m;
     // Kloofdiepte onder het maaiveld
-    const pitTop = Math.round((L.pxH - 3 * TILE + 8) * PS);
-    for (const [k, col] of [[0, '#4a3420'], [6, '#2e2014'], [16, '#1a120c'], [30, '#0c0806']]) { c.fillStyle = col; c.fillRect(cpx, pitTop + k, this.W, this.H); }
+    // Achterwand van kuilen: grillige rand met gras, aarde die geleidelijk in het donker verdwijnt
+    const pitTop = Math.round((L.pxH - 3 * TILE) * PS) + 4, PP = PAL[L.theme] || PAL.savanna, pd = PP.dirt || SAV_DIRT, pg = PP.grass || PAL.savanna.grass;
+    const depthCols = [pd[2], pd[3], '#3a2818', '#2a1c12', '#1c130c', '#120c08', '#0a0605'];
+    for (let x = 0; x < this.W + 1; x++) {
+      const wx = x + Math.floor(cpx), y0 = pitTop + Math.round(Math.sin(wx * 0.11) * 1.5 + hash(Math.floor(wx / 3), 7) * 3);
+      c.fillStyle = pg[2]; c.fillRect(wx, y0 - 1, 1, 1); c.fillStyle = pg[3]; c.fillRect(wx, y0, 1, 2);
+      if (hash(wx, 3) > 0.8) { c.fillStyle = pg[2]; c.fillRect(wx, y0 - 2 - Math.floor(hash(wx, 4) * 2), 1, 2); }
+      let y = y0 + 2;
+      depthCols.forEach((col, i) => { const h = i < 2 ? 5 : 7; c.fillStyle = col; c.fillRect(wx, y, 1, i === depthCols.length - 1 ? this.H : h); if ((wx + i) % 2 === 0) { c.fillStyle = depthCols[Math.min(depthCols.length - 1, i + 1)]; c.fillRect(wx, y + h - 1, 1, 1); } y += h; });
+      if (hash(wx, 9) > 0.93) { c.fillStyle = '#5a4026'; c.fillRect(wx, y0 + 2, 1, 4 + Math.floor(hash(wx, 10) * 8)); }   // worteltjes
+    }
     // Bomen en finish-decor (één keer gepixeld)
     for (const d of g.decor) if ((d.type === 'tree' || d.type === 'bigtree') && vis(d.x, 420)) {
       const big = d.type === 'bigtree';
@@ -658,6 +713,7 @@ class PixelView {
       let ch = this.chunks.get(i); if (!ch) { ch = this.buildChunk(g.map, i, theme); this.chunks.set(i, ch); }
       c.drawImage(ch, i * CH * PT, 0);
     }
+    for (const pb of this.pitBanks(g.map, theme)) if (vis(pb.wx, 200)) c.drawImage(pb.cv, pb.x, pb.y);
     this.dynamicTiles(c, g.map, camX, t);
     // Checkpoints, lianen, voorwerpen
     for (const f of g.fires) if (vis(f.x)) this.live(c, f.x - 30, f.y - 60, 60, 64, cc => (g.def.fire ? drawCampfire : drawStoneCache)(cc, f.x, f.y, f.lit, t));
