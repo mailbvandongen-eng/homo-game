@@ -16,9 +16,10 @@ import level34 from './levels/w3-4.js';
 import { SPECIES } from './species.js';
 import { installPixel } from './pixelmode.js';
 import { Cinema, hasIntro } from './cinema.js';
+import { TitleScene, TH, plankBoard, logSlice } from './title.js';
 
 // Ophogen bij elke publicatie (0.x tot de eerste complete versie 1.0).
-export const VERSION = '0.28.1';
+export const VERSION = '0.29.0';
 
 const LEVELS = [level11, level12, level13, level14, level21, level22, level23, level24, level31, level32, level33, level34];
 const $ = id => document.getElementById(id);
@@ -54,6 +55,7 @@ const ui = {
     const best = save.best[r.def.id] || {};
     save.best[r.def.id] = { artifacts: Math.max(best.artifacts || 0, r.artifacts), bones: Math.max(best.bones || 0, r.bones) };
     store(); renderLevels();
+
     $('nextLevel').hidden = current + 1 >= LEVELS.length;
     $('soon').hidden = current + 1 < LEVELS.length;
     const nextDef = LEVELS[current + 1];
@@ -117,6 +119,26 @@ function renderLevels() {
   $('play').textContent = save.unlocked > 1 ? `▶ Verder: ${LEVELS[Math.min(save.unlocked, LEVELS.length) - 1].id}` : '▶ Spelen';
 }
 renderLevels();
+// Startscherm Oersprong (pixelversie): levend oerwoud, houten knoppen en boomschijven
+const oerCv = $('oerCanvas');
+if (oerCv) {
+  const scene = new TitleScene(), oc = oerCv.getContext('2d');
+  document.querySelectorAll('button.plank').forEach((b, i) => { b.style.backgroundImage = `url(${plankBoard(64, 1, 18, 5 + i * 4).toDataURL()})`; });
+  const ICONS = {
+    music: ['0001111', '0001001', '0001001', '0001001', '0111011', '1111111', '0110110'],
+    sound: ['0001000', '0011010', '1111001', '1111101', '1111001', '0011010', '0001000'],
+    film: ['1111111', '1010101', '1111111', '1000001', '1011001', '1000001', '1111111'],
+    update: ['0111100', '1000010', '1000111', '1000010', '1000000', '1000001', '0111110'],
+  };
+  document.querySelectorAll('button.log').forEach(el => { el.style.backgroundImage = `url(${logSlice(ICONS[el.dataset.icon]).toDataURL()})`; });
+  const loop = now => {
+    if ($('title').classList.contains('open')) { const W = Math.max(240, Math.round(TH * innerWidth / innerHeight)); if (oerCv.width !== W) { oerCv.width = W; oerCv.height = TH; } scene.draw(oc, W, now / 1000); }
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+  on('levelsBtn', () => { $('levelPanel').hidden = !$('levelPanel').hidden; });
+  on('levelsClose', () => { $('levelPanel').hidden = true; });
+}
 on('resume', () => { show(null); game.state = 'play'; game.last = performance.now(); });
 on('restart', () => startLevel(current));
 on('toTitle', () => { show('title'); game.load(LEVELS[0]); game.state = 'title'; audio.playSong('title'); });
@@ -132,12 +154,12 @@ async function update() {
   try { await Promise.all([...files].map(f => fetch(f, { cache: 'reload' }))); } catch {}
   location.reload();
 }
-for (const el of document.querySelectorAll('[data-update]')) el.addEventListener('click', e => { e.preventDefault(); el.textContent = '↻ Bezig…'; update(); });
+for (const el of document.querySelectorAll('[data-update]')) el.addEventListener('click', e => { e.preventDefault(); if (el.dataset.icon) el.classList.add('busy'); else el.textContent = '↻ Bezig…'; update(); });
 $('version').textContent = 'versie ' + VERSION + (window.PIXEL_MODE ? ' · pixel' : ' · getekend');
 
 function syncAudioButtons() {
-  for (const el of document.querySelectorAll('[data-toggle=music]')) el.textContent = audio.music ? '♫ Muziek aan' : '♫ Muziek uit';
-  for (const el of document.querySelectorAll('[data-toggle=sfx]')) el.textContent = audio.sfx ? 'Geluid aan' : 'Geluid uit';
+  for (const el of document.querySelectorAll('[data-toggle=music]')) { if (el.dataset.icon) el.classList.toggle('off', !audio.music); else el.textContent = audio.music ? '♫ Muziek aan' : '♫ Muziek uit'; }
+  for (const el of document.querySelectorAll('[data-toggle=sfx]')) { if (el.dataset.icon) el.classList.toggle('off', !audio.sfx); else el.textContent = audio.sfx ? 'Geluid aan' : 'Geluid uit'; }
 }
 for (const el of document.querySelectorAll('[data-toggle]')) el.addEventListener('click', e => {
   e.preventDefault(); audio.unlock();

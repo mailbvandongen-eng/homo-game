@@ -287,7 +287,7 @@ export class TitleScene {
     // Grond
     for (let x = 0; x < W; x++) { const y = 148 + Math.round(Math.sin(x * 0.07) * 2 + Math.sin(x * 0.19)); c.fillStyle = '#8acc48'; c.fillRect(x, y, 1, 1); c.fillStyle = '#62a83a'; c.fillRect(x, y + 1, 1, 3); c.fillStyle = '#7a5434'; c.fillRect(x, y + 4, 1, H); c.fillStyle = '#5e3e26'; if (hash(x, 3) > 0.8) c.fillRect(x, y + 7 + (x % 5), 1, 1); }
     c.drawImage(kapok(), Math.round(W * 0.07) - 45, -4);
-    const fig = strangler(); c.drawImage(fig.cv, Math.round(W * 0.92) - fig.ox, -4); this.figX = Math.round(W * 0.92) - fig.ox; this.fig = fig;
+    const fig = treeTrunk(158, 8, 2); fig.edge = y => fig.mid(y) - fig.half(y); c.drawImage(fig.cv, Math.round(W * 0.92) - fig.ox, -4); this.figX = Math.round(W * 0.92) - fig.ox; this.fig = fig;
     // Omgevallen stam met paddenstoelen en mos
     const lx = Math.round(W * 0.16), ly = 146;
     c.drawImage(bake(54, 11, (x, y) => { if (x > 50) return (Math.hypot(x - 51, y - 5) < 2 ? '#c09060' : '#a87a48'); const k = y < 2 ? 0 : y < 5 ? 1 : y < 8 ? 2 : 3; if (y < 2 && hash(x >> 1, 2) > 0.4) return '#6aa04a'; if ((x * 5 + y) % 13 === 0) return BARK[4]; return BARK[k]; }), lx, ly - 4);
@@ -314,26 +314,19 @@ export class TitleScene {
     for (let i = 0; i < 16; i++) { const a = hash(i, 7) * 3.14, d = ((t * 12 + i * 3) % 10); c.fillStyle = '#ffffffc0'; c.fillRect(Math.round(fx + Math.cos(a) * d * 1.4), Math.round(124 - Math.sin(a) * d * 0.8), 1, 1); }
     // Olifanten die drinken (moeder en kalf)
     elephant(c, fx + 28, 126, 1, t); elephant(c, fx + 40, 126, 0.65, t + 1);
-    // Libellen boven het water
-    for (let i = 0; i < 2; i++) { const x = Math.round(fx - 10 + i * 18 + Math.sin(t * 2.3 + i * 4) * 8), y = Math.round(116 + Math.sin(t * 3.1 + i) * 3); c.fillStyle = '#2a6ab0'; c.fillRect(x, y, 4, 1); c.fillStyle = '#d8f0ff'; if (Math.floor(t * 20 + i) % 2) { c.fillRect(x + 1, y - 1, 1, 1); c.fillRect(x + 2, y - 1, 1, 1); } else { c.fillRect(x + 1, y + 1, 1, 1); c.fillRect(x + 2, y + 1, 1, 1); } }
     // Zonnestralen
     c.globalAlpha = 0.14 + Math.sin(t * 0.7) * 0.04; c.fillStyle = '#fff6c8';
     for (const [x0, w0] of [[0.42, 5], [0.55, 8], [0.66, 4], [0.8, 6]]) for (let y = 14; y < 150; y++) c.fillRect(Math.round(W * x0 - y * 0.4), y, w0 + Math.round(y * 0.05), 1);
     c.globalAlpha = 1;
-    // Papegaaien (grijze roodstaarten) vliegen voorbij
-    for (let i = 0; i < 2; i++) { const span = W + 120, x = Math.round(W + 40 - ((t * 22 + i * 26 + 80) % span)), y = 58 + i * 7 + Math.round(Math.sin(t * 2 + i) * 3); parrot(c, x, y, Math.floor(t * 7 + i) % 2); }
     c.drawImage(this.front, 0, 0);
     // Wurgvijg-tak met de habilis (achterste been achter de tak)
-    const by = 96, F = this.fig, trunkX = this.figX + F.edge(by), bx0 = Math.round(W * 0.64);
+    const by = 96, F = this.fig, trunkX = this.figX + Math.round(F.edge(by + 4)), bx0 = Math.round(W * 0.64);
     if (!this.branch || this.branchLen !== trunkX - bx0 + 4) { this.branchLen = trunkX - bx0 + 4; this.branch = sideBranch(this.branchLen, 8, 4); }
     const hx = Math.round(W * 0.78);
     this.hominin(c, hx, by, t, true);
     c.drawImage(this.branch, bx0, by - Math.round(this.branch.height / 2) + 1);
     leafBlob(c, bx0 + 2, by - 4, 9, ['#8ac860', '#62a84a', '#447a36', '#a8dc78'], 9);
     this.hominin(c, hx, by, t, false);
-    // Neushoornvogel op een uitsteeksel van de vijg
-    const hbx = this.figX + F.edge(54) - 2; c.fillStyle = BARK[2]; c.fillRect(hbx - 16, 56, 16, 3); c.fillStyle = BARK[1]; c.fillRect(hbx - 16, 56, 16, 1);
-    hornbill(c, hbx - 10, 56, t);
     // Franjeaap aan een liaan
     const ax = Math.round(W * 0.19), ay = 8, ang = Math.sin(t * 1.3) * 0.4, len = 38, mx = Math.round(ax + Math.sin(ang) * len), my = Math.round(ay + Math.cos(ang) * len);
     for (let i = 0; i <= len; i++) { c.fillStyle = '#3e6a2a'; c.fillRect(Math.round(ax + Math.sin(ang) * i), Math.round(ay + Math.cos(ang) * i), 1, 1); if (i % 7 === 3) { c.fillStyle = '#7ab85a'; c.fillRect(Math.round(ax + Math.sin(ang) * i) + 1, Math.round(ay + Math.cos(ang) * i), 2, 1); } }

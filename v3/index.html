@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" href="../icon.svg" type="image/svg+xml">
-<title>De lange reis (pixel) — een spel over de menselijke stamboom</title>
+<title>Oersprong — een sprong door de menselijke stamboom</title>
 <style>
 :root{--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px);--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -47,27 +47,50 @@ button.ghost{background:#ffffff1a;color:#fff1c4;box-shadow:none;font-size:14px;p
 #rotate{position:fixed;inset:0;z-index:20;display:none;place-items:center;background:#15252a;text-align:center;padding:30px;font-weight:800;font-size:20px}
 @media (orientation:portrait) and (pointer:coarse){#rotate{display:grid}}
 @media (max-height:420px){.card{padding:14px 20px}h1{font-size:40px}.how{margin-top:6px}button{padding:10px 18px}}
+
+/* Startscherm Oersprong */
+#title.oer{background:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0}
+#title.oer.open{display:block}
+#oerCanvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;z-index:auto;pointer-events:none}
+.oer-sub{position:absolute;top:39%;left:0;right:0;text-align:center;color:#fffbe6;font-weight:800;font-size:clamp(13px,2.2vw,19px);text-shadow:0 2px 0 #2a4a1e,0 0 8px #2a4a1e;letter-spacing:.04em;pointer-events:none}
+.oer-btns{position:absolute;left:0;right:0;bottom:14%;display:flex;justify-content:center;gap:12px}
+button.plank{margin:0;font:900 clamp(17px,2.9vw,23px) system-ui,sans-serif;padding:14px 30px 15px;border:none;border-radius:0;background:transparent center/100% 100% no-repeat;image-rendering:pixelated;color:#fff3c0;box-shadow:none;text-shadow:2px 0 #3a1e0c,-2px 0 #3a1e0c,0 2px #3a1e0c,0 -2px #3a1e0c,2px 2px #3a1e0c,-2px 2px #3a1e0c,2px -2px #3a1e0c,-2px -2px #3a1e0c;filter:drop-shadow(0 4px 0 #0006)}
+button.plank:active{transform:translateY(2px)}
+button.plank:focus,button.log:focus{outline:none}button.plank:focus-visible,button.log:focus-visible{filter:drop-shadow(0 4px 0 #0006) brightness(1.18)}
+.p-play{color:#ffe46a}.p-map{color:#c8f08a}
+.oer-icons{position:absolute;right:max(14px,var(--sar));bottom:max(12px,var(--sab));display:flex;gap:8px}
+button.log{position:relative;margin:0;width:46px;height:46px;padding:0;border:none;border-radius:50%;background:transparent center/100% 100% no-repeat;image-rendering:pixelated;box-shadow:none;filter:drop-shadow(0 3px 0 #0006)}
+button.log.off::after{content:'';position:absolute;left:8px;right:8px;top:21px;height:4px;background:#c0302a;transform:rotate(-40deg);border-radius:2px}
+button.log.busy{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.oer .ver{position:absolute;left:max(14px,var(--sal));bottom:max(14px,var(--sab));color:#fffbe6;font:700 12px system-ui,sans-serif;text-shadow:0 1px 0 #2a1a0c}
+#levelPanel{position:absolute;inset:6% max(10%,var(--sar)) 6% max(10%,var(--sal));background:#6e4624;border:4px solid #2a1a0c;border-radius:6px;box-shadow:inset 0 0 0 3px #a8743e,0 8px 0 #0006;padding:14px 18px;overflow:auto;display:flex;flex-direction:column;gap:10px;color:#fff3c0}
+#levelPanel[hidden]{display:none}
+.lp-head{display:flex;justify-content:space-between;align-items:center;font-size:20px}
+.lp-head button.plank{padding:6px 14px;font-size:18px}
+#levelPanel .swap{color:#f6cf75;font-size:13px}
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 <canvas id="ui"></canvas>
 
-<section id="title" class="screen" aria-hidden="true">
-  <div class="card">
-    <div class="eyebrow">Een reis door de menselijke stamboom · pixelversie</div>
-    <h1>DE LANGE<br>REIS</h1>
-    <div class="sub">Wereld 1 · Homo habilis · Riftvallei</div>
-    <div class="row">
-      <button id="play">▶ Spelen</button>
-      <button class="ghost" id="intro">🎬 Filmpje</button>
-      <button class="ghost" data-toggle="music"></button>
-      <button class="ghost" data-toggle="sfx"></button>
-    </div>
+<section id="title" class="screen oer" aria-hidden="true">
+  <canvas id="oerCanvas"></canvas>
+  <div class="oer-sub">Van de eerste mens tot Mars</div>
+  <div class="oer-btns"><button id="play" class="plank p-play">▶ Spelen</button><button id="levelsBtn" class="plank p-map">Kies level</button></div>
+  <div class="oer-icons">
+    <button class="log" data-toggle="music" data-icon="music" aria-label="Muziek aan of uit"></button>
+    <button class="log" data-toggle="sfx" data-icon="sound" aria-label="Geluid aan of uit"></button>
+    <button class="log" id="intro" data-icon="film" aria-label="Filmpje"></button>
+    <button class="log" data-update data-icon="update" aria-label="Bijwerken naar de nieuwste versie"></button>
+  </div>
+  <span class="ver" id="version"></span>
+  <div id="levelPanel" hidden>
+    <div class="lp-head"><b>Kies een level</b><button class="plank" id="levelsClose">✕</button></div>
     <div class="levels" id="levels"></div>
     <div class="how" id="howTouch">Links: schuif om te <b>lopen</b> (omhoog/omlaag = <b>klimmen</b>) · Rechts: <b>springen / loslaten</b> en <b>gooien</b></div>
-    <div class="row" style="margin-top:8px"><button class="ghost" data-update>↻ Bijwerken</button><a class="ghost swap" href="../v2/">◐ Getekende versie</a><span class="ver" id="version"></span></div>
     <div class="how" id="howKeys"><b>← →</b> lopen · <b>↑ ↓</b> klimmen (lianen, wanden, stammen) · <b>spatie</b> springen / loslaten · <b>X</b> gooien · <b>Esc</b> pauze</div>
+    <a class="swap" href="../v2/">◐ Getekende versie</a>
   </div>
 </section>
 
