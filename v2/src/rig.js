@@ -231,8 +231,10 @@ export function drawRig(c, look, p, opts = {}) {
     c.restore();
   };
 
+  // part 'backLeg' = alleen het achterste been (bv. om het achter een tak te tekenen); noBackLeg = alles behalve dat been
+  if (opts.part === 'backLeg') { leg(p.hB, p.kB, p.aB, true, -3); c.restore(); return; }
   arm(p.sB, p.eB, p.wB, true);
-  leg(p.hB, p.kB, p.aB, true, -3);
+  if (!opts.noBackLeg) leg(p.hB, p.kB, p.aB, true, -3);
   // Romp
   c.save(); c.scale(breath, breath);
   shaded(c, SHAPES.torso, L.fur, O, 5.5, 2.4);
