@@ -159,49 +159,71 @@ export class Hippo {
 export class Stegodon extends Log {
   constructor(e) {
     super({ ...e, len: 4 });
-    this.w = 116; this.x2 = (e.to + 1) * TILE - this.w;
+    this.kind = e.kind || 'stegodon';
+    // Ware grootte: schofthoogte t.o.v. de mens (habilis ±1,2 m, erectus en later ±1,6 m)
+    this.S = { deinotherium: 2.1, recki: 2.0, mammoth: 1.75, antiquus: 1.8, stegodon: 1.45 }[this.kind] || 1;
+    this.w = Math.round(116 * this.S); this.x2 = (e.to + 1) * TILE - this.w;
     this.x = this.x1 + (e.offset || 0) * (this.x2 - this.x1);
     this.speed = e.speed || 45;
-    this.base = e.y - 76;   // e.y = maaiveld
-    this.kind = e.kind || 'stegodon';
+    this.base = e.y - Math.round(76 * this.S);   // e.y = maaiveld
+    this.drawH = Math.round(100 * this.S) + 50;
     this.fact = MEGA_FACTS[this.kind];
   }
   update(dt) { super.update(dt); this.top = this.base + Math.abs(Math.sin(this.t * 4)) * -1.5; }
   draw(c, time) {
     const x = this.x, y = this.top, w = this.w, d = this.dir;
-    groundShadow(c, x + w / 2, y + 78, 62, 0.25);
-    c.save(); c.translate(x + w / 2, y); c.scale(d, 1);
+    groundShadow(c, x + w / 2, y + 78 * this.S, 62 * this.S, 0.25);
+    c.save(); c.translate(x + w / 2, y); c.scale(d * this.S, this.S);
     const SK = { deinotherium: ['#7d7266', '#a49a8c'], recki: ['#8a7e72', '#b0a496'], antiquus: ['#827a72', '#aaa298'], mammoth: ['#7a6656', '#a28c78'] }[this.kind] || ['#857a70', '#aaa094'];
     const o = '#2a2420', skin = SK[0], light = SK[1], ph = this.t * 4;
-    const leg = (lx, off, far) => {
-      const s = Math.sin(ph + off) * 6;
-      c.fillStyle = o; taper(c, lx, 34, lx + s * 0.5, 74, 17, 14); c.fill();
-      c.fillStyle = far ? mix(skin, o, 0.35) : skin; taper(c, lx, 34, lx + s * 0.5, 74, 14, 11); c.fill();
-      c.fillStyle = mix(skin, '#ffffff', 0.25); c.beginPath(); c.ellipse(lx + s * 0.5, 76, 7, 2.5, 0, 0, Math.PI * 2); c.fill();
+    const K = this.kind, eleph = K === 'antiquus' || K === 'recki' || K === 'mammoth';
+    const dark = mix(skin, o, 0.4);
+    // Zuilpoten: lang en recht, met een brede voetzool en teennagels
+    const leg = (lx, top, off, far) => {
+      const s = Math.sin(ph + off) * 5, fx = lx + s;
+      c.fillStyle = o; taper(c, lx, top, fx, 75, 21, 17); c.fill();
+      c.fillStyle = far ? dark : skin; taper(c, lx, top, fx, 75, 18, 14); c.fill();
+      if (!far) { c.fillStyle = mix(skin, light, 0.5); taper(c, lx - 4, top + 4, fx - 4, 70, 4, 3); c.fill(); }
+      c.fillStyle = o; c.beginPath(); c.ellipse(fx, 76, 10, 3.2, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#e8e0cc'; for (const nx of [-5, 0, 5]) { c.beginPath(); c.ellipse(fx + nx, 75.5, 1.8, 1.3, 0, 0, Math.PI * 2); c.fill(); }
+      c.strokeStyle = mix(skin, o, 0.55); c.lineWidth = 0.8; for (let yy = top + 26; yy < 70; yy += 6) { c.beginPath(); c.moveTo(fx - 6, yy); c.quadraticCurveTo(fx, yy + 1.5, fx + 6, yy); c.stroke(); }
     };
-    leg(-22, Math.PI, true); leg(38, Math.PI * 1.5, true);
-    const body = () => { c.beginPath(); c.ellipse(0, 26, 57, 30, 0, 0, Math.PI * 2); };
-    body(); c.lineWidth = 2.2; c.strokeStyle = INK; c.stroke();
-    const g = c.createLinearGradient(0, -4, 0, 56); g.addColorStop(0, light); g.addColorStop(0.5, skin); g.addColorStop(1, mix(skin, o, 0.4));
+    leg(-28, 34, Math.PI, true); leg(18, 30, Math.PI * 1.5, true);
+    // Staart met plukje
+    c.strokeStyle = o; c.lineWidth = 2.4; c.beginPath(); c.moveTo(-52, 16); c.quadraticCurveTo(-60, 30 + Math.sin(ph * 0.7) * 3, -58, 46); c.stroke();
+    c.fillStyle = o; c.beginPath(); c.ellipse(-58, 48, 2.5, 4, 0, 0, Math.PI * 2); c.fill();
+    // Romp: hoge schoft vóór, aflopende rug, ingetrokken buik
+    const body = () => { c.beginPath(); c.moveTo(-54, 34); c.bezierCurveTo(-58, 14, -46, 6, -24, 4); c.bezierCurveTo(-4, 2, 10, -2, 26, -3); c.bezierCurveTo(40, -3, 48, 6, 48, 18);
+      c.bezierCurveTo(50, 32, 46, 44, 34, 48); c.bezierCurveTo(16, 52, -10, 52, -30, 49); c.bezierCurveTo(-46, 47, -52, 42, -54, 34); c.closePath(); };
+    body(); c.lineWidth = 2.4; c.strokeStyle = INK; c.stroke();
+    const g = c.createLinearGradient(0, -4, 0, 52); g.addColorStop(0, light); g.addColorStop(0.45, skin); g.addColorStop(1, dark);
     body(); c.fillStyle = g; c.fill();
-    body(); paintLight(c, -4, 18, 52, 26, mix(light, '#ffffff', 0.3), mix(skin, o, 0.5), 60, 3);
-    c.strokeStyle = mix(skin, o, 0.3); c.lineWidth = 1; for (let i = -40; i < 40; i += 9) { c.beginPath(); c.moveTo(i, 10); c.quadraticCurveTo(i + 3, 26, i - 1, 44); c.stroke(); }
-    leg(-38, 0, false); leg(22, Math.PI / 2, false);
-    // Kop met oor, slurf en slagtanden; vorm verschilt per soort
-    const K = this.kind, dome = K === 'antiquus' || K === 'recki' || K === 'mammoth';
-    const head = () => { c.beginPath(); c.ellipse(56, 24, 19, 18, 0, 0, Math.PI * 2); if (dome) c.ellipse(52, 8, 13, 11, -0.3, 0, Math.PI * 2); };
-    head(); c.lineWidth = 2.2; c.strokeStyle = INK; c.stroke();
-    const hg = c.createLinearGradient(40, -4, 70, 42); hg.addColorStop(0, light); hg.addColorStop(1, skin); head(); c.fillStyle = hg; c.fill();
-    c.fillStyle = mix(skin, o, 0.25); c.beginPath(); c.ellipse(44, 26, 11, 15, -0.2, 0, Math.PI * 2); c.fill();
-    const trunkEnd = K === 'deinotherium' ? 60 : 72;
-    c.strokeStyle = o; c.lineWidth = 10; c.lineCap = 'round'; c.beginPath(); c.moveTo(68, 32); c.quadraticCurveTo(80, 50 + Math.sin(ph) * 4, 74, trunkEnd); c.stroke();
-    c.strokeStyle = skin; c.lineWidth = 7; c.beginPath(); c.moveTo(68, 32); c.quadraticCurveTo(80, 50 + Math.sin(ph) * 4, 74, trunkEnd); c.stroke();
-    const tusk = (f) => { c.strokeStyle = o; c.lineWidth = 7; c.beginPath(); f(); c.stroke(); c.strokeStyle = '#f6eedc'; c.lineWidth = 4.5; c.beginPath(); f(); c.stroke(); };
-    if (K === 'deinotherium') tusk(() => { c.moveTo(62, 44); c.quadraticCurveTo(66, 62, 54, 66); });          // in de onderkaak, naar beneden en achteren
-    else if (K === 'mammoth') tusk(() => { c.moveTo(62, 40); c.bezierCurveTo(84, 64, 106, 44, 94, 24); });     // sterk gekromd
-    else if (K === 'antiquus' || K === 'recki') tusk(() => { c.moveTo(62, 40); c.quadraticCurveTo(88, 50, 104, 40); });  // lang en vrij recht
-    else tusk(() => { c.moveTo(62, 40); c.quadraticCurveTo(90, 54, 99, 34); });
-    eye(c, 61, 18, 2.6, '#3a2a1a', 1);
+    c.save(); body(); c.clip();
+    c.strokeStyle = mix(skin, o, 0.22); c.lineWidth = 0.8; for (const [i, y0, y1] of [[-36, 14, 40], [-20, 10, 30], [-6, 22, 46], [10, 8, 26], [22, 24, 44], [34, 12, 34]]) { c.beginPath(); c.moveTo(i, y0); c.quadraticCurveTo(i + 4, (y0 + y1) / 2, i - 1, y1); c.stroke(); }
+    if (K === 'mammoth') { c.strokeStyle = mix(skin, o, 0.5); for (let i = -40; i < 40; i += 3) { c.beginPath(); c.moveTo(i, 40); c.lineTo(i - 1, 52); c.stroke(); } }
+    c.fillStyle = '#ffffff22'; c.beginPath(); c.ellipse(4, 6, 40, 6, -0.05, 0, Math.PI * 2); c.fill();
+    c.restore();
+    leg(-40, 36, 0, false); leg(30, 30, Math.PI / 2, false);
+    // Kop: groot, bij olifanten met een hoge koepel; oor erachter
+    const head = () => { c.beginPath(); c.ellipse(58, 18, 17, 19, 0.1, 0, Math.PI * 2); if (eleph) c.ellipse(54, 0, 13, 12, -0.3, 0, Math.PI * 2); };
+    head(); c.lineWidth = 2.4; c.strokeStyle = INK; c.stroke();
+    const hg = c.createLinearGradient(44, -12, 72, 36); hg.addColorStop(0, light); hg.addColorStop(1, skin); head(); c.fillStyle = hg; c.fill();
+    const earR = K === 'mammoth' ? [8, 10] : K === 'deinotherium' ? [7, 9] : [11, 17];
+    c.fillStyle = dark; c.strokeStyle = INK; c.lineWidth = 1.6; c.beginPath(); c.ellipse(46, 18, earR[0], earR[1], -0.15, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.strokeStyle = mix(dark, o, 0.4); c.lineWidth = 0.8; c.beginPath(); c.moveTo(42, 10); c.quadraticCurveTo(48, 18, 43, 28); c.stroke();
+    // Slurf: dik aan de basis, dun aan het eind, met ringen
+    const trunkEnd = K === 'deinotherium' ? 58 : 74, sw = Math.sin(ph) * 4;
+    const tx = t => 70 + 10 * Math.sin(t * 1.4) + sw * t * t, ty = t => 26 + (trunkEnd - 26) * t;
+    for (const [col, extra] of [[o, 2.4], [skin, 0]]) for (let i = 0; i < 12; i++) { const t0 = i / 12, t1 = (i + 1) / 12; c.strokeStyle = col; c.lineCap = 'round'; c.lineWidth = 11 - t0 * 6 + extra; c.beginPath(); c.moveTo(tx(t0), ty(t0)); c.lineTo(tx(t1), ty(t1)); c.stroke(); }
+    c.strokeStyle = mix(skin, o, 0.45); c.lineWidth = 0.8; for (let i = 1; i < 11; i++) { const tt = i / 11; c.beginPath(); c.moveTo(tx(tt) - 4 + tt * 2, ty(tt)); c.lineTo(tx(tt) + 4 - tt * 2, ty(tt) + 1); c.stroke(); }
+    const tusk = (f) => { c.strokeStyle = o; c.lineWidth = 7; c.beginPath(); f(); c.stroke(); c.strokeStyle = '#f6eedc'; c.lineWidth = 4.5; c.beginPath(); f(); c.stroke(); c.strokeStyle = '#ffffff'; c.lineWidth = 1.2; c.beginPath(); f(); c.stroke(); };
+    if (K === 'deinotherium') tusk(() => { c.moveTo(64, 38); c.quadraticCurveTo(70, 56, 58, 62); });          // in de onderkaak, naar beneden en achteren
+    else if (K === 'mammoth') tusk(() => { c.moveTo(64, 34); c.bezierCurveTo(88, 62, 112, 40, 98, 16); });     // sterk gekromd
+    else if (eleph) tusk(() => { c.moveTo(64, 34); c.quadraticCurveTo(92, 50, 110, 38); });  // lang en vrij recht
+    else tusk(() => { c.moveTo(64, 34); c.quadraticCurveTo(92, 50, 101, 28); });
+    // Oog met wenkbrauwplooi
+    c.strokeStyle = mix(skin, o, 0.5); c.lineWidth = 1; c.beginPath(); c.moveTo(60, 9); c.quadraticCurveTo(64, 7, 68, 10); c.stroke();
+    eye(c, 64, 13, 2.4, '#3a2a1a', 1);
     c.restore();
   }
 

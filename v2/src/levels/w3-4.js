@@ -48,8 +48,8 @@ export default {
     b.ent('boss', 218, 3);
     b.rock(223, 3, 1, 8);
     b.ent('tree', 228, 3, { scale: 1.1 });
-    // Megafauna: meerijden op een reus
-    b.ent('mega', 58, 3, { from: 57, to: 70, speed: 38, kind: 'antiquus' });
+    // Megafauna op ware grootte: de termietenheuvel lanceert je op zijn rug
+    b.spring(57, 3); b.ent('mega', 60, 3, { from: 59, to: 70, speed: 38, kind: 'antiquus' });
     // Eten: proberen wat het doet
     b.bump(15, 6, 'honey'); b.bump(40, 11, 'berry'); b.bump(77, 6, 'redcap'); b.bump(99, 6, 'shroom'); b.bump(171, 6, 'ferment'); b.bump(196, 6, 'flower');
     b.ent('finish', 226, 3);

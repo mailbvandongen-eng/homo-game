@@ -307,6 +307,40 @@ class PixelView {
     });
   }
 
+  barTrees(map) {
+    if (this._btMap === map) return this._bt;
+    const out = [];
+    for (let cy = 0; cy < map.h; cy++) for (let cx = 0; cx < map.w; cx++) {
+      if (map.get(cx, cy) !== T.BAR || map.get(cx - 1, cy) === T.BAR) continue;
+      let len = 0; while (map.get(cx + len, cy) === T.BAR) len++;
+      let gy = cy + 1; while (gy < map.h && !map.solidAt(cx, gy)) gy++;
+      const trunkH = (gy - cy) * PT, Wc = 64 + len * PT, Hc = trunkH + 30, tx = 28;   // stam staat op x = tx in het doek
+      const bark = ['#8a7458', '#6e5a44', '#56462f', '#3a2c1e'], leaf = ['#9cc85a', '#6e9e3c', '#4e7a2c', '#355a20'];
+      const crown = (x, y, cx0, cy0, rx, ry) => { const n = hash(Math.floor(x / 3), Math.floor(y / 3)); const r = ((x - cx0) / rx) ** 2 + ((y - cy0) / ry) ** 2 + (n - 0.5) * 0.5; if (r > 1) return null; const lit = (cx0 - x) / rx * 0.6 + (cy0 - y) / ry; return leaf[lit > 0.5 ? 0 : lit > 0 ? 1 : lit > -0.5 ? 2 : 3]; };
+      const cv = bake(Wc, Hc, (x, y) => {
+        const yy = y - 28;                     // 0 = hoogte van de hangtak
+        // Kruin boven de vork en een plukje aan het eind van de tak
+        const cr = crown(x, y, tx + 2, 14, 30, 13) || crown(x, y, tx + len * PT - 2, 27, 13, 7);
+        if (cr && yy < 4) return cr;
+        // Stam: licht gebogen, onderaan uitlopend in wortels
+        const fromTop = yy / Math.max(1, trunkH), bend = Math.round(Math.sin(fromTop * 2.6) * 3);
+        const half = 4 + (fromTop > 0.85 ? Math.round((fromTop - 0.85) * 40) : 0);
+        const dx = x - (tx + 4 + bend);
+        if (yy >= -10 && yy <= trunkH && Math.abs(dx) <= half) {
+          if (Math.abs(dx) === half) return INK;
+          const k = dx < -1 ? 0 : dx < 1 ? 1 : dx < 3 ? 2 : 3;
+          return (y * 3 + x) % 7 === 0 ? bark[3] : bark[k];
+        }
+        // Korte zijtakjes in de kruin
+        if (yy < -2 && yy > -12 && Math.abs(x - (tx + 4) - (yy + 2) * -1.2) < 1.2) return bark[2];
+        if (yy < -2 && yy > -10 && Math.abs(x - (tx + 4) - (yy + 2) * 1.4) < 1.2) return bark[2];
+        return null;
+      });
+      out.push({ cx, cy, cv, x: cx * PT - tx - 1, y: cy * PT - 28 - 1 });
+    }
+    this._btMap = map; this._bt = out;
+    return out;
+  }
   barTile(l, r, seed) {
     return this.tileSprite(`bar|${l}|${r}|${seed % 2}`, (x, y) => {
       if (y >= 2 && y <= 6 && (l || x >= 2) && (r || x <= PT - 3)) { if (y === 2 || y === 6 || (!l && x === 2) || (!r && x === PT - 3)) return INK; return y === 3 ? '#a87c4c' : y === 4 ? '#7a5434' : '#5a3c24'; }
@@ -608,6 +642,8 @@ class PixelView {
       const e = this.cachedTree(`${d.type}|${d.x}|${L.id}`, big ? g.renderer.bigTreeSpec(d) : g.renderer.levelTreeSpec(d, L.theme), d.x, d.y, big ? 1 : (d.scale || 1) * 0.95);
       c.drawImage(e.cv, Math.round(e.ox), Math.round(e.oy));
     }
+    // Hangtakken horen aan een boom: stam eronder en een kruin erboven
+    for (const bt of this.barTrees(g.map)) if (vis(bt.cx * TILE, 300)) c.drawImage(bt.cv, bt.x, bt.y);
     if (g.finish && vis(g.finish.x, 480) || g.finish && camX > g.finish.x) {
       const f = g.finish, shelter = g.def.finishScene === 'shelter';
       if (!shelter) { const cl = this.cliff(L, f); c.drawImage(cl.cv, cl.x, cl.y); }
@@ -636,7 +672,7 @@ class PixelView {
     const fig = (o, drawFn, mx = 46, top = 60, bot = 6, fps = 12) => this.liveObj(c, o, o.x - mx, o.y - top, o.w + mx * 2, o.h + top + bot, drawFn, fps);
     if (g.npcs && g.finish && vis(g.finish.x, 420)) for (const n of g.npcs) fig(n, cc => n.draw(cc, t + n.x), 40, 40, 4);
     for (const m of g.meets) if (vis(m.x, 200)) { if (m.trace) this.live(c, m.x - 70, m.y - 10, 150, 14, cc => drawFootprints(cc, m.x, m.y)); for (const n of m.group) fig(n, cc => n.draw(cc, t + n.phase), 40, 40, 4); }
-    for (const pl of g.platforms) if (vis(pl.x, 160)) { if (pl.kind === 'spear') this.live(c, pl.x - 10, pl.top - 12, pl.w + 20, 24, cc => pl.draw(cc, t)); else this.liveObj(c, pl, pl.x - 90, pl.top - 50, (pl.w || 100) + 180, 140, cc => pl.draw(cc, t), 10); }
+    for (const pl of g.platforms) if (vis(pl.x, 160)) { if (pl.kind === 'spear') this.live(c, pl.x - 10, pl.top - 12, pl.w + 20, 24, cc => pl.draw(cc, t)); else { const S = pl.S || 1; this.liveObj(c, pl, pl.x - 90 * S, pl.top - 50 * S, (pl.w || 100) + 180 * S, pl.drawH || 140, cc => pl.draw(cc, t), 10); } }
     for (const e of g.enemies) if (e.active || vis(e.x)) { if (drawAnimal(c, e, PS, t)) continue; const big = e.isBoss ? 130 : 46; fig(e, cc => e.draw(cc, t), big, big + 20, 8); }
     for (const s of g.stonesFlying) { c.fillStyle = INK; c.fillRect(Math.round((s.x + 1) * PS), Math.round((s.y + 1) * PS), 7, 7); c.fillStyle = '#7d8590'; c.fillRect(Math.round((s.x + 2) * PS), Math.round((s.y + 2) * PS), 5, 5); c.fillStyle = '#c0c8d0'; c.fillRect(Math.round((s.x + 2) * PS), Math.round((s.y + 2) * PS), 2, 2); }
     for (const s of g.spears) this.live(c, s.x - 10, s.y - 20, s.w + 20, 40, cc => drawFlyingSpear(cc, s));

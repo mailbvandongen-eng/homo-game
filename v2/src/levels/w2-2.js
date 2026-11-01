@@ -53,8 +53,8 @@ export default {
     b.ground(201, 231, 5); b.rock(201, 3, 1, 2);
     b.ent('artifact', 205, 8, { id: 'a3', name: 'Schraapsteen' });
     b.crack(207, 5, 1, 3); b.rock(207, 8, 1, 2);
-    // Megafauna: meerijden op een reus
-    b.ent('mega', 155, 3, { from: 154, to: 166, speed: 36, kind: 'mammoth' });
+    // Megafauna op ware grootte: de termietenheuvel lanceert je op zijn rug
+    b.spring(154, 3); b.ent('mega', 157, 3, { from: 156, to: 166, speed: 36, kind: 'mammoth' });
     // Eten: proberen wat het doet
     b.bump(14, 6, 'berry'); b.bump(34, 13, 'ferment'); b.bump(83, 10, 'redcap'); b.bump(147, 6, 'honey'); b.bump(190, 6, 'shroom');
     b.ent('finish', 212, 5);

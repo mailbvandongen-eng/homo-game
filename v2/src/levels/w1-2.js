@@ -73,8 +73,8 @@ export default {
     b.crumble(198, 7, 6);
     b.ent('artifact', 201, 10, { id: 'a3', name: 'Botsplijter' });
     b.ground(204, 231, 8);
-    // Megafauna: meerijden op een reus
-    b.ent('mega', 168, 3, { from: 166, to: 184, speed: 42, kind: 'recki' });
+    // Megafauna op ware grootte: de termietenheuvel lanceert je op zijn rug
+    b.spring(166, 3); b.ent('mega', 169, 3, { from: 168, to: 184, speed: 42, kind: 'recki' });
     // Eten: proberen wat het doet
     b.bump(12, 9, 'honey'); b.bump(92, 6, 'ferment'); b.bump(116, 6, 'flower');
     b.ent('finish', 209, 8);

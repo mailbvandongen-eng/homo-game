@@ -90,8 +90,8 @@ export default {
     b.ent('liana', 194, 13, { len: 7 });
     b.bones(196, 10, 2, { arc: 0.5 });
     b.ground(198, 221, 5);
-    // Megafauna: meerijden op een reus
-    b.ent('mega', 95, 3, { from: 94, to: 112, speed: 40, kind: 'deinotherium' });
+    // Megafauna op ware grootte: de termietenheuvel lanceert je op zijn rug
+    b.spring(94, 3); b.ent('mega', 97, 3, { from: 96, to: 112, speed: 40, kind: 'deinotherium' });
     // Eten: proberen wat het doet
     b.bump(40, 6, 'date'); b.bump(93, 6, 'shroom'); b.bump(181, 6, 'berry');
     b.ent('finish', 204, 5);
