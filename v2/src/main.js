@@ -16,8 +16,8 @@ import level34 from './levels/w3-4.js';
 import { SPECIES } from './species.js';
 import { installPixel } from './pixelmode.js';
 
-// Ophogen bij elke publicatie: zo zie je op het titelscherm of je de nieuwste versie hebt.
-export const VERSION = '2026-11-01f';
+// Ophogen bij elke publicatie (0.x tot de eerste complete versie 1.0).
+export const VERSION = '0.24.0';
 
 const LEVELS = [level11, level12, level13, level14, level21, level22, level23, level24, level31, level32, level33, level34];
 const $ = id => document.getElementById(id);
@@ -121,7 +121,7 @@ async function update() {
   location.reload();
 }
 for (const el of document.querySelectorAll('[data-update]')) el.addEventListener('click', e => { e.preventDefault(); el.textContent = '↻ Bezig…'; update(); });
-$('version').textContent = 'versie ' + VERSION;
+$('version').textContent = 'versie ' + VERSION + (window.PIXEL_MODE ? ' · pixel' : ' · getekend');
 
 function syncAudioButtons() {
   for (const el of document.querySelectorAll('[data-toggle=music]')) el.textContent = audio.music ? '♫ Muziek aan' : '♫ Muziek uit';
