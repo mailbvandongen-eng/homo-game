@@ -16,11 +16,12 @@ export default {
     b.ent('tree', 9, 3, { scale: 0.9 });
     b.bones(6, 4, 3);
     b.ent('wolf', 18, 3);
-    b.ground(23, 34, 5); b.ground(27, 34, 7);
-    b.bones(28, 8, 4);
-    b.crack(33, 7, 1, 3);
+    // Steile wand: beklim hem via de grepen
+    b.ground(23, 38, 10); b.climb(22, 3, 1, 7, 'rock');
+    b.bones(26, 11, 4);
+    b.ground(39, 41, 9); b.ground(42, 44, 8);
     // Windvlakte: wacht op de stilte, of ren met de wind mee
-    b.ground(35, 60, 7);
+    b.ground(45, 60, 7);
     b.ent('wolf', 44, 7); b.ent('wolf', 50, 7, { dir: 1 });
     b.thorns(54, 7, 1);
     b.ground(64, 92, 7);

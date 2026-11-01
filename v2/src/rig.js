@@ -98,6 +98,18 @@ export function pose(name, t) {
   } else if (name === 'throw') {
     const k = (Math.sin(t) + 1) / 2;   // 0 = naar achteren, 1 = gooien
     p.lean = 0.25 - k * 0.15; p.sF = -2.3 + k * 3.6; p.eF = 0.6 - k * 0.5; p.sB = 0.7 - k * 0.8; p.eB = 0.6; p.hF = 0.35; p.kF = 0.2; p.hB = -0.3; p.kB = 0.15;
+  } else if (name === 'sit' || name === 'knap' || name === 'eat') {
+    // Zitten met de knieën op: voeten op de grond, armen op de knieën
+    p.root = 28; p.lean = 0.14; p.hF = 1.85; p.kF = 1.65; p.aF = 0.3; p.hB = 1.75; p.kB = 1.55; p.aB = 0.3;
+    p.sF = 1.0; p.eF = 0.9; p.sB = 0.6; p.eB = 0.8; p.neck = 0.05 + Math.sin(t * 0.7) * 0.04;
+    if (name === 'knap') { const k = Math.max(0, Math.sin(t * 9)); p.sF = 0.7 + k * 0.9; p.eF = 0.3; p.sB = 0.9; p.eB = 0.7; p.neck = 0.25; }
+    if (name === 'eat') { p.sF = 2.25 + Math.sin(t * 3) * 0.12; p.eF = 2.3; p.neck = -0.05; }
+  } else if (name === 'dig') {
+    // Geknield, gebogen over de grond, met een stok of bot gravend
+    p.root = 24; p.lean = 0.6; p.hF = 1.5; p.kF = 1.95; p.hB = 0.25; p.kB = 1.9;
+    p.sF = 0.6 + Math.sin(t * 7) * 0.55; p.eF = 0.3; p.sB = 0.4; p.eB = 0.6; p.neck = 0.35;
+  } else if (name === 'play') {
+    p.sF = 2.5 + Math.sin(t * 6) * 0.4; p.sB = -1.2; p.eF = 0.2; p.root = -Math.abs(Math.sin(t * 5)) * 6; p.kF = 0.3; p.kB = 0.3;
   } else if (name === 'cheer') {
     const b = Math.abs(Math.sin(t * 2)); p.root = -b * 8; p.lean = -0.05; p.sF = 2.3 + Math.sin(t * 4) * 0.25; p.sB = -2.7 - Math.sin(t * 4) * 0.2; p.eF = -0.3; p.eB = -0.3; p.kF = 0.3 * b; p.kB = 0.3 * b; p.neck = -0.3;
   }
@@ -136,12 +148,27 @@ export function rigLook(look) {
 export function gamePose(st) {
   const p = { ...BASE };
   if (st.dead) { p.sF = 2.2; p.sB = -2.2; p.eF = 0.4; p.eB = 0.4; p.hF = 0.6; p.kF = 0.8; p.hB = -0.3; p.kB = 0.5; p.neck = 0.3; return p; }
+  if (st.ledge !== null && st.ledge !== undefined) {
+    if (st.ledge > 0) { const k = Math.min(1, st.ledge / 0.26); p.lean = 0.5 * k; p.sF = 2.8 - k * 1.8; p.sB = 2.7 - k * 1.6; p.eF = 0.4; p.hF = 0.4 + k * 1.2; p.kF = 0.6 + k * 1.2; p.hB = -0.2; p.kB = 0.6; p.root = -k * 14; return p; }
+    p.lean = -0.04; p.sF = 2.95; p.sB = 2.8; p.eF = 0.15; p.eB = 0.2; p.hF = 0.25 + Math.sin(st.time * 2) * 0.05; p.kF = 0.45; p.hB = -0.1; p.kB = 0.7; p.neck = -0.25; return p;
+  }
+  if (st.bar) {
+    const ph = st.phase * 1.2;
+    p.lean = 0; p.sF = 2.9 + Math.sin(ph) * 0.4; p.sB = 2.9 - Math.sin(ph) * 0.4; p.eF = 0.1; p.eB = 0.1;
+    p.hF = Math.sin(ph) * 0.35 + 0.1; p.kF = 0.5; p.hB = -Math.sin(ph) * 0.35 + 0.1; p.kB = 0.6; p.neck = -0.25; return p;
+  }
+  if (st.climb) {
+    const ph = st.phase * 1.3;
+    p.lean = 0.12; p.sF = 2.55 + Math.sin(ph) * 0.5; p.sB = 2.55 - Math.sin(ph) * 0.5; p.eF = 0.5; p.eB = 0.5;
+    p.hF = 0.6 + Math.sin(ph) * 0.45; p.kF = 1.2; p.hB = 0.6 - Math.sin(ph) * 0.45; p.kB = 1.2; p.neck = -0.15; return p;
+  }
   if (st.hang) {
     const w = st.hang;   // slingerhoeksnelheid
     p.lean = -w * 0.08; p.sF = 3.0; p.sB = 2.9; p.eF = 0.05; p.eB = 0.1; p.hF = 0.25 - w * 0.25; p.kF = 0.5; p.hB = -0.1 - w * 0.25; p.kB = 0.7; p.neck = -0.2; p.root = 0;
     return p;
   }
   if (st.cheer) return pose('cheer', st.time * 3 + st.seed);
+  if (st.activity && st.activity !== 'walk') return pose(st.activity, st.time + st.seed);
   if (st.air) { const q = pose(st.vy < 0 ? 'jump' : 'fall', 0); q.root = 0; return applyThrow(q, st); }
   if (st.skid) { p.lean = -0.2; p.hF = 0.5; p.kF = 0.1; p.hB = 0.2; p.kB = 0.2; p.sF = 1.2; p.sB = 0.8; p.eF = 0.3; return applyThrow(p, st); }
   if (st.speed > 10) { const q = locomotion(st.phase, st.run); return applyThrow(q, st); }

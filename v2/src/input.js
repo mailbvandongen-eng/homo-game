@@ -3,6 +3,8 @@ const KEYS = {
   left: ['arrowleft', 'a', 'q'],
   right: ['arrowright', 'd'],
   jump: [' ', 'arrowup', 'w', 'z'],
+  up: ['arrowup', 'w'],
+  down: ['arrowdown', 's'],
   throw: ['x', 'j', 'k', 'shift'],
   pause: ['escape', 'p'],
 };
@@ -18,7 +20,7 @@ export class Input {
     this.pointers = new Map();     // pointerId -> {role, x, y}
     this.layout = null;            // touchknoppen in css-pixels, gezet door de game
     this.touchMode = matchMedia('(pointer: coarse)').matches;
-    this.edges = { jump: false, throw: false, pause: false };
+    this.edges = { jump: false, jumpSolid: false, throw: false, pause: false };
     this.prevPad = { jump: false, throw: false, pause: false };
     this.enabled = true;
 
@@ -28,6 +30,7 @@ export class Input {
       if (e.repeat) return;
       this.keys.add(k);
       if (KEYS.jump.includes(k)) this.edges.jump = true;
+      if (k === ' ' || k === 'z') this.edges.jumpSolid = true;   // spatie: loslaten / afspringen (pijl omhoog = klimmen)
       if (KEYS.throw.includes(k)) this.edges.throw = true;
       if (KEYS.pause.includes(k)) this.edges.pause = true;
       this.touchMode = false;
@@ -44,7 +47,7 @@ export class Input {
       const role = this.roleAt(e.clientX, e.clientY);
       // Zwevende joystick: het midden ligt waar je duim neerkomt.
       this.pointers.set(e.pointerId, { role, x: e.clientX, y: e.clientY, ox: e.clientX, oy: e.clientY });
-      if (role === 'jump') this.edges.jump = true;
+      if (role === 'jump') { this.edges.jump = true; this.edges.jumpSolid = true; }
       if (role === 'throw') this.edges.throw = true;
       if (role === 'pause') this.edges.pause = true;
     };
@@ -55,8 +58,9 @@ export class Input {
       // Schuift de duim verder dan de rand, dan schuift het midden mee:
       // omkeren gaat zo altijd met een klein beweginkje.
       if (p.role === 'pad') {
-        const max = PAD_FOLLOW, dx = p.x - p.ox;
+        const max = PAD_FOLLOW, dx = p.x - p.ox, dy = p.y - p.oy;
         if (Math.abs(dx) > max) p.ox = p.x - Math.sign(dx) * max;
+        if (Math.abs(dy) > max * 1.4) p.oy = p.y - Math.sign(dy) * max * 1.4;
       }
     };
     const up = e => this.pointers.delete(e.pointerId);
@@ -83,14 +87,15 @@ export class Input {
   // Leest de huidige stand; flanken (net ingedrukt) worden daarna gewist.
   read() {
     let left = this.key('left'), right = this.key('right');
-    let jumpHeld = this.key('jump');
-    const out = { left: false, right: false, jumpHeld: false, jump: this.edges.jump, throw: this.edges.throw, pause: this.edges.pause };
-    this.edges.jump = this.edges.throw = this.edges.pause = false;
+    let jumpHeld = this.key('jump'), up = this.key('up'), down = this.key('down');
+    const out = { left: false, right: false, up: false, down: false, jumpHeld: false, jump: this.edges.jump, jumpSolid: this.edges.jumpSolid, throw: this.edges.throw, pause: this.edges.pause };
+    this.edges.jump = this.edges.jumpSolid = this.edges.throw = this.edges.pause = false;
 
     for (const p of this.pointers.values()) {
       if (p.role === 'pad') {
-        const dx = p.x - p.ox;
+        const dx = p.x - p.ox, dy = p.y - p.oy;
         if (dx < -PAD_DEAD) left = true; else if (dx > PAD_DEAD) right = true;
+        if (dy < -PAD_DEAD * 1.6) up = true; else if (dy > PAD_DEAD * 1.6) down = true;
       }
       if (p.role === 'jump') jumpHeld = true;
     }
@@ -101,19 +106,22 @@ export class Input {
       const ax = gp.axes[0] || 0;
       if (ax < -0.35 || gp.buttons[14]?.pressed) left = true;
       if (ax > 0.35 || gp.buttons[15]?.pressed) right = true;
+      const ay = gp.axes[1] || 0;
+      if (ay < -0.5 || gp.buttons[12]?.pressed) up = true;
+      if (ay > 0.5 || gp.buttons[13]?.pressed) down = true;
       const j = !!(gp.buttons[0]?.pressed || gp.buttons[1]?.pressed);
       const t = !!(gp.buttons[2]?.pressed || gp.buttons[3]?.pressed);
       const s = !!gp.buttons[9]?.pressed;
       if (j) jumpHeld = true;
-      if (j && !this.prevPad.jump) out.jump = true;
+      if (j && !this.prevPad.jump) { out.jump = true; out.jumpSolid = true; }
       if (t && !this.prevPad.throw) out.throw = true;
       if (s && !this.prevPad.pause) out.pause = true;
       this.prevPad = { jump: j, throw: t, pause: s };
       this.touchMode = false;
     }
 
-    if (!this.enabled) return { left: false, right: false, jumpHeld: false, jump: false, throw: false, pause: out.pause };
-    out.left = left && !right; out.right = right && !left; out.jumpHeld = jumpHeld;
+    if (!this.enabled) return { left: false, right: false, up: false, down: false, jumpHeld: false, jump: false, jumpSolid: false, throw: false, pause: out.pause };
+    out.left = left && !right; out.right = right && !left; out.jumpHeld = jumpHeld; out.up = up && !down; out.down = down && !up;
     return out;
   }
 

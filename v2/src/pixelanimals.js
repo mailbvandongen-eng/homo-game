@@ -7,19 +7,19 @@ const hash = (a, b) => { const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
 
 // L lijflengte, bh lijfhoogte, leg beenlengte, slope hoeveel hoger de schouders zijn, hr kopstraal, sn snuitlengte
 export const SPECS = {
-  hyena:   { L: 16, bh: 9, leg: 7, slope: 4, hr: 4, sn: 4, snH: 3, ear: 'point', mane: true, tail: 'brush', pat: 'spots', col: ['#e0bc80', '#b48c54', '#7c5a34'], spot: '#4a301a', mcol: '#3a2414', eye: '#f0c040', lw: 2 },
-  wolf:    { L: 17, bh: 7, leg: 8, slope: 1, hr: 3.5, sn: 5, snH: 2, ear: 'point', tail: 'bushy', belly: '#e0dad0', col: ['#c8c2b6', '#8c8780', '#5a5650'], eye: '#f2c84b', lw: 2 },
+  hyena:   { dog: true,  L: 16, bh: 9, leg: 7, slope: 4, hr: 4, sn: 4, snH: 3, ear: 'point', mane: true, tail: 'brush', pat: 'spots', col: ['#e0bc80', '#b48c54', '#7c5a34'], spot: '#4a301a', mcol: '#3a2414', eye: '#f0c040', lw: 2 },
+  wolf:    { dog: true,  L: 17, bh: 7, leg: 8, slope: 1, hr: 3.5, sn: 5, snH: 2, ear: 'point', tail: 'bushy', belly: '#e0dad0', col: ['#c8c2b6', '#8c8780', '#5a5650'], eye: '#f2c84b', lw: 2 },
   warthog: { L: 15, bh: 10, leg: 5, slope: 1, hr: 5, sn: 5, snH: 4, ear: 'point', mane: true, tail: 'whip', tusk: true, pat: 'bristle', col: ['#a08a78', '#7d6858', '#54463a'], mcol: '#2e221a', eye: '#2a1a10', lw: 2 },
-  leopard: { L: 20, bh: 7, leg: 6, slope: 0, hr: 3.5, sn: 2, snH: 2, ear: 'cat', tail: 'long', pat: 'rosette', belly: '#f4e2b8', col: ['#f2cf86', '#dcaa52', '#a07830'], spot: '#4a2e10', eye: '#e8d040', lw: 2 },
-  sabre:   { L: 20, bh: 8, leg: 6, slope: 2, hr: 4, sn: 2, snH: 2, ear: 'cat', tail: 'stub', fang: 4, pat: 'spots', belly: '#e2c69a', col: ['#d8ac72', '#b88a52', '#7a5a34'], spot: '#8a6a40', eye: '#e8d040', lw: 3 },
+  leopard: { cat: true,  L: 20, bh: 7, leg: 6, slope: 0, hr: 3.5, sn: 2, snH: 2, ear: 'cat', tail: 'long', pat: 'rosette', belly: '#f4e2b8', col: ['#f2cf86', '#dcaa52', '#a07830'], spot: '#4a2e10', eye: '#e8d040', lw: 2 },
+  sabre:   { cat: true,  L: 20, bh: 8, leg: 6, slope: 2, hr: 4, sn: 2, snH: 2, ear: 'cat', tail: 'stub', fang: 4, pat: 'spots', belly: '#e2c69a', col: ['#d8ac72', '#b88a52', '#7a5a34'], spot: '#8a6a40', eye: '#e8d040', lw: 3 },
   gnu:     { L: 18, bh: 9, leg: 10, slope: 4, hr: 3.5, sn: 5, snH: 3, ear: 'side', horn: 'curl', mane: true, tail: 'tuft', pat: 'stripes', col: ['#7c7a86', '#5c5a64', '#3a3840'], spot: '#2c2a30', mcol: '#1c1a1e', eye: '#2a1a10', lw: 2 },
   horse:   { L: 19, bh: 9, leg: 11, slope: 1, hr: 3.5, sn: 6, snH: 3, ear: 'point', mane: true, tail: 'tuft', belly: '#d8b88a', col: ['#c8955e', '#9a6a3c', '#6a4424'], mcol: '#3a2414', eye: '#2a1a10', lw: 2 },
   bear:    { L: 18, bh: 13, leg: 6, slope: 3, hr: 5, sn: 4, snH: 3, ear: 'round', tail: 'stub', pat: 'bristle', col: ['#9a7048', '#6a4a30', '#45301e'], mcol: '#3a2414', eye: '#2a1a10', lw: 4 },
   rhino:   { L: 24, bh: 13, leg: 6, slope: 1, hr: 5.5, sn: 6, snH: 4, ear: 'point', horn: 'rhino', tail: 'whip', pat: 'wrinkle', col: ['#b0aa9c', '#8a8478', '#5e5a50'], eye: '#2a1a10', lw: 4 },
   // Eindbazen
-  ghyena:  { L: 44, bh: 26, leg: 18, slope: 14, hr: 11, sn: 11, snH: 8, ear: 'point', mane: true, tail: 'brush', pat: 'spots', col: ['#cfa468', '#a37a46', '#6a4a28'], spot: '#3a2614', mcol: '#24160a', eye: '#ff4a2a', lw: 5, scars: true },
-  lion:    { L: 44, bh: 19, leg: 17, slope: 2, hr: 9, sn: 6, snH: 6, ear: 'none', lmane: true, tail: 'tuft', belly: '#ecd09a', col: ['#e8c07c', '#c9974e', '#8a6430'], mcol: '#6a3a18', eye: '#f2d36b', lw: 5 },
-  homoth:  { L: 42, bh: 19, leg: 19, slope: 11, hr: 9, sn: 5, snH: 5, ear: 'cat', tail: 'stub', fang: 9, pat: 'spots', belly: '#dcc298', col: ['#d6b07c', '#b08a58', '#7a5a34'], spot: '#8a6a40', eye: '#e8c84a', lw: 5 },
+  ghyena:  { dog: true,  L: 44, bh: 26, leg: 18, slope: 14, hr: 11, sn: 11, snH: 8, ear: 'point', mane: true, tail: 'brush', pat: 'spots', col: ['#cfa468', '#a37a46', '#6a4a28'], spot: '#3a2614', mcol: '#24160a', eye: '#ff4a2a', lw: 5, scars: true },
+  lion:    { cat: true,  L: 44, bh: 19, leg: 17, slope: 2, hr: 9, sn: 6, snH: 6, ear: 'none', lmane: true, tail: 'tuft', belly: '#ecd09a', col: ['#e8c07c', '#c9974e', '#8a6430'], mcol: '#6a3a18', eye: '#f2d36b', lw: 5 },
+  homoth:  { cat: true,  L: 42, bh: 19, leg: 19, slope: 11, hr: 9, sn: 5, snH: 5, ear: 'cat', tail: 'stub', fang: 9, pat: 'spots', belly: '#dcc298', col: ['#d6b07c', '#b08a58', '#7a5a34'], spot: '#8a6a40', eye: '#e8c84a', lw: 5 },
 };
 
 function ramp(t, x, y, [l, m, d]) {
@@ -57,8 +57,11 @@ function build(S, pose, frame, mouth, eyeMode) {
     else { const a = (frame + l.ph) * Math.PI / 2; off = Math.round(Math.sin(a) * amp); lift = amp ? Math.max(0, Math.round(Math.cos(a) * 1.5)) : 0; }
     const top = l.front ? shB - 2 : hipB - 2, bot = ground - lift;
     if (y < top || y > bot) return null;
-    const k = (y - top) / Math.max(1, bot - top), xc = l.x + off * k;
-    const w = (l.front ? S.lw : S.lw) * (1 - k * 0.25) + (y >= bot - 1 ? 1 : 0);
+    const k = (y - top) / Math.max(1, bot - top);
+    // Achterpoot met hielgewricht: eerst naar achteren, dan weer naar voren
+    const hock = l.front ? 0 : -Math.sin(Math.min(1, k * 1.4) * Math.PI) * Math.max(1, S.lw * 0.6);
+    const xc = l.x + off * k + hock;
+    const w = S.lw * (k < 0.35 ? 1.7 - k * 2 : 1) * (1 - k * 0.15) + (y >= bot - 1 ? 1 : 0);
     if (Math.abs(x - xc - (y >= bot - 1 ? 0.5 : 0)) > w / 2) return null;
     const t = l.far ? far : tone;
     return y >= bot - 1 ? INK === t[2] ? t[2] : darken(t[2], 0.25) : x < xc ? t[1] : t[2];
@@ -102,15 +105,34 @@ function build(S, pose, frame, mouth, eyeMode) {
     if (S.ear === 'round' && inEll(x, y, earX, earY, 1.6, 1.4)) return tone[2];
     if (S.ear === 'side' && y === earY + 1 && x >= earX - 3 && x <= earX - 1) return tone[2];
     // Schedel
-    if (inEll(x, y, hx, hy, S.hr, S.hr * 0.9)) { const t = (y - (hy - S.hr)) / (S.hr * 1.8) + (x < hx - S.hr * 0.4 ? 0.15 : 0); return ramp(t, x, y, tone); }
+    if (inEll(x, y, hx, hy, S.hr, S.hr * (S.cat ? 0.95 : 0.9))) {
+      const t = (y - (hy - S.hr)) / (S.hr * 1.8) + (x < hx - S.hr * 0.4 ? 0.15 : 0);
+      if (S.cat && y > hy + S.hr * 0.2 && x > hx) return S.belly || tone[0];   // lichte snuit en kin
+      return ramp(t, x, y, tone);
+    }
     // Leeuwenmanen achter de kop
-    if (S.lmane && inEll(x, y, hx - S.hr * 0.4, hy + S.hr * 0.2, S.hr * 1.6, S.hr * 1.5)) { const n = hash(Math.floor(x / 2), Math.floor(y / 2)); return n > 0.7 ? darken(S.mcol, 0.25) : n < 0.25 ? '#8a5428' : S.mcol; }
+    if (S.lmane) {
+      const ang = Math.atan2(y - hy, x - (hx - S.hr * 0.5)), rr = S.hr * (1.45 + 0.22 * Math.sin(ang * 7) + 0.12 * Math.sin(ang * 13));
+      const inM = Math.hypot((x - (hx - S.hr * 0.5)) / 1.05, y - hy - S.hr * 0.15) < rr || inEll(x, y, hx - S.hr * 0.9, hy + S.hr * 1.3, S.hr * 1.1, S.hr * 1.0);
+      if (inM && x < hx + S.hr * 0.6) { const n = hash(Math.floor(x / 2), Math.floor(y / 3)); return n > 0.72 ? darken(S.mcol, 0.3) : n < 0.22 ? '#a06030' : (y < hy - S.hr * 0.5 ? '#8a4c22' : S.mcol); }
+    }
+    // --- Nek: verbindt kop en schouders ---
+    if (x >= shX - 1 && x <= hx) {
+      const k = (x - (shX - 1)) / Math.max(1, hx - shX + 1);
+      const nt = shT + 1 + (hy - S.hr * 0.55 - shT - 1) * k, nb = shB - S.bh * 0.25 + (hy + S.hr * 0.6 - (shB - S.bh * 0.25)) * k;
+      if (y >= nt && y <= nb) return S.lmane ? (hash(Math.floor(x / 2), Math.floor(y / 2)) > 0.6 ? darken(S.mcol, 0.25) : S.mcol) : ramp((y - nt) / Math.max(1, nb - nt), x, y, tone);
+    }
     // --- Voorste poten ---
     for (const l of legs) if (!l.far) { const c = legAt(l, x, y); if (c) return c; }
     // --- Lijf ---
     let inBody = false, top = 0, bot = 0;
     const t0 = Math.max(0, Math.min(1, (x - hipX) / (shX - hipX)));
     top = hipT + (shT - hipT) * t0; bot = hipB + (shB - hipB) * t0;
+    // Anatomie: diepe borst achter de voorpoten, ingetrokken buik voor de achterpoten, zakkende rug bij katten
+    if (S.cat || S.dog) {
+      bot += S.bh * 0.22 * Math.exp(-(((t0 - 0.82) / 0.16) ** 2)) - S.bh * (S.cat ? 0.32 : 0.22) * Math.exp(-(((t0 - 0.28) / 0.18) ** 2));
+      top += (S.cat ? S.bh * 0.12 : 0) * Math.sin(Math.PI * t0) - S.bh * 0.12 * Math.exp(-(((t0 - 0.06) / 0.12) ** 2));
+    }
     if (x >= hipX && x <= shX) inBody = y >= top && y <= bot;
     else if (x < hipX) inBody = inEll(x, y, hipX, (hipT + hipB) / 2, S.bh * 0.5, S.bh / 2);
     else { const cy = (shT + shB) / 2, ry = (shB - shT) / 2; inBody = inEll(x, y, shX, cy, S.bh * 0.55, ry); top = shT; bot = shB; }

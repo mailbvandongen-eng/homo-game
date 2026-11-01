@@ -23,6 +23,7 @@ export default {
     b.bones(20, 30, 3); b.bones(40, 26, 3); b.bones(20, 22, 3); b.bones(40, 14, 3);
     b.ent('artifact', 21, 10, { id: 'a1', name: 'Berentand' });
     b.ent('light', 31, 40);
+    b.climb(43, 4, 1, 25, 'rock');
     b.ent('bear', 41, 3);
     // B · De gang onderin, naar de botkamer
     b.clear(44, 120, 3, 9);

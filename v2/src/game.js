@@ -95,9 +95,14 @@ export class Game {
         else if (e.type === 'meet') {
           // Een groepje van een andere soort: vriendelijk, ze doen hun eigen ding
           const sp = SPECIES[e.species];
-          const group = e.trace ? [] : (e.offsets || [0, 40, 76]).map((dx, i) => {
+          // Elke soort doet iets dat bij haar past (gebaseerd op vondsten)
+          const ACTS = { boisei: ['eat', 'dig', 'eat'], rudolfensis: ['knap', 'sit', 'eat'], robustus: ['dig', 'eat'], erectus: ['walk', 'walk', 'play'], sima: ['sit', 'knap', 'sit'], heidelbergensis: ['knap', 'walk', 'sit'] };
+          const offs = e.offsets || [0, 40, 76], mid = offs.reduce((a, b) => a + b, 0) / offs.length;
+          const group = e.trace ? [] : offs.map((dx, i) => {
             const n = new Player(e.x + dx, e.y, { ...sp.look, size: (sp.look.size || 1) * (e.sizes?.[i] ?? 1) });
-            n.face = -1; n.phase = i * 2.1; n.idle = e.idle?.[i] || 'chew';
+            n.face = dx < mid ? 1 : -1; n.phase = i * 2.1;
+            const acts = e.acts || ACTS[e.species] || ['sit'];
+            n.activity = acts[i % acts.length]; n.homeX = n.x; n.walkDir = i % 2 ? -1 : 1; n.actT = i;
             return n;
           });
           this.meets.push({ ...e, group, seen: false });
@@ -123,7 +128,9 @@ export class Game {
         new Player(f.x + 182, f.y, { ...base, fur: '#8f6040', hair: '#6a4028', skin: '#d0a070', size: sz * 0.68 }),
         new Player(f.x + 222, f.y, { ...base, fur: '#6e4a30', hair: '#3a2416', skin: '#a8744d', size: sz * 1.06 }),
       ];
-      this.npcs.forEach((n, i) => { n.face = i === 0 ? 1 : -1; n.phase = i * 1.7; });
+      // Voor de finish: de stam is bezig (eten, werktuigen maken, een kind dat speelt)
+      const acts = this.def.fire ? ['sit', 'knap', 'play', 'sit'] : ['eat', 'knap', 'play', 'sit'];
+      this.npcs.forEach((n, i) => { n.face = i === 0 ? 1 : -1; n.phase = i * 1.7; n.activity = acts[i]; n.homeX = n.x; n.walkDir = 1; n.actT = i; });
     }
   }
 
@@ -364,7 +371,7 @@ export class Game {
 
     // Ontmoetingen met andere soorten
     for (const m of this.meets) {
-      for (const n of m.group) { n.face = Math.sign(p.cx - n.cx) || -1; n.anim += dt * 2; }
+      for (const n of m.group) this.updateNpc(n, dt);
       if (!m.seen && Math.abs(p.cx - m.x) < 220) {
         m.seen = true; this.met.add(m.species);
         this.banner = { sp: SPECIES[m.species], t: 0 };
@@ -390,6 +397,7 @@ export class Game {
       if (this.finishing > 3.6 && this.state === 'play') { this.state = 'complete'; this.input.enabled = true; this.ui.complete(this.results()); }
     }
     for (const n of this.npcs || []) {
+      if (!n.cheer) this.updateNpc(n, dt);
       n.hop = n.cheer ? Math.abs(Math.sin(this.time * 7 + n.phase)) * 12 : 0;
       if (n.cheer && n !== p) n.anim += dt * 6;
     }
@@ -589,6 +597,20 @@ export class Game {
     setTimeout(() => { if (this.state === 'play') this.audio.playSong(this.def.music); }, 2500);
   }
 
+  // Mensen in een groepje: rondlopen, werktuigen slaan (vonkjes), graven, eten
+  updateNpc(n, dt) {
+    n.actT = (n.actT || 0) + dt;
+    n.onGround = true;
+    if (n.activity === 'walk') {
+      n.x += n.walkDir * 26 * dt; n.vx = n.walkDir * 26; n.face = n.walkDir; n.anim += dt * 26 / 15;
+      if (Math.abs(n.x - n.homeX) > 42) n.walkDir *= -1;
+    } else n.vx = 0;
+    if (n.activity === 'knap') {
+      const beat = Math.floor((n.actT + n.phase) * 9 / (Math.PI * 2));
+      if (beat !== n.lastBeat) { n.lastBeat = beat; this.fx.add({ kind: 'spark', x: n.cx + n.face * 12, y: n.bottom - 10, vx: n.face * (20 + Math.random() * 40), vy: -40 - Math.random() * 40, life: 0.25, max: 0.25, r: 1, g: 300, color: '#fff2c0' }); }
+    }
+  }
+
   // Landen op boomstammen, krokodillenruggen en nijlpaarden
   landOnPlatforms(p) {
     if (p.hang || p.dead) { p.platform = null; return; }
@@ -615,16 +637,17 @@ export class Game {
         L.omega *= 1 - 1.6 * dt;
         L.angle += L.omega * dt;
       }
-      if (p.hang || p.regrab > 0 || p.onGround || p.dead) continue;
+      if (p.hang || p.bar || p.ledge || p.climbing || p.regrab > 0 || p.onGround || p.dead) continue;
+      if (L === p.lastLiana && p.lastLianaT > 0) continue;
       const ex = L.ax + Math.sin(L.angle) * L.len, ey = L.ay + Math.cos(L.angle) * L.len;
       // Grijpen: een punt op het onderste deel van de liaan raakt je handen of bovenlijf (ruim, voor iedereen)
       const box = { x: p.x - 22, y: p.y - 16, w: p.w + 44, h: p.h * 0.75 + 16 };
       for (let t = 0.3; t <= 1.001; t += 0.05) {
         const px = L.ax + (ex - L.ax) * t, py = L.ay + (ey - L.ay) * t;
         if (px > box.x && px < box.x + box.w && py > box.y && py < box.y + box.h) {
-          L.len = Math.max(TILE * 1.5, Math.hypot(p.cx - L.ax, p.y - 9 - L.ay));
+          // Je pakt de liaan vast waar je hem raakt; het touw blijft even lang
           L.angle = Math.atan2(p.cx - L.ax, p.y - 9 - L.ay);
-          p.grab(L); this.audio.play('grab'); break;
+          p.grab(L, Math.hypot(p.cx - L.ax, p.y - 9 - L.ay)); this.audio.play('grab'); break;
         }
       }
     }

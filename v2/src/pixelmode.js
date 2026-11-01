@@ -4,7 +4,7 @@
 // - Figuren en dieren: hun bestaande tekening wordt per beeld omgezet naar pixels
 //   (harde randen, minder kleuren, 1px omlijning). Zo hebben alle soorten en dieren meteen hun animaties.
 import { TILE } from './config.js';
-import { T } from './level.js';
+import { T, TileMap } from './level.js';
 import { drawPickup, drawStoneCache, drawCampfire, drawFoodCache, drawLiana, drawCave, drawShelter, flintIcon, artifactIcon } from './render.js';
 import { drawFlyingSpear, drawFootprints, toolIcon } from './game.js';
 import { drawAnimal } from './pixelanimals.js';
@@ -240,6 +240,31 @@ class PixelView {
     });
   }
 
+  barTile(l, r, seed) {
+    return this.tileSprite(`bar|${l}|${r}|${seed % 2}`, (x, y) => {
+      if (y >= 2 && y <= 6 && (l || x >= 2) && (r || x <= PT - 3)) { if (y === 2 || y === 6 || (!l && x === 2) || (!r && x === PT - 3)) return INK; return y === 3 ? '#a87c4c' : y === 4 ? '#7a5434' : '#5a3c24'; }
+      if (seed % 2 && x >= 14 && x <= 15 && y > 6 && y < 6 + 10 - Math.abs(x - 14) * 2) return '#4e7a30';
+      if (!l && x >= 0 && x <= 4 && y >= 0 && y <= 3) return '#6a9a3a';
+      return null;
+    });
+  }
+  climbTile(up, seed, vine) {
+    return this.tileSprite(`clb|${up}|${seed % 3}|${vine}`, (x, y) => {
+      if (vine) {
+        const a = Math.abs(x - (6 + Math.round(Math.sin(y * 0.3) * 2))) <= 1, b = Math.abs(x - (18 + Math.round(Math.cos(y * 0.3) * 2))) <= 1, d = Math.abs(y - (x * 0.8 + 3)) < 1 && x > 4 && x < 20;
+        if (a || b || d) return '#3e5e26';
+        if ((x * 7 + y * 5 + seed) % 23 === 0 || ((x + 2) % 9 === 0 && (y + 3) % 8 === 0)) return '#7ab042';
+        return null;
+      }
+      if (!up && y < 2) return y === 0 ? '#a6c868' : '#7a9a44';
+      for (const [hx, hy] of [[5, 5], [17, 10], [8, 17], [19, 21]]) {
+        if (Math.abs(x - hx) <= 3 && y === hy) return '#c4b494';
+        if (Math.abs(x - hx) <= 3 && y === hy + 1) return '#4e4436';
+      }
+      return (x * 3 + y * 7 + seed) % 13 === 0 ? '#66594a' : y % 8 === 0 ? '#6e624f' : '#82745e';
+    });
+  }
+
   buildChunk(map, index, theme) {
     const CH = 16, cv = document.createElement('canvas'); cv.width = CH * PT; cv.height = map.h * PT;
     const c = cv.getContext('2d');
@@ -256,6 +281,9 @@ class PixelView {
       else if (t === T.BRANCH) c.drawImage(this.branchTile(map.get(cx - 1, cy) === T.BRANCH, map.get(cx + 1, cy) === T.BRANCH, false), x - 1, y - 1);
       else if (t === T.THORNS) c.drawImage(this.thornTile(theme === 'cave'), x - 1, y - 1);
       else if (t === T.MUD) c.drawImage(this.mudTile(s), x - 1, y - 1);
+      else if (t === T.BAR) c.drawImage(this.barTile(map.get(cx - 1, cy) === T.BAR, map.get(cx + 1, cy) === T.BAR, s), x - 1, y - 1);
+      else if (t === T.CLIMB) c.drawImage(this.climbTile(map.get(cx, cy - 1) === T.CLIMB, s, false), x - 1, y - 1);
+      else if (t === T.VINE) c.drawImage(this.climbTile(true, s, true), x - 1, y - 1);
       else if (t === T.CLAY) c.drawImage(this.clayTile(map.get(cx, cy - 1) === T.CLAY, map.get(cx - 1, cy) === T.CLAY, map.get(cx + 1, cy) === T.CLAY, s), x - 1, y - 1);
     }
     // Grassprietjes boven de bovenste tegels (steken boven de tegel uit)
@@ -269,6 +297,58 @@ class PixelView {
         if (hash(cx, k + 9) > 0.92) { c.fillStyle = hash(cx, k) > 0.5 ? '#f3d55b' : '#f4f0e0'; c.fillRect(bx - 1, y - h - 2, 3, 1); c.fillRect(bx, y - h - 3, 1, 3); c.fillStyle = '#c87a28'; c.fillRect(bx, y - h - 2, 1, 1); }
       }
     }
+    return cv;
+  }
+
+  // ---------- Rotswand met grot (finish) ----------
+  // Gelaagde rots met een grillige top, begroeiing, scheuren en een donkere, onregelmatige grotopening.
+  cliff(theme) {
+    const key = 'cliff|' + theme;
+    if (this.tiles.has(key)) return this.tiles.get(key);
+    const W = 300, H = 210, mx = 150, mw = 46, mh = 78;
+    const rock = ['#cbb894', '#b8a37e', '#a68f6a', '#937c5a', '#7c674a', '#5e4e38'];
+    const topY = x => { const n = Math.sin(x * 0.045) * 10 + Math.sin(x * 0.13 + 1) * 4 + Math.sin(x * 0.31) * 2; return 26 + n + (x < 50 ? (50 - x) * 1.6 : 0); };
+    const leftX = y => 6 + Math.max(0, (60 - y) * 0.2) + Math.round(Math.sin(y * 0.09) * 5) + (y > H - 40 ? -(y - (H - 40)) * 0.15 : 0);
+    const mouthEdge = (x, y) => { const dx = (x - mx) / (mw + Math.sin(y * 0.4) * 3), dy = (H - y) / (mh + Math.sin(x * 0.3) * 4); return dx * dx + dy * dy; };
+    const cv = bake(W, H, (x, y) => {
+      const t = topY(x);
+      if (y < t - 6) return null;
+      if (x < leftX(y)) return null;
+      // Begroeiing bovenop
+      if (y < t) { const tuft = (x * 7) % 5 < 2 ? 6 : 3; return y >= t - tuft ? ((x + y) % 3 === 0 ? '#9ccc5a' : '#6a9a3a') : null; }
+      if (y < t + 3) return y < t + 1 ? '#86b044' : '#5a7a34';
+      // Grotopening
+      const m = mouthEdge(x, y);
+      if (y > H - mh - 8 && m < 1) {
+        if (m > 0.86) return '#3a2a1e';
+        if (m > 0.62) return dither(x, y) ? '#22170f' : '#2e2016';
+        return m > 0.35 ? '#160e09' : '#0e0805';
+      }
+      // Schaduw onder de overhang boven de grot
+      if (y > H - mh - 16 && m < 1.5 && m >= 1) return (x + y) % 2 ? rock[4] : rock[5];
+      // Gesteentelagen met dithered overgangen; licht van links
+      const band = Math.floor((y + Math.sin(x * 0.05) * 4 + x * 0.06) / 13);
+      let tone = 1 + (band % 3) + (y > H - 30 ? 1 : 0);
+      if (x < leftX(y) + 5) tone = Math.max(0, tone - 1);
+      if (x > W - 40) tone = Math.min(5, tone + 1);
+      const frac = ((y + Math.sin(x * 0.05) * 4 + x * 0.06) % 13);
+      if (frac < 1.5) return rock[Math.min(5, tone + 1)];
+      if (frac < 3 && dither(x, y)) return rock[Math.min(5, tone + 1)];
+      // Scheuren
+      const cr = [[60, 0.5], [210, -0.3], [250, 0.2], [100, 0.1]];
+      for (const [cx0, sl] of cr) { const cx1 = cx0 + (y - 40) * sl + Math.sin(y * 0.2) * 2; if (y > 40 && y < 150 && Math.abs(x - cx1) < 0.8) return rock[5]; }
+      // Handafdrukken (rotskunst) in oker
+      for (const [hx, hy] of [[78, 120], [222, 108]]) if (inEll(x, y, hx, hy, 3.5, 4.5) || (y >= hy - 10 && y <= hy - 5 && (x - hx + 4) % 2 === 0 && x >= hx - 4 && x <= hx + 3)) return '#a85a34';
+      return (x * 7 + y * 13) % 41 === 0 ? rock[0] : rock[tone];
+    });
+    // Losse keien aan de voet
+    const c = cv.getContext('2d');
+    const boulder = bake(16, 10, (x, y) => inEll(x, y, 8, 6, 7.5, 5) ? (y < 4 ? rock[0] : y < 7 ? rock[2] : rock[4]) : null);
+    c.drawImage(boulder, 18, H - 9); c.drawImage(boulder, 92, H - 9); c.drawImage(boulder, 210, H - 8);
+    // Struik bovenop
+    const bush = bake(26, 14, (x, y) => (inEll(x, y, 8, 9, 8, 5) || inEll(x, y, 17, 8, 8, 6)) ? (y < 5 ? '#9ccc5a' : y < 9 ? '#6a9a3a' : '#46702c') : null);
+    c.drawImage(bush, 200, Math.round(topY(212)) - 16); c.drawImage(bush, 90, Math.round(topY(100)) - 14);
+    this.tiles.set(key, cv);
     return cv;
   }
 
@@ -307,6 +387,22 @@ class PixelView {
       c.fillStyle = p.near[1];
       for (let i = Math.floor(camX * PS * 0.6 / 60) - 1; i < (camX * PS * 0.6 + W) / 60 + 1; i++) { if (hash(i, 41) < 0.5) continue; const x = Math.round(i * 60 + hash(i, 42) * 30 - camX * PS * 0.6), len = 30 + Math.round(hash(i, 43) * 70); c.fillRect(x, 0, 2, len); for (let k = 8; k < len; k += 9) c.fillRect(x + (k % 2 ? 2 : -3), k, 3, 2); }
     } else {
+      // Jagers met speren achter een hert (erectus en latere mensen)
+      const look = g.def.look;
+      if (look === 'erectus' || look === 'heidelbergensis') {
+        const span2 = 2600, hx2 = Math.round(((400 - camX * PS * 0.3 + time * 22) % span2 + span2) % span2) - 300, hy2 = yOf(0.3, 32), f = Math.floor(time * 8) % 2;
+        // hert
+        c.fillStyle = '#7a5a3c'; const dx0 = hx2 + 70;
+        c.fillRect(dx0, hy2 - 7, 9, 4); c.fillRect(dx0 + 8, hy2 - 10, 2, 4); c.fillRect(dx0 + 9, hy2 - 11, 3, 2);
+        c.fillStyle = '#5a4028'; c.fillRect(dx0 + 9, hy2 - 14, 1, 3); c.fillRect(dx0 + 11, hy2 - 14, 1, 3); c.fillRect(dx0 + 8, hy2 - 15, 1, 1); c.fillRect(dx0 + 12, hy2 - 15, 1, 1);
+        c.fillStyle = '#7a5a3c'; c.fillRect(dx0 + (f ? 0 : 1), hy2 - 3, 1, 3); c.fillRect(dx0 + (f ? 7 : 6), hy2 - 3, 1, 3);
+        // jagers
+        for (let k = 0; k < 4; k++) {
+          const x = hx2 + k * 14 + (k % 2) * 3, y = hy2, ff = (f + k) % 2;
+          c.fillStyle = '#5a4434'; c.fillRect(x + 1, y - 10, 2, 2); c.fillRect(x + 1, y - 8, 2, 4); c.fillRect(x + (ff ? 0 : 1), y - 4, 1, 4); c.fillRect(x + (ff ? 3 : 2), y - 4, 1, 4);
+          c.fillStyle = '#8a6a44'; for (let q = 0; q < 6; q++) c.fillRect(x + 3 + q, y - 8 - Math.floor(q / 2), 1, 1);
+        }
+      }
       // Grote kudde in de verte
       const span = 2400, hx = Math.round(((900 - camX * PS * 0.3 + time * 6) % span + span) % span) - 300, hy = yOf(0.3, 34);
       c.fillStyle = '#8a6a48';
@@ -377,7 +473,12 @@ class PixelView {
       const e = this.cachedTree(`${d.type}|${d.x}|${L.id}`, big ? g.renderer.bigTreeSpec(d) : g.renderer.levelTreeSpec(d, L.theme), d.x, d.y, big ? 1 : (d.scale || 1) * 0.95);
       c.drawImage(e.cv, Math.round(e.ox), Math.round(e.oy));
     }
-    if (g.finish && vis(g.finish.x, 420)) { const f = g.finish, shelter = g.def.finishScene === 'shelter'; const e = this.cached(`fin|${L.id}`, f.x - 40, f.y - 300, 480, 304, cc => { shelter ? drawShelter(cc, f.x + 190, f.y) : drawCave(cc, f.x + 150, f.y, 0); drawFoodCache(cc, f.x + 122, f.y); }); c.drawImage(e.cv, Math.round(e.ox), Math.round(e.oy)); }
+    if (g.finish && vis(g.finish.x, 480)) {
+      const f = g.finish, shelter = g.def.finishScene === 'shelter';
+      if (!shelter) { const cl = this.cliff(L.theme); c.drawImage(cl, Math.round(f.x * PS) + 30, Math.round(f.y * PS) - cl.height + 3); }
+      const e = this.cached(`fin|${L.id}`, f.x - 40, f.y - 300, 480, 304, cc => { if (shelter) drawShelter(cc, f.x + 190, f.y); drawFoodCache(cc, f.x + 122, f.y); });
+      c.drawImage(e.cv, Math.round(e.ox), Math.round(e.oy));
+    }
     // Tegels
     const theme = L.theme, CH = 16;
     if (this.mapRef !== g.map || this.mapVer !== g.map.version) { this.chunks.clear(); this.mapRef = g.map; this.mapVer = g.map.version; }
@@ -432,11 +533,14 @@ class PixelView {
           return py < 4 ? '#8a909c' : py > PT - 5 ? '#3e4148' : '#5b5f66';
         }), x - 1, y - 1 + off);
       } else if (t === T.SPRING) {
-        const an = map.bounce.get(i) || 0, sq = an > 0 ? Math.round(Math.sin(an / 0.3 * Math.PI) * 5) : 0;
-        c.drawImage(this.tileSprite('spring', (px, py) => { const w = 3 + py * 0.42; if (Math.abs(px - 12) > w || py < 0) return null; return (px * 3 + py * 5) % 11 === 0 ? '#5b351d' : px < 12 ? '#c8804a' : '#a0663a'; }), x - 1, y - 1 + sq, PT + 2, PT + 2 - sq);
+        const an = map.bounce.get(i) || 0, sq = an > 0 ? Math.round(TileMap.wobble(an, 1.0) * 7) : 0;
+        const spr = this.tileSprite('spring', (px, py) => { const w = 3 + py * 0.42; if (Math.abs(px - 12) > w || py < 0) return null; return (px * 3 + py * 5) % 11 === 0 ? '#5b351d' : px < 12 ? '#c8804a' : '#a0663a'; });
+        c.drawImage(spr, x - 1 - Math.round(sq * 0.4), y - 1 + sq, PT + 2 + Math.round(sq * 0.8), PT + 2 - sq);
       } else if (t === T.BOUNCY) {
-        const an = map.bounce.get(i) || 0, sag = an > 0 ? Math.round(Math.sin((0.45 - an) / 0.45 * Math.PI * 3) * (an / 0.45) * 5) : 0;
-        c.drawImage(this.branchTile(map.get(cx - 1, cy) === T.BOUNCY, map.get(cx + 1, cy) === T.BOUNCY, true), x - 1, y - 1 + sag);
+        const an = map.bounce.get(i) || 0, l = map.get(cx - 1, cy) === T.BOUNCY, r = map.get(cx + 1, cy) === T.BOUNCY;
+        // Natrillen: het uiteinde zwiept het verst
+        const sag = an > 0 ? Math.round(TileMap.wobble(an, 1.2) * (r ? 5 : 8)) : 0;
+        c.drawImage(this.branchTile(l, r, true), x - 1, y - 1 + sag);
       } else if (t === T.CRACK) {
         c.drawImage(this.tileSprite('crack', (px, py) => (py === 0 || py === PT - 1 || px === 0 || px === PT - 1) ? INK : (Math.abs(px - 5 - (py >> 1)) < 1 && py < 12) || (Math.abs(py - 11 - ((px - 10) >> 1)) < 1 && px > 9) || (Math.abs(px - 15 + (py >> 2)) < 1 && py > 11) ? '#3e3428' : py < 3 ? '#b8a68a' : '#8f7f68'), x - 1, y - 1);
       }

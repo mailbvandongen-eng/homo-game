@@ -1,5 +1,5 @@
 import { TILE } from './config.js';
-import { T } from './level.js';
+import { T, TileMap } from './level.js';
 import { leafCluster, frond, WIND, bakeTree, drawBakedTree } from './art.js';
 
 const CHUNK = 16; // tegels per voorgetekend stuk
@@ -343,6 +343,8 @@ export class Renderer {
       else if (t === T.BRANCH) branchTile(c, map, cx, cy);
       else if (t === T.THORNS) (theme === 'cave' ? stalagmiteTile : thornTile)(c, cx, cy);
       else if (t === T.MUD) mudTile(c, map, cx, cy);
+      else if (t === T.BAR) barTile(c, map, cx, cy);
+      else if (t === T.CLIMB || t === T.VINE) climbTile(c, map, cx, cy, t === T.VINE);
       else if (t === T.CLAY) clayTile(c, map, cx, cy);
     }
     return cv;
@@ -592,7 +594,7 @@ function bumpTile(c, x, y, full, time) {
 }
 
 function springTile(c, x, y, anim, time) {
-  const sq = anim > 0 ? Math.sin(anim / 0.3 * Math.PI) * 0.35 : 0;
+  const sq = anim > 0 ? TileMap.wobble(anim, 1.0) * 0.4 : 0;
   c.save(); c.translate(x + TILE / 2, y + TILE); c.scale(1 + sq * 0.6, 1 - sq);
   c.fillStyle = '#7a4a2a';
   c.beginPath(); c.moveTo(-17, 0); c.quadraticCurveTo(-15, -22, -6, -30); c.lineTo(-3, -40); c.lineTo(3, -40); c.lineTo(6, -30); c.quadraticCurveTo(15, -22, 17, 0); c.closePath(); c.fill();
@@ -707,7 +709,7 @@ function bouncyTile(c, map, cx, cy, anim, time) {
   // Verende acaciatak: buigt door en veert na
   const x = cx * TILE, y = cy * TILE;
   const left = map.get(cx - 1, cy) === T.BOUNCY, right = map.get(cx + 1, cy) === T.BOUNCY;
-  const sag = anim > 0 ? Math.sin((0.45 - anim) / 0.45 * Math.PI * 3) * (anim / 0.45) * 7 : Math.sin(time * 2 + cx) * 0.8;
+  const sag = anim > 0 ? TileMap.wobble(anim, 1.2) * 9 : Math.sin(time * 2 + cx) * 0.8;
   const yy = y + 2 + sag * (left && right ? 1 : 0.6);
   c.fillStyle = '#3f2a1a'; c.beginPath(); c.roundRect(x - (left ? 1 : -2), yy, TILE + (left ? 1 : -2) + (right ? 1 : -2), 10, 4); c.fill();
   c.fillStyle = '#9a6a3c'; c.fillRect(x + (left ? 0 : 3), yy + 2, TILE - (left ? 0 : 3) - (right ? 0 : 3), 4);
@@ -937,4 +939,30 @@ function clayTile(c, map, cx, cy) {
   if (!left) { c.fillStyle = '#6e4428'; c.fillRect(x, y, 3, TILE); }
   if (!right) { c.fillStyle = '#6e4428'; c.fillRect(x + TILE - 3, y, 3, TILE); }
   if (!up) { c.fillStyle = '#86b044'; c.fillRect(x, y - 1, TILE + 0.5, 4); c.fillStyle = '#b4d868'; c.fillRect(x, y - 1, TILE + 0.5, 1.4); }
+}
+
+function barTile(c, map, cx, cy) {
+  // Hangtak: dunne horizontale tak met knoesten en blaadjes (hand-over-hand)
+  const x = cx * TILE, y = cy * TILE, l = map.get(cx - 1, cy) === T.BAR, r = map.get(cx + 1, cy) === T.BAR;
+  c.fillStyle = '#3a2616'; c.fillRect(x - (l ? 0 : -2), y + 2, TILE + (l ? 0 : -2) + (r ? 0.5 : -2), 6);
+  c.fillStyle = '#7a5434'; c.fillRect(x - (l ? 0 : -3), y + 3, TILE + (l ? 0 : -3) + (r ? 0.5 : -3), 3);
+  c.fillStyle = '#a07a4a'; c.fillRect(x + 6, y + 3, 8, 1);
+  if (!l || !r) { c.fillStyle = '#5a8a3c'; c.beginPath(); c.ellipse(x + (l ? TILE - 4 : 4), y + 4, 6, 3, 0.4, 0, Math.PI * 2); c.fill(); }
+  if (hash(cx, cy) > 0.6) { c.strokeStyle = '#4e7a30'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x + 14, y + 7); c.quadraticCurveTo(x + 16, y + 16, x + 12, y + 22); c.stroke(); }
+}
+
+function climbTile(c, map, cx, cy, vine) {
+  const x = cx * TILE, y = cy * TILE;
+  if (vine) {
+    // Klimplanten: vlechtwerk van ranken met blaadjes
+    c.strokeStyle = '#3e5e26'; c.lineWidth = 2.2;
+    c.beginPath(); c.moveTo(x + 8, y); c.quadraticCurveTo(x + 2, y + 16, x + 8, y + TILE); c.moveTo(x + 22, y); c.quadraticCurveTo(x + 28, y + 16, x + 22, y + TILE); c.moveTo(x + 4, y + 10); c.lineTo(x + 26, y + 22); c.stroke();
+    c.fillStyle = '#6a9a3a'; for (const [dx, dy] of [[6, 6], [24, 12], [10, 22], [20, 28]]) { c.beginPath(); c.ellipse(x + dx, y + dy, 4, 2, 0.6, 0, Math.PI * 2); c.fill(); }
+    return;
+  }
+  // Rotswand met grepen
+  c.fillStyle = '#7e705c'; c.fillRect(x, y, TILE + 0.5, TILE + 0.5);
+  c.fillStyle = '#6a5e4c'; c.fillRect(x, y + 14, TILE + 0.5, 2);
+  for (const [dx, dy] of [[6, 6], [22, 12], [10, 22], [24, 27]]) { c.fillStyle = '#4e4436'; c.beginPath(); c.ellipse(x + dx, y + dy + 1.5, 4, 2, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = '#b4a486'; c.beginPath(); c.ellipse(x + dx, y + dy, 3.5, 1.6, 0, 0, Math.PI * 2); c.fill(); }
+  if (map.get(cx, cy - 1) !== T.CLIMB) { c.fillStyle = '#8aa84a'; c.fillRect(x, y, TILE + 0.5, 3); }
 }

@@ -26,8 +26,9 @@ export default {
     b.ground(37, 52);
     b.ent('snake', 44, 3);
     b.bones(43, 6, 3, { arc: 0.6 });
-    b.rock(48, 3, 2, 2);
-    b.bones(48, 6, 2);
+    // Hoge rots: spring ertegen en pak de rand vast, dan trek je jezelf op
+    b.rock(48, 3, 2, 4);
+    b.bones(48, 8, 2);
     b.bones(52, 5, 4, { arc: 1 });
     b.ground(56, 80);
     b.ent('tree', 58, 3, { scale: 1.1 });
@@ -44,8 +45,10 @@ export default {
     b.ent('tree', 79, 3, { scale: 0.9 });
     b.branch(82, 5, 3);
     b.bones(82, 6, 3);
-    b.branch(86, 6, 3);
-    b.bones(86, 7, 3);
+    // Hangtak boven de kloof: hand-over-hand naar de overkant
+    b.bar(85, 8, 4);
+    b.branch(86, 4, 3);
+    b.bones(85, 7, 4);
     b.ground(90, 112);
     b.ent('vulture', 97, 3, { alt: 5 });
     b.ent('fig', 99, 4);
@@ -84,9 +87,9 @@ export default {
     b.bones(187, 9, 2);
     b.ent('liana', 189, 13, { len: 4 });
     b.bones(191, 10, 2, { arc: 0.5 });
-    b.ent('liana', 194, 13, { len: 6 });
+    b.ent('liana', 194, 13, { len: 7 });
     b.bones(196, 10, 2, { arc: 0.5 });
-    b.ground(199, 221, 5);
+    b.ground(198, 221, 5);
     b.ent('finish', 204, 5);
   },
 };

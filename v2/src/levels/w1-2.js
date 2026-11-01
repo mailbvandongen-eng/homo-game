@@ -68,6 +68,7 @@ export default {
     // G · Omhoog uit de kloof: verende tak, rotswand, brokkelpad
     b.bouncy(191, 2, 2);
     b.rock(194, 0, 4, 8);
+    b.climb(193, 3, 1, 5, 'rock');
     b.bones(194, 9, 3);
     b.crumble(198, 7, 6);
     b.ent('artifact', 201, 10, { id: 'a3', name: 'Botsplijter' });

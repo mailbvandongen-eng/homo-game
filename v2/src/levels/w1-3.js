@@ -12,6 +12,7 @@ export default {
     b.ground(0, 111);
 
     // A · Omhoog de boomtoppen in
+    b.climb(11, 3, 1, 8, 'vine');
     b.ent('bigtree', 11, 3, { height: 12 });
     b.bones(5, 3, 3);
     b.branch(8, 5, 3); b.bones(8, 6, 3);
@@ -20,6 +21,7 @@ export default {
     b.ent('liana', 25, 19, { len: 4 });
 
     // B · Kronenpad met bavianen; beneden een gevaarlijker bodemroute
+    b.climb(31, 3, 1, 8, 'vine');
     b.ent('bigtree', 31, 3, { height: 10 });
     b.branch(29, 11, 5);
     b.ent('baboon', 32, 12);
@@ -27,11 +29,13 @@ export default {
     b.branch(38, 15, 4); b.bones(38, 16, 2);
     b.ent('artifact', 41, 16, { id: 'a1', name: 'Graafstok-steen' });
     b.branch(39, 11, 4);
-    b.ent('liana', 46, 19, { len: 4 });
+    b.bar(43, 16, 7); b.bones(44, 15, 5);
+    b.climb(52, 3, 1, 8, 'vine');
     b.ent('bigtree', 52, 3, { height: 10 });
     b.branch(50, 11, 5);
     b.ent('baboon', 53, 12, { dir: -1 });
     b.ent('liana', 58, 19, { len: 4 });
+    b.climb(65, 3, 1, 8, 'vine');
     b.ent('bigtree', 65, 3, { height: 10 });
     b.branch(62, 11, 6); b.bones(62, 12, 5);
     b.branch(69, 8, 3); b.branch(73, 5, 3);
@@ -50,6 +54,7 @@ export default {
     b.ent('meet', 84, 3, { species: 'rudolfensis', offsets: [0, 42, 80], sizes: [1, 0.95, 0.72] });
     b.ent('tree', 92, 3, { scale: 1 });
     b.ent('snake', 98, 3);
+    b.climb(103, 3, 1, 8, 'vine');
     b.ent('bigtree', 103, 3, { height: 11 });
     b.bones(104, 4, 4);
 
@@ -69,6 +74,7 @@ export default {
     // E · Tweede kronenpad met een luipaard in de boom
     b.ent('checkpoint', 142, 3);
     b.branch(146, 5, 3); b.branch(150, 8, 3);
+    b.climb(156, 3, 1, 8, 'vine');
     b.ent('bigtree', 156, 3, { height: 10 });
     b.branch(154, 11, 6); b.bones(154, 12, 3);
     b.ent('leopard', 159, 12, { range: 180 });
@@ -77,6 +83,7 @@ export default {
     b.ent('artifact', 165, 17, { id: 'a3', name: 'Notenkraker' });
     b.ent('baboon', 168, 17);
     b.ent('liana', 172, 21, { len: 4 });
+    b.climb(178, 3, 1, 9, 'vine');
     b.ent('bigtree', 178, 3, { height: 11 });
     b.branch(176, 12, 4); b.bones(176, 13, 3);
     b.branch(181, 9, 3); b.branch(185, 6, 3);

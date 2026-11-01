@@ -16,6 +16,9 @@ export const T = {
   LAVA: 11,    // lava: erin vallen kost een leven
   MUD: 12,     // slik: stevig maar glad
   CLAY: 13,    // kleiwand: speren blijven erin steken
+  BAR: 14,     // hangtak/touw hoog in de lucht: hand-over-hand
+  CLIMB: 15,   // beklimbare rotswand (grepen)
+  VINE: 16,    // beklimbare klimplanten (boomstam)
 };
 
 const SOLID = new Set([T.GROUND, T.ROCK, T.CRUMBLE, T.BUMP, T.SPRING, T.CRACK, T.MUD, T.CLAY]);
@@ -48,6 +51,8 @@ export function buildLevel(def) {
     clear: (x1, x2, y1, y2) => fill(x1, x2, y1, y2, T.EMPTY),
     mud: (x1, x2, top = 3) => { fill(x1, x2, 0, top - 2, T.GROUND); fill(x1, x2, top - 1, top - 1, T.MUD); },
     clay: (x, y, cw = 1, ch = 1) => fill(x, x + cw - 1, y, y + ch - 1, T.CLAY),
+    bar: (x, y, cw) => fill(x, x + cw - 1, y, y, T.BAR),
+    climb: (x, y, cw, ch, kind = 'rock') => fill(x, x + cw - 1, y, y + ch - 1, kind === 'vine' ? T.VINE : T.CLIMB),
     ent: (type, x, y, opts = {}) => entities.push({ type, ...at(x, y), ...opts }),
     bones: (x, y, n = 1, opts = {}) => {
       for (let i = 0; i < n; i++) {
@@ -103,6 +108,9 @@ export class TileMap {
       }
     }
     for (const [i, t] of this.bounce) { const n = t - dt; if (n <= 0) this.bounce.delete(i); else this.bounce.set(i, n); }
+  }
+  // Natrillen van veren: gedempte trilling (an = resterende tijd, D = totale duur)
+  static wobble(an, D) { const e = D - an; return Math.sin(e * 24) * Math.exp(-e * 4.2);
   }
 
   touchCrumble(cx, cy) {
