@@ -82,12 +82,13 @@ button.log.busy{animation:spin 1s linear infinite}@keyframes spin{to{transform:r
     <button class="log" data-toggle="music" data-icon="music" aria-label="Muziek aan of uit"></button>
     <button class="log" data-toggle="sfx" data-icon="sound" aria-label="Geluid aan of uit"></button>
     <button class="log" id="intro" data-icon="film" aria-label="Filmpje"></button>
+    <button class="log" id="helpBtn" data-icon="help" aria-label="Besturing"></button>
     <button class="log" data-update data-icon="update" aria-label="Bijwerken naar de nieuwste versie"></button>
   </div>
   <span class="ver" id="version"></span>
   <div id="levelPanel" hidden>
-    <div class="lp-head"><b>Kies een level</b><button class="plank" id="levelsClose">✕</button></div>
-    <div class="levels" id="levels"></div>
+    <div class="lp-head"><b>Besturing</b><button class="plank" id="levelsClose">✕</button></div>
+    <div class="levels" id="levels" hidden></div>
     <div class="how" id="howTouch">Links: schuif om te <b>lopen</b> (omhoog/omlaag = <b>klimmen</b>) · Rechts: <b>springen / loslaten</b> en <b>gooien</b></div>
     <div class="how" id="howKeys"><b>← →</b> lopen · <b>↑ ↓</b> klimmen (lianen, wanden, stammen) · <b>spatie</b> springen / loslaten · <b>X</b> gooien · <b>Esc</b> pauze</div>
     <a class="swap" href="../v2/">◐ Getekende versie</a>

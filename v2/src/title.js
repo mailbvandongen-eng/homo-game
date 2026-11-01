@@ -377,3 +377,4 @@ export class TitleScene {
     c.drawImage(back ? this.homB : this.homC, Math.round(x - 32), Math.round(y - hipY - 5));
   }
 }
+export { hash, ell, bake, crown, cloud, leafBlob };

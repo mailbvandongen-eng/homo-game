@@ -17,9 +17,10 @@ import { SPECIES } from './species.js';
 import { installPixel } from './pixelmode.js';
 import { Cinema, hasIntro } from './cinema.js';
 import { TitleScene, TH, plankBoard, logSlice } from './title.js';
+import { JourneyMap } from './journeymap.js';
 
 // Ophogen bij elke publicatie (0.x tot de eerste complete versie 1.0).
-export const VERSION = '0.29.0';
+export const VERSION = '0.30.0';
 
 const LEVELS = [level11, level12, level13, level14, level21, level22, level23, level24, level31, level32, level33, level34];
 const $ = id => document.getElementById(id);
@@ -129,6 +130,7 @@ if (oerCv) {
     sound: ['0001000', '0011010', '1111001', '1111101', '1111001', '0011010', '0001000'],
     film: ['1111111', '1010101', '1111111', '1000001', '1011001', '1000001', '1111111'],
     update: ['0111100', '1000010', '1000111', '1000010', '1000000', '1000001', '0111110'],
+    help: ['0111100', '1000010', '0000010', '0001100', '0001000', '0000000', '0001000'],
   };
   document.querySelectorAll('button.log').forEach(el => { el.style.backgroundImage = `url(${logSlice(ICONS[el.dataset.icon]).toDataURL()})`; });
   const loop = now => {
@@ -136,7 +138,9 @@ if (oerCv) {
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
-  on('levelsBtn', () => { $('levelPanel').hidden = !$('levelPanel').hidden; });
+  const journey = new JourneyMap($('title'), { levels: LEVELS, save, onPlay: i => { journey.close(); startLevel(i); } });
+  on('levelsBtn', () => journey.open());
+  on('helpBtn', () => { $('levelPanel').hidden = !$('levelPanel').hidden; });
   on('levelsClose', () => { $('levelPanel').hidden = true; });
 }
 on('resume', () => { show(null); game.state = 'play'; game.last = performance.now(); });
