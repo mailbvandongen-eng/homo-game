@@ -15,9 +15,10 @@ import level33 from './levels/w3-3.js';
 import level34 from './levels/w3-4.js';
 import { SPECIES } from './species.js';
 import { installPixel } from './pixelmode.js';
+import { Cinema, hasIntro } from './cinema.js';
 
 // Ophogen bij elke publicatie (0.x tot de eerste complete versie 1.0).
-export const VERSION = '0.26.0';
+export const VERSION = '0.27.0';
 
 const LEVELS = [level11, level12, level13, level14, level21, level22, level23, level24, level31, level32, level33, level34];
 const $ = id => document.getElementById(id);
@@ -34,7 +35,7 @@ function show(name) {
 
 // Voortgang wordt op het apparaat bewaard
 const SAVE_KEY = 'homo-v2-save';
-const save = Object.assign({ unlocked: 1, met: [], best: {} }, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}'));
+const save = Object.assign({ unlocked: 1, met: [], best: {}, intros: [] }, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}'));
 const store = () => localStorage.setItem(SAVE_KEY, JSON.stringify(save));
 
 let current = 0;
@@ -72,10 +73,20 @@ game.state = 'title';
 audio.setAmbience('savanna');
 show('title');
 
-function startLevel(i) {
+const cinema = new Cinema(audio);
+window.cinema = cinema; // handig voor testen
+const worldOf = L => +String(L.id).replace(/^w/, '').split('-')[0];
+function startLevel(i, skipIntro) {
   current = i;
   audio.unlock();
   show(null);
+  // Eerste keer in een nieuw hoofdstuk: eerst het introfilmpje
+  const L = LEVELS[i], w = worldOf(L);
+  if (!skipIntro && /-1$/.test(L.id) && hasIntro(w) && !save.intros.includes(w)) {
+    save.intros.push(w); store(); tryFullscreen();
+    cinema.play(w, () => startLevel(i, true));
+    return;
+  }
   game.start(LEVELS[i]);
   tryFullscreen();
 }
@@ -90,6 +101,7 @@ function tryFullscreen() {
 
 const on = (id, fn) => $(id).addEventListener('click', e => { e.preventDefault(); audio.unlock(); audio.play('click'); fn(); });
 on('play', () => startLevel(Math.min(save.unlocked, LEVELS.length) - 1));
+on('intro', () => { const w = worldOf(LEVELS[Math.min(save.unlocked, LEVELS.length) - 1]); tryFullscreen(); cinema.play(hasIntro(w) ? w : 1, () => audio.playSong('title')); });
 
 // Levelkeuze op het titelscherm
 function renderLevels() {
