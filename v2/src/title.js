@@ -1,6 +1,9 @@
 // Startscherm "Oersprong": een levend oerwoud in pixelart met een houten bord als logo.
 // Interne hoogte 180 pixels; de breedte volgt het scherm.
 
+import { drawRig, rigLook, pose } from './rig.js';
+import { SPECIES } from './species.js';
+
 export const TH = 180;
 const hash = (a, b = 0) => { const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return n - Math.floor(n); };
 const INK = '#1c140c';
@@ -11,6 +14,59 @@ function leafBlob(c, x, y, r, cols, seed) {
   for (let i = 0; i < 6; i++) { const a = hash(i, seed) * 6.28, d = r * 0.55 * hash(i, seed + 1); ell(c, x + Math.cos(a) * d, y + Math.sin(a) * d * 0.7, Math.round(r * (0.5 + hash(i, seed + 2) * 0.3)), Math.round(r * (0.4 + hash(i, seed + 3) * 0.25)), cols[i % 2 ? 1 : 2]); }
   for (let i = 0; i < 4; i++) { const a = -0.8 + hash(i, seed + 5) * 1.2, d = r * 0.4; ell(c, x + Math.cos(a) * d, y - r * 0.25 + Math.sin(a) * d * 0.5, Math.round(r * 0.3), Math.round(r * 0.22), cols[0]); }
   c.fillStyle = cols[3]; for (let i = 0; i < r * 3; i++) c.fillRect(Math.round(x + (hash(i, seed + 7) - 0.5) * r * 1.6), Math.round(y + (hash(i, seed + 8) - 0.2) * r * 0.9), 1, 1);
+}
+
+
+// Pixelkunst bakken: fn(x,y) geeft een kleur of null; daarna een donkere rand eromheen
+function bake(w, h, fn, outline = INK) {
+  const cv = document.createElement('canvas'); cv.width = w + 2; cv.height = h + 2; const c = cv.getContext('2d');
+  const g = []; for (let y = 0; y < h; y++) { g[y] = []; for (let x = 0; x < w; x++) g[y][x] = fn(x, y); }
+  const at = (x, y) => x >= 0 && y >= 0 && x < w && y < h ? g[y][x] : null;
+  for (let y = -1; y <= h; y++) for (let x = -1; x <= w; x++) { const v = at(x, y); if (v) { c.fillStyle = v; c.fillRect(x + 1, y + 1, 1, 1); } else if (outline && (at(x - 1, y) || at(x + 1, y) || at(x, y - 1) || at(x, y + 1))) { c.fillStyle = outline; c.fillRect(x + 1, y + 1, 1, 1); } }
+  return cv;
+}
+const WOOD = ['#c99456', '#b07a40', '#9a6834', '#86582c', '#6e4624', '#55351a'];
+// Eén plank: nerven, een knoest, rafelige uiteinden met splinters, afgebrokkelde hoeken
+function plankPixel(x, y, w, h, seed, tint = 0) {
+  const endL = Math.floor(hash(y, seed) * 3) + (y === 0 || y === h - 1 ? 2 : 0) + (hash(Math.floor(y / 2), seed + 5) > 0.75 ? 2 : 0);
+  const endR = Math.floor(hash(y, seed + 9) * 3) + (y === 0 || y === h - 1 ? 2 : 0) + (hash(Math.floor(y / 2), seed + 6) > 0.75 ? 2 : 0);
+  if (x < endL || x > w - 1 - endR) return null;
+  const kx = 10 + Math.floor(hash(seed, 3) * (w - 20)), ky = Math.floor(h / 2), kd = Math.hypot((x - kx) * 0.6, y - ky);
+  if (kd < 1.6) return WOOD[5]; if (kd < 2.6) return WOOD[3]; if (kd < 3.4 && (x + y) % 2) return WOOD[4];
+  const grain = ((x * 0.07 + Math.sin(y * 0.9 + seed) * 0.5 + (kd < 7 ? 2 / (kd + 0.5) : 0)) % 1 + 1) % 1;
+  let k = 1 + tint + (y === 0 ? -1 : y === 1 ? 0 : y >= h - 2 ? 2 : 1);
+  if (grain < 0.07) k += 2; else if (grain < 0.13) k += 1;
+  if (hash(x, y * 7 + seed) > 0.97) k += 1;
+  if (x === endL || x === w - 1 - endR) k += 1;           // kopse kant iets donkerder
+  return WOOD[Math.max(0, Math.min(5, k))];
+}
+// Bord van losse planken (rijen), elk met eigen lengte en verschuiving, kiertjes ertussen en spijkers
+export function plankBoard(w, rows, rowH, seed = 1) {
+  const H = rows * rowH + (rows - 1);
+  const off = [...Array(rows)].map((_, r) => [Math.round((hash(r, seed) - 0.5) * 8), Math.round((hash(r, seed + 1) - 0.5) * 8)]);
+  const cv = bake(w + 12, H, (x, y) => {
+    const r = Math.floor(y / (rowH + 1)), yy = y - r * (rowH + 1);
+    if (yy === rowH) return null;                                   // kier
+    const [a, b] = off[r], x0 = 6 + a, x1 = w + 6 + b;
+    if (x < x0 || x >= x1) return null;
+    return plankPixel(x - x0, yy, x1 - x0, rowH, seed * 31 + r * 7, r % 2);
+  });
+  const c = cv.getContext('2d');
+  for (let r = 0; r < rows; r++) for (const nx of [18, w - 12]) { const ny = 1 + r * (rowH + 1) + Math.floor(rowH / 2); c.fillStyle = INK; c.fillRect(nx, ny - 1, 3, 3); c.fillStyle = '#b8b8b0'; c.fillRect(nx, ny - 1, 2, 2); c.fillStyle = '#e8e8e0'; c.fillRect(nx, ny - 1, 1, 1); }
+  return cv;
+}
+// Boomstamschijf met jaarringen en schors, met een pixelicoon erop (rijen van 0/1)
+export function logSlice(icon, R = 9) {
+  const D = R * 2 + 1;
+  return bake(D, D, (x, y) => {
+    const d = Math.hypot(x - R, y - R); if (d > R + 0.3) return null;
+    const iy = y - (R - Math.floor(icon.length / 2)), ix = x - (R - Math.floor(icon[0].length / 2));
+    if (iy >= 0 && iy < icon.length && ix >= 0 && ix < icon[0].length && icon[iy][ix] === '1') return '#3a2210';
+    if (d > R - 1.6) return (x + y) % 3 ? '#5e3c20' : '#4a2e18';             // schors
+    if (d > R - 2.4) return '#c08a50';
+    const ring = (d * 0.9 + hash(Math.floor(Math.atan2(y - R, x - R) * 3), 1) * 0.6) % 2;
+    return ring < 0.35 ? '#c8945a' : (x - y) > 2 ? '#e8c890' : '#f2d8a4';
+  });
 }
 
 // Pixelletters 5x7 voor het logo
@@ -37,7 +93,7 @@ function logo(word, px = 3) {
 }
 
 export class TitleScene {
-  constructor() { this.logo = logo('OERSPRONG'); }
+  constructor() { this.logo = logo('OERSPRONG'); this.homDy = 9; }
   draw(c, W, t) {
     const H = TH;
     // Lucht: fris turquoise naar warm geel bij de horizon
@@ -84,28 +140,35 @@ export class TitleScene {
     // Bladerdak bovenin als lijst, met hangende lianen
     for (let i = 0; i * 26 < W + 30; i++) leafBlob(c, i * 26 + (i % 2) * 8, -4 + (i % 3) * 3, 16, ['#5aa046', '#3e8a3a', '#2a6a2e', '#7ab85a'], 50 + i);
     for (let i = 0; i < 6; i++) { const x0 = Math.round(W * (0.05 + i * 0.18) + hash(i, 61) * 20), len = 30 + Math.round(hash(i, 62) * 50); for (let y = 6; y < len; y++) { const x = Math.round(x0 + Math.sin(t * 0.9 + i + y * 0.04) * (y / len) * 3); c.fillStyle = '#3e6a2a'; c.fillRect(x, y, 1, 1); if (y % 5 === 0) { c.fillStyle = '#7ab85a'; c.fillRect(x + (y % 10 ? 1 : -2), y, 2, 1); } } }
-    // Houten bord met het logo, aan twee lianen, schommelt een beetje
-    const L = this.logo, bw = L.width + 16, bhh = L.height + 12, cx = Math.round(W / 2), sw = Math.sin(t * 1.1) * 1.2, top = 26;
+    // Bord van losse planken met het logo, aan twee lianen, schommelt een beetje
+    const L = this.logo; if (!this.board) this.board = plankBoard(L.width + 26, 3, 14, 3);
+    const B = this.board, cx = Math.round(W / 2), sw = Math.sin(t * 1.1) * 1.2, top = 24;
     c.save(); c.translate(cx, 0); c.rotate(sw * 0.012);
-    c.fillStyle = '#3e6a2a'; for (const d of [-1, 1]) { const ax = d * (bw / 2 - 12); for (let y = 0; y < top; y++) c.fillRect(Math.round(ax + Math.sin(y * 0.3) * 0.6), y, 2, 1); c.fillStyle = '#7ab85a'; for (let y = 3; y < top; y += 6) c.fillRect(ax + 2, y, 2, 1); c.fillStyle = '#3e6a2a'; }
-    const x0 = -bw / 2;
-    c.fillStyle = INK; c.fillRect(x0 - 1, top - 1, bw + 2, bhh + 2);
-    for (let i = 0; i < 3; i++) { const y = top + Math.round(i * bhh / 3), h = Math.round(bhh / 3); c.fillStyle = ['#a8743e', '#9a6836', '#8c5c30'][i]; c.fillRect(x0, y, bw, h); c.fillStyle = '#c08a50'; c.fillRect(x0, y, bw, 1); c.fillStyle = '#5e3c20'; c.fillRect(x0, y + h - 1, bw, 1); for (let k = 0; k < 6; k++) c.fillRect(Math.round(x0 + hash(k, i) * bw), y + 2 + (k % 3), 4 + (k % 3), 1); }
-    c.fillStyle = '#5e3c20'; for (const d of [-1, 1]) { c.fillRect(d * (bw / 2 - 12), top + 2, 2, 2); }
-    c.drawImage(L, Math.round(-L.width / 2), top + 6);
+    for (const d of [-1, 1]) { const ax = d * (B.width / 2 - 20); for (let y = 0; y < top + 6; y++) { c.fillStyle = '#3e6a2a'; c.fillRect(Math.round(ax + Math.sin(y * 0.3) * 0.6), y, 2, 1); } c.fillStyle = '#7ab85a'; for (let y = 3; y < top; y += 6) c.fillRect(ax + 2, y, 2, 1); c.fillStyle = '#2e5220'; c.fillRect(ax - 2, top + 2, 6, 2); }
+    c.drawImage(B, Math.round(-B.width / 2), top);
+    c.drawImage(L, Math.round(-L.width / 2), top + Math.round((B.height - L.height) / 2) + 1);
     c.restore();
   }
-  // Kleine habilis die op de tak zit en zwaait
+  // De habilis uit het spel: zit op de tak met bungelende benen en zwaait
   hominin(c, x, y, t) {
-    const fur = '#7a4e2e', dark = '#4e301a', skin = '#c48c5e', wave = Math.sin(t * 6) > 0;
-    c.fillStyle = INK; c.fillRect(x - 5, y - 21, 11, 10); c.fillRect(x - 6, y - 12, 12, 12);
-    c.fillStyle = fur; c.fillRect(x - 5, y - 11, 10, 10); c.fillStyle = dark; c.fillRect(x + 2, y - 11, 3, 10);
-    c.fillStyle = '#3a2416'; c.fillRect(x - 4, y - 20, 9, 4); c.fillStyle = skin; c.fillRect(x - 3, y - 17, 8, 6); c.fillStyle = dark; c.fillRect(x - 4, y - 17, 9, 1);
-    c.fillStyle = '#fff'; c.fillRect(x - 1, y - 15, 2, 1); c.fillRect(x + 2, y - 15, 2, 1); c.fillStyle = INK; c.fillRect(x, y - 15, 1, 1); c.fillRect(x + 3, y - 15, 1, 1); c.fillRect(x, y - 12, 4, 1);
-    // Benen bungelen over de tak
-    const sw = Math.round(Math.sin(t * 2) * 1); c.fillStyle = fur; c.fillRect(x - 4, y, 3, 6 + sw); c.fillRect(x + 1, y, 3, 6 - sw); c.fillStyle = skin; c.fillRect(x - 5, y + 6 + sw, 4, 2); c.fillRect(x + 1, y + 6 - sw, 4, 2);
-    // Arm die zwaait
-    c.fillStyle = fur; if (wave) { c.fillRect(x + 5, y - 16, 2, 7); c.fillStyle = skin; c.fillRect(x + 5, y - 19, 3, 3); } else { c.fillRect(x + 5, y - 13, 2, 5); c.fillRect(x + 7, y - 17, 2, 5); c.fillStyle = skin; c.fillRect(x + 7, y - 20, 3, 3); }
-    c.fillStyle = fur; c.fillRect(x - 7, y - 9, 2, 8);
+    const f = Math.floor(t * 10);
+    if (this.homF !== f) {
+      this.homF = f;
+      const S = 64, cv = this.homCv || (this.homCv = document.createElement('canvas')); cv.width = S; cv.height = S;
+      const g = cv.getContext('2d', { willReadFrequently: true });
+      const p = pose('sit', t); p.hF = 1.55; p.hB = 1.5; p.kF = 1.35 + Math.sin(t * 2) * 0.25; p.kB = 1.35 - Math.sin(t * 2) * 0.25; p.aF = 0; p.aB = 0;
+      p.sB = 2.8; p.eB = 0.2 + Math.sin(t * 7) * 0.45; p.sF = 0.55; p.eF = 0.6; p.lean = 0.05; p.neck = -0.1;
+      g.save(); g.translate(S / 2, S - 6); g.scale(-0.33, 0.33);
+      drawRig(g, rigLook(SPECIES.habilis.look || {}), p, { time: t, mouth: 'open' });
+      g.restore();
+      const img = g.getImageData(0, 0, S, S), d = img.data;
+      for (let i = 0; i < d.length; i += 4) { if (d[i + 3] >= 140) { d[i + 3] = 255; for (let k = 0; k < 3; k++) d[i + k] = Math.round(d[i + k] / 14) * 14; } else d[i + 3] = 0; }
+      // Donkere rand eromheen, zoals bij de figuren in het spel
+      const sol = i => d[i * 4 + 3] === 255, out = [];
+      for (let yy = 0; yy < S; yy++) for (let xx = 0; xx < S; xx++) { const i = yy * S + xx; if (sol(i)) continue; if ((xx > 0 && sol(i - 1)) || (xx < S - 1 && sol(i + 1)) || (yy > 0 && sol(i - S)) || (yy < S - 1 && sol(i + S))) out.push(i); }
+      for (const i of out) { d[i * 4] = 26; d[i * 4 + 1] = 15; d[i * 4 + 2] = 8; d[i * 4 + 3] = 255; }
+      g.putImageData(img, 0, 0);
+    }
+    c.drawImage(this.homCv, Math.round(x - 32), Math.round(y - 64 + 6 + this.homDy));
   }
 }
