@@ -301,55 +301,111 @@ class PixelView {
   }
 
   // ---------- Rotswand met grot (finish) ----------
-  // Gelaagde rots met een grillige top, begroeiing, scheuren en een donkere, onregelmatige grotopening.
-  cliff(theme) {
-    const key = 'cliff|' + theme;
+  // Het level eindigt tegen een hoge rotswand die boven uit beeld en tot het einde doorloopt.
+  // Getrapte richels met gras en hangplanten, blokvormige breuken, puin aan de voet,
+  // en onderaan in de wand de grotopening met overhangende lip en druipstenen.
+  cliff(L, f) {
+    const key = 'cliff|' + L.id;
     if (this.tiles.has(key)) return this.tiles.get(key);
-    const W = 300, H = 210, mx = 150, mw = 46, mh = 78;
-    const rock = ['#cbb894', '#b8a37e', '#a68f6a', '#937c5a', '#7c674a', '#5e4e38'];
-    const topY = x => { const n = Math.sin(x * 0.045) * 10 + Math.sin(x * 0.13 + 1) * 4 + Math.sin(x * 0.31) * 2; return 26 + n + (x < 50 ? (50 - x) * 1.6 : 0); };
-    const leftX = y => 6 + Math.max(0, (60 - y) * 0.2) + Math.round(Math.sin(y * 0.09) * 5) + (y > H - 40 ? -(y - (H - 40)) * 0.15 : 0);
-    const mouthEdge = (x, y) => { const dx = (x - mx) / (mw + Math.sin(y * 0.4) * 3), dy = (H - y) / (mh + Math.sin(x * 0.3) * 4); return dx * dx + dy * dy; };
+    const theme = L.outside ? (L.outsideTheme || 'savanna') : L.theme;
+    const ROCK = {
+      sand: ['#dccaa2', '#c6b088', '#ae9670', '#967e5c', '#7a6549', '#584834'],
+      basalt: ['#aca89c', '#928e82', '#7a766c', '#646058', '#4e4a44', '#36332e'],
+      lime: ['#d6d2c4', '#c0bcac', '#a8a494', '#908c7c', '#767264', '#565246'],
+    };
+    const rock = ROCK[{ java: 'basalt', coast: 'basalt', dusk: 'basalt', hills: 'lime', forest: 'lime', lake: 'lime', dmanisi: 'lime' }[theme] || 'sand'];
+    const gr = (PAL[theme] || PAL.savanna).grass;
+    const x0 = f.x + 100;                                   // wereld-x van de linkerkant van het doek
+    const W = Math.ceil((L.pxW - x0) * PS) + 8, G = Math.round(f.y * PS), H = G + 6;
+    const mx = Math.round((f.x + 250 - x0) * PS), mw = 40, mh = 70;
+    const hAt = y => G - y;                                 // hoogte boven het maaiveld
+    const BAND = 46;
+    const leftX = y => {
+      const d = hAt(y) + 6, band = Math.floor(d / BAND), fy = BAND - (d - band * BAND);   // fy: 0 bovenaan de richel
+      let lx = 18 + Math.round((hash(band, 3) - 0.5) * 34);
+      lx += Math.round(Math.min(fy, 10) * 0.9) + Math.round(Math.sin(d * 0.33 + band * 2) * 1.6 + Math.sin(d * 0.9) * 0.8);
+      return lx;
+    };
+    const talus = y => { const d = hAt(y); return d < 24 ? Math.max(-2, d * 0.75 - 2) : 1e9; };
+    const wall = (x, y) => y >= 0 && x >= leftX(y);
+    const rubble = (x, y) => !wall(x, y) && x >= talus(y) && hAt(y) >= -6;
+    const solid = (x, y) => wall(x, y) || rubble(x, y);
+    // Grotopening: boog met vlakke vloer en grillige rand
+    const mouth = (x, y) => {
+      const d = hAt(y); if (d < -6) return 9;
+      const dx = (x - mx) / (mw + Math.sin(d * 0.5) * 2 + hash(Math.floor(d / 3), 1) * 3);
+      const dy = Math.max(0, d) / (mh + Math.sin(x * 0.35) * 3 + hash(Math.floor(x / 3), 5) * 4);
+      return dx * dx + dy * dy;
+    };
+    const archY = x => { const dx = (x - mx) / mw; return Math.abs(dx) >= 1 ? G : G - mh * Math.sqrt(1 - dx * dx); };
+    const teeth = [[-24, 9, 3], [-11, 5, 2], [2, 12, 3], [14, 6, 2], [26, 8, 3]];
     const cv = bake(W, H, (x, y) => {
-      const t = topY(x);
-      if (y < t - 6) return null;
-      if (x < leftX(y)) return null;
-      // Begroeiing bovenop
-      if (y < t) { const tuft = (x * 7) % 5 < 2 ? 6 : 3; return y >= t - tuft ? ((x + y) % 3 === 0 ? '#9ccc5a' : '#6a9a3a') : null; }
-      if (y < t + 3) return y < t + 1 ? '#86b044' : '#5a7a34';
-      // Grotopening
-      const m = mouthEdge(x, y);
-      if (y > H - mh - 8 && m < 1) {
-        if (m > 0.86) return '#3a2a1e';
-        if (m > 0.62) return dither(x, y) ? '#22170f' : '#2e2016';
-        return m > 0.35 ? '#160e09' : '#0e0805';
+      if (!solid(x, y)) {
+        // Grasplukjes op richels en op de puinhelling
+        if (solid(x, y + 1) && hAt(y) > -2) { const t = hash(x, 7); if (t > 0.45) return t > 0.8 ? gr[0] : gr[1]; }
+        if (solid(x, y + 2) && hash(x, 7) > 0.82 && hash(x, 8) > 0.4) return gr[0];
+        return null;
       }
-      // Schaduw onder de overhang boven de grot
-      if (y > H - mh - 16 && m < 1.5 && m >= 1) return (x + y) % 2 ? rock[4] : rock[5];
-      // Gesteentelagen met dithered overgangen; licht van links
-      const band = Math.floor((y + Math.sin(x * 0.05) * 4 + x * 0.06) / 13);
-      let tone = 1 + (band % 3) + (y > H - 30 ? 1 : 0);
-      if (x < leftX(y) + 5) tone = Math.max(0, tone - 1);
-      if (x > W - 40) tone = Math.min(5, tone + 1);
-      const frac = ((y + Math.sin(x * 0.05) * 4 + x * 0.06) % 13);
-      if (frac < 1.5) return rock[Math.min(5, tone + 1)];
-      if (frac < 3 && dither(x, y)) return rock[Math.min(5, tone + 1)];
-      // Scheuren
-      const cr = [[60, 0.5], [210, -0.3], [250, 0.2], [100, 0.1]];
-      for (const [cx0, sl] of cr) { const cx1 = cx0 + (y - 40) * sl + Math.sin(y * 0.2) * 2; if (y > 40 && y < 150 && Math.abs(x - cx1) < 0.8) return rock[5]; }
-      // Handafdrukken (rotskunst) in oker
-      for (const [hx, hy] of [[78, 120], [222, 108]]) if (inEll(x, y, hx, hy, 3.5, 4.5) || (y >= hy - 10 && y <= hy - 5 && (x - hx + 4) % 2 === 0 && x >= hx - 4 && x <= hx + 3)) return '#a85a34';
-      return (x * 7 + y * 13) % 41 === 0 ? rock[0] : rock[tone];
+      // Bovenkant van richels: gras
+      if (!solid(x, y - 1)) return gr[1];
+      if (!solid(x, y - 2)) return dither(x, y) ? gr[2] : gr[3];
+      const m = mouth(x, y);
+      if (m < 1) {
+        // Druipstenen aan de bovenrand
+        for (const [o, len, w] of teeth) { const k = Math.abs(x - (mx + o)); const ay = archY(x); if (k < w && y >= ay - 3 && y <= ay + len * (1 - k / w)) return k < 1 ? rock[3] : rock[4]; }
+        if (m > 0.9) return rock[5];
+        if (m > 0.78) return dither(x, y) ? '#2a1d14' : '#1e140d';
+        const d = hAt(y);
+        if (d < 4) return (x + y) % 3 === 0 ? '#2a1d14' : '#1a110b';       // vloer die de grot in loopt
+        return m > 0.5 ? '#140c08' : '#0b0604';
+      }
+      if (rubble(x, y)) {
+        // Puinhelling: losse stenen van verschillende grootte
+        const r = 3 + Math.floor(hash(Math.floor(x / 5), Math.floor(y / 5)) * 2), qx = Math.floor(x / r), qy = Math.floor(y / r), v = hash(qx, qy * 7);
+        const ex = x - qx * r, ey = y - qy * r;
+        if (ey === r - 1 || (ex === r - 1 && v > 0.5)) return rock[5];
+        return rock[ey === 0 ? 1 : v > 0.6 ? 2 : v > 0.25 ? 3 : 4];
+      }
+      // Grote onregelmatige rotsvlakken (gestrekt Voronoi), elk vlak licht van linksboven
+      let d1 = 1e9, d2 = 1e9, sx = 0, sy = 0, id = 0, id2 = 0;
+      const CW = 44, CH = 34, gx = Math.floor(x / CW), gy = Math.floor(y / CH);
+      for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
+        const cx = gx + a, cy = gy + b, px = (cx + 0.1 + hash(cx, cy) * 0.8) * CW, py = (cy + 0.1 + hash(cy, cx + 9) * 0.8) * CH;
+        const dd = Math.hypot(x - px, (y - py) * 1.25);
+        if (dd < d1) { d2 = d1; id2 = id; d1 = dd; sx = px; sy = py; id = cx * 31 + cy; } else if (dd < d2) { d2 = dd; id2 = cx * 31 + cy; }
+      }
+      const e = d2 - d1, rx = (x - sx) / CW, ry = (y - sy) / CH;
+      const crack = hash(Math.min(id, id2), Math.max(id, id2)) > 0.42;   // niet elke rand is een scheur
+      let tone = 1.9 + hash(id, 4) * 0.8 + rx * 0.7 + ry * 0.9;
+      // Gebroken gesteentelagen
+      const sy2 = y + Math.sin(x * 0.045) * 3 + Math.sin(x * 0.13) * 1.2, lay = Math.floor(sy2 / 17), lf = sy2 - lay * 17;
+      const layOn = hash(lay, Math.floor(x / 26)) > 0.35;
+      const fromEdge = x - leftX(y);
+      if (fromEdge < 2) tone = -1; else if (fromEdge < 6) tone -= 1;
+      if (fromEdge < 12 && leftX(y - 7) < leftX(y) - 4) tone += 1.6;  // schaduw onder een richel
+      if (x > W * 0.5) tone += 0.5;
+      if (m < 1.5) tone += 1 - (m - 1) * 2;                      // schaduw rond de opening
+      if (crack && e < 1.3) return rock[5];
+      if (crack && e < 3) { if (ry < 0) tone -= 1.2; else tone += 1; }
+      else if (layOn && lf < 1) tone += 1.3;
+      else if (layOn && lf < 2) tone -= 0.8;
+      const t = Math.max(0, Math.min(5, tone + (dither(x, y) ? 0.25 : -0.25)));
+      const sp = hash(x, y);
+      return sp > 0.99 ? rock[0] : sp < 0.01 ? rock[5] : rock[Math.min(5, Math.round(t))];
     });
-    // Losse keien aan de voet
     const c = cv.getContext('2d');
-    const boulder = bake(16, 10, (x, y) => inEll(x, y, 8, 6, 7.5, 5) ? (y < 4 ? rock[0] : y < 7 ? rock[2] : rock[4]) : null);
-    c.drawImage(boulder, 18, H - 9); c.drawImage(boulder, 92, H - 9); c.drawImage(boulder, 210, H - 8);
-    // Struik bovenop
-    const bush = bake(26, 14, (x, y) => (inEll(x, y, 8, 9, 8, 5) || inEll(x, y, 17, 8, 8, 6)) ? (y < 5 ? '#9ccc5a' : y < 9 ? '#6a9a3a' : '#46702c') : null);
-    c.drawImage(bush, 200, Math.round(topY(212)) - 16); c.drawImage(bush, 90, Math.round(topY(100)) - 14);
-    this.tiles.set(key, cv);
-    return cv;
+    // Hangplanten over de lip van de grot en van een paar richels
+    const vine = (x, y, len) => { for (let k = 0; k < len; k++) { const xx = x + Math.round(Math.sin(k * 0.35 + x) * 1); c.fillStyle = k % 3 === 0 ? gr[0] : gr[2]; c.fillRect(xx + 1, y + k + 1, 1, 1); if (k % 4 === 1) { c.fillStyle = gr[1]; c.fillRect(xx + (k % 8 < 4 ? 2 : 0), y + k + 1, 1, 1); } } };
+    for (const [o, len] of [[-30, 16], [-19, 9], [-6, 6], [8, 13], [21, 7], [33, 11]]) vine(mx + o, Math.round(archY(mx + o)) - 10, len);
+    for (let y = 8; y < G - mh - 20; y++) if (leftX(y) > leftX(y + 1) + 3 && hash(y, 4) > 0.3) { const x = leftX(y + 1) + 2; vine(x, y + 2, 8 + Math.floor(hash(y) * 14)); }
+    // Keien en struiken aan de voet
+    const boulder = (w, h) => bake(w, h, (x, y) => inEll(x, y, w / 2, h / 2 + 1, w / 2 - 0.5, h / 2) ? (y < h * 0.35 ? rock[1] : y < h * 0.7 ? rock[2] : rock[4]) : null);
+    c.drawImage(boulder(18, 12), mx - mw - 26, G - 11); c.drawImage(boulder(11, 8), mx - mw - 8, G - 7); c.drawImage(boulder(14, 10), mx + mw + 4, G - 9);
+    const bush = bake(26, 14, (x, y) => (inEll(x, y, 8, 9, 8, 5) || inEll(x, y, 17, 8, 8, 6)) ? (y < 5 ? gr[0] : y < 9 ? gr[2] : gr[3]) : null);
+    c.drawImage(bush, mx + mw + 22, G - 12); c.drawImage(bush, 2, G - 13);
+    const res = { cv, x: Math.round(x0 * PS) - 1, y: G - H + 1 };
+    this.tiles.set(key, res);
+    return res;
   }
 
   // ---------- Achtergrond ----------
@@ -473,9 +529,9 @@ class PixelView {
       const e = this.cachedTree(`${d.type}|${d.x}|${L.id}`, big ? g.renderer.bigTreeSpec(d) : g.renderer.levelTreeSpec(d, L.theme), d.x, d.y, big ? 1 : (d.scale || 1) * 0.95);
       c.drawImage(e.cv, Math.round(e.ox), Math.round(e.oy));
     }
-    if (g.finish && vis(g.finish.x, 480)) {
+    if (g.finish && vis(g.finish.x, 480) || g.finish && camX > g.finish.x) {
       const f = g.finish, shelter = g.def.finishScene === 'shelter';
-      if (!shelter) { const cl = this.cliff(L.theme); c.drawImage(cl, Math.round(f.x * PS) + 30, Math.round(f.y * PS) - cl.height + 3); }
+      if (!shelter) { const cl = this.cliff(L, f); c.drawImage(cl.cv, cl.x, cl.y); }
       const e = this.cached(`fin|${L.id}`, f.x - 40, f.y - 300, 480, 304, cc => { if (shelter) drawShelter(cc, f.x + 190, f.y); drawFoodCache(cc, f.x + 122, f.y); });
       c.drawImage(e.cv, Math.round(e.ox), Math.round(e.oy));
     }
