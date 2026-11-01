@@ -59,6 +59,8 @@ export default {
     b.ent('stampede', 200, 3, { count: 5, every: 0.7 });
     b.rock(205, 3, 3, 3);
     b.ent('tree', 212, 3, { scale: 1.1 });
+    // Eten: proberen wat het doet
+    b.bump(68, 6, 'date'); b.bump(107, 6, 'ferment'); b.bump(149, 6, 'honey'); b.bump(178, 6, 'berry');
     b.ent('finish', 216, 3);
   },
 };

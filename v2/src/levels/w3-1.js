@@ -54,6 +54,8 @@ export default {
     b.rock(200, 3, 2, 3);
     b.ent('artifact', 201, 8, { id: 'a3', name: 'Scheenbeen van Boxgrove' });
     b.ent('tree', 212, 3, { scale: 1.1 });
+    // Eten: proberen wat het doet
+    b.bump(15, 6, 'berry'); b.bump(50, 6, 'honey'); b.bump(82, 6, 'redcap'); b.bump(166, 6, 'shroom'); b.bump(194, 6, 'ferment');
     b.ent('finish', 214, 3);
   },
 };

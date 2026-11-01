@@ -49,6 +49,8 @@ export default {
     b.bones(165, 5, 2); b.bones(181, 5, 2); b.bones(193, 5, 2);
     b.ground(201, 235);
     b.ent('tree', 208, 3, { scale: 1.1 });
+    // Eten: proberen wat het doet
+    b.bump(19, 6, 'fig'); b.bump(60, 6, 'honey'); b.bump(101, 6, 'berry'); b.bump(149, 6, 'ferment');
     b.ent('finish', 214, 3);
   },
 };

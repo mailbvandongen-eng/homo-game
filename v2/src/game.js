@@ -8,6 +8,7 @@ import { Renderer, drawPickup, drawTree, drawCampfire, drawStoneCache, drawFoodC
 import { PLATFORM_TYPES } from './platforms.js';
 import { WIND } from './art.js';
 import { SPECIES } from './species.js';
+import { FOODS, BUFF_TIME, EFFECT_TEXT, GOOD, foodName } from './food.js';
 import { GiantHyena, Lion, Scimitar } from './boss.js';
 import { Stalactite, Gnu } from './enemies.js';
 
@@ -78,7 +79,7 @@ export class Game {
     const L = this.level;
     this.enemies = []; this.stonesFlying = []; this.projectiles = []; this.spears = []; this.stuckSpears = [];
     this.arenaOn = false; this.boss = null;
-    if (!fromCheckpoint) { this.pickups = []; this.decor = []; this.fires = []; this.meets = []; this.met = new Set(); this.banner = null; }
+    if (!fromCheckpoint) { this.pickups = []; this.decor = []; this.fires = []; this.meets = []; this.met = new Set(); this.banner = null; this.faunaSeen = new Set(); }
     this.stampedes = [];
     if (fromCheckpoint) for (const e of L.entities) if (e.type === 'stampede') this.stampedes.push({ ...e, started: false, spawned: 0, t: 0 });
     this.platforms = L.entities.filter(e => PLATFORM_TYPES[e.type]).map(e => new PLATFORM_TYPES[e.type](e));
@@ -88,7 +89,8 @@ export class Game {
         en.spawnX = e.x;
         this.enemies.push(en);
       } else if (!fromCheckpoint) {
-        if (['bone', 'fig', 'flint', 'artifact', 'handaxe'].includes(e.type)) this.pickups.push({ ...e, taken: false });
+        if (['bone', 'flint', 'artifact', 'handaxe'].includes(e.type)) this.pickups.push({ ...e, taken: false });
+        else if (FOODS[e.type]) this.pickups.push({ ...e, taken: false, rest: true, grow: 1 });
         else if (e.type === 'stampede') this.stampedes.push({ ...e, started: false, spawned: 0, t: 0 });
         else if (e.type === 'checkpoint') this.fires.push({ ...e, lit: false });
         else if (e.type === 'tree' || e.type === 'bigtree' || e.type === 'finish' || e.type === 'sign') this.decor.push({ ...e });
@@ -163,7 +165,7 @@ export class Game {
   // ---------------- Spelregels ----------------
   hurt(fromX) {
     const p = this.player;
-    if (p.invuln > 0 || p.dead) return;
+    if (p.invuln > 0 || p.dead || p.buffs?.shield > 0) return;
     this.hearts--;
     if (p.hang) { p.hang.held = false; p.hang = null; p.regrab = 0.5; }
     if (this.hearts <= 0) return this.die();
@@ -266,10 +268,61 @@ export class Game {
       if (item) {
         this.map.bumpItems.delete(i);
         const x = (cx + 0.5) * TILE, y = cy * TILE;
+        const F = FOODS[item];
         if (item === 'bone') { this.addBones(1); this.fx.sparkle(x, y - 10); this.fx.text(x, y - 14, '+1'); }
+        // Vruchten vallen er aan de onderkant uit; paddenstoelen en bloemen groeien er bovenop
+        else if (F && F.fall) { this.pickups.push({ type: item, x, y: y + TILE + 8, vx: (Math.random() < 0.5 ? -1 : 1) * (50 + Math.random() * 40), vy: 60, taken: false, wait: 0.45 }); this.audio.play('plip'); }
+        else if (F) { this.pickups.push({ type: item, x, y: y - 10, taken: false, rest: true, grow: 0 }); this.fx.sparkle(x, y - 6, '#cfe8a0'); }
         else this.pickups.push({ type: item, x, y: y - 14, taken: false, pop: 0.3 });
       }
     } else this.audio.play('bump');
+  }
+
+  // Vallen, stuiteren en uitrollen; true = (nog) niet te pakken
+  foodPhysics(k, dt) {
+    if (k.grow < 1) k.grow = Math.min(1, k.grow + dt * 4);
+    if (k.wait > 0) k.wait -= dt;
+    if (!k.rest) {
+      k.vy = Math.min(k.vy + 1300 * dt, 700); k.y += k.vy * dt;
+      const nx = k.x + k.vx * dt;
+      if (this.map.solidAt(Math.floor((nx + Math.sign(k.vx) * 6) / TILE), Math.floor(k.y / TILE))) k.vx = -k.vx * 0.5; else k.x = nx;
+      const tx = Math.floor(k.x / TILE), ty = Math.floor((k.y + 8) / TILE), t = this.map.get(tx, ty);
+      if (k.vy > 0 && (this.map.solidAt(tx, ty) || this.map.oneWayAt(tx, ty)) && k.y + 8 - ty * TILE < 14) {
+        k.y = ty * TILE - 8;
+        if (k.vy > 220) { k.vy = -k.vy * 0.32; k.vx *= 0.7; this.audio.play('plip'); }
+        else { k.vy = 0; k.rest = true; }
+      }
+      if (t === T.WATER || t === T.LAVA) { k.taken = true; this.fx.splash?.(k.x, ty * TILE); return true; }
+      if (k.y > this.level.pxH + 60) { k.taken = true; return true; }
+    } else if (Math.abs(k.vx || 0) > 4) {
+      // Uitrollen tot hij stil ligt
+      const nx = k.x + k.vx * dt; k.vx *= Math.max(0, 1 - dt * 3.5);
+      const below = Math.floor((k.y + 10) / TILE);
+      if (this.map.solidAt(Math.floor((nx + Math.sign(k.vx) * 6) / TILE), Math.floor(k.y / TILE))) k.vx = -k.vx * 0.4; else k.x = nx;
+      if (!this.map.solidAt(Math.floor(k.x / TILE), below) && !this.map.oneWayAt(Math.floor(k.x / TILE), below)) k.rest = false;
+    }
+    return k.wait > 0;
+  }
+
+  // Opeten: wat het doet weet je pas als je het probeert
+  eat(k) {
+    const p = this.player, F = FOODS[k.type];
+    let eff = F.effect;
+    if (eff === 'random') eff = Math.random() < 0.6 ? 'jump' : 'dizzy';
+    if (eff === 'heart' && this.hearts >= MAX_HEARTS) eff = 'bones';
+    if (eff === 'heart') this.hearts++;
+    else if (eff === 'bones') this.addBones(5);
+    else {
+      p.buffs[eff] = BUFF_TIME[eff];
+      // Tegenstrijdige effecten heffen elkaar op
+      if (eff === 'dizzy' || eff === 'drunk') { p.buffs.speed = 0; p.buffs.jump = 0; }
+      if (GOOD.has(eff)) { p.buffs.dizzy = 0; p.buffs.drunk = 0; }
+    }
+    const good = GOOD.has(eff);
+    this.audio.play(good ? (eff === 'heart' ? 'heart' : 'boost') : eff === 'drunk' ? 'hic' : 'yuck');
+    this.fx.sparkle(k.x, k.y, good ? '#ffe27a' : '#b0d070');
+    this.fx.text(k.x, k.y - 22, foodName(k.type, this.def), '#fff6dc');
+    this.fx.text(k.x, k.y - 8, EFFECT_TEXT[eff], good ? '#9cf27a' : '#ffb07a');
   }
 
   addBones(n) {
@@ -325,9 +378,20 @@ export class Game {
     const p = this.player;
     if (this.state === 'play' && this.finishing === null) this.levelTime += dt;
     for (const pl of this.platforms) pl.update(dt, this);
+    if (this.state === 'play' && !this.banner) for (const pl of this.platforms) if (pl.fact && !this.faunaSeen.has(pl.kind) && Math.abs(pl.x + (pl.w || 0) / 2 - p.cx) < this.viewW * 0.42) {
+      this.faunaSeen.add(pl.kind); this.banner = { hold: true, sp: pl.fact, t: 0 }; this.audio.play('meet');
+    }
     p.swingCd = Math.max(0, (p.swingCd || 0) - dt);
     if (p.platform && p.onGround && !p.hang) { p.x += p.platform.dx; p.y += p.platform.dy; }
-    p.update(dt, this.state === 'play' ? inp : { left: false, right: false, jumpHeld: false, jump: false, throw: false }, this);
+    let pin = this.state === 'play' ? inp : { left: false, right: false, jumpHeld: false, jump: false, throw: false };
+    if (this.state === 'play' && p.buffs.dizzy > 0) pin = { ...pin, left: pin.right, right: pin.left };
+    if (this.state === 'play' && p.buffs.drunk > 0) {
+      // Wankelen: af en toe trekt je lijf een kant op, of je wilt of niet
+      const d = Math.sin(this.time * 1.9) + Math.sin(this.time * 3.3 + 1) * 0.6;
+      if (Math.abs(d) > 1.05) pin = { ...pin, left: d < 0, right: d > 0 };
+      if (Math.random() < dt * 0.6) { this.fx.text(p.cx, p.y - 8, 'hik!', '#ffe6a0'); this.audio.play('hic'); }
+    }
+    p.update(dt, pin, this);
     this.landOnPlatforms(p);
 
     if (this.state === 'dying') {
@@ -480,16 +544,13 @@ export class Game {
     for (const k of this.pickups) {
       if (k.taken) continue;
       if (k.pop > 0) { k.pop -= dt; k.y -= 70 * dt; continue; }
+      if (FOODS[k.type]) { if (this.foodPhysics(k, dt)) continue; }
       // De handbijl pak je ook als je eroverheen springt (hij is te belangrijk om te missen)
       const kb = k.type === 'handaxe' ? { x: k.x - 14, y: k.y - 220, w: 28, h: 232 } : { x: k.x - 9, y: k.y - 9, w: 18, h: 18 };
       if (!overlap(box, kb)) continue;
       k.taken = true;
       if (k.type === 'bone') { this.addBones(1); this.fx.sparkle(k.x, k.y, '#fff6dc'); }
-      else if (k.type === 'fig') {
-        this.audio.play('heart'); this.fx.sparkle(k.x, k.y, '#ff9ccf');
-        if (this.hearts < MAX_HEARTS) { this.hearts++; this.fx.text(k.x, k.y - 10, '+♥', '#ff9ccf'); }
-        else { this.addBones(5); this.fx.text(k.x, k.y - 10, '+5'); }
-      } else if (k.type === 'flint') {
+      else if (FOODS[k.type]) this.eat(k); else if (k.type === 'flint') {
         this.stones = Math.min(MAX_STONES, this.stones + 3);
         this.audio.play('flint'); this.fx.sparkle(k.x, k.y, '#cfe0ff'); this.fx.text(k.x, k.y - 10, '+3 stenen');
       } else if (k.type === 'handaxe') {

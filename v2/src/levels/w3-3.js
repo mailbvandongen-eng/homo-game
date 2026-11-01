@@ -49,6 +49,8 @@ export default {
     b.rock(144, 3, 6, 12);
     b.clear(144, 175, 15, 39);
     b.ground(144, 175, 15);
+    // Eten: proberen wat het doet
+    b.bump(52, 6, 'shroom'); b.bump(88, 6, 'berry'); b.bump(138, 6, 'honey');
     b.ent('finish', 156, 15);
   },
 };

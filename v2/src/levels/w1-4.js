@@ -70,6 +70,8 @@ export default {
     // F · Naar buiten, het daglicht in
     b.ground(173, 205, 3);
     b.ent('meet', 186, 3, { species: 'erectus', offsets: [0, 46, 92], sizes: [1, 0.96, 0.8] });
+    // Eten: proberen wat het doet
+    b.bump(15, 6, 'berry'); b.bump(65, 6, 'shroom'); b.bump(144, 6, 'honey');
     b.ent('finish', 191, 3);
   },
 };

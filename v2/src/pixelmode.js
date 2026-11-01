@@ -8,6 +8,7 @@ import { T, TileMap } from './level.js';
 import { drawPickup, drawStoneCache, drawCampfire, drawFoodCache, drawLiana, drawCave, drawShelter, flintIcon, artifactIcon } from './render.js';
 import { drawFlyingSpear, drawFootprints, toolIcon } from './game.js';
 import { drawAnimal } from './pixelanimals.js';
+import { FOODS } from './food.js';
 
 export const PS = 0.75;           // pixels per wereldeenheid
 const PT = TILE * PS;             // 24 pixels per tegel
@@ -46,6 +47,72 @@ function bake(w, h, fn, outline = INK) {
 }
 function hash(a, b = 0) { const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return n - Math.floor(n); }
 const inEll = (x, y, cx, cy, rx, ry) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1;
+
+
+// Bladerbos: stoot ertegen en er valt iets uit (of er groeit iets bovenop)
+function leafClump(px, py, full, spark) {
+  const cx = 11.5, cy = 11.5, a = Math.atan2(py - cy, px - cx), r = Math.hypot(px - cx, py - cy);
+  const edge = 11.2 + Math.sin(a * 7) * 1.2 + Math.sin(a * 3 + 1) * 0.6;
+  if (r > edge + 0.9) return null;
+  if (r > edge - 0.3) return INK;
+  const lit = (px - cx) * -0.5 + (py - cy) * -0.7, n = hash(px * 3 + py * 7, 11);
+  const pal = full ? ['#a6d05a', '#7cb040', '#5a8c30', '#3e6a24', '#2a4a1a'] : ['#a8a060', '#8a8448', '#6c6a38', '#52502c', '#3a3820'];
+  let k = lit > 5 ? 0 : lit > 1 ? 1 : lit > -4 ? 2 : 3;
+  if (n > 0.82) k = Math.min(4, k + 1); else if (n < 0.12) k = Math.max(0, k - 1);
+  if ((px + py * 2) % 7 === 0 && k < 3) k++;   // bladnerven
+  if (!full && (px * 5 + py) % 4 === 0 && r > 5) return '#5a4426';   // kale twijgjes
+  if (spark && px === 8 && py === 7) return '#fffbe0';
+  if (spark && Math.abs(px - 8) + Math.abs(py - 7) === 1) return '#fff0a0';
+  return pal[k];
+}
+// Vuursteenknol in een brok kalk: er zit vuursteen of een fossiel bot in
+function flintNodule(px, py, full, spark) {
+  if (px === 0 || py === 0 || px === PT - 1 || py === PT - 1) return ((px === 0 || px === PT - 1) && (py === 0 || py === PT - 1)) ? null : INK;
+  const pal = ['#f2eee0', '#ded8c4', '#c4bca4', '#a69e86', '#847c66'];
+  const lay = (py + Math.round(Math.sin(px * 0.5) * 1)) % 7;
+  let k = py < 3 ? 0 : py > PT - 4 ? 3 : 1 + (lay === 0 ? 1 : 0);
+  if (px < 2) k = Math.max(0, k - 1); if (px > PT - 3) k = Math.min(4, k + 1);
+  if (hash(px, py * 13) > 0.93) k = Math.min(4, k + 1);
+  if (full && inEll(px, py, 12, 12.5, 6.5, 5)) {
+    if (!inEll(px, py, 12, 12.5, 5.2, 3.8)) return '#1a1c20';
+    if (spark && px === 10 && py === 11) return '#ffffff';
+    return (px + py) % 5 === 0 ? '#5d6470' : py < 12 ? '#3e4450' : '#2d3036';
+  }
+  if (!full && inEll(px, py, 12, 12.5, 6, 4.5)) return inEll(px, py, 12, 12.5, 4.8, 3.4) ? '#6c6452' : pal[4];
+  return pal[k];
+}
+
+
+// Megafauna in de verte: kleine silhouetten (W 32 x H 24), twee loopstanden
+function L2theme(def) { return def.outside ? def.outsideTheme : def.theme; }
+function megaSprite(kind, f) {
+  const col = '#7a7264', dark = '#665e52', tusk = '#ece4d0';
+  const sivath = kind === 'sivath';
+  return bake(32, 24, (x, y) => {
+    if (sivath) {
+      const body = inEll(x, y, 12, 11, 9, 5.5), neck = x >= 18 && x <= 21 && y >= 4 && y <= 10 && x - 18 >= (10 - y) * 0.4 - 1;
+      const head = inEll(x, y, 23, 5, 3.5, 2.2), oss = (y === 1 || y === 2) && (x === 20 || x === 21 || x === 23 || x === 24) || (y === 0 && (x === 19 || x === 24));
+      const legs = y >= 14 && y <= 23 && [5, 8, 16, 19].some((lx, k) => x === lx + ((k + f) % 2 ? (y > 19 ? 1 : 0) : 0));
+      const tail = x === 3 && y >= 9 && y <= 14;
+      if (oss) return dark; if (body || neck || head || legs || tail) return (x + y) % 7 === 0 ? dark : col; return null;
+    }
+    const body = inEll(x, y, 13, 10, 10, 6.5), head = inEll(x, y, 23, 8, 4.8, 4.8);
+    const dome = (kind === 'recki' || kind === 'antiquus' || kind === 'mammoth') && inEll(x, y, 21, 4, 3.5, 3);
+    const tEnd = kind === 'deino' ? 15 : 19, trunk = (x === 26 || x === 27) && y >= 9 && y <= tEnd || (x === 25 && y >= 12 && y <= tEnd);
+    const legs = y >= 14 && y <= 23 && [[5, 6], [9, 10], [16, 17], [19, 20]].some(([a, b], k) => { const o = ((k + f) % 2) && y > 20 ? 1 : 0; return x === a + o || x === b + o; });
+    const ear = inEll(x, y, 19, 9, 2.5, 3.5);
+    let tk = false;
+    if (kind === 'deino') tk = (x === 24 && y >= 12 && y <= 15) || (x === 23 && y === 16);
+    else if (kind === 'mammoth') tk = (y === 13 && x >= 25 && x <= 29) || (x === 30 && y >= 9 && y <= 12) || (x === 29 && y === 8);
+    else if (kind === 'stego') tk = (y === 13 && x >= 25 && x <= 31);
+    else tk = (y === 13 && x >= 25 && x <= 28) || (y === 12 && x >= 29 && x <= 31);
+    if (tk) return tusk;
+    if (ear) return dark;
+    if (body || head || dome || trunk || legs) return (x * 3 + y) % 11 === 0 ? dark : col;
+    if (x === 3 && y >= 9 && y <= 14) return dark;
+    return null;
+  });
+}
 
 // ---------- Vector-naar-pixel ----------
 // Tekent fn (in wereldcoördinaten) in een klein kladvlak, maakt de randen hard, beperkt de kleuren
@@ -459,6 +526,18 @@ class PixelView {
           c.fillStyle = '#8a6a44'; for (let q = 0; q < 6; q++) c.fillRect(x + 3 + q, y - 8 - Math.floor(q / 2), 1, 1);
         }
       }
+      // Megafauna in de verte (reuzen die toen overal rondliepen)
+      const look2 = g.def.look, th = L2theme(g.def);
+      const kinds = th === 'dmanisi' ? ['mammoth'] : th === 'java' ? ['stego'] : look2 === 'heidelbergensis' ? ['antiquus'] : look2 === 'habilis' ? ['deino', 'sivath'] : ['recki', 'sivath'];
+      if (!this.megaSpr) this.megaSpr = {};
+      kinds.forEach((kd, n) => {
+        const spanM = 3000 + n * 700, mx2 = Math.round(((1500 + n * 1300 - camX * PS * 0.3 - time * (3 + n)) % spanM + spanM) % spanM) - 300, my2 = yOf(0.3, 30);
+        for (let k = 0; k < 2; k++) {
+          const fr = Math.floor(time * 2 + k) % 2, key = kd + fr;
+          const spr = this.megaSpr[key] || (this.megaSpr[key] = megaSprite(kd, fr));
+          c.save(); c.translate(mx2 + k * 38 + (kd === 'sivath' ? 0 : 32), my2 - 25); c.scale(-1, 1); c.drawImage(spr, 0, 0); c.restore();
+        }
+      });
       // Grote kudde in de verte
       const span = 2400, hx = Math.round(((900 - camX * PS * 0.3 + time * 6) % span + span) % span) - 300, hy = yOf(0.3, 34);
       c.fillStyle = '#8a6a48';
@@ -549,7 +628,9 @@ class PixelView {
     for (const Ln of g.lianas) if (vis(Ln.ax, 200)) { const r = Ln.len + 30; this.live(c, Ln.ax - r, Ln.ay - 40, r * 2, r + 46, cc => drawLiana(cc, Ln, t)); }
     for (const k of g.pickups) if (!k.taken && vis(k.x)) {
       const e = this.cached(`pk|${k.type}`, -24, -24, 48, 48, cc => k.type === 'handaxe' ? toolIcon(cc, 'axe', 0, 0, 1.5, 0) : drawPickup(cc, { type: k.type, x: 0, y: 0 }, 0));
-      c.drawImage(e.cv, Math.round(k.x * PS + e.ox), Math.round(k.y * PS + e.oy + Math.sin(t * 3 + k.x * 0.05) * 2));
+      const food = !!FOODS[k.type], bob = food ? 0 : Math.sin(t * 3 + k.x * 0.05) * 2;
+      if (food && k.grow < 1) { const g2 = k.grow, w = e.cv.width * g2, h = e.cv.height * g2; c.drawImage(e.cv, Math.round(k.x * PS + e.ox * g2), Math.round(k.y * PS + e.oy + e.cv.height - h), Math.round(w), Math.round(h)); continue; }
+      c.drawImage(e.cv, Math.round(k.x * PS + e.ox), Math.round(k.y * PS + e.oy + bob));
     }
     // Figuren: stam, ontmoetingen, platforms, dieren, speler
     const fig = (o, drawFn, mx = 46, top = 60, bot = 6, fps = 12) => this.liveObj(c, o, o.x - mx, o.y - top, o.w + mx * 2, o.h + top + bot, drawFn, fps);
@@ -560,7 +641,7 @@ class PixelView {
     for (const s of g.stonesFlying) { c.fillStyle = INK; c.fillRect(Math.round((s.x + 1) * PS), Math.round((s.y + 1) * PS), 7, 7); c.fillStyle = '#7d8590'; c.fillRect(Math.round((s.x + 2) * PS), Math.round((s.y + 2) * PS), 5, 5); c.fillStyle = '#c0c8d0'; c.fillRect(Math.round((s.x + 2) * PS), Math.round((s.y + 2) * PS), 2, 2); }
     for (const s of g.spears) this.live(c, s.x - 10, s.y - 20, s.w + 20, 40, cc => drawFlyingSpear(cc, s));
     for (const q of g.projectiles) { const x = Math.round((q.x + 6) * PS), y = Math.round((q.y + 6) * PS); c.fillStyle = INK; c.fillRect(x - 3, y - 3, 7, 7); c.fillStyle = '#e8902e'; c.fillRect(x - 2, y - 2, 5, 5); c.fillStyle = '#ffd07a'; c.fillRect(x - 2, y - 2, 2, 2); }
-    if (g.state !== 'title') { const p = g.player; if (!p.dead && p.onGround) { c.fillStyle = '#0000003a'; c.fillRect(Math.round((p.cx - 12) * PS), Math.round(p.bottom * PS) - 1, Math.round(24 * PS), 2); } fig(p, cc => p.draw(cc, t), 46, 48, 8, 15); }
+    if (g.state !== 'title') { const p = g.player; if (!p.dead && p.onGround) { c.fillStyle = '#0000003a'; c.fillRect(Math.round((p.cx - 12) * PS), Math.round(p.bottom * PS) - 1, Math.round(24 * PS), 2); } fig(p, cc => p.draw(cc, t), 46, 48, 8, 15); this.buffFx(c, p, t); }
     this.water(c, g.map, camX, t);
     this.particles(c);
     c.restore();
@@ -581,13 +662,9 @@ class PixelView {
         c.drawImage(this.tileSprite('crumble', (px, py) => (py === 0 || py === PT - 1 || px === 0 || px === PT - 1) ? INK : (Math.abs(px - 8 - (py >> 2)) < 1 && py < 14) || (Math.abs(py - 13 - ((px - 9) >> 1)) < 1 && px > 9 && px < 20) ? '#7e5a2c' : py < 4 ? '#ecc88c' : py > PT - 5 ? '#a77d45' : '#d4a865'), x - 1 + sh, y - 1);
       } else if (t === T.BUMP) {
         const full = map.bumpItems.has(i), an = map.bounce.get(i) || 0, off = -Math.round(Math.sin(an / 0.2 * Math.PI) * 6);
-        const spark = full && Math.floor(time * 3) % 2 === 0;
-        c.drawImage(this.tileSprite(`bump|${full}|${spark}`, (px, py) => {
-          if (py === 0 || py === PT - 1 || px === 0 || px === PT - 1) return INK;
-          if (!full) return py < 4 ? '#b0a48e' : py > PT - 5 ? '#6c624f' : '#8a7e6a';
-          if (inEll(px, py, 12, 12, 7, 6)) return spark && px === 14 && py === 10 ? '#ffffff' : spark && (px === 14 || py === 10) && Math.abs(px - 14) + Math.abs(py - 10) < 3 ? '#fff8c0' : '#2d3036';
-          return py < 4 ? '#8a909c' : py > PT - 5 ? '#3e4148' : '#5b5f66';
-        }), x - 1, y - 1 + off);
+        const spark = full && Math.floor(time * 3 + cx) % 3 === 0, food = !!FOODS[map.bumpKinds.get(i)];
+        const shake = food && an > 0 ? Math.round(Math.sin(an * 90) * 1.5) : 0;
+        c.drawImage(this.tileSprite(`bump|${food}|${full}|${spark}`, (px, py) => food ? leafClump(px, py, full, spark) : flintNodule(px, py, full, spark)), x - 1 + shake, y - 1 + off);
       } else if (t === T.SPRING) {
         const an = map.bounce.get(i) || 0, sq = an > 0 ? Math.round(TileMap.wobble(an, 1.0) * 7) : 0;
         const spr = this.tileSprite('spring', (px, py) => { const w = 3 + py * 0.42; if (Math.abs(px - 12) > w || py < 0) return null; return (px * 3 + py * 5) % 11 === 0 ? '#5b351d' : px < 12 ? '#c8804a' : '#a0663a'; });
@@ -693,6 +770,39 @@ class PixelView {
       if (i < g.artifacts.size) { const e = this.cached('hud|art', -12, -12, 24, 24, cc => artifactIcon(cc, 0, 0, 1, true)); c.drawImage(e.cv, x + 4 + i * 12 + Math.round(e.ox + 8), y0 + 7 + Math.round(e.oy)); }
       else { c.fillStyle = '#1a2622'; c.fillRect(x + 5 + i * 12, y0 + 4, 8, 7); c.fillStyle = '#4a5a54'; c.fillRect(x + 6 + i * 12, y0 + 5, 6, 5); }
     }
+    x += 44;
+    const B = g.player.buffs || {}, ICON = { speed: ['0110', '0011', '0110', '1100', '0110'], jump: ['0110', '1111', '0110', '0110', '0110'], shield: ['0110', '1111', '1111', '0110', '0110'], drunk: ['1000', '0101', '0010', '1010', '0001'], dizzy: ['1001', '0110', '0110', '1001', '0000'] };
+    const COL = { speed: '#9cf27a', jump: '#9cf27a', shield: '#ffe27a', drunk: '#ffb07a', dizzy: '#ffb07a' }, MAXT = { speed: 8, jump: 8, shield: 6, drunk: 7, dizzy: 6 };
+    for (const k of Object.keys(ICON)) {
+      if (!(B[k] > 0)) continue;
+      panel(x, 16); c.fillStyle = COL[k];
+      ICON[k].forEach((row, ry) => { for (let rx = 0; rx < 4; rx++) if (row[rx] === '1') c.fillRect(x + 6 + rx, y0 + 3 + ry, 1, 1); });
+      c.fillStyle = '#1a2622'; c.fillRect(x + 3, y0 + 10, 10, 2); c.fillStyle = COL[k]; c.fillRect(x + 3, y0 + 10, Math.ceil(10 * B[k] / MAXT[k]), 2);
+      x += 18;
+    }
+  }
+
+  // Zichtbare effecten van eten
+  buffFx(c, p, t) {
+    const B = p.buffs; if (!B || p.dead) return;
+    const hx = Math.round(p.cx * PS), hy = Math.round(p.y * PS) - 4, foot = Math.round(p.bottom * PS);
+    if (B.dizzy > 0) for (let k = 0; k < 3; k++) {   // sterretjes om het hoofd
+      const a = t * 5 + k * 2.09, x = hx + Math.round(Math.cos(a) * 9), y = hy + Math.round(Math.sin(a) * 3);
+      c.fillStyle = INK; c.fillRect(x - 1, y - 2, 3, 5); c.fillRect(x - 2, y - 1, 5, 3); c.fillStyle = '#ffe27a'; c.fillRect(x, y - 1, 1, 3); c.fillRect(x - 1, y, 3, 1);
+    }
+    if (B.drunk > 0) for (let k = 0; k < 3; k++) {   // belletjes
+      const ph = (t * 0.8 + k * 0.33) % 1, x = hx + 6 + Math.round(Math.sin(ph * 9 + k) * 2), y = hy - Math.round(ph * 14);
+      c.fillStyle = '#ffffffb0'; c.fillRect(x, y - 1, 1, 1); c.fillRect(x - 1, y, 1, 1); c.fillRect(x + 1, y, 1, 1); c.fillRect(x, y + 1, 1, 1);
+    }
+    if (B.shield > 0 && (B.shield > 1.5 || Math.floor(t * 10) % 2)) {   // gouden gloed
+      const r = 15 + Math.round(Math.sin(t * 8)), cy2 = Math.round((p.y + p.h / 2) * PS);
+      c.fillStyle = '#ffe27a'; for (let a = 0; a < 24; a++) { const an = a / 24 * Math.PI * 2 + t * 2; if (a % 2) c.fillRect(hx + Math.round(Math.cos(an) * r * 0.8), cy2 + Math.round(Math.sin(an) * r), 1, 1); }
+    }
+    if (B.speed > 0 && Math.abs(p.vx) > 120) {   // snelheidsstrepen
+      c.fillStyle = '#fff6dcb0'; const d = -Math.sign(p.vx);
+      for (let k = 0; k < 3; k++) { const y = hy + 8 + k * 6, len = 5 + ((Math.floor(t * 20) + k) % 3) * 3; c.fillRect(hx + d * 10 + (d < 0 ? -len : 0), y, len, 1); }
+    }
+    if (B.jump > 0 && Math.floor(t * 8) % 2) { c.fillStyle = '#ffe27a'; c.fillRect(hx - 6, foot - 2, 1, 1); c.fillRect(hx + 5, foot - 4, 1, 1); c.fillRect(hx - 2, foot - 6, 1, 1); }
   }
 
   // Knoppen, banners en zwevende teksten op een scherp overlay-canvas

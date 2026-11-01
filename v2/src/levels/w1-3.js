@@ -86,6 +86,8 @@ export default {
     b.ent('fig', 182, 4);
 
     // F · Naar de groep bij de rotsen aan de bosrand
+    // Eten: proberen wat het doet
+    b.bump(81, 6, 'fig'); b.bump(88, 6, 'berry'); b.bump(95, 6, 'shroom');
     b.ent('finish', 196, 3);
   },
 };

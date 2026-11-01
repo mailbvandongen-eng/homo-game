@@ -181,6 +181,9 @@ export class Audio {
       case 'screech': this.tone(1400, 0.4, 'sawtooth', 0.04, t, d, 0.55); this.tone(1800, 0.3, 'square', 0.02, t + 0.05, d, 0.6); break;
       case 'snort': this.noise(t, 0.2, 0.35, 'lowpass', 500, 180, d); this.noise(t + 0.24, 0.2, 0.35, 'lowpass', 500, 180, d); break;
       case 'click': this.marimba(midi(88), t, 0.1, d); break;
+      case 'boost': [67, 74, 79, 86].forEach((n, k) => this.marimba(midi(n), t + k * 0.05, 0.16, d)); this.tone(400, 0.3, 'sine', 0.05, t, d, 3); break;
+      case 'yuck': this.tone(220, 0.35, 'sawtooth', 0.05, t, d, 0.55); this.tone(233, 0.35, 'sawtooth', 0.04, t, d, 0.5); break;
+      case 'hic': this.tone(520, 0.07, 'square', 0.04, t, d, 1.6); this.noise(t, 0.05, 0.08, 'bandpass', 1400, 0, d); break;
       case 'grab': this.noise(t, 0.1, 0.18, 'bandpass', 900, 400, d); this.tone(240, 0.08, 'triangle', 0.08, t, d, 1.5); break;
       // Plons: holle "bloop", spetterende ruis en druppels
       case 'splash': {

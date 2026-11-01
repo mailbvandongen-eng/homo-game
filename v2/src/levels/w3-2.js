@@ -44,6 +44,8 @@ export default {
     b.ent('artifact', 186, 10, { id: 'a3', name: 'Berenklauw' });
     b.ground(201, 235, 3); b.ground(201, 203, 5); b.ground(204, 205, 4);
     b.ent('tree', 212, 3, { scale: 1 });
+    // Eten: proberen wat het doet
+    b.bump(16, 6, 'berry'); b.bump(79, 6, 'flower'); b.bump(90, 6, 'ferment'); b.bump(128, 10, 'redcap'); b.bump(162, 6, 'honey');
     b.ent('finish', 214, 3);
   },
 };

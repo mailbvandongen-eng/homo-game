@@ -51,6 +51,8 @@ export default {
     b.rock(179, 3, 1, 8);
     // Naar buiten, de schemering in
     b.ground(179, 211);
+    // Eten: proberen wat het doet
+    b.bump(50, 6, 'berry'); b.bump(130, 6, 'shroom'); b.bump(164, 6, 'honey');
     b.ent('finish', 194, 3);
   },
 };

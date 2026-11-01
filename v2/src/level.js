@@ -75,6 +75,7 @@ export class TileMap {
     this.w = level.w; this.h = level.h;
     this.tiles = level.tiles.slice();
     this.bumpItems = new Map(level.bumps);
+    this.bumpKinds = new Map(level.bumps);   // wat er oorspronkelijk in zat (bepaalt het uiterlijk)
     this.crumble = new Map();   // index -> {t, gone, respawn}
     this.bounce = new Map();    // index -> animatietijd (stoten / veren)
     this.version = 0;           // verhoogd als de statische tegellaag verandert

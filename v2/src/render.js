@@ -1,5 +1,6 @@
 import { TILE } from './config.js';
 import { T, TileMap } from './level.js';
+import { FOODS, drawFood } from './food.js';
 import { leafCluster, frond, WIND, bakeTree, drawBakedTree } from './art.js';
 
 const CHUNK = 16; // tegels per voorgetekend stuk
@@ -610,9 +611,10 @@ function springTile(c, x, y, anim, time) {
 
 // ---------------- Voorwerpen ----------------
 export function drawPickup(c, p, time) {
-  const bob = Math.sin(time * 3 + p.x * 0.05) * 2.5;
+  const bob = FOODS[p.type] ? 0 : Math.sin(time * 3 + p.x * 0.05) * 2.5;
   c.save(); c.translate(p.x, p.y + bob);
-  if (p.type === 'bone') {
+  if (FOODS[p.type]) drawFood(c, p.type);
+  else if (p.type === 'bone') {
     c.rotate(Math.sin(time * 2 + p.x) * 0.25);
     c.strokeStyle = '#5a4630'; c.lineWidth = 6; c.lineCap = 'round'; c.beginPath(); c.moveTo(-6, 0); c.lineTo(6, 0); c.stroke();
     for (const d of [-7, 7]) { c.fillStyle = '#5a4630'; c.beginPath(); c.arc(d, -2.4, 3.6, 0, Math.PI * 2); c.arc(d, 2.4, 3.6, 0, Math.PI * 2); c.fill(); }

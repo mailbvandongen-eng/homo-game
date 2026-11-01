@@ -20,6 +20,7 @@ export class Player {
     this.holdTime = 0;          // hoe lang je al dezelfde kant op loopt (voor rennen)
     this.jumping = false;
     this.invuln = 0;
+    this.buffs = { speed: 0, jump: 0, shield: 0, drunk: 0, dizzy: 0 };   // effecten van eten
     this.throwAnim = 0;
     this.anim = 0;
     this.sx = 1; this.sy = 1;   // vervorming bij springen en landen
@@ -44,6 +45,7 @@ export class Player {
   }
 
   update(dt, input, game) {
+    if (!game.banner?.hold) for (const k in this.buffs) if (this.buffs[k] > 0) this.buffs[k] = Math.max(0, this.buffs[k] - dt);
     if (this.dead) {
       this.deadT += dt;
       if (this.deadT > 0.45) { this.vy = Math.min(this.vy + PHYS.gravDown * dt, PHYS.maxFall); this.y += this.vy * dt; }
@@ -66,7 +68,8 @@ export class Player {
 
     // Rennen ontstaat vanzelf als je een richting vasthoudt.
     if (dir !== 0 && dir === Math.sign(this.vx || dir)) this.holdTime += dt; else if (this.onGround) this.holdTime = 0;
-    const max = this.auto ? PHYS.walk * 0.8 : (this.holdTime >= PHYS.runDelay ? PHYS.run : PHYS.walk);
+    const B = this.buffs, fast = B.speed > 0 ? 1.35 : B.drunk > 0 ? 0.8 : 1;
+    const max = (this.auto ? PHYS.walk * 0.8 : (this.holdTime >= PHYS.runDelay ? PHYS.run : PHYS.walk)) * fast;
 
     if (dir !== 0) {
       this.face = dir;
@@ -94,7 +97,7 @@ export class Player {
     this.coyote = this.onGround ? PHYS.coyote : Math.max(0, this.coyote - dt);
     if (this.buffer > 0 && this.coyote > 0 && !this.auto) {
       const speedBonus = Math.abs(this.vx) / PHYS.run * PHYS.runJumpBonus;
-      this.vy = -(PHYS.jumpV + speedBonus);
+      this.vy = -(PHYS.jumpV + speedBonus) * (B.jump > 0 ? 1.2 : 1);
       this.onGround = false; this.jumping = true;
       this.buffer = 0; this.coyote = 0;
       this.sx = 0.8; this.sy = 1.22;
@@ -342,6 +345,7 @@ export class Player {
     c.save();
     c.translate(Math.round(this.cx), Math.round(this.bottom - (this.hop || 0) + (hanging ? 7 : 0)));
     if (this.dead) { c.translate(0, -22); c.rotate(Math.min(this.deadT * 6, Math.PI)); c.translate(0, 22); }
+    if (this.buffs?.drunk > 0 && !this.dead) { c.translate(0, -20); c.rotate(Math.sin(time * 2.6) * 0.16); c.translate(0, 20); }
     c.scale(this.face * this.sx * S, this.sy * S);
     const tool = this.tool || (this.throwAnim > 0.08 ? 'stone' : null);
     if (this.climbing) { c.scale(this.face, 1); // rug naar de camera: niet spiegelen
