@@ -338,3 +338,60 @@ function mix(a, b, t) {
   const A = p(a), B = p(b);
   return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('');
 }
+
+// ---------- Achteraanzicht: klimmen met de rug naar de camera ----------
+// Armen en benen grijpen om beurten omhoog; het hoofd kijkt opzij (face = -1 links, 1 rechts).
+function limb(x1, y1, x2, y2, w1, w2) {
+  const a = Math.atan2(y2 - y1, x2 - x1), nx = -Math.sin(a), ny = Math.cos(a), P = new Path2D();
+  P.moveTo(x1 + nx * w1 / 2, y1 + ny * w1 / 2); P.lineTo(x2 + nx * w2 / 2, y2 + ny * w2 / 2);
+  P.arc(x2, y2, w2 / 2, a + Math.PI / 2, a - Math.PI / 2, true);
+  P.lineTo(x1 - nx * w1 / 2, y1 - ny * w1 / 2); P.arc(x1, y1, w1 / 2, a - Math.PI / 2, a + Math.PI / 2, true);
+  P.closePath(); return P;
+}
+export function drawRigBack(c, L, phase, face, time) {
+  const O = L.outline, s = Math.sin(phase), ls = L.legs || 1;
+  c.save();
+  const up = (side) => side * s > 0;   // welke kant reikt nu omhoog
+  // Benen: om beurten een knie hoog, de andere gestrekt
+  for (const side of [-1, 1]) {
+    const hi = up(-side), hip = [side * 7, -44 * ls];
+    const knee = hi ? [side * 15, -30 * ls] : [side * 9, -24 * ls];
+    const foot = hi ? [side * 12, -16 * ls] : [side * 10, -3];
+    shaded(c, limb(hip[0], hip[1], knee[0], knee[1], 13, 9), side < 0 ? L.fur : darker(L.fur), O, 3);
+    shaded(c, limb(knee[0], knee[1], foot[0], foot[1], 9, 7), side < 0 ? L.fur : darker(L.fur), O, 2.5);
+    shaded(c, new Path2D(`M ${foot[0] - 6} ${foot[1] - 2} q 6 -4 12 0 l 0 4 l -12 0 z`), L.skin, O, 1.2, 1.6);
+  }
+  // Lendendoek (achterkant)
+  shaded(c, new Path2D('M -14 -48 C -6 -44 6 -44 14 -48 L 15 -38 L 11 -35 L 6 -38 L 0 -34 L -6 -38 L -11 -35 L -15 -38 Z'), L.hide, O, 2, 1.8);
+  // Rug: brede schouders, smaller naar de heup, vachtrand langs de ruggengraat
+  const torso = new Path2D('M -12 -46 C -18 -60 -20 -78 -16 -90 C -10 -96 10 -96 16 -90 C 20 -78 18 -60 12 -46 C 6 -42 -6 -42 -12 -46 Z');
+  shaded(c, torso, L.fur, O, 5, 2.4);
+  c.save(); c.clip(torso); c.fillStyle = L.fur[1];
+  for (let i = 0; i < 6; i++) { const y = -88 + i * 7; c.beginPath(); c.moveTo(-1, y); c.lineTo(-4, y + 4); c.lineTo(1, y + 2.5); c.closePath(); c.fill(); c.beginPath(); c.moveTo(1, y + 3); c.lineTo(4, y + 7); c.lineTo(-1, y + 5.5); c.closePath(); c.fill(); }
+  c.fillStyle = L.fur[2]; c.globalAlpha = 0.5; c.beginPath(); c.ellipse(-8, -82, 5, 8, 0.2, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
+  c.restore();
+  // Armen: om beurten hoog reiken; hand pakt boven het hoofd
+  for (const side of [-1, 1]) {
+    const hi = up(side), sh = [side * 14, -88];
+    const el = hi ? [side * 20, -104] : [side * 24, -86];
+    const hand = hi ? [side * 14, -126] : [side * 18, -104];
+    shaded(c, limb(sh[0], sh[1], el[0], el[1], 11, 8), side < 0 ? L.fur : darker(L.fur), O, 3);
+    shaded(c, limb(el[0], el[1], hand[0], hand[1], 8, 7), side < 0 ? L.fur : darker(L.fur), O, 2.5);
+    shaded(c, new Path2D(`M ${hand[0] - 4.5} ${hand[1] + 2} a 4.5 5 0 1 1 9 0 a 4.5 5 0 1 1 -9 0`), L.skin, O, 1.4, 1.6);
+  }
+  // Hoofd van achteren, licht gedraaid naar de kijkrichting
+  const hx = face * 2.5, hy = -104;
+  // Oren
+  for (const side of [-1, 1]) { c.fillStyle = L.skin[side * face > 0 ? 0 : 1]; c.beginPath(); c.ellipse(hx + side * 11, hy + 2, 2.6, 4, 0, 0, Math.PI * 2); c.fill(); c.strokeStyle = O; c.lineWidth = 1.4; c.stroke(); }
+  const head = new Path2D(`M ${hx - 11} ${hy + 6} C ${hx - 14} ${hy - 8} ${hx - 8} ${hy - 16} ${hx} ${hy - 16} C ${hx + 8} ${hy - 16} ${hx + 14} ${hy - 8} ${hx + 11} ${hy + 6} C ${hx + 6} ${hy + 11} ${hx - 6} ${hy + 11} ${hx - 11} ${hy + 6} Z`);
+  shaded(c, head, L.skin, O, 3, 2.2);
+  // Kijkt hij opzij, dan steken wenkbrauwboog en neus uit aan die kant
+  if (Math.abs(face) > 0.35) { const f = Math.sign(face) * Math.min(1, Math.abs(face) * 1.4); shaded(c, new Path2D(`M ${hx + f * 9} ${hy - 4} l ${f * 6} 2 l ${f * 1} 5 l ${-f * 4} 3 l ${-f * 3} -2 z`), L.skin, O, 1.2, 1.6); }
+  // Haar als één ruige massa over het achterhoofd
+  const hair = new Path2D();
+  hair.moveTo(hx - 12, hy + 4);
+  for (let i = 0; i <= 10; i++) { const a = Math.PI * (1.05 + i * 0.09), r = 14 + (i % 2) * 3; hair.lineTo(hx + Math.cos(a) * r, hy - 2 + Math.sin(a) * r); }
+  hair.lineTo(hx + 12, hy + 4); hair.lineTo(hx + 9, hy + 8); hair.lineTo(hx + 4, hy + 6); hair.lineTo(hx, hy + 9); hair.lineTo(hx - 4, hy + 6); hair.lineTo(hx - 9, hy + 8); hair.closePath();
+  shaded(c, hair, L.hair, O, 2, 1.8);
+  c.restore();
+}

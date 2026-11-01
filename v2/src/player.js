@@ -1,7 +1,7 @@
 import { TILE, PHYS, MAX_STONES } from './config.js';
 import { moveBody, T } from './level.js';
 import { groundShadow } from './art.js';
-import { drawRig, rigLook, gamePose } from './rig.js';
+import { drawRig, drawRigBack, rigLook, gamePose } from './rig.js';
 
 export class Player {
   constructor(x, y, look = null) {
@@ -299,6 +299,7 @@ export class Player {
     const map = game.map;
     this.vx = dir * 60; this.vy = input.up ? -88 : input.down ? 95 : 0;
     if (dir) this.face = dir;
+    this.lookK = (this.lookK || 0) + (dir - (this.lookK || 0)) * Math.min(1, dt * 10);
     const r = moveBody(this, dt, map);
     if (input.up || input.down || dir) this.anim += dt * 8;
     this.ease(dt);
@@ -343,6 +344,8 @@ export class Player {
     if (this.dead) { c.translate(0, -22); c.rotate(Math.min(this.deadT * 6, Math.PI)); c.translate(0, 22); }
     c.scale(this.face * this.sx * S, this.sy * S);
     const tool = this.tool || (this.throwAnim > 0.08 ? 'stone' : null);
+    if (this.climbing) { c.scale(this.face, 1); // rug naar de camera: niet spiegelen
+      drawRigBack(c, look, this.anim * 1.3, this.lookK || 0, time); c.restore(); return; }
     drawRig(c, look, gamePose(st), {
       tool, time, blink: this.blinkT < 0, eyes: this.dead ? 'closed' : null,
       mouth: this.cheer || this.invuln > 1 ? 'open' : null, chew: !!this.look.crest,
