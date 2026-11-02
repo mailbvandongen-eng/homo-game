@@ -6,7 +6,7 @@
 import { TILE } from './config.js';
 import { T, TileMap } from './level.js';
 import { drawPickup, drawStoneCache, drawCampfire, drawFoodCache, drawLiana, drawCave, drawShelter, flintIcon, artifactIcon } from './render.js';
-import { drawFlyingSpear, drawFootprints, toolIcon } from './game.js';
+import { drawFlyingSpear, drawFootprints, toolIcon, drawSign } from './game.js';
 import { drawAnimal } from './pixelanimals.js';
 import { FOODS } from './food.js';
 
@@ -17,6 +17,8 @@ const INK = '#1a0f08';
 // ---------- Paletten per landschap ----------
 const SAV_DIRT = ['#b07a44', '#94643a', '#784e2e', '#5e3c24', '#d8b07a'];
 const PAL = {
+  steppe: { sky: ['#7aa8c8', '#94bad2', '#b8cede', '#d4dce0', '#e6e2d4'], far: ['#a8b4bc', '#f2f6f8'], snow: true, mid: ['#b8b07a', '#c8c08a', '#98905e'], near: ['#a8a06a', '#8a8456'], grass: ['#eef2f2', '#c8cca8', '#a8a478', '#8a865c'], dirt: ['#8a7a64', '#746652', '#5e5242', '#48402e', '#a89a80'], tree: ['broad', 'winter'], cold: true },
+  snow: { sky: ['#8aa6c4', '#a2b8d0', '#c0d0dc', '#dce4ea', '#eef0f0'], far: ['#b4c0cc', '#ffffff'], snow: true, mid: ['#d8e2ea', '#e8eef2', '#b8c6d2'], near: ['#c8d4de', '#a8b8c6'], grass: ['#ffffff', '#eef4f8', '#cfdce6', '#a8bccc'], dirt: ['#7a7068', '#645a54', '#504842', '#3c3632', '#9a9088'], tree: ['broad', 'winter'], cold: true },
   savanna: { sky: ['#5ea8d0', '#78bcd8', '#98cede', '#bcdcd8', '#e6dcb0'], far: ['#94b4b0', '#aec6be'], mid: ['#8aa860', '#a2bc6c', '#6e8c4c'], near: ['#76984a', '#5e7e3c'], grass: ['#b4dc68', '#8cbc44', '#64962e', '#4a7424'], dirt: SAV_DIRT, tree: ['acacia', 'savanna'] },
   gorge: { sky: ['#4f9fd0', '#78b8d8', '#a9d4d8', '#d6dcc0', '#f7d49a'], far: ['#c68a5a', '#e0b282'], mesa: true, mid: ['#b5774a', '#c88a58', '#8a5a34'], near: ['#9aa65a', '#7e8a46'], grass: ['#b4dc68', '#8cbc44', '#64962e', '#4a7424'], dirt: ['#b8784a', '#9a6240', '#7c4c30', '#5e3824', '#e0b080'], tree: ['acacia', 'savanna'] },
   forest: { sky: ['#6fb7cf', '#88c4d4', '#b8dcc8', '#d8e4c0', '#e9e2a8'], far: ['#86a88e', '#9cbc9f'], mid: ['#4f7a45', '#62904f', '#3f6a3a'], near: ['#4a7a3a', '#3a6430'], grass: ['#9ccc5a', '#74a83e', '#548a2e', '#3c6c22'], dirt: ['#8a6040', '#745034', '#5e3e28', '#48301e', '#b08a5a'], tree: ['broad', 'forest'], jungle: true },
@@ -86,24 +88,25 @@ function flintNodule(px, py, full, spark) {
 // Megafauna in de verte: kleine silhouetten (W 32 x H 24), twee loopstanden
 function L2theme(def) { return def.outside ? def.outsideTheme : def.theme; }
 function megaSprite(kind, f) {
-  const col = '#7a7264', dark = '#665e52', tusk = '#ece4d0';
-  const sivath = kind === 'sivath';
+  const col = kind === 'woolly' ? '#7a6250' : '#7a7264', dark = kind === 'woolly' ? '#5e4a3a' : '#665e52', tusk = '#ece4d0';
+  const sivath = kind === 'sivath' || kind === 'deer';
   return bake(32, 24, (x, y) => {
     if (sivath) {
       const body = inEll(x, y, 12, 11, 9, 5.5), neck = x >= 18 && x <= 21 && y >= 4 && y <= 10 && x - 18 >= (10 - y) * 0.4 - 1;
-      const head = inEll(x, y, 23, 5, 3.5, 2.2), oss = (y === 1 || y === 2) && (x === 20 || x === 21 || x === 23 || x === 24) || (y === 0 && (x === 19 || x === 24));
+      const head = inEll(x, y, 23, 5, 3.5, 2.2), oss = kind === 'deer' ? (y <= 3 && (Math.abs(x - 22) === 3 + y || (y === 0 && x > 16 && x < 28 && x % 2 === 0))) : ((y === 1 || y === 2) && (x === 20 || x === 21 || x === 23 || x === 24) || (y === 0 && (x === 19 || x === 24)));
       const legs = y >= 14 && y <= 23 && [5, 8, 16, 19].some((lx, k) => x === lx + ((k + f) % 2 ? (y > 19 ? 1 : 0) : 0));
       const tail = x === 3 && y >= 9 && y <= 14;
       if (oss) return dark; if (body || neck || head || legs || tail) return (x + y) % 7 === 0 ? dark : col; return null;
     }
     const body = inEll(x, y, 13, 10, 10, 6.5), head = inEll(x, y, 23, 8, 4.8, 4.8);
-    const dome = (kind === 'recki' || kind === 'antiquus' || kind === 'mammoth') && inEll(x, y, 21, 4, 3.5, 3);
+    const dome = (kind === 'recki' || kind === 'antiquus' || kind === 'mammoth' || kind === 'woolly') && inEll(x, y, 21, 4, 3.5, 3);
+    if (kind === 'woolly' && y > 13 && y < 19 && x > 3 && x < 24 && (x + y) % 2 === 0 && inEll(x, y - 3, 13, 10, 10, 6.5)) return dark;
     const tEnd = kind === 'deino' ? 15 : 19, trunk = (x === 26 || x === 27) && y >= 9 && y <= tEnd || (x === 25 && y >= 12 && y <= tEnd);
     const legs = y >= 14 && y <= 23 && [[5, 6], [9, 10], [16, 17], [19, 20]].some(([a, b], k) => { const o = ((k + f) % 2) && y > 20 ? 1 : 0; return x === a + o || x === b + o; });
     const ear = inEll(x, y, 19, 9, 2.5, 3.5);
     let tk = false;
     if (kind === 'deino') tk = (x === 24 && y >= 12 && y <= 15) || (x === 23 && y === 16);
-    else if (kind === 'mammoth') tk = (y === 13 && x >= 25 && x <= 29) || (x === 30 && y >= 9 && y <= 12) || (x === 29 && y === 8);
+    else if (kind === 'mammoth' || kind === 'woolly') tk = (y === 13 && x >= 25 && x <= 29) || (x === 30 && y >= 9 && y <= 12) || (x === 29 && y === 8);
     else if (kind === 'stego') tk = (y === 13 && x >= 25 && x <= 31);
     else tk = (y === 13 && x >= 25 && x <= 28) || (y === 12 && x >= 29 && x <= 31);
     if (tk) return tusk;
@@ -302,7 +305,9 @@ class PixelView {
       return null;
     });
   }
-  mudTile(seed) { return this.tileSprite(`m|${seed % 3}`, (x, y) => y === 0 ? '#a8b8c0' : y < 4 ? '#6e5640' : (x * 7 + y * 3 + seed) % 17 === 0 ? '#2e2218' : y < 10 ? '#5a4430' : '#3e2e20'); }
+  mudTile(seed, theme) {
+    if (PAL[theme]?.cold) return this.tileSprite(`ice|${seed % 3}`, (x, y) => y === 0 ? '#ffffff' : y < 3 ? '#e4f4fa' : (x * 5 + y * 2 + seed) % 13 === 0 ? '#ffffff' : ((x + y * 2 + seed) % 9 < 2 && y < 12) ? '#d8eef8' : y < 12 ? '#b4dcec' : '#8ec0d8');
+    return this.tileSprite(`m|${seed % 3}`, (x, y) => y === 0 ? '#a8b8c0' : y < 4 ? '#6e5640' : (x * 7 + y * 3 + seed) % 17 === 0 ? '#2e2218' : y < 10 ? '#5a4430' : '#3e2e20'); }
   clayTile(up, left, right, seed) {
     return this.tileSprite(`c|${up}|${left}|${right}|${seed % 2}`, (x, y) => {
       if (!up && y < 3) return y === 0 ? '#b4d868' : '#86b044';
@@ -427,7 +432,7 @@ class PixelView {
       } else if (t === T.ROCK) c.drawImage(this.rockTile(map.get(cx, cy - 1) === T.ROCK, map.get(cx, cy + 1) === T.ROCK, map.get(cx - 1, cy) === T.ROCK, map.get(cx + 1, cy) === T.ROCK, s % 3), x - 1, y - 1);
       else if (t === T.BRANCH) c.drawImage(this.branchTile(map.get(cx - 1, cy) === T.BRANCH, map.get(cx + 1, cy) === T.BRANCH, false), x - 1, y - 1);
       else if (t === T.THORNS) c.drawImage(this.thornTile(theme === 'cave'), x - 1, y - 1);
-      else if (t === T.MUD) c.drawImage(this.mudTile(s), x - 1, y - 1);
+      else if (t === T.MUD) c.drawImage(this.mudTile(s, theme), x - 1, y - 1);
       else if (t === T.BAR) c.drawImage(this.barTile(map.get(cx - 1, cy) === T.BAR, map.get(cx + 1, cy) === T.BAR, s), x - 1, y - 1);
       else if (t === T.CLIMB) c.drawImage(this.climbTile(map.get(cx, cy - 1) === T.CLIMB, s, false), x - 1, y - 1);
       else if (t === T.VINE) c.drawImage(this.climbTile(true, s, true), x - 1, y - 1);
@@ -608,7 +613,7 @@ class PixelView {
       }
       // Megafauna in de verte (reuzen die toen overal rondliepen)
       const look2 = g.def.look, th = L2theme(g.def);
-      const kinds = th === 'dmanisi' ? ['mammoth'] : th === 'java' ? ['stego'] : look2 === 'heidelbergensis' ? ['antiquus'] : look2 === 'habilis' ? ['deino', 'sivath'] : ['recki', 'sivath'];
+      const kinds = look2 === 'neanderthalensis' ? ['woolly', 'deer'] : th === 'dmanisi' ? ['mammoth'] : th === 'java' ? ['stego'] : look2 === 'heidelbergensis' ? ['antiquus'] : look2 === 'habilis' ? ['deino', 'sivath'] : ['recki', 'sivath'];
       if (!this.megaSpr) this.megaSpr = {};
       kinds.forEach((kd, n) => {
         const spanM = 3000 + n * 700, mx2 = Math.round(((1500 + n * 1300 - camX * PS * 0.3 - time * (3 + n)) % spanM + spanM) % spanM) - 300, my2 = yOf(0.3, 30);
@@ -697,6 +702,7 @@ class PixelView {
       const e = this.cachedTree(`${d.type}|${d.x}|${L.id}`, big ? g.renderer.bigTreeSpec(d) : g.renderer.levelTreeSpec(d, L.theme), d.x, d.y, big ? 1 : (d.scale || 1) * 0.95);
       c.drawImage(e.cv, Math.round(e.ox), Math.round(e.oy));
     }
+    for (const d of g.decor) if (d.type === 'sign' && vis(d.x)) { const e = this.cached(`sign|${d.x}|${L.id}`, d.x - 70, d.y - 80, 140, 84, cc => drawSign(cc, d.x, d.y, d.text)); c.drawImage(e.cv, Math.round(e.ox), Math.round(e.oy)); }
     // Hangtakken horen aan een boom: stam eronder en een kruin erboven
     for (const bt of this.barTrees(g.map)) if (vis(bt.cx * TILE, 300)) c.drawImage(bt.cv, bt.x, bt.y);
     if (g.finish && vis(g.finish.x, 480) || g.finish && camX > g.finish.x) {
@@ -739,6 +745,7 @@ class PixelView {
     c.restore();
     // Voorgrond-gras, duisternis, HUD
     if (!PAL[L.theme]?.cave && g.state !== 'title') this.foreground(c, camX);
+    if (PAL[L.theme]?.cold || (L.outside && PAL[L.outsideTheme]?.cold && camX > L.outside.from * TILE - 400)) this.snowfall(c, camX, camY, t);
     this.darkness(c, cpx, cpy, t);
     if (g.state !== 'title') this.hud(c);
     this.drawUI(cpx, cpy);
@@ -759,7 +766,9 @@ class PixelView {
         c.drawImage(this.tileSprite(`bump|${food}|${full}|${spark}`, (px, py) => food ? leafClump(px, py, full, spark) : flintNodule(px, py, full, spark)), x - 1 + shake, y - 1 + off);
       } else if (t === T.SPRING) {
         const an = map.bounce.get(i) || 0, sq = an > 0 ? Math.round(TileMap.wobble(an, 1.0) * 7) : 0;
-        const spr = this.tileSprite('spring', (px, py) => { const w = 3 + py * 0.42; if (Math.abs(px - 12) > w || py < 0) return null; return (px * 3 + py * 5) % 11 === 0 ? '#5b351d' : px < 12 ? '#c8804a' : '#a0663a'; });
+        const snowy = !!PAL[this.g.level.theme]?.cold;
+        const spr = snowy ? this.tileSprite('springSnow', (px, py) => { const w = 4 + Math.sqrt(Math.max(0, py)) * 3.4; if (Math.abs(px - 12) > w || py < 0) return null; return py < 2 ? '#ffffff' : (px * 3 + py * 5) % 13 === 0 ? '#c8dce8' : px < 12 ? '#f2f8fc' : '#d4e4ee'; })
+          : this.tileSprite('spring', (px, py) => { const w = 3 + py * 0.42; if (Math.abs(px - 12) > w || py < 0) return null; return (px * 3 + py * 5) % 11 === 0 ? '#5b351d' : px < 12 ? '#c8804a' : '#a0663a'; });
         c.drawImage(spr, x - 1 - Math.round(sq * 0.4), y - 1 + sq, PT + 2 + Math.round(sq * 0.8), PT + 2 - sq);
       } else if (t === T.BOUNCY) {
         const an = map.bounce.get(i) || 0, l = map.get(cx - 1, cy) === T.BOUNCY, r = map.get(cx + 1, cy) === T.BOUNCY;
@@ -810,6 +819,19 @@ class PixelView {
     for (let i = Math.floor(camX * PS * 1.3 / 5) - 1; i < (camX * PS * 1.3 + this.W) / 5 + 1; i++) { if (hash(i, 9) < 0.5) continue; const x = Math.round(i * 5 - camX * PS * 1.3), h = 3 + Math.round(hash(i, 3) * 8); c.fillRect(x, this.H - h, 1, h); c.fillRect(x + 1, this.H - h + 3, 1, h - 3); }
   }
 
+  // Sneeuwval: drie lagen vlokken die schuin naar beneden dwarrelen
+  snowfall(c, camX, camY, t) {
+    for (let layer = 0; layer < 3; layer++) {
+      const sp = 10 + layer * 8, par = 0.4 + layer * 0.3, n = 50 + layer * 20;
+      c.fillStyle = layer === 2 ? '#ffffff' : layer === 1 ? '#f0f6fa' : '#dce8f0';
+      for (let i = 0; i < n; i++) {
+        const x = ((hash(i, layer) * (this.W + 40) - camX * PS * par + Math.sin(t * 0.8 + i) * 6 - t * (4 + layer * 3)) % (this.W + 40) + this.W + 40) % (this.W + 40) - 20;
+        const y = ((hash(i, layer + 7) * (this.H + 20) + t * sp - camY * PS * par) % (this.H + 20) + this.H + 20) % (this.H + 20) - 10;
+        c.fillRect(Math.round(x), Math.round(y), layer === 2 ? 2 : 1, layer === 2 ? 2 : 1);
+      }
+    }
+  }
+
   // Duisternis in grotten: getrapte, gedithered lichtcirkel rond de speler en lichtbundels
   darkness(c, cpx, cpy, time) {
     const g = this.g, D = g.level.dark;
@@ -832,6 +854,7 @@ class PixelView {
     if (g.def.fire) for (const f of g.fires) if (f.lit) hole(Math.round(f.x * PS - cpx), Math.round((f.y - 20) * PS - cpy), 140);
     if (g.boss && !g.boss.gone) hole(Math.round(g.boss.cx * PS - cpx), Math.round((g.boss.y + 20) * PS - cpy), 90);
     for (const pk of g.pickups) if (!pk.taken && pk.type === 'artifact') hole(Math.round(pk.x * PS - cpx), Math.round(pk.y * PS - cpy), 26);
+    for (const m of g.meets) if (!m.trace) hole(Math.round((m.x + 36) * PS - cpx), Math.round((m.y - 24) * PS - cpy), 72);   // ontmoetingen hebben hun eigen vuur
     for (const Lt of g.level.entities) if (Lt.type === 'light') {
       const x = Math.round(Lt.x * PS - cpx);
       d.fillStyle = this.checker; d.beginPath(); d.moveTo(x - 20, 0); d.lineTo(x + 20, 0); d.lineTo(x + 50, this.H); d.lineTo(x - 50, this.H); d.closePath(); d.fill();
@@ -863,6 +886,15 @@ class PixelView {
       else { c.fillStyle = '#1a2622'; c.fillRect(x + 5 + i * 12, y0 + 4, 8, 7); c.fillStyle = '#4a5a54'; c.fillRect(x + 6 + i * 12, y0 + 5, 6, 5); }
     }
     x += 44;
+    if (g.def.cold) {
+      // Warmte: vlammetje en een balk van blauw (koud) naar oranje (warm)
+      const w = Math.max(0, Math.min(1, g.warmth ?? 1)), low = w < 0.3 && Math.floor(this.g.time * 4) % 2;
+      panel(x, 34);
+      const fl = low ? '#8ec8ff' : '#ff9a30'; c.fillStyle = fl; c.fillRect(x + 4, y0 + 6, 3, 5); c.fillRect(x + 5, y0 + 4, 1, 2); c.fillStyle = low ? '#d8f0ff' : '#ffe27a'; c.fillRect(x + 5, y0 + 8, 1, 3);
+      c.fillStyle = '#1a2622'; c.fillRect(x + 10, y0 + 6, 20, 4);
+      c.fillStyle = w > 0.6 ? '#ff9a30' : w > 0.3 ? '#e8c86a' : '#8ec8ff'; c.fillRect(x + 10, y0 + 6, Math.ceil(20 * w), 4);
+      x += 38;
+    }
     const B = g.player.buffs || {}, ICON = { speed: ['0110', '0011', '0110', '1100', '0110'], jump: ['0110', '1111', '0110', '0110', '0110'], shield: ['0110', '1111', '1111', '0110', '0110'], drunk: ['1000', '0101', '0010', '1010', '0001'], dizzy: ['1001', '0110', '0110', '1001', '0000'] };
     const COL = { speed: '#9cf27a', jump: '#9cf27a', shield: '#ffe27a', drunk: '#ffb07a', dizzy: '#ffb07a' }, MAXT = { speed: 8, jump: 8, shield: 6, drunk: 7, dizzy: 6 };
     for (const k of Object.keys(ICON)) {

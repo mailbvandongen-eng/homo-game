@@ -5,8 +5,8 @@ import { leafCluster, frond, WIND, bakeTree, drawBakedTree } from './art.js';
 
 const CHUNK = 16; // tegels per voorgetekend stuk
 // Welke bomen bij welk landschap horen
-const PAL_OF = { forest: 'forest', java: 'java', dmanisi: 'dmanisi', coast: 'temperate', lake: 'temperate', hills: 'hills' };
-const KIND_OF = { forest: 'broad', java: 'jungle', dmanisi: 'broad', coast: 'broad', lake: 'broad', hills: 'broad' };
+const PAL_OF = { steppe: 'winter', snow: 'winter', forest: 'forest', java: 'java', dmanisi: 'dmanisi', coast: 'temperate', lake: 'temperate', hills: 'hills' };
+const KIND_OF = { steppe: 'broad', snow: 'broad', forest: 'broad', java: 'jungle', dmanisi: 'broad', coast: 'broad', lake: 'broad', hills: 'broad' };
 
 // Deterministische "willekeur" zodat het landschap elke keer hetzelfde is.
 export function hash(a, b = 0) { const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return n - Math.floor(n); }

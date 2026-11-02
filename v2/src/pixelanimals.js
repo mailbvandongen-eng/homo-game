@@ -16,6 +16,9 @@ export const SPECS = {
   horse:   { L: 19, bh: 9, leg: 11, slope: 1, hr: 3.5, sn: 6, snH: 3, ear: 'point', mane: true, tail: 'tuft', belly: '#d8b88a', col: ['#c8955e', '#9a6a3c', '#6a4424'], mcol: '#3a2414', eye: '#2a1a10', lw: 2 },
   bear:    { L: 18, bh: 13, leg: 6, slope: 3, hr: 5, sn: 4, snH: 3, ear: 'round', tail: 'stub', pat: 'bristle', col: ['#9a7048', '#6a4a30', '#45301e'], mcol: '#3a2414', eye: '#2a1a10', lw: 4 },
   rhino:   { L: 24, bh: 13, leg: 6, slope: 1, hr: 5.5, sn: 6, snH: 4, ear: 'point', horn: 'rhino', tail: 'whip', pat: 'wrinkle', col: ['#b0aa9c', '#8a8478', '#5e5a50'], eye: '#2a1a10', lw: 4 },
+  woolly:  { L: 25, bh: 14, leg: 6, slope: 3, hr: 5.5, sn: 6, snH: 4, ear: 'point', horn: 'rhino', tail: 'whip', mane: true, pat: 'shaggy', col: ['#a87e52', '#7e5a36', '#52381e'], mcol: '#3e2814', eye: '#2a1a10', lw: 4 },
+  reindeer:{ L: 17, bh: 8, leg: 10, slope: 1, hr: 3, sn: 4, snH: 3, ear: 'point', horn: 'antler', mane: true, tail: 'stub', belly: '#efe8dc', col: ['#bca88a', '#8e785a', '#5e4c36'], mcol: '#ece4d4', eye: '#2a1a10', lw: 2 },
+  cavelion:{ cat: true,  L: 44, bh: 19, leg: 17, slope: 2, hr: 8, sn: 6, snH: 6, ear: 'cat', tail: 'tuft', pat: 'stripes', belly: '#f0dcb4', col: ['#e4cc9c', '#c6a674', '#8a7048'], spot: '#b8986a', eye: '#f2d36b', lw: 5 },
   // Eindbazen
   ghyena:  { dog: true,  L: 44, bh: 26, leg: 18, slope: 14, hr: 11, sn: 11, snH: 8, ear: 'point', mane: true, tail: 'brush', pat: 'spots', col: ['#cfa468', '#a37a46', '#6a4a28'], spot: '#3a2614', mcol: '#24160a', eye: '#ff4a2a', lw: 5, scars: true },
   lion:    { cat: true,  L: 44, bh: 19, leg: 17, slope: 2, hr: 9, sn: 6, snH: 6, ear: 'none', lmane: true, tail: 'tuft', belly: '#ecd09a', col: ['#e8c07c', '#c9974e', '#8a6430'], mcol: '#6a3a18', eye: '#f2d36b', lw: 5 },
@@ -33,7 +36,7 @@ function build(S, pose, frame, mouth, eyeMode) {
   const tailLen = S.tail === 'long' ? Math.round(S.L * 0.6) : S.tail === 'bushy' || S.tail === 'brush' ? Math.round(S.bh * 0.8) : 4;
   const pad = tailLen + 2, crouch = pose === 'crouch' ? 1 : 0, run = pose === 'run' ? 1 : 0, jump = pose === 'jump' ? 1 : 0;
   const W = Math.ceil(pad + S.bh * 0.5 + S.L + S.bh * 0.5 + S.hr * 2 + S.sn + 4);
-  const H = Math.ceil(S.leg + S.bh + S.slope + S.hr * 2.6 + (S.horn === 'curl' ? 4 : 2) + (S.lmane ? S.hr * 0.6 : 0));
+  const H = Math.ceil(S.leg + S.bh + S.slope + S.hr * 2.6 + (S.horn === 'curl' ? 4 : S.horn === 'antler' ? 8 : 2) + (S.lmane ? S.hr * 0.6 : 0));
   const ground = H - 1;
   const legEff = Math.round(S.leg * (1 - 0.4 * crouch)) - (jump ? 2 : 0);
   const bob = run && frame % 2 ? -1 : 0;
@@ -81,6 +84,13 @@ function build(S, pose, frame, mouth, eyeMode) {
       if (y < by && y >= by - 6 && x >= bx - (6 - (by - y)) * 0.4 && x <= bx + 1 - (by - y) * 0.2) return y < by - 3 ? '#f2ead6' : '#d8ccb0';
       const bx2 = Math.round(snX1 - 7);
       if (y < by && y >= by - 3 && Math.abs(x - bx2) <= (3 - (by - y)) * 0.5) return '#d8ccb0';
+    }
+    if (S.horn === 'antler') {   // rendiergewei: twee stangen naar achteren met een tak naar voren
+      const top = Math.round(hy - S.hr), AC = '#eadcc0';
+      for (const off of [0, 2]) { const x0 = Math.round(hx) - off;
+        for (let k = 1; k <= 7; k++) if (y === top - k && x === Math.round(x0 - k * 0.45)) return off ? '#cbbc9c' : AC;
+        if ((y === top - 2 && x === x0 + 1) || (y === top - 3 && x === x0 + 2)) return AC;
+        if ((y === top - 5 && x === Math.round(x0 - 2.25) - 1) || (y === top - 7 && x === Math.round(x0 - 3.15) + 1)) return AC; }
     }
     if (S.horn === 'curl') {
       const top = Math.round(hy - S.hr);
@@ -144,6 +154,7 @@ function build(S, pose, frame, mouth, eyeMode) {
       if (S.pat === 'rosette') { const cx = Math.floor(x / 4) * 4 + 2 + (Math.floor(y / 4) % 2) * 2, cy = Math.floor(y / 4) * 4 + 2; const d = Math.abs(x - cx) + Math.abs(y - cy); if (d === 2 && hash(cx, cy) > 0.25) return S.spot; }
       if (S.pat === 'stripes' && x % 3 === 0 && t < 0.8 && t > 0.1) return S.spot;
       if (S.pat === 'bristle' && (x * 5 + y * 3) % 7 === 0 && t < 0.6) return tone[2];
+      if (S.pat === 'shaggy' && (x * 3 + Math.floor(y / 2)) % 4 === 0 && t > 0.25) return tone[2];
       if (S.pat === 'wrinkle' && x % 6 === 0 && t > 0.2 && t < 0.9) return tone[2];
       return ramp(t + (x < hipX ? 0.1 : 0), x, y, tone);
     }
@@ -197,7 +208,7 @@ export function animalLook(e) {
     case 'Hyena': return { kind: 'hyena', pose: e.fleeing ? 'run' : 'walk', frame: walkF(e.fleeing ? 14 : e.speed / 7), mouth: e.fleeing ? 1 : 0 };
     case 'Wolf': return { kind: 'wolf', pose: e.fleeing ? 'run' : 'walk', frame: walkF(e.fleeing ? 14 : e.speed / 6), mouth: e.fleeing ? 1 : 0 };
     case 'Warthog': case 'Rhino': {
-      const kind = n === 'Rhino' ? 'rhino' : 'warthog';
+      const kind = n === 'Rhino' ? (e.skin === 'woolly' ? 'woolly' : 'rhino') : 'warthog';
       if (st === 'charge') return { kind, pose: 'run', frame: walkF(12), mouth: 0, eye: 'angry' };
       if (st === 'scrape') return { kind, pose: 'crouch', frame: walkF(10) % 2 ? 1 : 3, mouth: 0, eye: 'angry' };
       if (st === 'dazed') return { kind, pose: 'idle', frame: 0, mouth: 1, eye: 'closed', stars: true };
@@ -211,7 +222,7 @@ export function animalLook(e) {
       if (st === 'recover') return { kind, pose: 'idle', frame: 0, eye: 'closed', stars: true };
       return { kind, pose: 'run', frame: walkF(14) };
     }
-    case 'Gnu': return { kind: e.skin === 'horse' ? 'horse' : 'gnu', pose: 'run', frame: walkF(14) };
+    case 'Gnu': return { kind: e.skin === 'horse' ? 'horse' : e.skin === 'reindeer' ? 'reindeer' : 'gnu', pose: 'run', frame: walkF(14) };
     case 'CaveBear': {
       if (st === 'rear') return { kind: 'bear', pose: 'idle', frame: 0, mouth: 1, eye: 'angry', rear: true };
       if (st === 'slam') return { kind: 'bear', pose: 'crouch', frame: 0, mouth: 1, eye: 'angry' };
@@ -219,7 +230,7 @@ export function animalLook(e) {
       return { kind: 'bear', pose: e.fleeing ? 'run' : 'walk', frame: walkF(e.fleeing ? 12 : 4) };
     }
     case 'GiantHyena': case 'Lion': case 'Scimitar': {
-      const kind = n === 'GiantHyena' ? 'ghyena' : n === 'Lion' ? 'lion' : 'homoth';
+      const kind = n === 'GiantHyena' ? 'ghyena' : n === 'Lion' ? (e.skin === 'cave' ? 'cavelion' : 'lion') : 'homoth';
       const growl = st === 'growl' || st === 'aim' || st === 'roar';
       if (st === 'charge' || st === 'flee') return { kind, pose: 'run', frame: walkF(10), mouth: 1, eye: 'angry' };
       if (st === 'leap') return { kind, pose: 'jump', frame: 0, mouth: 1, eye: 'angry' };

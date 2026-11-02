@@ -15,7 +15,7 @@ export class Log {
     this.x = this.x1 + (e.offset || 0) * (this.x2 - this.x1);
     this.dir = 1; this.speed = e.speed || 55;
     this.base = e.y - 3;      // e.y = bovenkant van de waterrij; het oppervlak ligt 8 lager
-    this.top = this.base; this.dx = 0; this.dy = 0; this.t = Math.random() * 6;
+    this.top = this.base; this.dx = 0; this.dy = 0; this.t = Math.random() * 6; this.ice = !!e.ice;
   }
   standable() { return true; }
   update(dt) {
@@ -29,6 +29,13 @@ export class Log {
   }
   draw(c) {
     const x = this.x, y = this.top, w = this.w;
+    if (this.ice) {   // ijsschots: plat, wit-blauw, met barstjes
+      c.fillStyle = '#5a8aa8'; c.beginPath(); c.roundRect(x, y + 2, w, 12, 4); c.fill();
+      c.fillStyle = '#cfe8f4'; c.beginPath(); c.roundRect(x + 1, y, w - 2, 11, 4); c.fill();
+      c.fillStyle = '#ffffff'; c.fillRect(x + 6, y + 1, w - 14, 3);
+      c.strokeStyle = '#8ec0d8'; c.lineWidth = 1; c.beginPath(); c.moveTo(x + w * 0.3, y + 3); c.lineTo(x + w * 0.38, y + 9); c.moveTo(x + w * 0.7, y + 2); c.lineTo(x + w * 0.62, y + 7); c.stroke();
+      return;
+    }
     c.fillStyle = '#3e2a1a'; c.beginPath(); c.roundRect(x, y, w, 16, 8); c.fill();
     c.fillStyle = '#7a5534'; c.beginPath(); c.roundRect(x + 2, y + 2, w - 4, 11, 6); c.fill();
     c.fillStyle = '#a07345'; c.fillRect(x + 8, y + 3, w - 16, 2);
@@ -161,7 +168,7 @@ export class Stegodon extends Log {
     super({ ...e, len: 4 });
     this.kind = e.kind || 'stegodon';
     // Ware grootte: schofthoogte t.o.v. de mens (habilis ±1,2 m, erectus en later ±1,6 m)
-    this.S = { deinotherium: 2.1, recki: 2.0, mammoth: 1.75, antiquus: 1.8, stegodon: 1.45 }[this.kind] || 1;
+    this.S = { deinotherium: 2.1, recki: 2.0, mammoth: 1.75, antiquus: 1.8, stegodon: 1.45, woolly: 1.6 }[this.kind] || 1;
     this.w = Math.round(116 * this.S); this.x2 = (e.to + 1) * TILE - this.w;
     this.x = this.x1 + (e.offset || 0) * (this.x2 - this.x1);
     this.speed = e.speed || 45;
@@ -174,9 +181,9 @@ export class Stegodon extends Log {
     const x = this.x, y = this.top, w = this.w, d = this.dir;
     groundShadow(c, x + w / 2, y + 78 * this.S, 62 * this.S, 0.25);
     c.save(); c.translate(x + w / 2, y); c.scale(d * this.S, this.S);
-    const SK = { deinotherium: ['#7d7266', '#a49a8c'], recki: ['#8a7e72', '#b0a496'], antiquus: ['#827a72', '#aaa298'], mammoth: ['#7a6656', '#a28c78'] }[this.kind] || ['#857a70', '#aaa094'];
+    const SK = { woolly: ['#6a4428', '#9a6a40'], deinotherium: ['#7d7266', '#a49a8c'], recki: ['#8a7e72', '#b0a496'], antiquus: ['#827a72', '#aaa298'], mammoth: ['#7a6656', '#a28c78'] }[this.kind] || ['#857a70', '#aaa094'];
     const o = '#2a2420', skin = SK[0], light = SK[1], ph = this.t * 4;
-    const K = this.kind, eleph = K === 'antiquus' || K === 'recki' || K === 'mammoth';
+    const K = this.kind, eleph = K === 'antiquus' || K === 'recki' || K === 'mammoth' || K === 'woolly';
     const dark = mix(skin, o, 0.4);
     // Zuilpoten: lang en recht, met een brede voetzool en teennagels
     const leg = (lx, top, off, far) => {
@@ -200,6 +207,10 @@ export class Stegodon extends Log {
     body(); c.fillStyle = g; c.fill();
     c.save(); body(); c.clip();
     c.strokeStyle = mix(skin, o, 0.22); c.lineWidth = 0.8; for (const [i, y0, y1] of [[-36, 14, 40], [-20, 10, 30], [-6, 22, 46], [10, 8, 26], [22, 24, 44], [34, 12, 34]]) { c.beginPath(); c.moveTo(i, y0); c.quadraticCurveTo(i + 4, (y0 + y1) / 2, i - 1, y1); c.stroke(); }
+    if (K === 'woolly') {   // lange vacht: plukken langs flank en buik, dikke wollige bult
+      c.strokeStyle = mix(skin, o, 0.45); c.lineWidth = 1.6; for (let i = -50; i < 46; i += 2.6) { const y0 = 20 + Math.sin(i * 0.3) * 4; c.beginPath(); c.moveTo(i, y0); c.quadraticCurveTo(i - 2, y0 + 16, i - 1 + Math.sin(ph + i) * 1.2, 56 + (i % 3)); c.stroke(); }
+      c.strokeStyle = mix(skin, '#ffffff', 0.18); c.lineWidth = 1; for (let i = -44; i < 40; i += 5) { c.beginPath(); c.moveTo(i, 4); c.quadraticCurveTo(i + 2, 12, i, 22); c.stroke(); }
+    }
     if (K === 'mammoth') { c.strokeStyle = mix(skin, o, 0.5); for (let i = -40; i < 40; i += 3) { c.beginPath(); c.moveTo(i, 40); c.lineTo(i - 1, 52); c.stroke(); } }
     c.fillStyle = '#ffffff22'; c.beginPath(); c.ellipse(4, 6, 40, 6, -0.05, 0, Math.PI * 2); c.fill();
     c.restore();
@@ -208,7 +219,7 @@ export class Stegodon extends Log {
     const head = () => { c.beginPath(); c.ellipse(58, 18, 17, 19, 0.1, 0, Math.PI * 2); if (eleph) c.ellipse(54, 0, 13, 12, -0.3, 0, Math.PI * 2); };
     head(); c.lineWidth = 2.4; c.strokeStyle = INK; c.stroke();
     const hg = c.createLinearGradient(44, -12, 72, 36); hg.addColorStop(0, light); hg.addColorStop(1, skin); head(); c.fillStyle = hg; c.fill();
-    const earR = K === 'mammoth' ? [8, 10] : K === 'deinotherium' ? [7, 9] : [11, 17];
+    const earR = K === 'woolly' ? [5, 6] : K === 'mammoth' ? [8, 10] : K === 'deinotherium' ? [7, 9] : [11, 17];
     c.fillStyle = dark; c.strokeStyle = INK; c.lineWidth = 1.6; c.beginPath(); c.ellipse(46, 18, earR[0], earR[1], -0.15, 0, Math.PI * 2); c.fill(); c.stroke();
     c.strokeStyle = mix(dark, o, 0.4); c.lineWidth = 0.8; c.beginPath(); c.moveTo(42, 10); c.quadraticCurveTo(48, 18, 43, 28); c.stroke();
     // Slurf: dik aan de basis, dun aan het eind, met ringen
@@ -218,7 +229,7 @@ export class Stegodon extends Log {
     c.strokeStyle = mix(skin, o, 0.45); c.lineWidth = 0.8; for (let i = 1; i < 11; i++) { const tt = i / 11; c.beginPath(); c.moveTo(tx(tt) - 4 + tt * 2, ty(tt)); c.lineTo(tx(tt) + 4 - tt * 2, ty(tt) + 1); c.stroke(); }
     const tusk = (f) => { c.strokeStyle = o; c.lineWidth = 7; c.beginPath(); f(); c.stroke(); c.strokeStyle = '#f6eedc'; c.lineWidth = 4.5; c.beginPath(); f(); c.stroke(); c.strokeStyle = '#ffffff'; c.lineWidth = 1.2; c.beginPath(); f(); c.stroke(); };
     if (K === 'deinotherium') tusk(() => { c.moveTo(64, 38); c.quadraticCurveTo(70, 56, 58, 62); });          // in de onderkaak, naar beneden en achteren
-    else if (K === 'mammoth') tusk(() => { c.moveTo(64, 34); c.bezierCurveTo(88, 62, 112, 40, 98, 16); });     // sterk gekromd
+    else if (K === 'mammoth' || K === 'woolly') tusk(() => { c.moveTo(64, 34); c.bezierCurveTo(88, 62, 112, 40, 98, 16); });     // sterk gekromd
     else if (eleph) tusk(() => { c.moveTo(64, 34); c.quadraticCurveTo(92, 50, 110, 38); });  // lang en vrij recht
     else tusk(() => { c.moveTo(64, 34); c.quadraticCurveTo(92, 50, 101, 28); });
     // Oog met wenkbrauwplooi
@@ -231,6 +242,7 @@ export class Stegodon extends Log {
 
 // Infokaarten bij de reuzen van toen (megafauna)
 export const MEGA_FACTS = {
+  woolly: { name: 'Wolharige mammoet', nick: 'Mammuthus primigenius', when: 'circa 400.000 – 4.000 jaar geleden', text: 'Ongeveer 3 meter hoog, met een dikke vacht, kleine oren en een vetbult: gemaakt voor de kou van de ijstijd. Neanderthalers en later wij jaagden erop en gebruikten bot en ivoor. De allerlaatste mammoeten leefden op het Wrangel-eiland, nog toen de piramiden al stonden.' },
   stegodon: { name: 'Stegodon', nick: '"Daktand"', when: 'circa 4 miljoen – 4.000 jaar geleden', text: 'Een verre verwant van de olifanten, met lange slagtanden die zo dicht bij elkaar stonden dat de slurf ertussen of erop lag. Op Java leefde hij tegelijk met Homo erectus. Op Flores bestond later een dwergvorm.' },
   deinotherium: { name: 'Deinotherium', nick: '"Verschrikkelijk beest"', when: 'tot circa 1 miljoen jaar geleden', text: 'Een slurfdier van wel 4 meter hoog, groter dan de olifant van nu. De slagtanden zaten in de onderkaak en krulden naar beneden. Daarmee trok hij waarschijnlijk takken en schors los. Habilis en erectus hebben hem nog gezien.' },
   recki: { name: 'Palaeoloxodon recki', nick: '"Oude olifant"', when: 'circa 3,5 miljoen – 300.000 jaar geleden', text: 'De grote olifant van de Oost-Afrikaanse graslanden. In de Olduvai-kloof liggen zijn botten soms tussen stenen werktuigen. Vroege mensen haalden er vlees van, maar of ze hem zelf doodden of een dood dier vonden, weten we vaak niet.' },

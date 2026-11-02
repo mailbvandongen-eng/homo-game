@@ -345,6 +345,7 @@ export class Player {
     c.save();
     c.translate(Math.round(this.cx), Math.round(this.bottom - (this.hop || 0) + (hanging ? 7 : 0)));
     if (this.dead) { c.translate(0, -22); c.rotate(Math.min(this.deadT * 6, Math.PI)); c.translate(0, 22); }
+    if (this.shiver && !this.dead) c.translate(Math.round(Math.sin(time * 70) * 1.2), 0);
     if (this.buffs?.drunk > 0 && !this.dead) { c.translate(0, -20); c.rotate(Math.sin(time * 2.6) * 0.16); c.translate(0, 20); }
     c.scale(this.face * this.sx * S, this.sy * S);
     const tool = this.tool || (this.throwAnim > 0.08 ? 'stone' : null);

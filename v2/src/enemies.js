@@ -703,7 +703,7 @@ export class CaveBear extends Enemy {
 
 // Neushoorn (Stephanorhinus): als het wrattenzwijn, maar groter en met hoorns
 export class Rhino extends Warthog {
-  constructor(x, y, o = {}) { super(x, y, o); this.x += this.w / 2; this.y += this.h; this.w = 58; this.h = 38; this.x -= this.w / 2; this.y -= this.h; }
+  constructor(x, y, o = {}) { super(x, y, o); this.skin = o.skin; this.x += this.w / 2; this.y += this.h; this.w = 58; this.h = 38; this.x -= this.w / 2; this.y -= this.h; }
   draw(c, time) {
     const charge = this.state === 'charge', scrape = this.state === 'scrape';
     c.save(); c.globalAlpha = this.alpha();

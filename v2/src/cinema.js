@@ -467,10 +467,54 @@ const W3 = [
     } },
 ];
 
+// ---------- wereld 4: de IJstijd en de Neanderthalers ----------
+function mammothSil(c, x, y, s, col, f) {
+  big(c, x, y, s, () => { ell(c, 0, -9, 10, 6, col); ell(c, 8, -12, 5, 5, col); ell(c, 5, -15, 4, 3, col); c.fillStyle = col; c.fillRect(11, -11, 2, 9);
+    for (const lx of [-7, -3, 3, 6]) c.fillRect(lx + ((f + lx) % 2 ? 1 : 0), -4, 2, 4);
+    c.fillStyle = '#f2ecdc'; c.fillRect(11, -7, 4, 1); c.fillRect(14, -9, 1, 2); c.fillStyle = col; for (let i = -9; i < 9; i += 2) c.fillRect(i, -4, 1, 2); });
+}
+const W4 = [
+  { when: 'circa 115.000 – 11.700 jaar geleden', title: 'De laatste ijstijd', text: 'Dikke ijskappen bedekten Scandinavië en Noord-Amerika, en de zeespiegel lag wel 120 meter lager dan nu. Ten zuiden van het ijs lag een koude, droge grasvlakte vol grote dieren: de mammoetsteppe.', dur: 9, chord: [45, 48, 52, 55],
+    draw(c, W, t, k) {
+      bands(c, W, ['#7aa8c8', '#94bad2', '#b8cede', '#d4dce0', '#e6e2d4'], 0, 120);
+      // Gletsjer aan de horizon
+      for (let x = 0; x < W; x++) { const h = 30 + Math.round(Math.sin(x * 0.03) * 6 + Math.sin(x * 0.11) * 2); c.fillStyle = '#f4f8fa'; c.fillRect(x, 108 - h, 1, h); c.fillStyle = '#c8dce8'; if (x % 7 < 2) c.fillRect(x, 108 - h + 6, 1, h - 6); }
+      ground(c, W, 118, ['#d8d4b0', '#b8b088'], 2, 0.03);
+      for (let i = 0; i < 4; i++) mammothSil(c, Math.round((W * 0.15 + i * 60 + t * 8) % (W + 80)) - 40, 140 + (i % 2) * 6, 2, '#5e4430', Math.floor(t * 3 + i));
+      c.fillStyle = '#ffffff'; for (let i = 0; i < 80; i++) c.fillRect(Math.round((hash(i, 3) * W - t * 6) % W + W) % W, Math.round((hash(i, 4) * H + t * 14) % H), 1, 1);
+    } },
+  { when: 'circa 400.000 – 40.000 jaar geleden', title: 'De Neanderthalers', text: 'Gedrongen, sterk en met een grote neus: gebouwd voor de kou. Hun brein was even groot als het onze. Ze maakten fijne stenen werktuigen, lijm van berkenpek, sieraden van arendsklauwen, en zorgden voor zieken en gewonden.', dur: 10, chord: [41, 48, 53, 57],
+    draw(c, W, t, k) {
+      bands(c, W, ['#0e1428', '#16203a', '#1e2a48']); stars(c, W, t, 120, 14);
+      // Rotsoverhang met sneeuw
+      for (let x = 0; x < W * 0.45; x++) { const y = 60 + Math.round(Math.sin(x * 0.05) * 6); c.fillStyle = '#3a342e'; c.fillRect(x, 0, 1, y); c.fillStyle = '#e8eef4'; c.fillRect(x, y - 2, 1, 2); }
+      ground(c, W, 140, ['#e8eef4', '#b8c6d2'], 1, 0.04);
+      big(c, Math.round(W / 2), 150, 2, () => {
+        const x = 0, y = 0;
+        c.globalAlpha = 0.25 + Math.sin(t * 9) * 0.05; disc(c, x, y - 6, 26, '#ff9a40'); c.globalAlpha = 1;
+        c.fillStyle = '#4a3020'; c.fillRect(x - 8, y - 2, 16, 2);
+        for (let i = 0; i < 14; i++) { const h = 4 + hash(i, Math.floor(t * 10)) * 10; c.fillStyle = i % 3 ? '#ff8a20' : '#ffd060'; c.fillRect(x - 6 + i, Math.round(y - 2 - h), 1, Math.round(h)); }
+        for (const [dx, f] of [[-24, 1], [22, -1], [-38, 1], [34, -1]]) { c.fillStyle = '#1a0c06'; c.fillRect(x + dx - 4, y - 15, 8, 7); c.fillRect(x + dx - 5, y - 8, 10, 8); c.fillStyle = '#c86a30'; c.fillRect(x + dx + (f > 0 ? 4 : -5), y - 12, 1, 5); }
+      });
+    } },
+  { when: 'circa 300.000 – 30.000 jaar geleden', title: 'Hun neven: de Denisovanen', text: 'Verder naar het oosten leefden de Denisovanen. We kennen ze vooral van DNA uit de Denisova-grot in Siberië, een kaak uit Tibet en een schedel uit Harbin in China. Neanderthalers en Denisovanen kregen soms samen kinderen.', dur: 10, chord: [43, 50, 55, 59],
+    draw(c, W, t, k) { mapScene(c, W, t, k, [[7, 51], [40, 50], [84, 51], [102, 35], [126, 45]], '#bfe6ff'); } },
+  { when: 'circa 45.000 jaar geleden', title: 'Een ontmoeting', text: 'Toen kwamen er nieuwe mensen uit Afrika: Homo sapiens. Ze ontmoetten de Neanderthalers en kregen soms samen kinderen. Daarom draagt bijna iedereen buiten Afrika nog 1 à 2 procent Neanderthaler-DNA. Jij misschien ook!', dur: 10, chord: [48, 55, 60, 64],
+    draw(c, W, t, k) {
+      bands(c, W, ['#8ab4d4', '#a8c8dc', '#d0dcd8', '#e8e0c8'], 0, 130);
+      ground(c, W, 136, ['#a8b878', '#86965a'], 1, 0.04);
+      const meet = ease(seg(k, 0, 0.6)), gap = Math.round(W * 0.32 * (1 - meet)) + 18;
+      for (let i = 0; i < 2; i++) big(c, Math.round(W / 2 - gap - i * 22), 152, 2, () => walker(c, 0, 0, meet < 1 ? t * 7 + i : 0, '#4a2e1a', 0.92));
+      for (let i = 0; i < 2; i++) big(c, Math.round(W / 2 + gap + i * 22), 152, 2, () => { c.save(); c.scale(-1, 1); walker(c, 0, 0, meet < 1 ? t * 7 + i : 0, '#2a1a10', 1.2); c.restore(); });
+      if (meet >= 1) { c.fillStyle = '#ffe27a'; for (let i = 0; i < 5; i++) { const a = t * 2 + i * 1.25; c.fillRect(Math.round(W / 2 + Math.cos(a) * 10), Math.round(100 + Math.sin(a) * 5), 1, 1); } }
+    } },
+];
+
 const CHAPTERS = {
   1: { title: 'Hoofdstuk 1', sub: 'De eerste mens · Homo habilis', scenes: W1 },
   2: { title: 'Hoofdstuk 2', sub: 'De lange benen · Homo erectus', scenes: W2 },
   3: { title: 'Hoofdstuk 3', sub: 'Het grote brein · Homo heidelbergensis', scenes: W3 },
+  4: { title: 'Hoofdstuk 4', sub: 'De IJstijd · Neanderthalers', scenes: W4 },
 };
 export const hasIntro = w => !!CHAPTERS[w];
 

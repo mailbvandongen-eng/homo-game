@@ -71,7 +71,7 @@ export class Game {
     this.player = new Player(this.level.start.x, this.level.start.y, def.look ? SPECIES[def.look].look : null);
     this.player.tool = def.tool || null;
     this.bombT = 2;
-    this.hearts = MAX_HEARTS; this.stones = 3; this.bones = 0;
+    this.hearts = MAX_HEARTS; this.stones = 3; this.bones = 0; this.warmth = 1; this.coldWarned = false;
     this.snapCamera();
   }
 
@@ -98,7 +98,7 @@ export class Game {
           // Een groepje van een andere soort: vriendelijk, ze doen hun eigen ding
           const sp = SPECIES[e.species];
           // Elke soort doet iets dat bij haar past (gebaseerd op vondsten)
-          const ACTS = { boisei: ['eat', 'dig', 'eat'], rudolfensis: ['knap', 'sit', 'eat'], robustus: ['dig', 'eat'], erectus: ['walk', 'walk', 'play'], sima: ['sit', 'knap', 'sit'], heidelbergensis: ['knap', 'walk', 'sit'] };
+          const ACTS = { denisova: ['knap', 'sit', 'play'], sapiens: ['walk', 'knap', 'play'], boisei: ['eat', 'dig', 'eat'], rudolfensis: ['knap', 'sit', 'eat'], robustus: ['dig', 'eat'], erectus: ['walk', 'walk', 'play'], sima: ['sit', 'knap', 'sit'], heidelbergensis: ['knap', 'walk', 'sit'] };
           const offs = e.offsets || [0, 40, 76], mid = offs.reduce((a, b) => a + b, 0) / offs.length;
           const group = e.trace ? [] : offs.map((dx, i) => {
             const n = new Player(e.x + dx, e.y, { ...sp.look, size: (sp.look.size || 1) * (e.sizes?.[i] ?? 1) });
@@ -116,8 +116,9 @@ export class Game {
     const be = L.entities.find(e => e.type === 'boss');
     if (be && !this.bossBeaten) {
       const A = L.arena;
-      const Boss = L.boss === 'lion' ? Lion : L.boss === 'homotherium' ? Scimitar : GiantHyena;
+      const Boss = L.boss === 'lion' || L.boss === 'cavelion' ? Lion : L.boss === 'homotherium' ? Scimitar : GiantHyena;
       this.boss = new Boss(be.x, be.y, { x1: A.x1 * TILE, x2: (A.x2 + 1) * TILE, ceil: (L.h - A.ceil) * TILE });
+      if (L.boss === 'cavelion') { this.boss.skin = 'cave'; this.boss.title = 'HOLENLEEUW · Panthera spelaea'; }
       this.enemies.push(this.boss);
     }
     this.finish = L.entities.find(e => e.type === 'finish');
@@ -149,7 +150,7 @@ export class Game {
     this.map = new TileMap(this.level);
     if (this.bossBeaten) { const A = this.level.arena; this.setColumn(A.exit, A.exitRows, T.EMPTY); }
     this.player.reset(p.x, p.y);
-    this.hearts = MAX_HEARTS; this.stones = Math.max(this.stones, 3);
+    this.hearts = MAX_HEARTS; this.stones = Math.max(this.stones, 3); this.warmth = 1;
     this.snapCamera();
     this.state = 'intro'; this.introT = 0.6;
     this.audio.playSong(this.def.music || 'savanna');
@@ -416,6 +417,7 @@ export class Game {
       this.hearts = 0; this.die(); p.vy = -200; return;
     }
     this.updateWind(dt);
+    this.updateCold(dt);
     this.updateStampedes(dt);
     this.updateBombs(dt);
     // Bek van de krokodil
@@ -563,6 +565,20 @@ export class Game {
         this.fx.text(k.x, k.y - 14, k.name || 'Artefact!', '#ffe27a');
       }
     }
+  }
+
+  // Kou (ijstijd): buiten koel je af, bij een brandend vuur of in een grot warm je op
+  updateCold(dt) {
+    const p = this.player;
+    p.shiver = false;
+    if (!this.def.cold || this.state !== 'play' || p.dead || this.finishing !== null || this.banner?.hold) return;
+    const fire = this.fires.some(f => f.lit && Math.abs(f.x - p.cx) < 150 && Math.abs(f.y - p.bottom) < 110);
+    const shelter = (this.def.shelters || []).some(([a, b]) => p.cx > a * TILE && p.cx < b * TILE);
+    if (fire || shelter) { this.warmth = Math.min(1, this.warmth + dt * 0.4); if (this.warmth > 0.5) this.coldWarned = false; }
+    else this.warmth -= dt / (this.def.coldTime || 50);
+    p.shiver = this.warmth < 0.25;
+    if (this.warmth < 0.3 && !this.coldWarned) { this.coldWarned = true; this.fx.text(p.cx, p.y - 24, 'Koud! Zoek een vuur', '#bfe6ff'); }
+    if (this.warmth <= 0) { this.warmth = 0.45; this.hurt(p.cx - p.face * 10); this.fx.text(p.cx, p.y - 24, 'Brrr! Te koud', '#bfe6ff'); }
   }
 
   // Windstoten (Dmanisi): rustig → waarschuwing (wervelende blaadjes) → stoot die je opzij duwt
@@ -868,6 +884,7 @@ export class Game {
     }
     if (this.boss && !this.boss.gone) hole(this.boss.cx, this.boss.y + 20, 120, 0.8);
     for (const pk of this.pickups) if (!pk.taken && pk.type === 'artifact') hole(pk.x, pk.y, 40, 0.8);
+    for (const m of this.meets) if (!m.trace) hole(m.x + 36, m.y - 24, 110, 0.9);
     c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(this.darkCv, 0, 0); c.restore();
     // Lichtbundels krijgen een zachte gloed
     c.save(); c.setTransform(k, 0, 0, k, -camX * k, -camY * k); c.globalCompositeOperation = 'lighter';
@@ -1067,7 +1084,7 @@ function miniHead(c, x, y) {
   c.fillStyle = '#1d1410'; c.beginPath(); c.arc(x + 3, y, 1.2, 0, Math.PI * 2); c.fill();
 }
 
-function drawSign(c, x, y, text) {
+export function drawSign(c, x, y, text) {
   c.save(); c.translate(x, y);
   c.fillStyle = '#5b3c26'; c.fillRect(-2, -30, 4, 30);
   c.font = '700 9px system-ui, sans-serif';

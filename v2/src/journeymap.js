@@ -2,18 +2,19 @@
 // met een besneeuwd stuk waar de volgende wereld (de IJstijd) komt. Swipen om te schuiven, tikken om te kiezen.
 import { hash, ell, bake, crown, cloud, leafBlob, plankBoard, logSlice } from './title.js';
 
-const MH = 180, MW = 880;
+const MH = 180, MW = 1010;
 // Plek van elk level op de kaart (in kaartpixels) en de wereldborden
 const NODES = {
   '1-1': [44, 122], '1-2': [96, 92], '1-3': [150, 128], '1-4': [218, 96],
   '2-1': [286, 126], '2-2': [352, 82], '2-3': [430, 124], '2-4': [500, 90],
   '3-1': [578, 128], '3-2': [632, 86], '3-3': [690, 116], '3-4': [748, 88],
+  '4-1': [800, 128], '4-2': [848, 92], '4-3': [892, 118], '4-4': [938, 92],
 };
-const NEXT = [818, 112];   // de volgende wereld: nog op slot
-const SIGNS = [[20, 52, '1 · Homo habilis', 'Oost-Afrika'], [268, 46, '2 · Homo erectus', 'Afrika uit'], [560, 46, '3 · Homo heidelbergensis', 'Europa'], [790, 46, '4 · De IJstijd', 'binnenkort']];
+const NEXT = [985, 124];   // de volgende wereld: nog op slot
+const SIGNS = [[20, 52, '1 · Homo habilis', 'Oost-Afrika'], [268, 46, '2 · Homo erectus', 'Afrika uit'], [560, 46, '3 · Homo heidelbergensis', 'Europa'], [786, 46, '4 · Neanderthalers', 'De IJstijd'], [948, 150, '5 · Homo sapiens', 'binnenkort']];
 
 // Ondergrond per x: savanne → bergen → zee → rode woestijn → groen Europa → sneeuw
-const BANDS = [[0, ['#c8c068', '#b8b05a', '#d6ce78']], [300, ['#9ab868', '#88a85a', '#acc678']], [470, ['#c89a5a', '#b8884c', '#d6aa6a']], [548, ['#86bc5c', '#74aa4e', '#98ca6a']], [770, ['#e8f0f4', '#d4e2ea', '#f6fafc']]];
+const BANDS = [[0, ['#c8c068', '#b8b05a', '#d6ce78']], [300, ['#9ab868', '#88a85a', '#acc678']], [470, ['#c89a5a', '#b8884c', '#d6aa6a']], [548, ['#86bc5c', '#74aa4e', '#98ca6a']], [770, ['#e8f0f4', '#d4e2ea', '#f6fafc']], [915, ['#c8c2a8', '#b4ae94', '#d8d4be']], [962, ['#d8c08a', '#c8ae78', '#e6d09a']]];
 function groundAt(x, y) {
   let i = 0; while (i < BANDS.length - 1 && x >= BANDS[i + 1][0] - 12 + ((y * 7) % 5) * 3 + (((x + y) % 2) ? 4 : 0)) i++;
   const p = BANDS[i][1], n = hash(Math.floor(x / 3), Math.floor(y / 3));
@@ -51,11 +52,18 @@ function bakeMap() {
   ell(c, 690, 124, 7, 4, '#3a2e22'); ell(c, 690, 124, 5, 2, '#140c08');
   water(756, 116, 18, 9, 4); for (let i = 0; i < 9; i++) { c.fillStyle = '#5a7a34'; c.fillRect(738 + i * 4, 106 + (i % 3), 1, 4); }
   for (let i = 0; i < 22; i++) { const x = Math.round(556 + hash(i, 9) * 210), y = Math.round(80 + hash(i, 10) * 64); if (Math.abs(x - 690) < 12 && Math.abs(y - 124) < 8) continue; hash(i, 11) > 0.6 ? pine(x, y, false) : tree(x, y, ['#3e7a34', '#78b04e']); }
-  // Wereld 4 (binnenkort): sneeuw, dennen, een mammoet en mist
-  for (let i = 0; i < 12; i++) pine(Math.round(780 + hash(i, 12) * 95), Math.round(70 + hash(i, 13) * 100), true);
-  ell(c, 846, 140, 10, 6, '#6a4a30'); ell(c, 855, 135, 5, 5, '#6a4a30'); c.fillStyle = '#6a4a30'; for (const lx of [-7, -3, 3, 7]) c.fillRect(846 + lx, 144, 2, 5); c.fillRect(859, 136, 2, 8);
-  c.fillStyle = '#f4f0e0'; c.fillRect(857, 141, 4, 1); c.fillRect(860, 139, 1, 2); c.fillStyle = '#4a3020'; c.fillRect(840, 132, 12, 2);
-  c.globalAlpha = 0.35; c.fillStyle = '#ffffff'; for (let y = 0; y < MH; y++) for (let x = 790 + (y % 2); x < MW; x += 2) if (hash(x >> 3, y >> 2) > 0.4) c.fillRect(x, y, 1, 1); c.globalAlpha = 1;
+  // Wereld 4: besneeuwde steppe, een bevroren rivier, de Denisova-grot in de bergen, de rots van Gibraltar
+  for (let i = 0; i < 12; i++) { const x = Math.round(778 + hash(i, 12) * 120), y = Math.round(70 + hash(i, 13) * 100); if (Math.abs(x - 892) < 16 && Math.abs(y - 112) < 14) continue; pine(x, y, true); }
+  for (let i = 0; i < 40; i++) { const x = 816 + i, y = 110 + Math.round(Math.sin(i * 0.25) * 6); c.fillStyle = '#b8dcec'; c.fillRect(x, y, 1, 4); c.fillStyle = '#ffffff'; c.fillRect(x, y, 1, 1); }
+  mountain(892, 120, 20, 40, true); ell(c, 892, 116, 4, 4, '#1e140c');
+  ell(c, 808, 152, 10, 6, '#6a4a30'); ell(c, 817, 147, 5, 5, '#6a4a30'); c.fillStyle = '#6a4a30'; for (const lx of [-7, -3, 3, 7]) c.fillRect(808 + lx, 156, 2, 5); c.fillRect(821, 148, 2, 8);
+  c.fillStyle = '#f4f0e0'; c.fillRect(819, 153, 4, 1); c.fillRect(822, 151, 1, 2); c.fillStyle = '#4a3020'; c.fillRect(802, 144, 12, 2);
+  for (let x = 920; x < 958; x++) { const top = 60 + Math.round(Math.abs(x - 934) * 1.4); for (let y = top; y < 112; y++) { c.fillStyle = (x + y) % 9 === 0 ? '#a8a294' : x < 934 ? '#e0dccc' : '#c4beae'; c.fillRect(x, y, 1, 1); } }
+  water(944, 150, 26, 18, 5);
+  // Wereld 5 (binnenkort): een zandige kust, een kano en mist
+  c.fillStyle = '#7a5434'; c.fillRect(980, 150, 14, 3); c.fillStyle = '#a8784a'; c.fillRect(981, 149, 12, 1);
+  for (const px of [972, 998]) { c.fillStyle = '#5a4a30'; c.fillRect(px, 104, 1, 10); for (const d of [-1, 1]) { c.fillStyle = '#3e8a34'; c.fillRect(px + d, 103, d * 4, 1); c.fillRect(px + d * 4, 104, d, 2); } }
+  c.globalAlpha = 0.4; c.fillStyle = '#ffffff'; for (let y = 0; y < MH; y++) for (let x = 962 + (y % 2); x < MW; x += 2) if (hash(x >> 3, y >> 2) > 0.45) c.fillRect(x, y, 1, 1); c.globalAlpha = 1;
   // Wolkjes die over de kaart drijven (vast)
   cloud(c, 140, 20, 12); cloud(c, 380, 16, 10); cloud(c, 650, 22, 14);
   return cv;
@@ -145,7 +153,7 @@ export class JourneyMap {
       b.addEventListener('click', e => { e.preventDefault(); this.select(i); });
       this.inner.appendChild(b);
     });
-    const nb = document.createElement('button'); nb.className = 'mnode locked'; nb.style.left = NEXT[0] * k + 'px'; nb.style.top = NEXT[1] * k + 'px'; nb.style.backgroundImage = `url(${this.slice})`; nb.textContent = '4-1';
+    const nb = document.createElement('button'); nb.className = 'mnode locked'; nb.style.left = NEXT[0] * k + 'px'; nb.style.top = NEXT[1] * k + 'px'; nb.style.backgroundImage = `url(${this.slice})`; nb.textContent = '5-1';
     nb.addEventListener('click', e => { e.preventDefault(); this.select(-1); }); this.inner.appendChild(nb);
     for (const [x, y, t, s] of SIGNS) { const d = document.createElement('div'); d.className = 'msign'; d.style.left = x * k + 'px'; d.style.top = y * k + 'px'; d.innerHTML = `${t}<small>${s}</small>`; this.inner.appendChild(d); }
     const cur = done - 1, [px, py] = NODES[this.levels[cur].id], pin = document.createElement('div'); pin.className = 'mpin'; pin.textContent = '▼'; pin.style.left = px * k + 'px'; pin.style.top = py * k + 'px'; this.inner.appendChild(pin);
@@ -156,7 +164,7 @@ export class JourneyMap {
     this.sel = i;
     this.inner.querySelectorAll('.mnode').forEach((n, j) => n.classList.toggle('sel', j === i || (i === -1 && j === this.levels.length)));
     const name = this.el.querySelector('.mi-name'), where = this.el.querySelector('.mi-where'), art = this.el.querySelector('.art2'), play = this.el.querySelector('#mapPlay');
-    if (i === -1) { name.textContent = 'Wereld 4 · De IJstijd'; where.textContent = 'Neanderthalers en wolharige mammoeten: komt binnenkort'; art.textContent = ''; play.disabled = true; return; }
+    if (i === -1) { name.textContent = 'Wereld 5 · Homo sapiens'; where.textContent = 'Wij trekken de wereld over: komt binnenkort'; art.textContent = ''; play.disabled = true; return; }
     const L = this.levels[i], open = i < this.save.unlocked, a = this.save.best[L.id]?.artifacts || 0;
     name.textContent = `${L.id} · ${L.name}`; where.textContent = `${L.place} · ${L.era}`;
     art.textContent = open ? `${'◆'.repeat(a)}${'◇'.repeat(3 - a)} artefacten` : 'op slot: speel eerst het level ervoor';

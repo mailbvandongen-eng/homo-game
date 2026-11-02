@@ -49,4 +49,22 @@ export const SPECIES = {
     text: 'Lang, met lange benen: gebouwd om ver te lopen. Leefde een tijd tegelijk met habilis. De eerste mensensoort die buiten Afrika voorkomt, en later de maker van handbijlen. In wereld 2 speel je als erectus!',
     look: { fur: '#7a5236', hair: '#2e1d12', skin: '#a8754e', limb: '#8f6040', flat: true, size: 1.2, tall: true },
   },
+  neanderthalensis: {
+    name: 'Neanderthaler', nick: 'Homo neanderthalensis',
+    when: 'circa 400.000 – 40.000 jaar geleden', where: 'Europa en West-Azië',
+    text: 'Gedrongen en sterk, met een grote neus en een brein zo groot als het onze. Maakte fijne stenen werktuigen, lijm van berkenpek, sieraden van arendsklauwen en verf van oker. Sommigen hadden rood haar. In wereld 4 speel je als Neanderthaler!',
+    look: { fur: '#6a4a34', hair: '#7a3a1e', skin: '#d0a07a', limb: '#a87a58', flat: true, size: 1.12 },
+  },
+  denisova: {
+    name: 'Denisovanen', nick: '"Mensen van de Denisova-grot"',
+    when: 'circa 300.000 – 30.000 jaar geleden', where: 'Azië: Siberië, Tibet, China',
+    text: 'Bekend van een vingerbotje, tanden en DNA uit de Denisova-grot in Siberië. In die grot lag ook een botje van een meisje met een Neanderthaler als moeder en een Denisovaan als vader. Een kaak uit Tibet en de schedel van Harbin ("Homo longi") horen er waarschijnlijk bij.',
+    look: { fur: '#5e4430', hair: '#2a1a10', skin: '#b08058', limb: '#8e6444', flat: true, size: 1.1 },
+  },
+  sapiens: {
+    name: 'Homo sapiens', nick: '"Wijze mens": wij',
+    when: 'vanaf circa 300.000 jaar geleden', where: 'eerst Afrika, daarna de hele wereld',
+    text: 'Slanker, met een hoog voorhoofd en een kin. Rond 45.000 jaar geleden kwamen sapiens en Neanderthalers elkaar in Europa tegen en kregen soms samen kinderen. Daarom zit in de meeste mensen buiten Afrika nog 1 à 2 procent Neanderthaler-DNA.',
+    look: { fur: '#5a4030', hair: '#1e140c', skin: '#8a5a3a', limb: '#6e4630', size: 1.1, tall: true },
+  },
 };
