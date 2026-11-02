@@ -17,6 +17,10 @@ import level41 from './levels/w4-1.js';
 import level42 from './levels/w4-2.js';
 import level43 from './levels/w4-3.js';
 import level44 from './levels/w4-4.js';
+import level51 from './levels/w5-1.js';
+import level52 from './levels/w5-2.js';
+import level53 from './levels/w5-3.js';
+import level54 from './levels/w5-4.js';
 import { SPECIES } from './species.js';
 import { installPixel } from './pixelmode.js';
 import { Cinema, hasIntro } from './cinema.js';
@@ -24,9 +28,9 @@ import { TitleScene, TH, plankBoard, logSlice } from './title.js';
 import { JourneyMap } from './journeymap.js';
 
 // Ophogen bij elke publicatie (0.x tot de eerste complete versie 1.0).
-export const VERSION = '0.31.0';
+export const VERSION = '0.32.0';
 
-const LEVELS = [level11, level12, level13, level14, level21, level22, level23, level24, level31, level32, level33, level34, level41, level42, level43, level44];
+const LEVELS = [level11, level12, level13, level14, level21, level22, level23, level24, level31, level32, level33, level34, level41, level42, level43, level44, level51, level52, level53, level54];
 const $ = id => document.getElementById(id);
 const canvas = $('game');
 const input = new Input(canvas);

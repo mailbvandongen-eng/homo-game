@@ -597,7 +597,7 @@ class PixelView {
     } else {
       // Jagers met speren achter een hert (erectus en latere mensen)
       const look = g.def.look;
-      if (look === 'erectus' || look === 'heidelbergensis') {
+      if (look === 'erectus' || look === 'heidelbergensis' || look === 'sapiens') {
         const span2 = 2600, hx2 = Math.round(((400 - camX * PS * 0.3 + time * 22) % span2 + span2) % span2) - 300, hy2 = yOf(0.3, 32), f = Math.floor(time * 8) % 2;
         // hert
         c.fillStyle = '#7a5a3c'; const dx0 = hx2 + 70;
@@ -613,7 +613,7 @@ class PixelView {
       }
       // Megafauna in de verte (reuzen die toen overal rondliepen)
       const look2 = g.def.look, th = L2theme(g.def);
-      const kinds = look2 === 'neanderthalensis' ? ['woolly', 'deer'] : th === 'dmanisi' ? ['mammoth'] : th === 'java' ? ['stego'] : look2 === 'heidelbergensis' ? ['antiquus'] : look2 === 'habilis' ? ['deino', 'sivath'] : ['recki', 'sivath'];
+      const kinds = look2 === 'neanderthalensis' || (look2 === 'sapiens' && g.def.cold) ? ['woolly', 'deer'] : th === 'dmanisi' ? ['mammoth'] : th === 'java' ? ['stego'] : look2 === 'heidelbergensis' ? ['antiquus'] : look2 === 'habilis' ? ['deino', 'sivath'] : ['recki', 'sivath'];
       if (!this.megaSpr) this.megaSpr = {};
       kinds.forEach((kd, n) => {
         const spanM = 3000 + n * 700, mx2 = Math.round(((1500 + n * 1300 - camX * PS * 0.3 - time * (3 + n)) % spanM + spanM) % spanM) - 300, my2 = yOf(0.3, 30);

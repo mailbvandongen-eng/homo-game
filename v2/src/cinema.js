@@ -510,11 +510,49 @@ const W4 = [
     } },
 ];
 
+// ---------- wereld 5: Homo sapiens ----------
+function lionSil(c, x, y, col) {
+  c.fillStyle = col; c.fillRect(x, y, 14, 1); c.fillRect(x - 1, y + 1, 1, 3); c.fillRect(x + 14, y - 2, 4, 1); c.fillRect(x + 17, y - 1, 1, 3);
+  c.fillRect(x + 14, y + 1, 4, 1); c.fillRect(x + 1, y + 1, 1, 5); c.fillRect(x + 12, y + 1, 1, 5); c.fillRect(x - 3, y - 1, 3, 1);
+}
+const W5 = [
+  { when: 'circa 300.000 jaar geleden', title: 'Een nieuwe soort', text: 'In Afrika verscheen Homo sapiens: wij. De oudste resten komen uit Jebel Irhoud in Marokko, maar ook in Oost- en Zuid-Afrika leefden vroege sapiens. Onze soort groeide op in heel Afrika tegelijk.', dur: 9, chord: [45, 52, 57, 60],
+    draw(c, W, t, k) { mapScene(c, W, t, k, [[-8, 31], [8, 20], [30, 10], [36, 5], [32, -12], [21, -34]], '#ffd27a'); } },
+  { when: 'circa 75.000 jaar geleden', title: 'De eerste kunst', text: 'In de Blombos-grot in Zuid-Afrika krasten mensen ruitjes in rode oker en regen ze schelpjes aan een snoer. Zo laat je zien wie je bent en bij wie je hoort: zonder woorden, met symbolen.', dur: 9, chord: [41, 48, 53, 57],
+    draw(c, W, t, k) {
+      bands(c, W, ['#2a1a12', '#3a261a', '#4a3020']);
+      c.globalAlpha = 0.3 + Math.sin(t * 7) * 0.04; disc(c, Math.round(W * 0.3), 150, 40, '#ff9a40'); c.globalAlpha = 1;
+      ground(c, W, 150, ['#6a4a30', '#4a3020'], 1, 0.05);
+      big(c, Math.round(W / 2), 120, 3, () => {
+        c.fillStyle = '#b8482a'; c.fillRect(-14, -6, 28, 12); c.fillStyle = '#8a2e1a'; c.fillRect(-14, 4, 28, 2);
+        const n = Math.floor(seg(k, 0.1, 0.8) * 8); c.fillStyle = '#f2d0a8';
+        for (let i = 0; i < n; i++) { const x = -12 + i * 3; c.fillRect(x, -4 + (i % 2) * 6, 1, 1); c.fillRect(x + 1, -3 + (i % 2) * 4, 1, 1); c.fillRect(x + 2, -2 + (i % 2) * 2, 1, 1); }
+        c.fillStyle = '#e8dcc0'; c.fillRect(-12, -2, 24, 1);
+      });
+      for (let i = 0; i < 9; i++) { const a = i / 8 * Math.PI, x = Math.round(W / 2 + Math.cos(a) * 40), y = Math.round(160 - Math.sin(a) * 10); disc(c, x, y, 2, '#e8dcc0'); c.fillStyle = '#2a1a12'; c.fillRect(x, y, 1, 1); }
+    } },
+  { when: 'circa 70.000 – 45.000 jaar geleden', title: 'De wereld over', text: 'Groepjes sapiens trokken Afrika uit: naar Azië, Europa en met boten zelfs naar Australië. Onderweg ontmoetten ze Neanderthalers en Denisovanen, en kregen ze samen kinderen.', dur: 10, chord: [43, 50, 55, 59],
+    draw(c, W, t, k) { mapScene(c, W, t, k, [[36, 5], [43, 12], [45, 28], [36, 34], [30, 40], [25, 43], [12, 47], [4, 45], [25, 43], [60, 30], [80, 22], [100, 15], [115, -2], [125, -10], [135, -25]], '#ffffff'); } },
+  { when: 'circa 36.000 jaar geleden', title: 'Tekeningen in het donker', text: 'In de Chauvet-grot in Frankrijk tekenden mensen bij fakkellicht holenleeuwen, paarden en mammoeten. Uiteindelijk bleef er van alle mensensoorten maar één over: wij. Maar in ons DNA reizen ze nog steeds mee.', dur: 10, chord: [40, 47, 52, 55],
+    draw(c, W, t, k) {
+      bands(c, W, ['#1a120c', '#241a12', '#2e2218']);
+      const lx = Math.round(W * (0.2 + seg(k, 0, 0.8) * 0.6));
+      c.globalAlpha = 0.35 + Math.sin(t * 9) * 0.05; disc(c, lx, 90, 70, '#c88a50'); c.globalAlpha = 1;
+      const wall = (x, y, fn) => { if (Math.abs(x - lx) < 80) fn(); };
+      wall(Math.round(W * 0.25), 70, () => { lionSil(c, Math.round(W * 0.25), 70, '#1a0c06'); lionSil(c, Math.round(W * 0.25) + 10, 76, '#1a0c06'); });
+      wall(Math.round(W * 0.5), 60, () => mammothSil(c, Math.round(W * 0.5), 80, 2, '#2a140a', 0));
+      wall(Math.round(W * 0.75), 70, () => { for (const [dx, dy] of [[0, 0], [6, -6], [-5, 5]]) { c.fillStyle = '#b8402a'; const x = Math.round(W * 0.75) + dx, y = 70 + dy; c.fillRect(x, y, 4, 5); for (let f = 0; f < 4; f++) c.fillRect(x + f, y - 3 - (f % 2), 1, 3); c.fillRect(x - 2, y + 1, 2, 1); } });
+      ground(c, W, 150, ['#3a2a1e', '#22180e'], 2, 0.06);
+      big(c, lx, 160, 2, () => { walker(c, 0, 0, k < 0.8 ? t * 7 : 0, '#1a100a', 1.15); c.fillStyle = '#ffb040'; c.fillRect(5, -17 - (Math.floor(t * 10) % 2), 2, 3); });
+    } },
+];
+
 const CHAPTERS = {
   1: { title: 'Hoofdstuk 1', sub: 'De eerste mens · Homo habilis', scenes: W1 },
   2: { title: 'Hoofdstuk 2', sub: 'De lange benen · Homo erectus', scenes: W2 },
   3: { title: 'Hoofdstuk 3', sub: 'Het grote brein · Homo heidelbergensis', scenes: W3 },
   4: { title: 'Hoofdstuk 4', sub: 'De IJstijd · Neanderthalers', scenes: W4 },
+  5: { title: 'Hoofdstuk 5', sub: 'De wijze mens · Homo sapiens', scenes: W5 },
 };
 export const hasIntro = w => !!CHAPTERS[w];
 

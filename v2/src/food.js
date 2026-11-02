@@ -24,7 +24,7 @@ export const GOOD = new Set(['heart', 'speed', 'jump', 'shield', 'bones']);
 
 // Waar ben je? Bepaalt de naam (en in de levels: welke soorten er groeien)
 function region(def) {
-  if (def.look === 'heidelbergensis' || def.look === 'neanderthalensis') return 'europe';
+  if (def.look === 'heidelbergensis' || def.look === 'neanderthalensis' || def.region === 'europe') return 'europe';
   if (def.theme === 'dmanisi') return 'georgia';
   if (def.theme === 'java') return 'java';
   return 'africa';

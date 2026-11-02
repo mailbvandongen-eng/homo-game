@@ -98,7 +98,7 @@ export class Game {
           // Een groepje van een andere soort: vriendelijk, ze doen hun eigen ding
           const sp = SPECIES[e.species];
           // Elke soort doet iets dat bij haar past (gebaseerd op vondsten)
-          const ACTS = { denisova: ['knap', 'sit', 'play'], sapiens: ['walk', 'knap', 'play'], boisei: ['eat', 'dig', 'eat'], rudolfensis: ['knap', 'sit', 'eat'], robustus: ['dig', 'eat'], erectus: ['walk', 'walk', 'play'], sima: ['sit', 'knap', 'sit'], heidelbergensis: ['knap', 'walk', 'sit'] };
+          const ACTS = { denisova: ['knap', 'sit', 'play'], neanderthalensis: ['sit', 'knap', 'play'], sapiens: ['walk', 'knap', 'play'], boisei: ['eat', 'dig', 'eat'], rudolfensis: ['knap', 'sit', 'eat'], robustus: ['dig', 'eat'], erectus: ['walk', 'walk', 'play'], sima: ['sit', 'knap', 'sit'], heidelbergensis: ['knap', 'walk', 'sit'] };
           const offs = e.offsets || [0, 40, 76], mid = offs.reduce((a, b) => a + b, 0) / offs.length;
           const group = e.trace ? [] : offs.map((dx, i) => {
             const n = new Player(e.x + dx, e.y, { ...sp.look, size: (sp.look.size || 1) * (e.sizes?.[i] ?? 1) });
@@ -119,6 +119,7 @@ export class Game {
       const Boss = L.boss === 'lion' || L.boss === 'cavelion' ? Lion : L.boss === 'homotherium' ? Scimitar : GiantHyena;
       this.boss = new Boss(be.x, be.y, { x1: A.x1 * TILE, x2: (A.x2 + 1) * TILE, ceil: (L.h - A.ceil) * TILE });
       if (L.boss === 'cavelion') { this.boss.skin = 'cave'; this.boss.title = 'HOLENLEEUW · Panthera spelaea'; }
+      if (L.boss === 'cavehyena') this.boss.title = 'HOLENHYENA · Crocuta spelaea';
       this.enemies.push(this.boss);
     }
     this.finish = L.entities.find(e => e.type === 'finish');
