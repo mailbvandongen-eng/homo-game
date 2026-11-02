@@ -15,7 +15,7 @@ export default {
     b.clear(0, 30, 33, 39);             // ingang bovenin
     b.ent('light', 4, 40); b.ent('light', 20, 40);
     b.bones(8, 34, 3);
-    // A · De schacht: richels links en rechts, steeds dieper
+    // 1 · LEREN · De schacht: richels links en rechts, steeds dieper
     b.clear(18, 44, 4, 36);
     b.rock(18, 29, 6, 1); b.rock(35, 25, 7, 1); b.rock(18, 21, 7, 1); b.crumble(29, 17, 6); b.rock(36, 13, 6, 1); b.rock(18, 9, 9, 1);
     b.ent('bat', 30, 26, { alt: 3 }); b.ent('bat', 26, 15, { alt: 3 });
@@ -25,7 +25,7 @@ export default {
     b.ent('light', 31, 40);
     b.climb(43, 4, 1, 25, 'rock');
     b.ent('bear', 41, 3);
-    // B · De gang onderin, naar de botkamer
+    // 2 · OEFENEN · De gang onderin, naar de botkamer
     b.clear(44, 120, 3, 9);
     b.ent('checkpoint', 48, 3);
     b.rock(56, 3, 2, 2); b.ent('stalactite', 62, 9); b.ent('stalactite', 66, 9);
@@ -34,17 +34,18 @@ export default {
     b.ent('bear', 92, 3, { dir: -1 });
     b.crack(100, 3, 1, 4);
     b.ent('fig', 96, 4);
-    // C · De botkamer met Excalibur
+    // 3 · VERRASSING · De botkamer met Excalibur: omhoog over smalle richels
     b.clear(104, 120, 3, 14);
     b.rock(106, 6, 3, 1); b.rock(111, 9, 3, 1); b.rock(116, 12, 3, 1);
     b.ent('artifact', 117, 13, { id: 'a2', name: 'Excalibur' });
     b.bones(106, 7, 3); b.bones(111, 10, 3);
     b.ent('light', 112, 40);
     b.ent('checkpoint', 121, 3);
-    // D · Omhoog naar buiten: rotstreden en een brokkelbrug
+    // 4 · FINALE · Omhoog naar buiten: rotstreden, vallende stalactieten en een brokkelbrug
     b.clear(120, 150, 3, 16);
     b.rock(125, 3, 4, 3); b.rock(129, 3, 4, 6); b.rock(133, 3, 3, 9); b.crumble(136, 11, 8);
-    b.ent('bat', 134, 8, { alt: 3 });
+    b.ent('bat', 134, 8, { alt: 3 }); b.ent('bat', 140, 13, { alt: 2 });
+    b.ent('stalactite', 127, 17); b.ent('stalactite', 131, 17);
     b.ent('artifact', 142, 15, { id: 'a3', name: 'Rode kwartsiet' });
     b.rock(144, 3, 6, 12);
     b.clear(144, 175, 15, 39);
