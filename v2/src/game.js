@@ -611,14 +611,15 @@ export class Game {
   updateStampedes(dt) {
     const p = this.player;
     for (const s of this.stampedes) {
-      if (!s.started) { if (p.cx > s.x) { s.started = true; s.t = -1.6; this.audio.play('rumble'); this.shake(4); this.fx.text(p.cx, p.y - 30, 'Een kudde gnoes! Klim omhoog!', '#ffd07a'); } continue; }
+      if (!s.started) { if (p.cx > s.x) { s.started = true; s.t = -1.6; this.audio.play('rumble'); this.shake(4); const nm = { reindeer: 'rendieren', horse: 'paarden' }[s.kind] || 'gnoes'; this.fx.text(p.cx, p.y - 30, s.from === 'front' ? `Een kudde ${nm} komt eraan! →` : `← Een kudde ${nm} achter je!`, '#ffd07a'); } continue; }
+      if (s.t < 0 && Math.random() < dt * 20) { const ex = s.from === 'front' ? this.camX + this.viewW - 6 : this.camX + 6; this.fx.add({ kind: 'dust', x: ex, y: p.y + p.h - Math.random() * 20, vx: (s.from === 'front' ? -1 : 1) * 70, vy: -30, life: 0.8, max: 0.8, r: 4, g: 20 }); }
       s.t += dt;
       if (s.t > 0 && s.spawned < (s.count || 10) && s.t > s.spawned * (s.every || 0.55)) {
         s.spawned++;
-        const x = this.camX - 60;
+        const front = s.from === 'front', x = front ? this.camX + this.viewW + 60 : this.camX - 60;
         let y = null; const cx = Math.floor(x / TILE);
         for (let cy = 0; cy < this.map.h; cy++) if (this.map.solidAt(cx, cy)) { y = cy * TILE; break; }
-        if (y !== null) this.enemies.push(new Gnu(x, y, { skin: s.kind }));
+        if (y !== null) this.enemies.push(new Gnu(x, y, { skin: s.kind, dir: front ? -1 : 1 }));
         if (Math.random() < 0.5) this.shake(2);
       }
     }

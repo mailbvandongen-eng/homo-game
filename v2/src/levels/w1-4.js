@@ -21,7 +21,7 @@ export default {
     b.ground(0, 48, 3);
     b.ent('light', 4, 11);
     b.bones(8, 4, 4);
-    b.ent('stalactite', 18, 11); b.ent('stalactite', 23, 11); b.ent('stalactite', 28, 11);
+    b.ent('stalactite', 20, 11);   // leren: één stalactiet die valt als je eronder loopt
     b.ent('light', 21, 11);
     b.bump(26, 6, 'fig');
     b.ent('bat', 34, 3, { alt: 4 });
@@ -35,7 +35,7 @@ export default {
 
     // B · Kamer met druipsteenputten
     b.ent('checkpoint', 60, 3);
-    b.ent('stalactite', 70, 11);
+    b.ent('stalactite', 64, 11); b.ent('stalactite', 68, 11); b.ent('stalactite', 72, 11);   // oefenen: een rij
     b.ground(76, 80, 1); b.thorns(76, 1, 5);
     b.ground(81, 100, 3);
     b.rock(84, 3, 2, 2); b.rock(88, 3, 2, 4);
@@ -46,7 +46,7 @@ export default {
 
     // C · Ondergrondse beek met stapstenen (en druipsteen erboven)
     b.water(101, 118);
-    b.rock(102, 1, 3, 2); b.rock(106, 1, 3, 2); b.rock(110, 1, 3, 2); b.rock(114, 1, 5, 2);
+    b.rock(102, 1, 4, 2); b.rock(107, 1, 4, 2); b.rock(112, 1, 4, 2); b.rock(117, 1, 2, 2);
     b.ent('stalactite', 107, 11); b.ent('stalactite', 115, 11);
     b.ent('artifact', 111, 7, { id: 'a2', name: 'Snijsteen' });
     b.ent('bat', 113, 3, { alt: 5 });
@@ -55,7 +55,8 @@ export default {
 
     // D · Rust voor het gevecht
     b.ent('checkpoint', 124, 3);
-    b.ent('fig', 128, 4);
+    b.ent('hyena', 131, 3); b.ent('hyena', 137, 3, { fast: true });   // jonge hyena's: het hol is dichtbij
+    b.ent('fig', 141, 4);
     b.ent('light', 127, 11);
     b.rock(133, 3, 1, 2); b.rock(135, 3, 2, 5);
     b.ent('artifact', 136, 8, { id: 'a3', name: 'Slagsteen' });

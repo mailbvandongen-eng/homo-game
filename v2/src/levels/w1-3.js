@@ -1,6 +1,6 @@
 // Wereld 1 · Level 3: het galerijbos langs de rivier bij het Turkanameer.
-// Nieuw: een route door de boomtoppen (takken, lianen, verende takken), bavianen die vruchten gooien,
-// luipaarden die op de loer liggen. Ontmoeting met Homo rudolfensis.
+// Hoofdidee: de boomtoppen. Leren (takken als trap, verende tak), oefenen (bavianen, hangtak, luipaard),
+// verrassing (lianen over de rivier), finale (alles samen hoog in de kruinen).
 export default {
   id: '1-3', world: 1, name: 'Het galerijbos',
   species: 'Homo habilis', place: 'Koobi Fora, Turkanameer (Kenia)', era: 'circa 1,9 miljoen jaar geleden',
@@ -11,49 +11,37 @@ export default {
     b.ent('start', 3, 3);
     b.ground(0, 111);
 
-    // A · Omhoog de boomtoppen in
-    b.ent('bigtree', 11, 3, { height: 12 });
+    // 1 · LEREN: takken zijn trappen. Boven is veilig, beneden prikken doorns en ligt een slang.
+    b.ent('bigtree', 12, 3, { height: 12 });
     b.bones(5, 3, 3);
-    b.branch(8, 5, 3); b.bones(8, 6, 3);
-    b.branch(12, 8, 3); b.bones(12, 9, 3);
-    b.branch(16, 11, 6); b.bones(17, 12, 4);
-    b.ent('liana', 25, 19, { len: 4 });
+    b.branch(9, 5, 3); b.bones(9, 6, 3);
+    b.branch(13, 8, 3); b.bones(13, 9, 3);
+    b.branch(17, 11, 5); b.bones(17, 12, 4);
+    b.branch(24, 11, 5); b.bones(24, 12, 4);
+    b.thorns(20, 3, 2); b.ent('snake', 26, 3);
+    b.bouncy(34, 2, 2);                                // verende tak: veilig uitproberen
+    b.branch(36, 11, 4); b.bones(36, 12, 3);
+    b.ent('artifact', 38, 14, { id: 'a1', name: 'Graafstok-steen' });   // alleen met de verende tak
+    b.bump(44, 6, 'flint');
 
-    // B · Kronenpad met bavianen; beneden een gevaarlijker bodemroute
-    b.ent('bigtree', 31, 3, { height: 10 });
-    b.branch(29, 11, 5);
-    b.ent('baboon', 32, 12);
-    b.bouncy(35, 11, 2);
-    b.branch(38, 15, 4); b.bones(38, 16, 2);
-    b.ent('artifact', 41, 16, { id: 'a1', name: 'Graafstok-steen' });
-    b.branch(39, 11, 4);
-    b.bar(43, 16, 7); b.bones(44, 15, 5);
-    b.ent('bigtree', 52, 3, { height: 10 });
-    b.branch(50, 11, 5);
-    b.ent('baboon', 53, 12, { dir: -1 });
-    b.ent('liana', 58, 19, { len: 4 });
-    b.ent('bigtree', 65, 3, { height: 10 });
-    b.branch(62, 11, 6); b.bones(62, 12, 5);
-    b.branch(69, 8, 3); b.branch(73, 5, 3);
+    // 2 · OEFENEN: bavianen gooien vruchten, een hangtak met een luipaard eronder
+    b.branch(51, 5, 3); b.branch(54, 8, 3);
+    b.ent('bigtree', 59, 3, { height: 10 });
+    b.branch(57, 11, 7); b.bones(57, 12, 3);
+    b.ent('baboon', 62, 12, { dir: -1 });               // nieuw: de baviaan
+    b.bar(65, 14, 6); b.bones(65, 13, 6);               // nieuw: hand over hand
+    b.ent('leopard', 68, 3, { range: 160 });            // nieuw: de luipaard wacht beneden
+    b.ent('bigtree', 74, 3, { height: 10 });
+    b.branch(72, 11, 5); b.bones(72, 12, 2);
+    b.ent('baboon', 76, 12, { dir: -1 });
+    b.branch(78, 8, 3); b.branch(82, 5, 3);
+    b.ent('checkpoint', 86, 3);
 
-    // bodemroute
-    b.ent('snake', 22, 3);
-    b.thorns(30, 3, 2);
-    b.ent('fig', 36, 4);
-    b.ent('leopard', 43, 3);
-    b.thorns(48, 3, 2);
-    b.ent('flint', 58, 4);
-    b.ent('hyena', 64, 3);
-
-    // C · Open plek aan de rivier: ontmoeting
-    b.ent('checkpoint', 77, 3);
-    b.ent('meet', 84, 3, { species: 'rudolfensis', offsets: [0, 42, 80], sizes: [1, 0.95, 0.72] });
-    b.ent('tree', 92, 3, { scale: 1 });
-    b.ent('snake', 98, 3);
+    // 3 · VERRASSING: even rust bij Homo rudolfensis, dan slingeren aan lianen over de rivier
+    b.ent('meet', 90, 3, { species: 'rudolfensis', offsets: [0, 42, 80], sizes: [1, 0.95, 0.72] });
+    b.bump(99, 6, 'berry');
+    b.ent('snake', 104, 3);
     b.ent('bigtree', 103, 3, { height: 11 });
-    b.bones(104, 4, 4);
-
-    // D · Over de rivier slingeren (een krokodil is je reddingsvlot als je valt)
     b.bouncy(110, 2, 2);
     b.water(112, 137);
     b.ent('liana', 115, 20, { len: 12 });
@@ -65,12 +53,14 @@ export default {
     b.rock(135, 0, 2, 3);
     b.bones(117, 10, 2); b.bones(129, 10, 2);
     b.ground(138, 215, 3);
+    b.ent('checkpoint', 141, 3);
 
-    // E · Tweede kronenpad met een luipaard in de boom
-    b.ent('checkpoint', 142, 3);
+    // 4 · FINALE: hoog door de kruinen, met bavianen en een luipaard op de takken
+    b.bump(143, 7, 'fig');
     b.branch(146, 5, 3); b.branch(150, 8, 3);
     b.ent('bigtree', 156, 3, { height: 10 });
     b.branch(154, 11, 6); b.bones(154, 12, 3);
+    b.ent('baboon', 156, 12, { dir: -1 });
     b.ent('leopard', 159, 12, { range: 180 });
     b.bouncy(161, 11, 2);
     b.branch(164, 16, 5);
@@ -80,14 +70,8 @@ export default {
     b.ent('bigtree', 178, 3, { height: 11 });
     b.branch(176, 12, 4); b.bones(176, 13, 3);
     b.branch(181, 9, 3); b.branch(185, 6, 3);
-    // bodemroute
-    b.thorns(165, 3, 3);
-    b.ent('snake', 173, 3);
-    b.ent('fig', 182, 4);
-
-    // F · Naar de groep bij de rotsen aan de bosrand
-    // Eten: proberen wat het doet
-    b.bump(81, 6, 'fig'); b.bump(88, 6, 'berry'); b.bump(95, 6, 'shroom');
-    b.ent('finish', 196, 3);
+    b.thorns(165, 3, 3); b.ent('snake', 173, 3);       // wie valt, landt tussen doorns en een slang
+    b.ent('hyena', 191, 3, { fast: true });
+    b.ent('finish', 200, 3);
   },
 };

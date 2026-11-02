@@ -595,19 +595,23 @@ export class Sabre extends Leopard {
 
 // ---------------- Gnoe: deel van een stormende kudde; rent door, spring erop of klim weg ----------------
 export class Gnu extends Enemy {
-  constructor(x, y, o = {}) { super(x, y, 46, 30); this.dir = 1; this.speed = o.speed || 300 + Math.random() * 40; this.active = true; this.skin = o.skin; }
+  constructor(x, y, o = {}) { super(x, y, 46, 30); this.dir = o.dir || 1; this.speed = o.speed || 300 + Math.random() * 40; this.active = true; this.skin = o.skin; this.stopT = -1; }
+  // Tegen een rots: het dier zwenkt af (de diepte in) en verdwijnt, het rent er niet doorheen
+  harmful() { return !this.fleeing && this.stopT < 0; }
+  alpha() { return this.stopT >= 0 ? Math.max(0, 1 - this.stopT / 0.35) : super.alpha(); }
   scare(dir, game) { if (!this.fleeing) { this.fleeing = true; this.fleeT = 0; this.fleeDir = 1; game.fx.stars(this.cx, this.y); } }
   update(dt, game) {
     this.t += dt;
     if (this.fleeing) return this.updateFlee(dt);
-    this.vx = this.speed; this.vy = Math.min(this.vy + 1900 * dt, 800);
+    if (this.stopT >= 0) { this.stopT += dt; if (this.stopT > 0.35) this.gone = true; return; }
+    this.vx = this.dir * this.speed; this.vy = Math.min(this.vy + 1900 * dt, 800);
     const r = moveBody(this, dt, game.map);
-    if (r.wall) { this.fleeing = true; this.fleeT = 0.2; this.fleeDir = 1; }   // zwenkt af langs de rots
-    if (this.x > game.camX + game.viewW + 300) this.gone = true;
+    if (r.wall) { this.stopT = 0; this.vx = 0; game.fx.stars(this.cx + this.dir * 20, this.y + 6); }
+    if (this.dir > 0 ? this.x > game.camX + game.viewW + 300 : this.x < game.camX - 300) this.gone = true;
   }
   draw(c, time) {
     c.save(); c.globalAlpha = this.alpha();
-    c.translate(Math.round(this.cx), Math.round(this.y + this.h)); c.scale(1, this.squash());
+    c.translate(Math.round(this.cx), Math.round(this.y + this.h)); c.scale(this.dir, this.squash());
     const ph = this.t * 22, o = '#1c1a1e', coat = '#56545e';
     for (const [lx, off] of [[-14, 0], [-8, Math.PI], [10, Math.PI / 2], [16, Math.PI * 1.5]]) { const s2 = Math.sin(ph + off) * 7; c.strokeStyle = o; c.lineWidth = 3.5; c.lineCap = 'round'; c.beginPath(); c.moveTo(lx, -14); c.lineTo(lx + s2, -1); c.stroke(); }
     c.fillStyle = o; c.beginPath(); c.ellipse(0, -19, 21, 9, -0.12, 0, Math.PI * 2); c.fill();
