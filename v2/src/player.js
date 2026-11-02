@@ -178,7 +178,8 @@ export class Player {
   // Slingeren aan een liaan. Je hangt waar je de liaan raakt (ropePos) en kunt langs het touw klimmen of zakken.
   grab(liana, dist) {
     this.hang = liana; liana.held = true;
-    this.ropePos = Math.max(TILE * 1.4, Math.min(liana.len, dist));
+    // Je glijdt meteen naar het onderste stuk: zo slinger je altijd aan (bijna) het hele touw
+    this.ropePos = Math.max(TILE * 1.4, Math.min(liana.len, Math.max(dist, liana.len - TILE * 1.2)));
     const len = this.ropePos;
     liana.omega = (this.vx * Math.cos(liana.angle) - this.vy * Math.sin(liana.angle) * 0.3) / len;
     this.vx = 0; this.vy = 0; this.jumping = false; this.onGround = false;
@@ -188,10 +189,11 @@ export class Player {
   release(game, jump, dir) {
     const L = this.hang, len = this.ropePos, tv = L.omega * len;
     if (jump) {
-      let vx = tv * Math.cos(L.angle) + this.face * 70;
-      if (vx * this.face < 205) vx = this.face * 205;
-      this.vx = Math.max(-PHYS.run * 1.3, Math.min(PHYS.run * 1.3, vx));
-      this.vy = Math.min(0, -tv * Math.sin(L.angle)) - PHYS.lianaJump;
+      // Je vliegt mee met de vaart van de slinger, plus een klein zetje: niet meer dan dat
+      let vx = tv * Math.cos(L.angle) + this.face * 40;
+      if (vx * this.face < 150) vx = this.face * 150;
+      this.vx = Math.max(-PHYS.run * 1.15, Math.min(PHYS.run * 1.15, vx));
+      this.vy = Math.min(0, -tv * Math.sin(L.angle)) * 0.7 - PHYS.lianaJump;
       this.holdTime = PHYS.runDelay; this.jumping = true; this.sx = 0.8; this.sy = 1.2;
       game.audio.play('jump');
     } else { this.vx = tv * Math.cos(L.angle) * 0.6 + (dir || 0) * 60; this.vy = 40; }
@@ -208,9 +210,10 @@ export class Player {
       if (this.ropePos > L.len) return this.release(game, false, dir);   // onderaan: loslaten
     }
     const len = this.ropePos;
-    L.omega += (-(1700 / len) * Math.sin(L.angle) + dir * 2.6) * dt;
-    L.omega *= 1 - 0.2 * dt;
-    L.angle = Math.max(-1.25, Math.min(1.25, L.angle + L.omega * dt));
+    L.omega += (-(1700 / len) * Math.sin(L.angle) + dir * 1.9) * dt;
+    L.omega *= 1 - 0.35 * dt;
+    const lim = 1.05; L.angle += L.omega * dt;
+    if (Math.abs(L.angle) > lim) { L.angle = Math.sign(L.angle) * lim; L.omega *= -0.2; }   // verder kan een liaan niet
     if (dir) this.face = dir; else if (Math.abs(L.omega) > 0.3) this.face = Math.sign(L.omega);
     const hx = L.ax + Math.sin(L.angle) * len, hy = L.ay + Math.cos(L.angle) * len;
     this.x = hx - this.w / 2; this.y = hy + 9;   // handen precies aan de liaan

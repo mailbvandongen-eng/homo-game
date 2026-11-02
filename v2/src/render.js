@@ -736,7 +736,9 @@ export function drawLiana(c, L, time) {
   c.fillStyle = '#5d8a3c';
   for (const [dx, dy, r] of [[-60, -30, 26], [-20, -16, 30], [30, -16, 26], [5, -30, 22]]) { c.beginPath(); c.ellipse(L.ax + dx, L.ay + dy, r, r * 0.45, 0, 0, Math.PI * 2); c.fill(); }
   // De liaan zelf: licht gebogen touw met blaadjes
-  const mx = (L.ax + ex) / 2 - Math.cos(L.angle) * L.omega * 6, my = (L.ay + ey) / 2 + Math.sin(L.angle) * L.omega * 6;
+  // Het touw buigt achter de beweging aan, zoals een echte liaan
+  const bend = Math.max(-26, Math.min(26, L.omega * 16)) + Math.sin(time * 1.7 + L.ax) * 3;
+  const mx = (L.ax + ex) / 2 - Math.cos(L.angle) * bend, my = (L.ay + ey) / 2 + Math.sin(L.angle) * bend;
   c.strokeStyle = '#3e5a22'; c.lineWidth = 5;
   c.beginPath(); c.moveTo(L.ax, L.ay); c.quadraticCurveTo(mx, my, ex, ey); c.stroke();
   c.strokeStyle = '#7fae3e'; c.lineWidth = 2.4;

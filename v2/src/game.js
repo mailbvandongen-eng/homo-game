@@ -720,7 +720,7 @@ export class Game {
     for (const L of this.lianas) {
       if (!L.held) {
         L.omega += (-(1700 / L.len) * Math.sin(L.angle) + Math.sin(this.time * 1.3 + L.ax) * 0.05) * dt;
-        L.omega *= 1 - 1.6 * dt;
+        L.omega *= 1 - 0.6 * dt;   // losgelaten zwaait hij nog even na
         L.angle += L.omega * dt;
       }
       if (p.hang || p.bar || p.ledge || p.climbing || p.regrab > 0 || p.onGround || p.dead) continue;
@@ -728,7 +728,7 @@ export class Game {
       const ex = L.ax + Math.sin(L.angle) * L.len, ey = L.ay + Math.cos(L.angle) * L.len;
       // Grijpen: een punt op het onderste deel van de liaan raakt je handen of bovenlijf (ruim, voor iedereen)
       const box = { x: p.x - 22, y: p.y - 16, w: p.w + 44, h: p.h * 0.75 + 16 };
-      for (let t = 0.3; t <= 1.001; t += 0.05) {
+      for (let t = 0.15; t <= 1.001; t += 0.05) {
         const px = L.ax + (ex - L.ax) * t, py = L.ay + (ey - L.ay) * t;
         if (px > box.x && px < box.x + box.w && py > box.y && py < box.y + box.h) {
           // Je pakt de liaan vast waar je hem raakt; het touw blijft even lang

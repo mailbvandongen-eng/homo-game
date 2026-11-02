@@ -1,6 +1,6 @@
 // Wereld 1 · Level 3: het galerijbos langs de rivier bij het Turkanameer.
 // Hoofdidee: de boomtoppen. Leren (takken als trap, verende tak), oefenen (bavianen, hangtak, luipaard),
-// verrassing (lianen over de rivier), finale (alles samen hoog in de kruinen).
+// verrassing (drie lianen over de rivier: echt slingeren), finale (alles samen hoog in de kruinen).
 export default {
   id: '1-3', world: 1, name: 'Het galerijbos',
   species: 'Homo habilis', place: 'Koobi Fora, Turkanameer (Kenia)', era: 'circa 1,9 miljoen jaar geleden',
@@ -29,7 +29,7 @@ export default {
     b.ent('bigtree', 59, 3, { height: 10 });
     b.branch(57, 11, 7); b.bones(57, 12, 3);
     b.ent('baboon', 62, 12, { dir: -1 });               // nieuw: de baviaan
-    b.bar(65, 14, 6); b.bones(65, 13, 6);               // nieuw: hand over hand
+    b.bar(65, 16, 6); b.bones(65, 15, 6);               // nieuw: hand over hand
     b.ent('leopard', 68, 3, { range: 160 });            // nieuw: de luipaard wacht beneden
     b.ent('bigtree', 74, 3, { height: 10 });
     b.branch(72, 11, 5); b.bones(72, 12, 2);
@@ -42,18 +42,18 @@ export default {
     b.bump(99, 6, 'berry');
     b.ent('snake', 104, 3);
     b.ent('bigtree', 103, 3, { height: 11 });
-    b.bouncy(110, 2, 2);
-    b.water(112, 137);
-    b.ent('liana', 115, 20, { len: 12 });
-    b.rock(119, 0, 2, 3);
-    b.ent('liana', 123, 20, { len: 14 });
-    b.ent('artifact', 125, 11, { id: 'a2', name: 'Zeefsteen' });
-    b.rock(127, 0, 2, 3);
-    b.ent('liana', 131, 20, { len: 14 });
-    b.rock(135, 0, 2, 3);
-    b.bones(117, 10, 2); b.bones(129, 10, 2);
-    b.ground(138, 215, 3);
-    b.ent('checkpoint', 141, 3);
+    b.branch(97, 5, 3); b.branch(100, 8, 3);           // takken als trap naar de uitkijktak
+    b.branch(104, 10, 7); b.bones(104, 11, 4);
+    b.ent('sign', 105, 11, { text: 'Zwaai mee en spring op het hoogste punt' });
+    b.water(112, 139);
+    // Drie korte lianen, ver uit elkaar: slinger goed door, laat los op het hoogste punt, net de volgende pakken
+    b.ent('liana', 116, 18, { len: 7 });
+    b.ent('liana', 125, 18, { len: 7 });
+    b.ent('liana', 134, 18, { len: 7 });
+    b.bones(113, 12, 2); b.bones(120, 13, 2); b.bones(129, 13, 2);
+    b.ent('artifact', 121, 15, { id: 'a2', name: 'Zeefsteen' });   // alleen voor een hoge zwaai
+    b.ground(140, 215, 3);
+    b.ent('checkpoint', 142, 3);
 
     // 4 · FINALE: hoog door de kruinen, met bavianen en een luipaard op de takken
     b.bump(143, 7, 'fig');
@@ -66,12 +66,12 @@ export default {
     b.branch(164, 16, 5);
     b.ent('artifact', 165, 17, { id: 'a3', name: 'Notenkraker' });
     b.ent('baboon', 168, 17);
-    b.ent('liana', 172, 21, { len: 4 });
-    b.ent('bigtree', 178, 3, { height: 11 });
-    b.branch(176, 12, 4); b.bones(176, 13, 3);
-    b.branch(181, 9, 3); b.branch(185, 6, 3);
+    b.ent('liana', 173, 21, { len: 5 });                // slinger over het gat naar de volgende boom
+    b.ent('bigtree', 183, 3, { height: 11 });
+    b.branch(180, 13, 4); b.bones(180, 14, 3);
+    b.branch(186, 9, 3); b.branch(190, 6, 3);
     b.thorns(165, 3, 3); b.ent('snake', 173, 3);       // wie valt, landt tussen doorns en een slang
-    b.ent('hyena', 191, 3, { fast: true });
+    b.ent('hyena', 194, 3, { fast: true });
     b.ent('finish', 200, 3);
   },
 };
