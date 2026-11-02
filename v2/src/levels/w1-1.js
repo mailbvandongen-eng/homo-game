@@ -1,99 +1,75 @@
-// Wereld 1 · Level 1: leert lopen, springen, stampen, gooien en veren.
+// Wereld 1 · Level 1: springen en verjagen. Opbouw zoals bij Mario: leren, oefenen, verrassing, finale.
+// Nieuw: springen, stampen, stenen gooien en de termietenheuvel. Niets anders.
 // Coördinaten: (kolom, hoogte vanaf de bodem). Het gewone maaiveld ligt op hoogte 3.
 export default {
   id: '1-1', world: 1, name: 'Eerste stappen',
   species: 'Homo habilis', place: 'Riftvallei, Oost-Afrika', era: 'circa 2,4 miljoen jaar geleden',
   theme: 'savanna', music: 'savanna',
-  width: 222, height: 15,
+  width: 210, height: 15,
   fact: 'Homo habilis betekent "handige mens". Deze vroege mensachtige sloeg scherpe afslagen van keien: Oldowan-werktuigen. Die techniek is zelfs ouder dan habilis zelf: ook eerdere mensachtigen maakten al stenen werktuigen.',
   build(b) {
     b.ent('start', 3, 3);
 
-    // A · Lopen, springen en de eerste hyena
-    b.ground(0, 34);
-    b.ent('tree', 8, 3, { scale: 1 });
-    b.bones(6, 3, 4);
-    b.rock(13, 3);
-    b.bones(12, 5, 3, { arc: 0.8 });
-    b.bump(17, 6, 'bone'); b.bump(18, 6, 'flint'); b.bump(19, 6, 'bone');
-    b.ent('hyena', 25, 3);
-    b.ent('tree', 28, 3, { scale: 0.8 });
+    // 1 · LEREN: springen, stampen, stenen gooien. Alles op vlakke grond, met ruimte.
+    b.ground(0, 40);
+    b.bones(6, 3, 3);
+    b.rock(12, 3);                                   // klein rotsje: de eerste sprong
+    b.bones(11, 5, 3, { arc: 0.8 });
+    b.bump(17, 6, 'bone'); b.bump(18, 6, 'flint'); b.bump(19, 6, 'bone');   // stoot ertegen: stenen
+    b.ent('tree', 9, 3, { scale: 1 });
+    b.ent('hyena', 26, 3);                           // de eerste hyena: loopt naar je toe over vlakke grond
+    b.bones(23, 6, 5, { arc: 0.6 });                 // botjes wijzen: spring erop
     b.rock(31, 3, 1, 2);
-    b.bones(31, 6, 1);
+    b.ent('snake', 36, 3);                           // slang: niet op springen, gooi een steen of spring eroverheen
+    b.bones(35, 6, 3, { arc: 0.6 });
 
-    // B · Kuilen en de slang
-    b.bones(34, 5, 4, { arc: 0.9 });
-    b.ground(37, 52);
-    b.ent('snake', 44, 3);
-    b.bones(43, 6, 3, { arc: 0.6 });
-    // Hoge rots: spring ertegen en pak de rand vast, dan trek je jezelf op
-    b.rock(48, 3, 2, 4);
-    b.bones(48, 8, 2);
-    b.bones(52, 5, 4, { arc: 1 });
-    b.ground(56, 80);
-    b.ent('tree', 58, 3, { scale: 1.1 });
-    b.ent('hyena', 61, 3);
-    b.ent('hyena', 66, 3, { dir: 1 });
+    // 2 · OEFENEN: dezelfde dingen, maar nu met kuilen erbij
+    b.bones(41, 5, 2, { arc: 0.7 });                 // eerste kuil: 2 breed
+    b.ground(43, 58);
+    b.ent('hyena', 52, 3);                           // hyena die bij de rand van de kuil omkeert
+    b.ent('artifact', 47, 7, { id: 'a1', name: 'Hamersteen' });
+    b.rock(46, 3, 2, 2);
+    b.bones(59, 5, 3, { arc: 0.9 });                 // tweede kuil: 3 breed
+    b.ground(62, 76);
+    b.ent('hyena', 70, 3);                           // landt vlak voor een hyena: snel reageren
+    b.stairs(73, 3, 3);                              // trap omhoog naar een rotsplateau
+    b.ground(76, 84, 6);
+    b.bones(77, 7, 4);
+    b.bones(85, 8, 3, { arc: 0.6 });                 // spring van het plateau over de kuil
+    b.ground(88, 106);
+    b.ent('vulture', 96, 3, { alt: 5 });             // nieuw: de gier duikt van boven
+    b.bump(92, 6, 'date');
+    b.ent('checkpoint', 101, 3);
+    b.ent('tree', 104, 3, { scale: 1.1 });
 
-    // Termietenheuvel naar een hoge richel met het eerste artefact
-    b.spring(70, 3);
-    b.rock(72, 8, 5, 1);
-    b.bones(72, 9, 4);
-    b.ent('artifact', 76, 9, { id: 'a1', name: 'Hamersteen' });
+    // 3 · VERRASSING: de termietenheuvel lanceert je. Eerst veilig, dan over een brede kuil.
+    b.spring(108, 3);
+    b.rock(109, 8, 4, 1); b.bones(109, 9, 4);        // veilig uitproberen: hoge richel
+    b.bump(111, 12, 'honey');                        // beloning voor wie nog hoger springt
+    b.ground(107, 116);
+    b.spring(116, 3);
+    b.rock(117, 6, 5, 1);                            // zwevende richel boven een brede kuil
+    b.bones(117, 8, 5);
+    b.ground(124, 150);
+    b.ent('artifact', 120, 9, { id: 'a2', name: 'Afslag' });
+    b.spring(129, 3);
+    b.thorns(131, 3, 4);                             // doornstruiken: alleen met de termietenheuvel eroverheen
+    b.bones(131, 9, 5, { arc: 0.8 });
+    b.rock(140, 3, 2, 3);                            // rots om op te schuilen
+    b.ent('hyena', 145, 3); b.ent('hyena', 148, 3, { fast: true });   // twee hyena's tegelijk
+    b.bump(137, 6, 'flint');
 
-    // C · Takken boven de kloof, en de gier
-    b.ent('tree', 79, 3, { scale: 0.9 });
-    b.branch(82, 5, 3);
-    b.bones(82, 6, 3);
-    // Hangtak boven de kloof: hand-over-hand naar de overkant
-    b.bar(85, 8, 4);
-    b.branch(86, 4, 3);
-    b.bones(85, 7, 4);
-    b.ground(90, 112);
-    b.ent('vulture', 97, 3, { alt: 5 });
-    b.ent('fig', 99, 4);
-    b.ent('checkpoint', 103, 3);
-    b.ent('tree', 107, 3, { scale: 1 });
-
-    // D · Brokkelbrug over een brede kuil
-    b.crumble(113, 2, 10);
-    b.bones(113, 4, 10);
-    b.ent('artifact', 118, 7, { id: 'a2', name: 'Afslag' });
-    b.ground(123, 150);
-
-    // E · Het wrattenzwijn op de vlakte
-    b.ent('flint', 127, 4);
-    b.ent('tree', 129, 3, { scale: 0.85 });
-    b.thorns(134, 3, 2);
-    b.bones(133, 6, 4, { arc: 0.7 });
-    b.ent('warthog', 142, 3);
-    b.rock(147, 3, 1, 2);
-
-    // F · Rotspilaren boven kuilen
-    b.rock(154, 0, 2, 5);
-    b.bones(154, 6, 2);
-    b.rock(159, 0, 2, 6);
-    b.bones(159, 7, 2);
-    b.ground(163, 184);
-    b.ent('hyena', 167, 3, { fast: true });
-    b.spring(169, 3);
-    b.bump(171, 7, 'fig'); b.bump(172, 7, 'bone'); b.bump(173, 7, 'bone');
-    b.ent('artifact', 172, 8, { id: 'a3', name: 'Oldowan-hakker' });
-    b.ent('vulture', 178, 3, { alt: 5 });
-
-    // G · Verende tak en twee lianen over de kloof naar de grot van de stam
-    b.ent('checkpoint', 164, 3);
-    b.bouncy(185, 2, 2);
-    b.bones(187, 9, 2);
-    b.ent('liana', 189, 13, { len: 4 });
-    b.bones(191, 10, 2, { arc: 0.5 });
-    b.ent('liana', 194, 13, { len: 7 });
-    b.bones(196, 10, 2, { arc: 0.5 });
-    b.ground(198, 221, 5);
-    // Megafauna op ware grootte: de termietenheuvel lanceert je op zijn rug
-    b.spring(94, 3); b.ent('mega', 97, 3, { from: 96, to: 112, speed: 40, kind: 'deinotherium' });
-    // Eten: proberen wat het doet
-    b.bump(40, 6, 'date'); b.bump(93, 6, 'shroom'); b.bump(181, 6, 'berry');
-    b.ent('finish', 204, 5);
+    // 4 · FINALE: rotspilaren boven diepe kuilen, met een gier erboven
+    b.bump(149, 7, 'fig');                           // even opladen voor het laatste stuk
+    b.rock(153, 0, 2, 5); b.bones(153, 6, 2);
+    b.rock(158, 0, 2, 6); b.bones(158, 7, 2);
+    b.rock(163, 0, 2, 5); b.bones(163, 6, 2);
+    b.ent('vulture', 160, 3, { alt: 7 });
+    b.rock(168, 0, 2, 4); b.bones(168, 5, 2);
+    b.ground(172, 209);
+    b.ent('hyena', 182, 3, { fast: true });
+    b.spring(189, 3);
+    b.rock(186, 11, 3, 1); b.ent('artifact', 187, 12, { id: 'a3', name: 'Oldowan-hakker' });   // verstopt boven in beeld
+    b.ent('finish', 198, 3);
   },
 };
