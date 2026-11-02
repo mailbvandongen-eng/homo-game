@@ -173,7 +173,10 @@ export class Game {
     if (this.hearts <= 0) return this.die();
     p.invuln = PHYS.hurtInvuln;
     const dir = Math.sign(p.cx - fromX) || -p.face;
-    p.vx = dir * 200; p.vy = -330; p.onGround = false; p.jumping = false;
+    // Terugslag gooit je nooit een kuil, lava of water in: dan val je op dezelfde plek terug
+    let safe = !p.platform; const tx = Math.floor((p.cx + dir * 70) / TILE);
+    if (safe) { safe = false; for (let cy = Math.floor(p.bottom / TILE); cy < this.map.h; cy++) { const t = this.map.get(tx, cy); if (t === T.WATER || t === T.LAVA) break; if (this.map.solidAt(tx, cy)) { safe = true; break; } } }
+    p.vx = safe ? dir * 200 : 0; p.vy = safe ? -330 : -260; p.onGround = false; p.jumping = false;
     this.audio.play('hurt'); this.shake(5);
   }
 
@@ -593,13 +596,15 @@ export class Game {
     let target = 0;
     if (W) for (const z of W) if (p.cx > z.from * TILE - 400 && p.cx < z.to * TILE + 400) { const st = this.windState(z); target = st === 'gust' ? z.dir * 0.7 : st === 'warn' ? z.dir * 0.2 : 0; }
     WIND.push += (target - WIND.push) * Math.min(1, dt * 3);
+    p.tailwind = 0;
     if (!W || p.dead || p.hang) return;
     for (const z of W) {
       if (p.cx < z.from * TILE || p.cx > z.to * TILE) continue;
       const st = this.windState(z);
       if (st === 'gust') {
         const force = (z.strength || 520) * (p.onGround ? 1 : 1.35);
-        p.vx = Math.max(-330, Math.min(330, p.vx + z.dir * force * dt));
+        p.vx = Math.max(-360, Math.min(360, p.vx + z.dir * force * dt));
+        p.tailwind = z.dir * 95;
         if (Math.random() < dt * 30) this.fx.add({ kind: 'wind', x: this.camX + (z.dir > 0 ? -10 : this.viewW + 10), y: this.camY + Math.random() * this.viewH, vx: z.dir * (500 + Math.random() * 200), vy: 0, life: 1.2, max: 1.2, r: 1, g: 0 });
       }
       if (st === 'warn' && Math.random() < dt * 12) this.fx.add({ kind: 'leaf', x: this.camX + Math.random() * this.viewW, y: this.camY + this.viewH * (0.3 + Math.random() * 0.4), vx: z.dir * 90, vy: -20, life: 0.8, max: 0.8, r: 2, g: 30 });

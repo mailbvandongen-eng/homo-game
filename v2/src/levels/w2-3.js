@@ -1,56 +1,64 @@
 // Wereld 2 · Level 3: de vulkanen van Java.
-// Nieuw: lava, vallende vulkaanbommen (schaduw = waarschuwing), meerijden op een Stegodon, varanen, makaken.
+// Hoofdidee: lava en vulkaanbommen. Leren (langzame bommen op vlakke grond), oefenen (pilaren boven lava),
+// verrassing (op de Stegodon onder de bommen), finale (lavaveld onder een regen van bommen).
 export default {
   id: '2-3', world: 2, name: 'De vulkanen van Java',
   species: 'Homo erectus', place: 'Sangiran en Trinil, Java (Indonesië)', era: 'circa 1,5 miljoen – 500.000 jaar geleden',
   theme: 'java', music: 'java', look: 'erectus', tool: 'axe', phys: { walk: 158, run: 255 },
   width: 236, height: 16,
-  bombs: [{ from: 98, to: 116, every: 2.4 }, { from: 160, to: 200, every: 1.9 }],
-  fact: 'In 1891 vond de Nederlander Eugène Dubois bij Trinil op Java de "Javamens": de eerste erectus-fossielen ooit. In de collectie ligt ook een zoetwaterschelp met een zigzaglijn, gekrast door erectus zo’n 500.000 jaar geleden. Die schelp is nu te zien in Naturalis in Leiden.',
+  bombs: [
+    { from: 46, to: 60, every: 3.0 },     // leren: langzaam, op vlakke grond
+    { from: 63, to: 84, every: 2.6 },     // oefenen: boven de lava
+    { from: 112, to: 140, every: 2.2 },   // verrassing: terwijl je op de Stegodon rijdt
+    { from: 161, to: 202, every: 1.7 },   // finale: een regen van bommen
+  ],
   build(b) {
     b.ent('start', 3, 3);
+
+    // 1 · LEREN: makaken en varanen, de eerste lavageul met brede stenen, en de eerste vulkaanbommen
     b.ground(0, 30);
     b.ent('tree', 8, 3, { scale: 1 });
     b.bones(5, 4, 3);
-    b.ent('baboon', 15, 6, { skin: 'macaque' }); b.branch(14, 5, 3);
-    b.ent('varaan', 22, 3);
+    b.branch(14, 5, 3); b.ent('baboon', 15, 6, { skin: 'macaque' });   // nieuw: de makaak gooit vruchten
+    b.ent('varaan', 23, 3);                             // nieuw: de varaan
     b.crack(27, 3, 1, 3); b.rock(27, 6, 1, 2);
-    // Eerste lavageul met stenen
     b.lava(31, 42);
-    b.rock(33, 1, 3, 2); b.rock(37, 1, 3, 2); b.rock(41, 1, 2, 2);
-    b.bones(33, 4, 2); b.bones(37, 4, 2);
-    b.ground(43, 58);
-    b.ent('varaan', 50, 3);
-    b.ent('checkpoint', 56, 3);
-    // Vulkaanbommen en een Stegodon die je over de lava draagt
-    b.ground(59, 70);
-    b.ent('artifact', 66, 7, { id: 'a1', name: 'Zigzagschelp' }); b.rock(65, 3, 2, 3);
-    b.lava(71, 96);
-    b.ent('stegodon', 72, 2, { from: 71, to: 96, speed: 72 });
-    b.bones(76, 8, 4); b.bones(88, 8, 4);
-    b.ground(97, 116);
-    b.ent('baboon', 105, 7, { skin: 'macaque', dir: -1 }); b.branch(104, 6, 3);
-    b.ent('varaan', 110, 3);
-    // De Solo-rivier met krokodillen
-    b.ent('checkpoint', 114, 3);
-    b.water(117, 140);
-    b.ent('croc', 118, 2, { from: 117, to: 127, speed: 40 });
-    b.rock(128, 0, 2, 3);
-    b.ent('croc', 131, 2, { from: 130, to: 140, speed: 44, dir: -1, offset: 0.6 });
-    b.ent('artifact', 129, 7, { id: 'a2', name: 'Dubois-tand' });
-    b.ground(141, 158);
+    b.rock(32, 1, 3, 2); b.rock(36, 1, 3, 2); b.rock(40, 1, 2, 2);
+    b.bones(32, 4, 3); b.bones(36, 4, 3);
+    b.ground(43, 62);
+    b.bones(48, 4, 3); b.bones(55, 4, 3);              // bommen: kijk naar de schaduw
+    b.ent('varaan', 58, 3);
+
+    // 2 · OEFENEN: rotspilaren boven de lava, bommen, en een makaak boven je hoofd
+    b.lava(63, 84);
+    b.rock(65, 0, 2, 4); b.rock(69, 0, 2, 5); b.rock(73, 0, 2, 4); b.rock(77, 0, 2, 6); b.rock(81, 0, 2, 4);
+    b.bones(65, 5, 2); b.bones(69, 6, 2); b.bones(73, 5, 2); b.bones(81, 5, 2);
+    b.ent('artifact', 78, 8, { id: 'a1', name: 'Zigzagschelp' });
+    b.branch(72, 10, 3); b.ent('baboon', 73, 11, { skin: 'macaque', dir: -1 });
+    b.ground(85, 108);
+    b.bump(96, 6, 'honey');
+    b.ent('varaan', 100, 3, { fast: true });
+    b.ent('checkpoint', 104, 3);
+
+    // 3 · VERRASSING: de Stegodon draagt je over het lavameer, terwijl de bommen vallen
+    b.lava(109, 140);
+    b.ent('stegodon', 110, 2, { from: 109, to: 140, speed: 72 });
+    b.bones(114, 8, 4); b.bones(130, 8, 4);
+    b.ent('artifact', 125, 10, { id: 'a2', name: 'Dubois-tand' });
+    b.ground(141, 160);
     b.crack(146, 3, 1, 4);
     b.ent('varaan', 152, 3);
-    // Lavaveld onder vallende bommen: springen op rotsen
-    b.lava(159, 200);
-    const heights = [3, 4, 3, 4, 4, 3, 4, 3, 4, 3];
-    heights.forEach((h, i) => b.rock(161 + i * 4, 0, 2, h));
+    b.bump(157, 6, 'fig');                              // opladen voor de finale
+
+    // 4 · FINALE: lavaveld met pilaren, een regen van bommen, en nog een makaak
+    b.lava(161, 202);
+    [3, 4, 3, 5, 4, 3, 5, 4, 3, 4].forEach((h, i) => b.rock(163 + i * 4, 0, 2, h));
     b.bouncy(177, 3, 2); b.ent('artifact', 178, 10, { id: 'a3', name: 'Sangiran-steen' });
-    b.bones(165, 5, 2); b.bones(181, 5, 2); b.bones(193, 5, 2);
-    b.ground(201, 235);
-    b.ent('tree', 208, 3, { scale: 1.1 });
-    // Eten: proberen wat het doet
-    b.bump(19, 6, 'fig'); b.bump(60, 6, 'honey'); b.bump(101, 6, 'berry'); b.bump(149, 6, 'ferment');
-    b.ent('finish', 214, 3);
+    b.bones(167, 6, 2); b.bones(183, 5, 2); b.bones(195, 5, 2);
+    b.branch(189, 9, 3); b.ent('baboon', 190, 10, { skin: 'macaque', dir: -1 });
+    b.ground(203, 235);
+    b.ent('varaan', 210, 3, { fast: true });
+    b.ent('tree', 222, 3, { scale: 1.1 });
+    b.ent('finish', 224, 3);
   },
 };

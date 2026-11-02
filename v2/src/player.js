@@ -69,7 +69,9 @@ export class Player {
     // Rennen ontstaat vanzelf als je een richting vasthoudt.
     if (dir !== 0 && dir === Math.sign(this.vx || dir)) this.holdTime += dt; else if (this.onGround) this.holdTime = 0;
     const B = this.buffs, fast = B.speed > 0 ? 1.35 : B.drunk > 0 ? 0.8 : 1;
-    const max = (this.auto ? PHYS.walk * 0.8 : (this.holdTime >= PHYS.runDelay ? PHYS.run : PHYS.walk)) * fast;
+    // Wind in je rug: je kunt harder (en dus verder springen)
+    const tail = this.tailwind && dir === Math.sign(this.tailwind) ? Math.abs(this.tailwind) : 0;
+    const max = (this.auto ? PHYS.walk * 0.8 : (this.holdTime >= PHYS.runDelay ? PHYS.run : PHYS.walk)) * fast + tail;
 
     if (dir !== 0) {
       this.face = dir;
