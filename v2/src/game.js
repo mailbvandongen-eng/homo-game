@@ -718,6 +718,7 @@ export class Game {
       p.y = landed.top - p.h; p.vy = 0; p.onGround = true; p.jumping = false;
     }
     p.platform = landed;
+    if (landed) p.groundTile = 0;   // op een stam of dier is het niet glad (ook niet na slik)
   }
 
   updateLianas(dt) {
