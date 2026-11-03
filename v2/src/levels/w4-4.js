@@ -21,7 +21,6 @@ export default {
     b.bones(29, 6, 3); b.bones(34, 7, 3); b.bones(39, 6, 3);
     b.ground(44, 72);
     b.ent('vulture', 55, 9);
-    b.ent('checkpoint', 50, 3);
     b.rock(60, 3, 2, 3); b.ent('artifact', 61, 8, { id: 'a1', name: 'Krassen in de grotvloer' });
     // B · De kalksteenrots: klimmen
     b.climb(73, 3, 1, 7, 'rock'); b.ground(74, 96, 10);
@@ -34,7 +33,6 @@ export default {
     b.ent('hyena', 132, 3);
     b.water(141, 152); b.ent('log', 142, 2, { from: 141, to: 152, len: 3, speed: 48 });
     b.ground(153, 194);
-    b.ent('checkpoint', 156, 3);
     b.ent('boulder', 168, 12, { every: 2.2 });
     b.rock(172, 3, 2, 2); b.rock(174, 5, 2, 2); b.ent('artifact', 175, 9, { id: 'a2', name: 'Veer van een raaf' });
     b.ent('artifact', 186, 7, { id: 'a3', name: 'Schelp met oker' }); b.rock(185, 3, 3, 3);
@@ -45,6 +43,8 @@ export default {
     b.rock(201, 6, 2, 1); b.rock(216, 6, 2, 1);
     b.ent('boss', 218, 3);
     b.rock(223, 3, 1, 8);
+    // Extra vijanden: de moeilijkheid stijgt per wereld
+    b.ent('wolf', 64, 3, { fast: true }); b.ent('hyena', 127, 3); b.ent('vulture', 146, 3, { alt: 6 }); b.ent('wolf', 180, 3, { fast: true });
     b.ent('finish', 226, 3);
   },
 };

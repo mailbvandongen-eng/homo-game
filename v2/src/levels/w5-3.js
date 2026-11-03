@@ -9,7 +9,6 @@ export default {
   build(b) {
     b.ent('start', 3, 3);
     b.ground(0, 28);
-    b.ent('checkpoint', 8, 3);
     b.ent('tree', 13, 3, { scale: 0.9 });
     b.bones(16, 5, 3);
     b.bump(21, 6, 'berry');
@@ -18,7 +17,6 @@ export default {
     b.ground(43, 70);
     b.ent('wolf', 54, 3);
     b.rock(60, 3, 2, 3); b.ent('artifact', 61, 8, { id: 'a1', name: 'Naald met oog' }); b.rock(61, 6, 1, 1);
-    b.ent('checkpoint', 46, 3);
     // B · De bevroren Don met ijsschotsen
     b.water(71, 86);
     b.ent('log', 72, 2, { from: 71, to: 77, len: 3, speed: 36, ice: true });
@@ -33,7 +31,6 @@ export default {
     b.bump(108, 6, 'redcap');
     // D · Rendierkudde
     b.ground(123, 160);
-    b.ent('checkpoint', 125, 3);
     b.ent('stampede', 130, 3, { count: 9, every: 0.5, kind: 'reindeer' });
     b.rock(133, 3, 2, 3); b.rock(145, 3, 2, 3); b.rock(157, 3, 2, 3);
     b.bones(133, 7, 2); b.bones(145, 7, 2); b.bones(157, 7, 2);
@@ -46,7 +43,8 @@ export default {
     b.ent('wolf', 198, 3); b.ent('wolf', 205, 3, { fast: true });
     b.rock(209, 3, 2, 3); b.ent('artifact', 210, 8, { id: 'a3', name: 'Venusbeeldje' }); b.rock(210, 6, 1, 1);
     b.bump(201, 6, 'shroom');
-    b.ent('checkpoint', 212, 3);
+    // Extra vijanden: de moeilijkheid stijgt per wereld
+    b.ent('wolf', 38, 3); b.ent('hyena', 120, 3); b.ent('wolf', 180, 3, { fast: true });
     b.ent('finish', 218, 3);
   },
 };

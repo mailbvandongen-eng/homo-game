@@ -14,7 +14,6 @@ export default {
     b.ent('start', 3, 3);
     b.rock(16, 11, 172, 4);
     b.ground(0, 40);
-    b.ent('checkpoint', 7, 3);
     b.ent('light', 17, 11);
     // De grot in
     b.bones(20, 4, 4);
@@ -23,7 +22,6 @@ export default {
     b.rock(39, 3, 2, 2);
     b.crumble(41, 2, 6); b.bones(41, 4, 6);
     b.ground(47, 84);
-    b.ent('checkpoint', 50, 3);
     b.ent('stalactite', 57, 11); b.ent('stalactite', 61, 11);
     b.crack(65, 3, 1, 4);
     b.rock(69, 3, 2, 3); b.ent('artifact', 70, 8, { id: 'a1', name: 'Naald van bot' });
@@ -47,7 +45,8 @@ export default {
     b.bump(170, 6, 'berry');
     // Naar buiten, de sneeuw in
     b.ground(187, 213);
-    b.ent('checkpoint', 190, 3);
+    // Extra vijanden: de moeilijkheid stijgt per wereld
+    b.ent('hyena', 60, 3); b.ent('bat', 150, 3, { alt: 5 });
     b.ent('finish', 198, 3);
   },
 };

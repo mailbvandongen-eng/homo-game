@@ -9,7 +9,6 @@ export default {
   build(b) {
     b.ent('start', 3, 3);
     b.ground(0, 24);
-    b.ent('checkpoint', 8, 3);
     b.ent('tree', 13, 3, { scale: 1 }); b.ent('tree', 21, 3, { scale: 0.8 });
     b.bump(17, 6, 'berry');
     // A · De bevroren rivier: ijsschotsen en een rotseilandje
@@ -32,7 +31,6 @@ export default {
     b.bones(105, 14, 4);
     b.crumble(121, 11, 5);
     b.ground(126, 140, 6);
-    b.ent('checkpoint', 130, 6);
     b.ent('hyena', 137, 6);
     // D · IJs met een wolharige neushoorn
     b.ground(141, 144, 4); b.mud(145, 164);
@@ -45,6 +43,8 @@ export default {
     b.ent('bear', 188, 3);
     b.rock(194, 3, 1, 4); b.ent('artifact', 194, 9, { id: 'a3', name: 'Botgereedschap (lissoir)' }); b.bones(196, 5, 3);
     b.bump(203, 6, 'flower');
+    // Extra vijanden: de moeilijkheid stijgt per wereld
+    b.ent('wolf', 70, 3, { fast: true }); b.ent('wolf', 95, 7); b.ent('wolf', 198, 3); b.ent('hyena', 206, 3, { fast: true });
     b.ent('finish', 212, 3);
   },
 };

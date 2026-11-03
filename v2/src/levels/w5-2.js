@@ -9,7 +9,6 @@ export default {
   build(b) {
     b.ent('start', 3, 3);
     b.ground(0, 26);
-    b.ent('checkpoint', 8, 3);
     b.ent('tree', 12, 3, { scale: 0.8 });
     b.bones(15, 5, 3);
     b.bump(20, 6, 'berry');
@@ -18,7 +17,6 @@ export default {
     b.rock(29, 1, 3, 3); b.rock(34, 1, 3, 4); b.rock(39, 1, 2, 3);
     b.bones(29, 6, 3); b.bones(34, 7, 3); b.bones(39, 6, 2);
     b.ground(43, 74);
-    b.ent('checkpoint', 46, 3);
     b.ent('snake', 54, 3);
     b.rock(60, 3, 2, 3); b.ent('artifact', 61, 8, { id: 'a1', name: 'Kralen van slakkenhuisjes' }); b.rock(61, 6, 1, 1);
     // B · Drijfhout over een inham
@@ -44,7 +42,8 @@ export default {
     b.ground(187, 225);
     b.ent('hyena', 196, 3, { fast: true });
     b.rock(201, 3, 2, 3); b.ent('artifact', 202, 8, { id: 'a3', name: 'Verfpot van een schelp' }); b.rock(202, 6, 1, 1);
-    b.ent('checkpoint', 204, 3);
+    // Extra vijanden: de moeilijkheid stijgt per wereld
+    b.ent('vulture', 68, 3, { alt: 5 }); b.ent('baboon', 104, 3); b.ent('hyena', 170, 3); b.ent('snake', 191, 3);
     b.ent('finish', 214, 3);
   },
 };

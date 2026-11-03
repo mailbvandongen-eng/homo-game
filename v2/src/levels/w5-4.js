@@ -16,7 +16,6 @@ export default {
     b.ent('start', 3, 3);
     b.rock(12, 11, 172, 4);
     b.ground(0, 40);
-    b.ent('checkpoint', 7, 3);
     b.ent('light', 13, 11);
     // A · De grot in
     b.bones(18, 4, 4);
@@ -25,7 +24,6 @@ export default {
     b.rock(38, 3, 2, 2);
     b.crumble(41, 2, 6); b.bones(41, 4, 6);
     b.ground(47, 86);
-    b.ent('checkpoint', 50, 3);
     b.ent('stalactite', 56, 11); b.ent('stalactite', 60, 11);
     b.rock(66, 3, 2, 3); b.ent('artifact', 67, 8, { id: 'a1', name: 'Handafdruk van oker' });
     b.ent('bat', 72, 3, { alt: 5 });
@@ -54,7 +52,8 @@ export default {
     b.rock(177, 3, 1, 8);
     // E · Naar buiten, naar het kampvuur
     b.ground(177, 211);
-    b.ent('checkpoint', 186, 3);
+    // Extra vijanden: de moeilijkheid stijgt per wereld
+    b.ent('bat', 110, 3, { alt: 5 }); b.ent('hyena', 60, 3);
     b.ent('finish', 196, 3);
   },
 };

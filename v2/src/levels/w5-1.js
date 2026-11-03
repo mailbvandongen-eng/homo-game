@@ -9,7 +9,6 @@ export default {
   build(b) {
     b.ent('start', 3, 3);
     b.ground(0, 30);
-    b.ent('checkpoint', 8, 3);
     b.ent('tree', 13, 3, { scale: 0.9 }); b.ent('tree', 24, 3, { scale: 0.7 });
     b.bump(18, 6, 'berry');
     b.bones(20, 5, 4);
@@ -42,7 +41,8 @@ export default {
     b.ent('leopard', 196, 3);
     b.rock(201, 3, 2, 3); b.ent('artifact', 202, 8, { id: 'a3', name: 'Schedel van Jebel Irhoud' }); b.rock(202, 6, 1, 1);
     b.bump(192, 6, 'flower');
-    b.ent('checkpoint', 198, 3);
+    // Extra vijanden: de moeilijkheid stijgt per wereld
+    b.ent('snake', 147, 7); b.ent('vulture', 170, 3, { alt: 5 }); b.ent('hyena', 185, 3, { fast: true });
     b.ent('finish', 210, 3);
   },
 };

@@ -10,7 +10,6 @@ export default {
     b.ent('start', 3, 3);
     b.ground(0, 30);
     b.ent('sign', 5, 3, { text: 'Koud! Blijf bij het vuur' });
-    b.ent('checkpoint', 9, 3);
     b.ent('tree', 14, 3, { scale: 0.9 });
     b.bones(12, 5, 3);
     // A · Eerste ijsvlakte: je glijdt door
@@ -46,7 +45,8 @@ export default {
     b.ent('wolf', 184, 3); b.ent('wolf', 192, 3, { fast: true });
     b.rock(196, 3, 2, 3); b.ent('artifact', 197, 8, { id: 'a3', name: 'Schraper voor huiden' }); b.rock(197, 6, 1, 1);
     b.bump(188, 6, 'shroom');
-    b.ent('checkpoint', 200, 3);
+    // Extra vijanden: de moeilijkheid stijgt per wereld
+    b.ent('wolf', 24, 3); b.ent('hyena', 120, 3); b.ent('wolf', 146, 3, { fast: true }); b.ent('rhino', 203, 3, { skin: 'woolly' });
     b.ent('finish', 210, 3);
   },
 };
