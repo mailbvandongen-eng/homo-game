@@ -28,7 +28,7 @@ import { TitleScene, TH, plankBoard, logSlice } from './title.js';
 import { JourneyMap } from './journeymap.js';
 
 // Ophogen bij elke publicatie (0.x tot de eerste complete versie 1.0).
-export const VERSION = '0.34.0';
+export const VERSION = '0.35.0';
 
 const LEVELS = [level11, level12, level13, level14, level21, level22, level23, level24, level31, level32, level33, level34, level41, level42, level43, level44, level51, level52, level53, level54];
 const $ = id => document.getElementById(id);
