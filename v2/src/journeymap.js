@@ -41,7 +41,7 @@ const VIA = {
   '5-4': [[33, 50.5], [24, 50], [15, 48.5], [9.5, 46.5], [6, 45.2]],
 };
 const SIGNS = [[43, -16, '1 · Homo habilis', 'Oost-Afrika'], [60, 14, '2 · Homo erectus', 'Afrika uit'], [-17, 50, '3 · Homo heidelbergensis', 'Europa'],
-  [16, 63, '4 · Neanderthalers', 'De IJstijd'], [-18, 25, '5 · Homo sapiens', 'Wij'], [112, -15, 'Extra', 'binnenkort']];
+  [44, 57, '4 · Neanderthalers', 'De IJstijd'], [-18, 25, '5 · Homo sapiens', 'Wij'], [112, -15, 'Extra', 'binnenkort']];
 
 // ── Landmassa's (lengte, breedte) ──
 const LANDS = [
@@ -201,10 +201,10 @@ function walkerSprite(look, frame) {
 const CSS = `
 #mapView{position:absolute;inset:0;z-index:6;background:#2a1a0c;display:flex;flex-direction:column}
 #mapView[hidden]{display:none}
-#mapScroll{position:relative;flex:1;overflow:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;cursor:grab}
+#mapScroll{position:relative;flex:1;overflow:auto;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch;scrollbar-width:none;cursor:grab}
 #mapScroll::-webkit-scrollbar{display:none}
 #mapInner{position:relative;height:100%}
-#mapInner canvas{position:absolute;left:0;top:0;image-rendering:pixelated;image-rendering:crisp-edges}
+#mapInner canvas{position:absolute;left:0;top:0;touch-action:pan-x pan-y;image-rendering:pixelated;image-rendering:crisp-edges}
 .mnode{position:absolute;width:32px;height:32px;margin:-16px 0 0 -16px;padding:0;border:none;border-radius:50%;background:transparent center/100% 100% no-repeat;image-rendering:pixelated;font:900 12px system-ui,sans-serif;color:#3a2210;box-shadow:none;filter:drop-shadow(0 3px 0 #0006);cursor:pointer}
 .mnode.locked{filter:grayscale(1) brightness(.75) drop-shadow(0 3px 0 #0006);color:#3a3a3a}
 .mnode.sel{outline:3px solid #ffe46a;outline-offset:2px}
@@ -217,6 +217,11 @@ const CSS = `
 .mtitle{padding:6px 14px;background:#7a5030;border:3px solid #2a1a0c;box-shadow:inset 0 2px 0 #a8743e,0 4px 0 #0006;color:#ffe46a;font:900 18px system-ui,sans-serif;text-shadow:0 2px 0 #3a1e0c}
 .minfo{position:relative;display:flex;justify-content:center;align-items:center;gap:18px;padding:6px max(16px,var(--sar)) max(6px,var(--sab)) max(16px,var(--sal));background:#6e4624;border-top:3px solid #2a1a0c;box-shadow:inset 0 2px 0 #a8743e;color:#fff3c0;font:600 13px system-ui,sans-serif;z-index:2}
 .minfo b{display:block;font-size:16px;color:#ffe46a}
+.mworlds{display:flex;gap:6px}
+.mworlds button{width:42px;height:42px;padding:0;margin:0;border-radius:50%;background:#7a5030;border:3px solid #2a1a0c;box-shadow:inset 0 2px 0 #a8743e,0 3px 0 #0006;color:#fff3c0;font:900 18px system-ui,sans-serif}
+.mworlds button.on{background:#f6c94c;color:#3a2210}
+.mworlds button.lock{filter:grayscale(1) opacity(.6)}
+.minfo .marrow{width:44px;height:44px;padding:0;margin:0;font-size:20px}
 .minfo .art2{color:#ffe46a;letter-spacing:2px}
 .minfo button.plank{padding:10px 20px 11px;font-size:18px}
 .minfo button.plank:disabled{filter:grayscale(1) opacity(.6)}
@@ -228,8 +233,8 @@ export class JourneyMap {
     const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
     const el = this.el = document.createElement('div'); el.id = 'mapView'; el.hidden = true;
     el.innerHTML = `<div id="mapScroll"><div id="mapInner"><canvas></canvas></div></div>
-      <div class="mtop"><div class="mtitle">De reiskaart</div><button class="plank" id="mapClose" aria-label="Sluiten">✕</button></div>
-      <div class="minfo"><div><b class="mi-name"></b><span class="mi-where"></span><br><span class="art2"></span></div><button class="plank p-play" id="mapPlay">▶ Spelen</button></div>`;
+      <div class="mtop"><div class="mtitle">De reiskaart</div><div class="mworlds">${[1, 2, 3, 4, 5].map(w => `<button data-w="${w}" aria-label="Wereld ${w}">${w}</button>`).join('')}</div><button class="plank" id="mapClose" aria-label="Sluiten">✕</button></div>
+      <div class="minfo"><button class="plank marrow" id="mapPrev" aria-label="Vorig level">◀</button><div><b class="mi-name"></b><span class="mi-where"></span><br><span class="art2"></span></div><button class="plank marrow" id="mapNext" aria-label="Volgend level">▶</button><button class="plank p-play" id="mapPlay">▶ Spelen</button></div>`;
     root.appendChild(el);
     this.scroll = el.querySelector('#mapScroll'); this.inner = el.querySelector('#mapInner'); this.cv = el.querySelector('canvas');
     // Pad: start → (tussenpunten → level) × n. Per punt onthouden naar welk level het leidt.
@@ -241,6 +246,12 @@ export class JourneyMap {
     el.querySelectorAll('button.plank').forEach((b, i) => { b.style.backgroundImage = `url(${plankBoard(64, 1, 18, 11 + i * 3).toDataURL()})`; });
     this.slice = logSlice(['0000000'], 9).toDataURL();
     el.querySelector('#mapClose').addEventListener('click', e => { e.preventDefault(); this.close(); });
+    // Levelkiezer: een wereld kiezen, of het vorige/volgende level. De kaart schuift er vanzelf heen.
+    el.querySelectorAll('.mworlds button').forEach(b => b.addEventListener('click', e => { e.preventDefault();
+      const w = +b.dataset.w, idx = this.levels.map((L, i) => i).filter(i => this.levels[i].world === w);
+      const open = idx.filter(i => i < this.save.unlocked); this.select(open.length ? open[open.length - 1] : idx[0], 'smooth'); }));
+    el.querySelector('#mapPrev').addEventListener('click', e => { e.preventDefault(); this.select(Math.max(0, (this.sel ?? 0) - 1), 'smooth'); });
+    el.querySelector('#mapNext').addEventListener('click', e => { e.preventDefault(); this.select(Math.min(this.levels.length - 1, (this.sel ?? 0) + 1), 'smooth'); });
     el.querySelector('#mapPlay').addEventListener('click', e => { e.preventDefault(); if (this.sel != null && this.sel < this.save.unlocked) this.onPlay(this.sel); });
     // Slepen met de muis; wieltje schuift horizontaal
     let drag = null;
@@ -291,7 +302,10 @@ export class JourneyMap {
     art.textContent = open ? `${'◆'.repeat(a)}${'◇'.repeat(3 - a)} artefacten` : 'op slot: speel eerst het level ervoor';
     play.disabled = !open;
     if (this.levels[i] && this.levels[i].world !== this.shownWorld) this.drawPaths();
-    if (scroll) { const [x, y] = this.path[Math.round(this.wpos)]; this.scroll.scrollLeft = x * this.k - this.scroll.clientWidth / 2; this.scroll.scrollTop = y * this.k - this.scroll.clientHeight / 2; }
+    // Wereldknoppen bijwerken
+    this.el.querySelectorAll('.mworlds button').forEach(b => { const w = +b.dataset.w; b.classList.toggle('on', w === L.world); b.classList.toggle('lock', !this.levels.some((Q, j) => Q.world === w && j < this.save.unlocked)); });
+    if (scroll) { const [x, y] = P(...SITES[L.id]); this.scroll.scrollTo({ left: x * this.k - this.scroll.clientWidth / 2, top: y * this.k - this.scroll.clientHeight / 2, behavior: scroll === 'smooth' ? 'smooth' : 'auto' }); }
+    this.follow = scroll !== 'smooth';   // na een sprong met de kiezer niet meteen terugschuiven naar het poppetje
     if (open) this.walkTo(this.nodeIdx[i]);
   }
   // Kaart + paden. Alleen de route van de gekozen wereld is een zandpad; andere werelden zijn vage stippels.
@@ -321,8 +335,8 @@ export class JourneyMap {
       this.placeWalker(Math.floor(dist / 5) % 2);
       const [x, y] = this.path[Math.round(this.wpos)], sx = x * this.k - this.scroll.scrollLeft, sy = y * this.k - this.scroll.scrollTop;
       const W = this.scroll.clientWidth, H = this.scroll.clientHeight, f = Math.min(1, dt * 4);
-      if (sx < W * 0.3 || sx > W * 0.7) this.scroll.scrollLeft += (sx - W / 2) * f;
-      if (sy < H * 0.3 || sy > H * 0.7) this.scroll.scrollTop += (sy - H / 2) * f;
+      if (this.follow !== false) { if (sx < W * 0.3 || sx > W * 0.7) this.scroll.scrollLeft += (sx - W / 2) * f;
+        if (sy < H * 0.3 || sy > H * 0.7) this.scroll.scrollTop += (sy - H / 2) * f; }
       if (Math.abs(this.wtarget - this.wpos) > 0.5) requestAnimationFrame(tick); else { this.wpos = this.wtarget; this.walking = false; this.placeWalker(0); }
     };
     requestAnimationFrame(tick);
