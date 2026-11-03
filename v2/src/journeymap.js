@@ -1,129 +1,174 @@
-// De reiskaart, zoals een wereldkaart in Mario: herkenbare gebieden per wereld, en een kronkelpad
-// dat om meren heen loopt, over bruggen en ijs gaat en bergen op zigzagt. Een poppetje van de juiste
-// mensensoort wandelt over het pad naar het gekozen level. Swipen om te schuiven, tikken om te kiezen.
+// De reiskaart: een wereldkaart van toen, in de stijl van een Mario-wereldkaart. Landmassa's met kliffen,
+// zee met golfjes en rotsjes, bergen, bossen, woestijnen en meren. In de ijstijd lag de zeespiegel lager:
+// Groot-Brittannië hing aan Europa vast en Sumatra, Java en Borneo vormden samen Sundaland.
+// Elk level ligt op de plek van de echte vondsten. Een poppetje wandelt over het pad naar het gekozen level.
 import { hash, ell, cloud, plankBoard, logSlice } from './title.js';
 import { SPECIES } from './species.js';
 
-const MH = 180, MW = 1420;
-// Plek van elk level op de kaart (in kaartpixels)
-const NODES = {
-  '1-1': [50, 118], '1-2': [112, 100], '1-3': [170, 70], '1-4': [236, 104],
-  '2-1': [300, 120], '2-2': [356, 66], '2-3': [462, 116], '2-4': [556, 110],
-  '3-1': [622, 134], '3-2': [680, 82], '3-3': [726, 110], '3-4': [792, 84],
-  '4-1': [870, 96], '4-2': [938, 100], '4-3': [990, 50], '4-4': [1062, 140],
-  '5-1': [1122, 120], '5-2': [1180, 152], '5-3': [1246, 84], '5-4': [1314, 102],
-};
-const NEXT = [1378, 120];   // extra afleveringen: nog op slot
-// Tussenpunten van het pad náár elk level: om meren heen, over de kloof, bergop in bochten
-const VIA = {
-  '1-1': [[10, 124], [28, 130]],
-  '1-2': [[70, 128], [90, 124], [102, 110]],
-  '1-3': [[126, 100], [142, 96], [152, 84]],
-  '1-4': [[190, 62], [212, 64], [226, 82]],
-  '2-1': [[248, 124], [270, 134], [286, 130]],
-  '2-2': [[318, 112], [332, 98], [340, 88], [326, 80], [342, 72]],
-  '2-3': [[372, 84], [386, 104], [400, 122], [414, 130], [428, 128], [442, 124]],
-  '2-4': [[480, 142], [494, 150], [510, 146], [526, 134], [540, 122]],
-  '3-1': [[572, 98], [588, 94], [604, 108], [612, 124]],
-  '3-2': [[640, 124], [652, 106], [664, 92]],
-  '3-3': [[698, 90], [712, 102]],
-  '3-4': [[740, 100], [756, 86], [774, 78]],
-  '4-1': [[812, 72], [832, 66], [852, 80]],
-  '4-2': [[888, 112], [902, 118], [920, 114]],
-  '4-3': [[954, 88], [968, 76], [956, 64], [972, 54]],
-  '4-4': [[1008, 64], [1020, 88], [1030, 110], [1044, 128]],
-  '5-1': [[1080, 146], [1096, 142], [1108, 132]],
-  '5-2': [[1140, 132], [1158, 146]],
-  '5-3': [[1198, 140], [1210, 118], [1226, 96]],
-  '5-4': [[1266, 90], [1280, 102], [1296, 110]],
-  next: [[1336, 110], [1358, 118]],
-};
-const SIGNS = [[14, 150, '1 · Homo habilis', 'Oost-Afrika'], [262, 14, '2 · Homo erectus', 'Afrika uit'], [586, 14, '3 · Homo heidelbergensis', 'Europa'],
-  [818, 150, '4 · Neanderthalers', 'De IJstijd'], [1100, 14, '5 · Homo sapiens', 'Wij'], [1350, 150, 'Extra', 'binnenkort']];
+const S = 8, LON0 = -20, LAT0 = 68, MW = 144 * S, MH = 108 * S;   // lengte -20..124, breedte 68..-40
+const P = (lon, lat) => [Math.round((lon - LON0) * S), Math.round((LAT0 - lat) * S)];
 
-// Ondergrond per x: savanne → galerijbos → rotsheuvels → grasland → bergweide → oerwoud → rode woestijn →
-// groen Europa → sneeuw → kalksteen → woestijn → fynbos → koude steppe → kalksteenkloof → mist
-const BANDS = [[0, ['#c8c068', '#b8b05a', '#d6ce78']], [140, ['#7aa850', '#6a9844', '#8ab85e']], [222, ['#b8a070', '#a89060', '#c8b080']],
-  [252, ['#9ab868', '#88a85a', '#acc678']], [322, ['#9aa478', '#8a946a', '#aab488']], [406, ['#4e8a3a', '#3e7a30', '#5e9a48']],
-  [505, ['#c89a5a', '#b8884c', '#d6aa6a']], [572, ['#86bc5c', '#74aa4e', '#98ca6a']], [810, ['#e8f0f4', '#d4e2ea', '#f6fafc']],
-  [1032, ['#c8c2a8', '#b4ae94', '#d8d4be']], [1094, ['#d8c08a', '#c8ae78', '#e6d09a']], [1162, ['#9ab868', '#88a85a', '#acc678']],
-  [1200, ['#d8dcd0', '#c4c8bc', '#eceee6']], [1298, ['#c4b89c', '#b0a488', '#d4c8ac']], [1345, ['#c8c8c0', '#b4b4ac', '#dcdcd4']]];
-// Grillige grens tussen twee gebieden (geen rechte strepen)
-const edge = (y, i) => Math.sin(y * 0.045 + i * 1.7) * 11 + Math.sin(y * 0.12 + i * 3.1) * 6 + Math.sin(y * 0.31 + i) * 2;
-function groundAt(x, y) {
-  let i = 0; while (i < BANDS.length - 1 && x >= BANDS[i + 1][0] + edge(y, i) + (((x + y) % 2) ? 2 : 0)) i++;
-  const p = BANDS[i][1], n = hash(Math.floor(x / 3), Math.floor(y / 3));
-  return n > 0.82 ? p[2] : n < 0.18 ? p[1] : p[0];
-}
-const wob = (x, y, s) => Math.sin(x * 0.11 + s) * 3 + Math.sin(x * 0.037 + y * 0.05 + s) * 4;
-// Zee: de zeestraat naar Java (met het eiland), de krijtkust, de straat van Gibraltar en de kust van Zuid-Afrika
-function isSea(x, y) {
-  // Zeestraat met het eiland Java: grillige kusten links en rechts
-  if (x >= 400 + edge(y, 20) * 0.8 && x <= 507 + edge(y, 21) * 0.8) { const dx = (x - 462) / 26, dy = (y - 108) / 40; return dx * dx + dy * dy + (hash(x >> 2, y >> 2) - 0.5) * 0.18 >= 1; }
-  // Straat van Gibraltar
-  if (x >= 1068 + edge(y, 22) * 0.5 && x <= 1092 + edge(y, 23) * 0.5) return true;
-  // Baaien aan de onderkant: krijtkust, kust bij Gibraltar, kust van Zuid-Afrika
-  const bay = (x1, x2, top, s2) => x > x1 - 12 && x < x2 + 12 && y > top + wob(x, 0, s2) * 0.7 + Math.max(0, x1 - x) * 2.2 + Math.max(0, x - x2) * 2.2;
-  return bay(600, 658, 150, 1) || bay(1036, 1068, 156, 2) || bay(1154, 1212, 164, 3);
+// Vindplaatsen (lengte, breedte). Een paar zijn een tikje verschoven zodat de knoppen niet overlappen.
+const SITES = {
+  '1-1': [40, 9.5], '1-2': [35.3, -3], '1-3': [36.6, 3.6], '1-4': [32, -12],
+  '2-1': [33.2, 7], '2-2': [44.3, 41.3], '2-3': [110.9, -7.2], '2-4': [23.6, -27.8],
+  '3-1': [-0.7, 50.9], '3-2': [-4.5, 43], '3-3': [-1.5, 40.5], '3-4': [10.9, 52.4],
+  '4-1': [34, 45.4], '4-2': [6.6, 50.6], '4-3': [84.7, 51.4], '4-4': [-5.3, 36.3],
+  '5-1': [-8.9, 31.9], '5-2': [21.2, -33.9], '5-3': [39, 51.4], '5-4': [4.4, 44.6],
+};
+const EXTRA = [121, -8.5];   // Flores: Homo floresiensis (nog op slot)
+// Route náár elk level, over land: langs de Nijl, door de Levant, over de landbrug naar Sundaland...
+const VIA = {
+  '1-1': [[43, 4], [42, 7]],
+  '1-2': [[38, 4], [37.5, 0], [36.5, -2]],
+  '1-3': [[34, -2.5], [34.5, 1], [35.6, 2.4]],
+  '1-4': [[37.5, 0.5], [36.3, -6], [34.8, -9.5]],
+  '2-1': [[31.2, -9], [30.8, -2], [31.5, 3], [32.5, 5.5]],
+  '2-2': [[31.8, 11], [32.5, 16], [31.8, 21], [32.2, 26], [32.9, 30], [35.5, 32.5], [37, 36], [40.5, 38.5], [42.5, 40.5]],
+  '2-3': [[47, 37.5], [52, 34], [58, 31], [64, 29], [70, 27], [78, 26], [86, 25], [93, 23], [97, 18], [100.3, 12], [101.5, 6], [102.5, 2], [104.5, -1.5], [107, -4.5]],
+  '2-4': [[106, -3], [101.8, 4], [99.5, 14], [92, 24], [80, 26], [68, 28], [58, 28], [50, 23], [45, 17], [43.4, 13], [40.5, 9], [37.5, 2], [36.8, -6], [33.8, -15], [29.8, -21], [26, -25.5]],
+  '3-1': [[25, -20], [27.5, -10], [30.5, 0], [31.8, 10], [32.4, 20], [32.4, 27], [33, 30.3], [35.4, 33.5], [36.2, 36.4], [33, 38.5], [28.5, 40.6], [26, 41.6], [22.5, 43], [18, 45], [13, 46.8], [7.5, 47.6], [3, 48.8], [1.2, 50]],
+  '3-2': [[0.5, 48.5], [-0.5, 46], [-2, 44.2]],
+  '3-3': [[-4, 41.6], [-3, 40.6]],
+  '3-4': [[0.8, 42.5], [3.5, 45.5], [6, 48.5], [8.5, 50.8]],
+  '4-1': [[15, 51], [21, 50], [27, 48.5], [31.5, 47]],
+  '4-2': [[29, 49.5], [22, 51.6], [15.5, 52.5], [10, 51.5]],
+  '4-3': [[11, 53.5], [20, 54.5], [30, 55], [42, 55.5], [55, 55.5], [66, 54.8], [76, 53]],
+  '4-4': [[78, 49.5], [68, 48.5], [58, 48.5], [47.5, 48], [40, 47.5], [32.5, 47.5], [26.5, 46.5], [20, 45.6], [13, 45.6], [7, 44.6], [2.5, 42.2], [-1, 39.5], [-3.5, 37.8]],
+  '5-1': [[-5.7, 35.6], [-7, 34.2], [-8, 33]],
+  '5-2': [[-6, 28], [-3, 22], [0, 16], [5, 11], [11, 6.5], [15, 1], [17, -6], [18.5, -13], [20, -21], [21, -27], [20.5, -31.5]],
+  '5-3': [[23.5, -28], [28, -20], [31.5, -10], [33.5, -1], [33.3, 10], [32.6, 20], [32.5, 27], [33, 30.3], [35.5, 33.5], [37.5, 37], [41, 40], [42.5, 44], [40.5, 48]],
+  '5-4': [[33, 50.5], [24, 50], [15, 48.5], [9.5, 46.5], [6, 45.2]],
+};
+const SIGNS = [[43, -16, '1 · Homo habilis', 'Oost-Afrika'], [60, 14, '2 · Homo erectus', 'Afrika uit'], [-17, 50, '3 · Homo heidelbergensis', 'Europa'],
+  [16, 63, '4 · Neanderthalers', 'De IJstijd'], [-18, 25, '5 · Homo sapiens', 'Wij'], [112, -15, 'Extra', 'binnenkort']];
+
+// ── Landmassa's (lengte, breedte) ──
+const LANDS = [
+  // Afrika
+  [[-6, 35.8], [-2, 35.1], [3, 36.8], [10, 37.3], [11, 35.5], [10.5, 34], [15, 32.2], [20, 30.8], [20.5, 32.5], [25, 31.8], [29, 31], [32.3, 31.3], [32.5, 29.8], [33.5, 27.5], [35.5, 24], [37.2, 21], [38.5, 18], [39.5, 15.5], [41.5, 13.5], [43.3, 12.5], [44.5, 10.4], [47, 11.1], [51.2, 11.8], [51, 10.4], [49.5, 7], [47.5, 4.5], [44, 1.5], [41.5, -1.5], [40, -3.5], [39.2, -6.5], [39.8, -10], [40.5, -14.5], [37, -17.5], [35.3, -22], [33, -25.8], [32.5, -28.5], [30.5, -31], [27, -33.8], [22, -34.1], [20, -34.8], [18.4, -34.2], [18, -32], [16.5, -28.6], [15, -26.6], [14.5, -23], [12, -18], [11.8, -15.5], [13.6, -12], [13, -8.6], [12.2, -6], [9.5, -2], [9.5, 1], [9.8, 3], [8.5, 4.5], [6, 4.3], [4, 6.3], [1.5, 6.1], [-2, 4.8], [-4.5, 5.2], [-7.5, 4.4], [-10.5, 6.5], [-13.3, 8.5], [-15.5, 11.3], [-16.8, 13.5], [-17.3, 14.7], [-16.5, 16.5], [-16.2, 19.5], [-17, 21], [-16, 24], [-14.5, 26], [-13, 27.8], [-10, 29.5], [-9.6, 30.4], [-9.8, 32], [-8.5, 33.3], [-6.8, 34.1]],
+  // Madagaskar
+  [[44, -25], [47, -25], [50.5, -15.5], [49.3, -12], [47, -15], [44, -17], [43.3, -22]],
+  // Eurazië met Arabië en India
+  [[-5.6, 36], [-6.3, 36.8], [-8.9, 37], [-8.8, 40], [-9.3, 43], [-8, 43.7], [-2, 43.4], [-1.3, 44.5], [-1.2, 46], [-2.5, 47.3], [-4.7, 48], [-1.6, 48.7], [1.5, 50], [2.5, 51.1], [4, 51.8], [5, 53], [8, 53.6], [8.5, 55.5], [8.2, 57], [10.5, 57.7], [10.5, 56], [12.5, 54.5], [14, 54], [18, 54.8], [21, 55.5], [21.5, 57], [24, 57.5], [24, 59.4], [28, 60], [30, 62], [35, 64], [42, 66], [60, 69], [125, 69],
+    [125, 40], [121.5, 39], [118, 39], [121.5, 37], [120, 34], [122, 30], [120, 26], [117, 23.5], [113, 22], [110, 21], [108, 21.5], [106.5, 20], [106, 17], [108.5, 15], [109.2, 12], [107, 10.5], [105, 8.7], [104.8, 10.5], [103, 10.8], [101, 12.7], [100, 13.5], [99.2, 10], [100.3, 7.2], [102, 6], [103.4, 3.5], [104.2, 1.4], [103.5, 1.3], [101.3, 2.8], [100.3, 5], [98.3, 8], [98.5, 13], [97.6, 16.5], [94.5, 16], [94, 19.5], [92, 21.5], [90, 22], [88, 21.6], [86.5, 20], [84.5, 18.5], [82, 16.3], [80.2, 15.5], [80.3, 13], [79.8, 10.3], [78.3, 8.5], [77.2, 8], [76.3, 9.5], [74.8, 12.8], [73.5, 16], [72.8, 19], [72.6, 21.5], [70, 22.5], [68.5, 23.5], [66.5, 25.3], [62, 25.2], [57.3, 25.8], [56.4, 26.2], [56, 24.3], [58.5, 23.6], [59.8, 22.5], [57.8, 19], [55, 17], [52, 15.7], [49, 14.2], [45, 12.8], [43.5, 12.7], [42.8, 14.5], [42.6, 16.5], [41, 19.5], [39.2, 21.5], [38.3, 24], [36.6, 26], [35, 28], [34.9, 29.5], [34.3, 27.8], [33.5, 28.5], [32.5, 29.9], [32.3, 31.3],
+    [34.5, 31.5], [35, 33], [35.9, 35], [36, 36.6], [34, 36.3], [32, 36.1], [30, 36.2], [28.2, 36.7], [27, 37.6], [26.3, 39.5], [26, 40.6], [24, 40.8], [23, 39.8], [23.5, 38], [22.5, 36.5], [21.5, 37.5], [21, 38.5], [19.5, 40.2], [19.5, 41.8], [16, 43.5], [13.6, 45.6], [12.3, 45.3], [13.5, 43.6], [16, 41.4], [18.5, 40.2], [17.2, 39.5], [16.6, 38.5], [15.6, 38], [16, 39.4], [15.6, 40.1], [14, 40.9], [12, 41.8], [10.5, 43], [8.8, 44.4], [7.5, 43.8], [5, 43.3], [3, 43.2], [3.2, 41.9], [1, 41], [0.2, 40], [-0.3, 39], [0.1, 38.6], [-0.7, 37.6], [-2.1, 36.7], [-4.4, 36.7]],
+  // Groot-Brittannië, via Doggerland vast aan Europa
+  [[-5.7, 50.1], [-3, 50.6], [1.4, 51.2], [3, 51.4], [5, 53.5], [3, 54.5], [0, 54.5], [-1.5, 55.5], [-2, 57], [-1.8, 57.6], [-4, 58.6], [-5, 58.6], [-6.2, 56.8], [-5, 55], [-3.2, 54.6], [-3.2, 53.4], [-4.6, 53.2], [-4.3, 52.2], [-5.3, 51.7], [-3.2, 51.4]],
+  // Sundaland: Sumatra, Java en Borneo, met droog gevallen zeebodem ertussen
+  [[95.3, 5.6], [97.5, 5.2], [100, 2.5], [103.5, 1.3], [104.5, 1.6], [109, 1.5], [111, 2.5], [113, 3.3], [116, 6.5], [119, 5.2], [118, 1], [117.5, -1], [116.4, -3.6], [114.5, -3.8], [114.6, -8.4], [110, -8.4], [106, -7.1], [105.2, -6.8], [104.5, -5.9], [102, -4], [101, -2.5], [99, 0.2], [97.5, 2.5]],
+  // Flores en Sri Lanka
+  [[119.8, -8.3], [122.8, -8.1], [122.9, -8.9], [119.8, -8.9]],
+  [[79.8, 9.8], [81.8, 7.5], [81.2, 6.2], [80, 6]],
+  // Sicilië, Sardinië, Corsica, Kreta
+  [[12.4, 38.1], [15.6, 38.3], [15.1, 36.7]], [[8.4, 41.2], [9.8, 41], [9.6, 39], [8.4, 39]], [[23.5, 35.6], [26.3, 35.3], [24, 35]],
+];
+const WATERS = [
+  // Zwarte Zee en Kaspische Zee
+  [[28, 41.5], [33, 42], [36, 41.6], [41.5, 41.5], [41.7, 42.6], [39, 44.3], [36.6, 45.1], [35.4, 44.5], [33.5, 44.4], [32, 45.4], [30.6, 46.4], [29.6, 45.3], [28.6, 44], [27.8, 42.5]],
+  [[47, 45.5], [50, 46.8], [53, 46.8], [53, 45], [51.3, 44.5], [50.5, 44], [52, 42], [53, 41], [53.8, 38], [53.9, 37.2], [51, 36.7], [49, 37.6], [48.8, 38.9], [49.5, 40.3], [48, 42], [47.5, 43]],
+];
+// Meren in Afrika (midden, straal in graden) en de Nijl
+const LAKES = [[33, -1, 1.5, 1.4], [36.1, 3.8, 0.35, 1.2], [29.6, -6.2, 0.35, 2.6], [34.4, -11.8, 0.35, 2.2], [14, 13.2, 1.3, 1.1]];
+const NILE = [[33, 0.6], [32.4, 3.5], [31.6, 9.5], [32.6, 15.6], [33.6, 17.5], [32, 20], [31.4, 24], [32.7, 26.4], [31.3, 30], [31, 31.3]];
+// Gebergten: lengte, breedte, grootte, sneeuw
+const MOUNTAINS = [[-5, 32, 1.6], [-1, 33, 1.3], [3, 34.3, 1.1], [7.5, 46.3, 1.4, 1], [11, 46.8, 1.5, 1], [0.5, 42.6, 1.1, 1], [42, 42.8, 1.4, 1], [46.5, 42, 1.2, 1],
+  [51, 31, 1.3], [55, 29, 1.2], [76, 33.5, 1.8, 1], [82, 30, 2, 1], [87, 28.5, 2.2, 1], [92, 28, 1.8, 1], [86, 50.5, 1.6, 1], [89, 49.5, 1.4, 1],
+  [38.5, 9.2, 1.3], [37.4, 11.6, 1.2], [37.3, -3.1, 1.2, 1], [29.5, -29, 1.2], [24, 46, 1.1], [101, 25, 1.4], [70, 38, 1.5, 1]];
+
+// Soort landschap op een plek (palet: gewoon, donker, licht)
+function biome(lon0, lat0) {
+  // Grillige grenzen: de plek een beetje verschuiven met golvende ruis
+  const lon = lon0 + Math.sin(lat0 * 0.35 + lon0 * 0.1) * 2.2 + Math.sin(lat0 * 1.1) * 0.8, lat = lat0 + Math.sin(lon0 * 0.3 + lat0 * 0.07) * 1.8 + Math.sin(lon0 * 0.9) * 0.6;
+  if (lat > 58 && lon < 64) return ['#eef4f8', '#d2e0ea', '#ffffff'];                                    // ijskap
+  if (lat > 55) return ['#4a7a40', '#3a6a34', '#5a8a4c'];                                                // taiga
+  if ((lat > 17 && lat < 31 && lon < 33) || (lon > 34.5 && lon < 58 && lat > 13 && lat < 31) || (lon >= 58 && lon < 71 && lat > 24 && lat < 31)) return ['#ecc878', '#dcb060', '#f8dc98'];   // woestijn
+  if (lon > 77 && lon < 101 && lat > 29 && lat < 39) return ['#b0a080', '#a09070', '#c0b090'];          // Tibet
+  if ((lon > 9 && lon < 29 && lat > -5 && lat < 5) || (lon > 95 && lat < 12) || (lon > -12 && lon < 8 && lat > 4 && lat < 9)) return ['#2e8030', '#1e6e24', '#40923c'];   // regenwoud
+  if (lon > 16 && lon < 26 && lat > -28 && lat < -19) return ['#dcbc74', '#ccaa60', '#e8cc88'];       // Kalahari
+  if (lat < 17 && lat > -18 && lon < 52) return ['#ccc45c', '#b8b04a', '#dcd474'];                       // savanne
+  if (lat <= -18) return ['#a8bc60', '#98ac50', '#b8cc70'];                                              // zuidelijk Afrika
+  if (lon > 28 && lon < 82 && lat > 43 && lat < 56) return ['#cccc84', '#bcbc72', '#dcdc96'];            // steppe
+  if (lon > 66 && lon < 93 && lat < 29) return ['#9cb45c', '#8ca44c', '#acc46c'];                        // India
+  if (lat < 44 && lon < 46) return ['#a4bc5c', '#94ac4c', '#b4cc6c'];                                    // Middellandse Zee
+  return ['#6cb44c', '#5ca440', '#7cc45c'];                                                              // groen
 }
 
 function bakeMap() {
-  const cv = document.createElement('canvas'); cv.width = MW; cv.height = MH; const c = cv.getContext('2d');
-  const mask = new Uint8Array(MW * MH);   // 1 = water (brug nodig), 2 = ijs
-  const px = (x, y, col) => { c.fillStyle = col; c.fillRect(x, y, 1, 1); };
+  // 1 · Land en water als masker, met grillige kusten
+  const mcv = document.createElement('canvas'); mcv.width = MW; mcv.height = MH; const mc = mcv.getContext('2d');
+  mc.fillStyle = '#000'; mc.fillRect(0, 0, MW, MH);
+  const poly = (pts, col) => { mc.fillStyle = col; mc.beginPath(); pts.forEach(([lo, la], i) => { const [x, y] = P(lo, la); i ? mc.lineTo(x, y) : mc.moveTo(x, y); }); mc.closePath(); mc.fill(); };
+  for (const L of LANDS) poly(L, '#fff');
+  for (const W of WATERS) poly(W, '#000');
+  for (const [lo, la, rx, ry] of LAKES) { const [x, y] = P(lo, la); mc.fillStyle = '#000'; mc.beginPath(); mc.ellipse(x, y, rx * S, ry * S, 0, 0, Math.PI * 2); mc.fill(); }
+  mc.strokeStyle = '#000'; mc.lineWidth = 2; mc.beginPath(); NILE.forEach(([lo, la], i) => { const [x, y] = P(lo, la); i ? mc.lineTo(x, y) : mc.moveTo(x, y); }); mc.stroke();
+  const raw = mc.getImageData(0, 0, MW, MH).data, land = new Uint8Array(MW * MH);
   for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
-    if (isSea(x, y)) { mask[y * MW + x] = 1; const shore = !isSea(x - 2, y) || !isSea(x + 2, y) || !isSea(x, y - 2) || !isSea(x, y + 2);
-      px(x, y, shore ? '#9ad4e8' : (x * 3 + y * 7) % 23 === 0 ? '#7ac0d8' : y % 9 === 0 && (x + (y >> 1)) % 7 < 3 ? '#4e9ac4' : '#3e8ab4'); }
-    else px(x, y, groundAt(x, y));
+    const jx = Math.round((hash(x >> 3, y >> 3) - 0.5) * 4), jy = Math.round((hash((x >> 3) + 7, (y >> 3) + 3) - 0.5) * 4);
+    const sx = Math.max(0, Math.min(MW - 1, x + jx)), sy = Math.max(0, Math.min(MH - 1, y + jy));
+    land[y * MW + x] = raw[(sy * MW + sx) * 4] > 128 ? 1 : 0;
   }
-  const water = (cx, cy, rx, ry, seed, ice) => { for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) { const d = (x / rx) ** 2 + (y / ry) ** 2 + (hash(x >> 2, (y >> 2) + seed) - 0.5) * 0.25; if (d < 1) { mask[(cy + y) * MW + cx + x] = ice ? 2 : 1; px(cx + x, cy + y, ice ? (d > 0.8 ? '#e8f6fc' : (x + y) % 7 === 0 ? '#ffffff' : '#b8dcec') : d > 0.8 ? '#9ad4e8' : (x + y * 3 + seed) % 11 === 0 ? '#9ad4e8' : '#3e8ab4'); } } };
-  const river = (x0, seed, w, ice, y0 = 0, y1 = MH) => { for (let y = y0; y < y1; y++) { const cx = Math.round(x0 + Math.sin(y * 0.09 + seed) * 3 + Math.sin(y * 0.031 + seed) * 4); for (let x = cx - w; x <= cx + w; x++) { mask[y * MW + x] = ice ? 2 : 1; px(x, y, Math.abs(x - cx) === w ? (ice ? '#e8f6fc' : '#9ad4e8') : ice ? ((x + y) % 6 === 0 ? '#ffffff' : '#b8dcec') : (y + x) % 9 === 0 ? '#7ac0d8' : '#3e8ab4'); } } };
-  const mountain = (x, y, w, h, snow, col = ['#9a8a74', '#7a6c5a']) => { for (let i = 0; i < h; i++) { const hw = Math.round(w * i / h); for (let k = -hw; k <= hw; k++) px(x + k, y - h + i, snow && i < h * 0.3 ? (k < 0 ? '#ffffff' : '#d8e4ec') : k < 0 ? col[0] : col[1]); } c.fillStyle = '#5e5242'; c.fillRect(x - w, y, w * 2, 1); };
-  const acacia = (x, y, s = 1) => { c.fillStyle = '#5a4a30'; c.fillRect(x, y - 6 * s, 1, 6 * s); ell(c, x, y - 7 * s, 6 * s, 2 * s, '#4e7a34'); ell(c, x - 1, y - 8 * s, 4 * s, 1, '#6e9a44'); };
-  const tree = (x, y, cols) => { c.fillStyle = '#4e3a24'; c.fillRect(x, y - 3, 1, 3); ell(c, x, y - 5, 3, 3, cols[0]); ell(c, x - 1, y - 6, 1, 1, cols[1]); };
-  const palm = (x, y) => { c.fillStyle = '#5a4a30'; c.fillRect(x, y - 9, 1, 9); for (const d of [-1, 1]) { c.fillStyle = '#2e7a2c'; c.fillRect(x + d, y - 10, d * 4, 1); c.fillRect(x + d * 4, y - 9, d, 2); c.fillRect(x + d * 2, y - 11, d * 2, 1); } };
-  const pine = (x, y, snow) => { for (let i = 0; i < 8; i++) { const w = Math.floor(i / 2) + 1; c.fillStyle = snow && i % 3 === 0 ? '#ffffff' : '#2e5a3a'; c.fillRect(x - w, y - 9 + i, w * 2 + 1, 1); } c.fillStyle = '#4e3a24'; c.fillRect(x, y - 1, 1, 2); };
-  const cave = (x, y, rock = ['#8a7a64', '#a89878']) => { ell(c, x, y - 6, 12, 8, rock[0]); ell(c, x - 2, y - 9, 8, 4, rock[1]); ell(c, x + 2, y - 3, 4, 4, '#1e140c'); };
-  const mammoth = (x, y) => { ell(c, x, y, 7, 4, '#6a4a30'); ell(c, x + 6, y - 3, 3, 3, '#6a4a30'); c.fillStyle = '#6a4a30'; for (const lx of [-5, -2, 2, 5]) c.fillRect(x + lx, y + 3, 1, 3); c.fillRect(x + 8, y - 2, 1, 6); c.fillStyle = '#f4f0e0'; c.fillRect(x + 7, y + 1, 3, 1); };
-  const near = (x, y, r = 12) => Object.values(NODES).some(([nx, ny]) => Math.abs(nx - x) < r && Math.abs(ny - y) < r);
-
-  // ── Wereld 1: savanne, de Olduvai-kloof met rivier, het galerijbos bij het Turkanameer, rotsheuvels met de grot
-  for (let x = 114; x <= 136; x++) for (let y = 0; y < MH; y++) { const e = Math.abs(x - 125 - Math.sin(y * 0.09) * 3 - Math.sin(y * 0.031) * 4); if (e < 11) px(x, y, e > 9 ? '#6a4a2a' : e > 7 ? '#8a6a44' : '#a07a4a'); }
-  river(125, 0, 2, false);
-  water(200, 104, 12, 24, 1);
-  for (let i = 0; i < 16; i++) { const x = Math.round(8 + hash(i, 1) * 104), y = Math.round(40 + hash(i, 2) * 130); if (!near(x, y)) acacia(x, y, hash(i, 3) > 0.7 ? 2 : 1); }
-  for (let i = 0; i < 30; i++) { const x = Math.round(142 + hash(i, 4) * 80), y = Math.round(30 + hash(i, 5) * 140); if (Math.abs(x - 200) < 16 && Math.abs(y - 104) < 28) continue; if (!near(x, y, 9)) tree(x, y, ['#2e6a2c', '#5a9a40']); }
-  mountain(232, 96, 10, 14, false, ['#b09070', '#907054']); cave(240, 112);
-  // ── Wereld 2: grasland, de bergen van Dmanisi, de zeestraat naar Java met de vulkaan, rode rotsen met de Wonderwerk-grot
-  for (let i = 0; i < 8; i++) { const x = Math.round(256 + hash(i, 7) * 60), y = Math.round(90 + hash(i, 8) * 80); if (!near(x, y)) acacia(x, y); }
-  mountain(312, 76, 14, 30, true); mountain(392, 62, 18, 42, true); mountain(362, 50, 16, 28, true); mountain(380, 160, 14, 26, false);
-  for (let i = 0; i < 10; i++) { const x = Math.round(442 + hash(i, 9) * 40), y = Math.round(80 + hash(i, 10) * 60); if (!near(x, y, 8)) palm(x, y); }
-  for (let i = 0; i < 16; i++) { const w = Math.round(i * 0.9) + 1; px(474 - w, 70 + i, i < 3 ? '#e8602a' : '#6a5a4e'); c.fillStyle = i < 3 ? '#e8602a' : '#6a5a4e'; c.fillRect(474 - w, 70 + i, w * 2, 1); }
-  for (let i = 0; i < 4; i++) { const r = 2 + i; ell(c, 476 + i * 2, 62 - i * 7, r, Math.max(1, r - 1), i < 2 ? '#b8b0a8' : '#d8d4d0'); }
-  for (let i = 0; i < 6; i++) { const x = 514 + i * 10, h = 6 + Math.round(hash(i, 6) * 8), y = 80 + (i % 3) * 30; c.fillStyle = '#a85a34'; c.fillRect(x, y - h, 9, h); c.fillStyle = '#c8784a'; c.fillRect(x, y - h, 9, 2); }
-  cave(562, 104, ['#a85a34', '#c8784a']);
-  // ── Wereld 3: krijtkust met witte kliffen, de heuvels van Atapuerca, de put, het meer van Schöningen
-  for (let x = 588; x <= 670; x++) { let top = 0; while (top < MH && !isSea(x, top)) top++; if (top >= MH) continue; c.fillStyle = '#f4f2ea'; c.fillRect(x, top - 4, 1, 4); c.fillStyle = '#d8d6ce'; c.fillRect(x, top - 1, 1, 1); }   // witte krijtkliffen
-  for (const [hx, hy, w] of [[662, 66, 26], [700, 60, 22], [690, 140, 20]]) { ell(c, hx, hy, w, 9, '#6aa04a'); ell(c, hx - 6, hy - 3, Math.round(w * 0.6), 4, '#82b85a'); }
-  ell(c, 732, 120, 8, 5, '#3a2e22'); ell(c, 732, 120, 6, 3, '#140c08');
-  water(798, 110, 16, 9, 4); for (let i = 0; i < 10; i++) { c.fillStyle = '#5a7a34'; c.fillRect(780 + i * 4, 100 + (i % 3), 1, 4); }
-  for (let i = 0; i < 26; i++) { const x = Math.round(576 + hash(i, 11) * 232), y = Math.round(30 + hash(i, 12) * 115); if (near(x, y, 10) || (Math.abs(x - 798) < 20 && Math.abs(y - 110) < 12) || (Math.abs(x - 732) < 10 && Math.abs(y - 120) < 8)) continue; hash(i, 13) > 0.6 ? pine(x, y, false) : tree(x, y, ['#3e7a34', '#78b04e']); }
-  // ── Wereld 4: sneeuwsteppe met mammoeten, een bevroren rivier, het Altaj-gebergte met de Denisova-grot, de rots van Gibraltar
-  for (let i = 0; i < 18; i++) { const x = Math.round(812 + hash(i, 14) * 220), y = Math.round(30 + hash(i, 15) * 135); if (near(x, y, 10) || Math.abs(x - 910) < 8) continue; pine(x, y, true); }
-  mammoth(846, 132); mammoth(864, 140); mammoth(892, 60);
-  river(910, 2, 3, true);
-  mountain(964, 84, 20, 44, true); mountain(1014, 80, 22, 50, true); mountain(990, 64, 18, 40, true); ell(c, 990, 56, 4, 3, '#1e140c');
-  for (let x = 1036; x < 1066; x++) { const top = 104 + Math.round(Math.abs(x - 1050) * 1.6); for (let y = top; y < 154; y++) px(x, y, (x + y) % 9 === 0 ? '#a8a294' : x < 1050 ? '#e0dccc' : '#c4beae'); }
-  // ── Wereld 5: woestijn en het Atlasgebergte, de kust van Zuid-Afrika, de koude steppe aan de Don, de Chauvet-kloof
-  mountain(1112, 100, 16, 28, false, ['#c09868', '#a07c50']); mountain(1144, 104, 14, 24, false, ['#c09868', '#a07c50']);
-  for (let i = 0; i < 6; i++) { const x = Math.round(1098 + hash(i, 16) * 60), y = Math.round(126 + hash(i, 17) * 30); if (!near(x, y)) acacia(x, y); }
-  cave(1192, 148);
-  river(1272, 4, 2, false);
-  ell(c, 1246, 98, 7, 4, '#7a6a54'); ell(c, 1246, 96, 5, 2, '#9a8a70'); c.fillStyle = '#f4f0e0'; for (const dx of [-6, -3, 0, 3, 6]) c.fillRect(1246 + dx, 93 + Math.abs(dx) / 2, 1, 5);
-  for (let i = 0; i < 8; i++) { const x = Math.round(1206 + hash(i, 18) * 60), y = Math.round(30 + hash(i, 19) * 130); if (!near(x, y, 10) && Math.abs(x - 1272) > 8) pine(x, y, true); }
-  mountain(1318, 92, 18, 30, false, ['#d4c8ac', '#b0a488']); ell(c, 1318, 86, 4, 4, '#1e140c'); c.fillStyle = '#b8402a'; c.fillRect(1308, 76, 2, 3);
-  c.globalAlpha = 0.45; c.fillStyle = '#ffffff'; for (let y = 0; y < MH; y++) for (let x = 1345 + (y % 2); x < MW; x += 2) if (hash(x >> 3, y >> 2) > 0.45) c.fillRect(x, y, 1, 1); c.globalAlpha = 1;
-  cloud(c, 140, 20, 12); cloud(c, 420, 16, 10); cloud(c, 760, 22, 14); cloud(c, 1180, 18, 12);
+  const isLand = (x, y) => x >= 0 && y >= 0 && x < MW && y < MH && land[y * MW + x] === 1;
+  // 2 · Pixels: land met textuur, donkere rand, kliffen aan de zuidkant, schuim en golfjes in de zee
+  const cv = document.createElement('canvas'); cv.width = MW; cv.height = MH; const c = cv.getContext('2d');
+  const img = c.createImageData(MW, MH), d = img.data, mask = new Uint8Array(MW * MH);
+  const put = (i, hex) => { const n = parseInt(hex.slice(1), 16); d[i * 4] = n >> 16; d[i * 4 + 1] = (n >> 8) & 255; d[i * 4 + 2] = n & 255; d[i * 4 + 3] = 255; };
+  const CL = 6;   // klifhoogte
+  for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
+    const i = y * MW + x;
+    if (land[i]) {
+      const edge = !isLand(x - 1, y) || !isLand(x + 1, y) || !isLand(x, y - 1) || !isLand(x, y + 1);
+      const b = biome(LON0 + x / S, LAT0 - y / S), n = hash(x >> 1, y >> 1);
+      put(i, edge ? '#24401a' : n > 0.86 ? b[2] : n < 0.12 ? b[1] : ((x >> 1) + (y >> 1)) % 7 === 0 && n > 0.5 ? b[1] : b[0]);
+      continue;
+    }
+    mask[i] = 1;
+    let up = 0; for (let k = 1; k <= CL; k++) if (isLand(x, y - k)) { up = k; break; }
+    if (up) {   // klif: oker met verticale strepen, donker onderaan
+      let full = true; for (let k = 1; k < up; k++) if (isLand(x, y - k)) full = false;
+      put(i, up === CL ? '#5a3418' : up === 1 ? '#e8a858' : x % 5 === 0 ? '#9a5c2c' : (x + up) % 5 === 2 ? '#d89850' : '#c07a3c');
+      continue;
+    }
+    const nearLand = isLand(x - 2, y) || isLand(x + 2, y) || isLand(x, y - CL - 1) || isLand(x, y + 2) || isLand(x - 1, y - CL - 1) || isLand(x + 1, y - CL - 1);
+    put(i, nearLand ? '#c8e4ff' : (y % 10 === 0 && ((x + (y >> 1) * 3) % 14) < 5) ? '#78a8f0' : (x * 7 + y * 13) % 97 === 0 ? '#90b8f8' : '#4878e0');
+  }
+  c.putImageData(img, 0, 0);
+  // 3 · Versiering
+  const at = (lon, lat) => P(lon, lat);
+  const nearSite = (x, y, r = 14) => Object.values(SITES).some(([lo, la]) => { const [sx, sy] = P(lo, la); return Math.abs(sx - x) < r && Math.abs(sy - y) < r; });
+  const mountain = (x, y, s, snow) => { const h = Math.round(9 * s), w = Math.round(8 * s);
+    for (let i = 0; i <= h; i++) { const hw = Math.round(w * i / h); for (let k = -hw; k <= hw; k++) { c.fillStyle = k === -hw || k === hw ? '#3a2a1a' : snow && i < h * 0.35 ? (k < 0 ? '#ffffff' : '#c8d8e8') : k < 0 ? '#b8946c' : '#8a6a4a'; c.fillRect(x + k, y - h + i, 1, 1); } }
+    c.fillStyle = '#3a2a1a'; c.fillRect(x - w, y, w * 2 + 1, 1); };
+  const bush = (x, y, col) => { ell(c, x, y, 4, 4, '#1e3a14'); ell(c, x, y, 3, 3, col); c.fillStyle = '#ffffff55'; c.fillRect(x - 2, y - 2, 2, 1); };
+  const acacia = (x, y) => { c.fillStyle = '#5a4028'; c.fillRect(x, y - 4, 1, 4); ell(c, x, y - 5, 5, 2, '#1e3a14'); ell(c, x, y - 5, 4, 1, '#5a8a34'); };
+  const pine = (x, y, snow) => { for (let i = 0; i < 7; i++) { const w = Math.floor(i / 2) + 1; c.fillStyle = i === 6 ? '#1e3a14' : snow && i % 3 === 0 ? '#ffffff' : '#2e5a34'; c.fillRect(x - w, y - 7 + i, w * 2 + 1, 1); } c.fillStyle = '#4e3a24'; c.fillRect(x, y, 1, 1); };
+  const palm = (x, y) => { c.fillStyle = '#6a4a2a'; c.fillRect(x, y - 6, 1, 6); for (const dd of [-1, 1]) { c.fillStyle = '#2a7a2a'; c.fillRect(x + dd, y - 7, dd * 4, 1); c.fillRect(x + dd * 4, y - 6, dd, 2); } };
+  const rock = (x, y) => { ell(c, x, y, 3, 2, '#5a6a7a'); ell(c, x - 1, y - 1, 2, 1, '#e8eef4'); };
+  const mammoth = (x, y) => { ell(c, x, y, 5, 3, '#5a3a24'); ell(c, x + 4, y - 2, 2, 2, '#5a3a24'); c.fillStyle = '#5a3a24'; for (const lx of [-3, -1, 1, 3]) c.fillRect(x + lx, y + 2, 1, 2); c.fillStyle = '#f4f0e0'; c.fillRect(x + 5, y, 2, 1); };
+  // bossen, savannes, palmen en dennen: verspreid over het land, niet op de vindplaatsen
+  for (let i = 0; i < 2600; i++) {
+    const x = Math.floor(hash(i, 41) * MW), y = Math.floor(hash(i, 42) * MH);
+    if (!isLand(x, y) || !isLand(x, y + 6) || !isLand(x - 4, y) || !isLand(x + 4, y) || nearSite(x, y)) continue;
+    const lon = LON0 + x / S, lat = LAT0 - y / S, b = biome(lon, lat)[0], r = hash(i, 43);
+    if (b === '#2e8030') { if (lon > 95 && r < 0.4) palm(x, y); else bush(x, y, r < 0.5 ? '#2e8a34' : '#3e9a3c'); }
+    else if (b === '#ccc45c' && r < 0.35) acacia(x, y);
+    else if (b === '#6cb44c' && r < 0.45) bush(x, y, '#4ea03c');
+    else if (b === '#a4bc5c' && r < 0.2) bush(x, y, '#6a9a3c');
+    else if (b === '#4a7a40' && r < 0.6) pine(x, y, false);
+    else if (b === '#eef4f8' && r < 0.12) pine(x, y, true);
+    else if ((b === '#ecc878' || b === '#dcbc74') && r < 0.06) { ell(c, x, y, 3, 2, '#b8884c'); ell(c, x - 1, y - 1, 2, 1, '#d8a868'); }
+    else if (b === '#cccc84' && r < 0.04) mammoth(x, y);
+  }
+  // rotsjes in zee, vlak bij de kust
+  for (let i = 0; i < 700; i++) { const x = Math.floor(hash(i, 51) * MW), y = Math.floor(hash(i, 52) * MH); if (mask[y * MW + x] && !isLand(x, y - 10) && (isLand(x + 14, y) || isLand(x - 14, y) || isLand(x, y + 14))) rock(x, y); }
+  // de Riftvallei: een kloof door Oost-Afrika
+  for (const [a, b2] of [[[39.8, 13], [38.6, 7]], [[38.6, 7], [36.2, 1]], [[36.2, 1], [35.8, -5]], [[35.8, -5], [34.6, -9]]]) { const [x1, y1] = at(...a), [x2, y2] = at(...b2), n = Math.hypot(x2 - x1, y2 - y1);
+    for (let t = 0; t < n; t++) { const x = Math.round(x1 + (x2 - x1) * t / n), y = Math.round(y1 + (y2 - y1) * t / n); c.fillStyle = '#7a4a24'; c.fillRect(x - 1, y, 3, 1); c.fillStyle = '#4a2a14'; c.fillRect(x, y, 1, 1); } }
+  for (const [lo, la, s, snow] of MOUNTAINS) { const [x, y] = at(lo, la); mountain(x, y, s, snow); }
+  // de vulkaan op Java
+  { const [x, y] = at(110.4, -6.9); mountain(x, y, 1.1); c.fillStyle = '#e8602a'; c.fillRect(x - 1, y - 10, 3, 2); for (let k = 0; k < 3; k++) ell(c, x + 2 + k * 2, y - 14 - k * 5, 2 + k, 2 + k, '#d8d4d0'); }
+  cloud(c, 160, 40, 14); cloud(c, 700, 120, 16); cloud(c, 980, 300, 14); cloud(c, 260, 700, 16);
   return { cv, mask };
 }
 
@@ -156,11 +201,11 @@ function walkerSprite(look, frame) {
 const CSS = `
 #mapView{position:absolute;inset:0;z-index:6;background:#2a1a0c;display:flex;flex-direction:column}
 #mapView[hidden]{display:none}
-#mapScroll{position:relative;flex:1;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;cursor:grab}
+#mapScroll{position:relative;flex:1;overflow:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;cursor:grab}
 #mapScroll::-webkit-scrollbar{display:none}
 #mapInner{position:relative;height:100%}
-#mapInner canvas{position:absolute;left:0;top:0;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
-.mnode{position:absolute;width:38px;height:38px;margin:-19px 0 0 -19px;padding:0;border:none;border-radius:50%;background:transparent center/100% 100% no-repeat;image-rendering:pixelated;font:900 12px system-ui,sans-serif;color:#3a2210;box-shadow:none;filter:drop-shadow(0 3px 0 #0006);cursor:pointer}
+#mapInner canvas{position:absolute;left:0;top:0;image-rendering:pixelated;image-rendering:crisp-edges}
+.mnode{position:absolute;width:32px;height:32px;margin:-16px 0 0 -16px;padding:0;border:none;border-radius:50%;background:transparent center/100% 100% no-repeat;image-rendering:pixelated;font:900 12px system-ui,sans-serif;color:#3a2210;box-shadow:none;filter:drop-shadow(0 3px 0 #0006);cursor:pointer}
 .mnode.locked{filter:grayscale(1) brightness(.75) drop-shadow(0 3px 0 #0006);color:#3a3a3a}
 .mnode.sel{outline:3px solid #ffe46a;outline-offset:2px}
 .mnode .art{position:absolute;left:50%;top:100%;transform:translateX(-50%);font-size:10px;color:#ffe46a;text-shadow:0 1px 0 #2a1a0c,1px 0 #2a1a0c,-1px 0 #2a1a0c;white-space:nowrap;letter-spacing:1px}
@@ -187,11 +232,9 @@ export class JourneyMap {
       <div class="minfo"><div><b class="mi-name"></b><span class="mi-where"></span><br><span class="art2"></span></div><button class="plank p-play" id="mapPlay">▶ Spelen</button></div>`;
     root.appendChild(el);
     this.scroll = el.querySelector('#mapScroll'); this.inner = el.querySelector('#mapInner'); this.cv = el.querySelector('canvas');
-    const { cv: map, mask } = bakeMap(); this.map = map; this.mask = mask;
-    // Pad: start → (tussenpunten → level) × n → extra. Per punt onthouden naar welk level het leidt.
-    const pts = [[6, 120]], segOf = [0], nodePt = [];
-    levels.forEach((L, i) => { for (const v of VIA[L.id] || []) { pts.push(v); segOf.push(i); } pts.push(NODES[L.id] || [0, 0]); segOf.push(i); nodePt.push(pts.length - 1); });
-    for (const v of VIA.next) { pts.push(v); segOf.push(levels.length); } pts.push(NEXT); segOf.push(levels.length);
+    // Pad: start → (tussenpunten → level) × n. Per punt onthouden naar welk level het leidt.
+    const pts = [P(44, 2)], segOf = [0], nodePt = [];
+    levels.forEach((L, i) => { for (const v of VIA[L.id] || []) { pts.push(P(...v)); segOf.push(i); } pts.push(P(...(SITES[L.id] || [0, 0]))); segOf.push(i); nodePt.push(pts.length - 1); });
     this.path = trail(pts, segOf);
     this.nodeIdx = nodePt.map(j => this.path.findIndex(q => q[3] === j));
     this.walkFrames = {};
@@ -201,32 +244,24 @@ export class JourneyMap {
     el.querySelector('#mapPlay').addEventListener('click', e => { e.preventDefault(); if (this.sel != null && this.sel < this.save.unlocked) this.onPlay(this.sel); });
     // Slepen met de muis; wieltje schuift horizontaal
     let drag = null;
-    this.scroll.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.target.closest('button')) return; drag = { x: e.clientX, s: this.scroll.scrollLeft }; this.scroll.style.cursor = 'grabbing'; });
-    addEventListener('pointermove', e => { if (drag) this.scroll.scrollLeft = drag.s - (e.clientX - drag.x); });
+    this.scroll.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.target.closest('button')) return; drag = { x: e.clientX, y: e.clientY, s: this.scroll.scrollLeft, t: this.scroll.scrollTop }; this.scroll.style.cursor = 'grabbing'; });
+    addEventListener('pointermove', e => { if (drag) { this.scroll.scrollLeft = drag.s - (e.clientX - drag.x); this.scroll.scrollTop = drag.t - (e.clientY - drag.y); } });
     addEventListener('pointerup', () => { drag = null; this.scroll.style.cursor = ''; });
-    this.scroll.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { this.scroll.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+    
     addEventListener('resize', () => { if (!this.el.hidden) this.layout(); });
   }
-  open() { this.el.hidden = false; this.layout(true); }
+  open() { if (!this.map) { const r = bakeMap(); this.map = r.cv; this.mask = r.mask; } this.el.hidden = false; this.layout(true); }
   close() { this.el.hidden = true; }
   // Pad, knopen en borden op de juiste schaal neerzetten
   layout(center) {
-    const k = this.scroll.clientHeight / MH, cv = this.cv, c = cv.getContext('2d');
+    const k = Math.max(this.scroll.clientHeight / 210, this.scroll.clientWidth / MW), cv = this.cv, c = cv.getContext('2d');   // ongeveer 26 breedtegraden in beeld
     const done = Math.min(this.save.unlocked, this.levels.length);   // levels 0..done-1 zijn open
-    cv.width = MW; cv.height = MH; cv.style.width = Math.round(MW * k) + 'px'; this.inner.style.width = Math.round(MW * k) + 'px';
-    c.drawImage(this.map, 0, 0);
-    // Het pad: begaan stuk is een zandpad (met planken over water), de rest een vage stippellijn
-    const wet = (x, y) => this.mask[Math.round(y) * MW + Math.round(x)] === 1;
-    for (const [x, y, seg] of this.path) { const open = seg < done, X = Math.round(x), Y = Math.round(y);
-      if (wet(x, y)) { c.fillStyle = open ? '#3a2412' : '#00000044'; c.fillRect(X - 3, Y - 3, 6, 6); }
-      else { c.fillStyle = open ? '#5a3c20' : '#00000033'; c.fillRect(X - 2, Y - 2, 4, 4); } }
-    for (const [x, y, seg] of this.path) { const open = seg < done, X = Math.round(x), Y = Math.round(y);
-      if (wet(x, y)) { if (!open) continue; c.fillStyle = X % 3 ? '#b07a44' : '#7a5030'; c.fillRect(X - 2, Y - 2, 1, 4); c.fillRect(X - 2, Y - 2, 1, 4); c.fillStyle = X % 3 ? '#c8925a' : '#8a5a34'; c.fillRect(X, Y - 2, 1, 4); continue; }
-      if (!open && (X % 6) > 2) continue; c.fillStyle = open ? '#f2d89a' : '#fff6dc99'; c.fillRect(X - 1, Y - 1, 2, 2); }
+    cv.width = MW; cv.height = MH; cv.style.width = Math.round(MW * k) + 'px'; cv.style.height = Math.round(MH * k) + 'px'; this.inner.style.width = Math.round(MW * k) + 'px'; this.inner.style.height = Math.round(MH * k) + 'px';
+    this.drawPaths();
     // Knopen
     this.inner.querySelectorAll('.mnode,.mwalker,.msign').forEach(n => n.remove());
     this.levels.forEach((L, i) => {
-      const [x, y] = NODES[L.id] || [0, 0], b = document.createElement('button');
+      const [x, y] = P(...(SITES[L.id] || [0, 0])), b = document.createElement('button');
       b.className = 'mnode' + (i >= done ? ' locked' : ''); b.style.left = x * k + 'px'; b.style.top = y * k + 'px'; b.style.backgroundImage = `url(${this.slice})`;
       const art = this.save.best[L.id]?.artifacts || 0;
       b.innerHTML = `${L.id}${i < done ? `<span class="art">${'◆'.repeat(art)}${'◇'.repeat(3 - art)}</span>` : ''}`;
@@ -234,9 +269,9 @@ export class JourneyMap {
       b.addEventListener('click', e => { e.preventDefault(); this.select(i); });
       this.inner.appendChild(b);
     });
-    const nb = document.createElement('button'); nb.className = 'mnode locked'; nb.style.left = NEXT[0] * k + 'px'; nb.style.top = NEXT[1] * k + 'px'; nb.style.backgroundImage = `url(${this.slice})`; nb.textContent = '★';
+    const nb = document.createElement('button'); nb.className = 'mnode locked'; const [ex, ey] = P(...EXTRA); nb.style.left = ex * k + 'px'; nb.style.top = ey * k + 'px'; nb.style.backgroundImage = `url(${this.slice})`; nb.textContent = '★';
     nb.addEventListener('click', e => { e.preventDefault(); this.select(-1); }); this.inner.appendChild(nb);
-    for (const [x, y, t, s] of SIGNS) { const d = document.createElement('div'); d.className = 'msign'; d.style.left = x * k + 'px'; d.style.top = y * k + 'px'; d.innerHTML = `${t}<small>${s}</small>`; this.inner.appendChild(d); }
+    for (const [lo, la, t, s] of SIGNS) { const [x, y] = P(lo, la), d = document.createElement('div'); d.className = 'msign'; d.style.left = x * k + 'px'; d.style.top = y * k + 'px'; d.innerHTML = `${t}<small>${s}</small>`; this.inner.appendChild(d); }
     // Het poppetje
     const cur = done - 1;
     this.walker = document.createElement('canvas'); this.walker.className = 'mwalker'; this.walker.width = 9; this.walker.height = 13;
@@ -255,28 +290,46 @@ export class JourneyMap {
     name.textContent = `${L.id} · ${L.name}`; where.textContent = `${L.place} · ${L.era}`;
     art.textContent = open ? `${'◆'.repeat(a)}${'◇'.repeat(3 - a)} artefacten` : 'op slot: speel eerst het level ervoor';
     play.disabled = !open;
-    if (scroll) { const [x] = this.path[Math.round(this.wpos)]; this.scroll.scrollLeft = x * this.k - this.scroll.clientWidth / 2; }
+    if (this.levels[i] && this.levels[i].world !== this.shownWorld) this.drawPaths();
+    if (scroll) { const [x, y] = this.path[Math.round(this.wpos)]; this.scroll.scrollLeft = x * this.k - this.scroll.clientWidth / 2; this.scroll.scrollTop = y * this.k - this.scroll.clientHeight / 2; }
     if (open) this.walkTo(this.nodeIdx[i]);
+  }
+  // Kaart + paden. Alleen de route van de gekozen wereld is een zandpad; andere werelden zijn vage stippels.
+  drawPaths() {
+    const c = this.cv.getContext('2d'), done = Math.min(this.save.unlocked, this.levels.length);
+    const W = this.levels[this.sel >= 0 ? this.sel : done - 1]?.world; this.shownWorld = W;
+    const wet = (x, y) => this.mask[Math.round(y) * MW + Math.round(x)] === 1;
+    c.drawImage(this.map, 0, 0);
+    const mine = seg => this.levels[seg]?.world === W;
+    for (const [x, y, seg] of this.path) { if (mine(seg)) continue; const X = Math.round(x), Y = Math.round(y); if ((X + Y) % 6 > 1) continue;
+      c.fillStyle = seg < done ? '#fff4c8aa' : '#00000030'; c.fillRect(X, Y, 2, 2); }
+    for (const [x, y, seg] of this.path) { if (!mine(seg)) continue; const open = seg < done, X = Math.round(x), Y = Math.round(y);
+      if (!open) { if ((X + Y) % 7 < 3) { c.fillStyle = '#00000050'; c.fillRect(X - 1, Y - 1, 3, 3); } continue; }
+      c.fillStyle = wet(x, y) ? '#3a2412' : '#7a4a20'; c.fillRect(X - 3, Y - 3, 7, 7); }
+    for (const [x, y, seg] of this.path) { if (!mine(seg) || seg >= done) continue; const X = Math.round(x), Y = Math.round(y);
+      c.fillStyle = wet(x, y) ? ((X + Y) % 4 < 2 ? '#c8904c' : '#9a6430') : '#f8e4a8'; c.fillRect(X - 2, Y - 2, 5, 5); }
   }
   // Het poppetje wandelt over het pad naar het gekozen level (de camera loopt mee)
   walkTo(target) {
     this.wtarget = target; if (this.walking) return; this.walking = true;
     let last = performance.now(), dist = 0;
     const tick = now => {
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
       if (this.el.hidden) { this.wpos = this.wtarget; this.walking = false; return; }
       const d = this.wtarget - this.wpos, step = Math.min(Math.abs(d), Math.max(120, Math.abs(d) * 2.2) * dt);   // ver weg: sneller lopen
       this.wpos += Math.sign(d) * step; dist += step; this.wdir = Math.sign(d) || this.wdir;
       this.placeWalker(Math.floor(dist / 5) % 2);
-      const [x] = this.path[Math.round(this.wpos)], sx = x * this.k - this.scroll.scrollLeft;
-      if (sx < this.scroll.clientWidth * 0.25 || sx > this.scroll.clientWidth * 0.75) this.scroll.scrollLeft += (sx - this.scroll.clientWidth / 2) * Math.min(1, dt * 4);
+      const [x, y] = this.path[Math.round(this.wpos)], sx = x * this.k - this.scroll.scrollLeft, sy = y * this.k - this.scroll.scrollTop;
+      const W = this.scroll.clientWidth, H = this.scroll.clientHeight, f = Math.min(1, dt * 4);
+      if (sx < W * 0.3 || sx > W * 0.7) this.scroll.scrollLeft += (sx - W / 2) * f;
+      if (sy < H * 0.3 || sy > H * 0.7) this.scroll.scrollTop += (sy - H / 2) * f;
       if (Math.abs(this.wtarget - this.wpos) > 0.5) requestAnimationFrame(tick); else { this.wpos = this.wtarget; this.walking = false; this.placeWalker(0); }
     };
     requestAnimationFrame(tick);
   }
   placeWalker(frame = 0) {
     if (!this.walker || this.wpos == null) return;
-    const q = this.path[Math.round(this.wpos)], lv = this.levels[this.sel >= 0 ? this.sel : Math.min(this.save.unlocked, this.levels.length) - 1];   // de soort van het gekozen level
+    const q = this.path[Math.max(0, Math.min(this.path.length - 1, Math.round(this.wpos)))], lv = this.levels[this.sel >= 0 ? this.sel : Math.min(this.save.unlocked, this.levels.length) - 1];   // de soort van het gekozen level
     const look = (lv.look && SPECIES[lv.look]?.look) || {}, key = (lv.look || 'habilis') + frame;
     const spr = this.walkFrames[key] || (this.walkFrames[key] = walkerSprite(look, frame));
     const c = this.walker.getContext('2d'); c.clearRect(0, 0, 9, 13); c.save(); if (this.wdir < 0) { c.translate(9, 0); c.scale(-1, 1); } c.drawImage(spr, 0, 0); c.restore();
