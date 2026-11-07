@@ -31,12 +31,17 @@ Wereld 3 (Homo heidelbergensis) is compleet: 3-1 De krijtkust (Boxgrove), 3-2 De
 Een proef met een heel andere opzet: een 3D-wereld met de camera hoog achter de hoofdpersoon (ergens tussen GTA 2 en GTA 5 in). Je loopt vrij rond, onderzoekt en overleeft, in plaats van naar een finish te rennen. Speel hem op `/homo-game/v4/`. Het spel in `v2/` en `v3/` is niet aangeraakt.
 
 - Eén stuk Riftvallei met *Homo habilis*: rivier, acacia's, rotsen, hoog gras, een kudde impala's en gieren boven een karkas
-- Oppakken, bekijken, proeven: paarse bessen (goed), rode bessen (ziek), bitterblad (geneest), botten openslaan met een kei (merg)
-- Voeding en gezondheid; ben je te zwak, dan zak je in elkaar en kom je zwak weer bij (geen game over)
-- Sluipen: gebukt in hoog gras zien de impala's je minder snel; kom je te dichtbij, dan vlucht de kudde
-- Zes ontdekkingen in het boekje, met zachte tips als je even vastzit
-- Telefoon: duimstick links, rechts vegen om rond te kijken. Computer: WASD/pijltjes, Shift, C, E en de muis
-- `v4/src/world.js` landschap, gras en licht · `actors.js` hoofdpersoon, impala's, gieren · `items.js` vondsten en ontdekkingen · `main.js` besturing, camera en spelregels
+- **Onderzoeken door te tikken:** tik op iets in de wereld; er verschijnt een boogje met icoontjes: oog (bekijken), hand (pakken), mond (proeven, met een vraagteken zolang je het niet kent). Je hoofdpersoon loopt er zelf heen.
+- **Twee handen in plaats van een tas** (habilis had nog geen leer): je kunt twee dingen dragen. Tik op een hand om te bekijken, eten, neerleggen of een bot met de kei open te slaan. Later in het spel kan dragen meegroeien (bladbundel, leren tas, struisvogelei).
+- **De pak-knop is een hand die oplicht** als er iets binnen bereik is; dingen om te pakken glinsteren.
+- **Zintuigen:** houd het oog ingedrukt (of Q). De wereld wordt stiller en donkerder; vondsten lichten op (groen = goed, rood = slecht, wit = onbekend), je ziet de hoefsporen van de kudde, de wind en de geur van het karkas.
+- **Wind:** waait uit het oosten. Staat de wind van jou naar de impala's, dan ruiken ze je van ver.
+- Vondsten: paarse bessen (goed), rode bessen (ziek), bitterblad (geneest), botten openslaan met een kei (merg). Zeven ontdekkingen in het boekje, met zachte tips.
+- Voeding en gezondheid; ben je te zwak, dan zak je in elkaar en kom je zwak weer bij (geen game over).
+- **Sfeer:** dag en nacht in 14 minuten (ochtend, middag, oranje avond, nacht), opgewekt geluid (wind, vogels, krekels, ritselend gras, voetstappen, hoeven), vogeltjes die opvliegen, vlinders, stof in het zonlicht.
+- Telefoon: duimstick links, rechts vegen om rond te kijken. Computer: WASD/pijltjes, Shift, C, E, Q en de muis
+- `v4/src/world.js` landschap, gras, licht en dag · `actors.js` hoofdpersoon, impala's, gieren · `items.js` vondsten en ontdekkingen · `life.js` vogels, vlinders, glinsteringen en zintuigen · `audio.js` geluid · `icons.js` icoontjes · `main.js` besturing, camera en spelregels
+- Bomen, rotsen, struiken en delen van dieren zijn samengevoegd, zodat een telefoon minder hoeft te tekenen (zo'n 230 tekenopdrachten per beeld)
 - `v4/lib/three.module.js` is three.js r187 (MIT), gebundeld en verkleind
 
 ## Pixelversie (v3): `v3/` — het hoofdspel

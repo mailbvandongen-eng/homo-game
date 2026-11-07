@@ -92,7 +92,8 @@ export function buildWorld(scene) {
   scene.fog = new THREE.Fog(0xe9cf9c, 45, 230);
 
   // ---------- licht: lage middagzon ----------
-  scene.add(new THREE.HemisphereLight(0xcfe0ff, 0x8a6a3a, 1.1));
+  const hemi = new THREE.HemisphereLight(0xcfe0ff, 0x8a6a3a, 1.1);
+  scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffe2b0, 2.6);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
@@ -124,6 +125,9 @@ export function buildWorld(scene) {
 
   const ok = (x, z, minRiver = 12) => riverDist(x, z) > minRiver && Math.max(Math.abs(x), Math.abs(z)) < WALK - 8 && Math.hypot(x - 2, z + 8) > 8;
 
+  // Bomen en rotsen bewegen niet: ze worden straks samengevoegd tot één geheel (veel sneller op een telefoon)
+  const statics = new THREE.Group();
+
   // ---------- acacia's ----------
   const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5a4030, flatShading: true });
   const crownMat = new THREE.MeshLambertMaterial({ color: 0x5f7a32, flatShading: true });
@@ -142,7 +146,7 @@ export function buildWorld(scene) {
     crown.castShadow = true; g.add(crown);
     const top = crown.clone(); top.scale.set(2.8 * s, 0.6 * s, 2.6 * s); top.position.set(0.8 * s, 5.5 * s, 0.4 * s); g.add(top);
     g.position.set(x, y - 0.1, z); g.rotation.y = R() * 6;
-    scene.add(g);
+    statics.add(g);
     blockers.push({ x, z, r: 0.5 * s });
   }
   for (let i = 0; i < 70; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 10)) acacia(x, z, 0.8 + R() * 0.6); }
@@ -154,12 +158,14 @@ export function buildWorld(scene) {
     const m = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), rockMat);
     m.scale.set(1, 0.55 + R() * 0.4, 0.8 + R() * 0.4);
     m.position.set(x, height(x, z) + s * 0.15, z); m.rotation.set(R(), R() * 6, R());
-    m.castShadow = true; m.receiveShadow = true; scene.add(m);
+    statics.add(m);
     if (s > 0.7) blockers.push({ x, z, r: s * 0.85 });
   }
   for (let i = 0; i < 55; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 9)) rock(x, z, 0.4 + R() * 1.6); }
   for (let i = 0; i < 14; i++) { const a = R() * 6.28, d = 6 + R() * 14; rock(-40 + Math.cos(a) * d, -30 + Math.sin(a) * d, 0.8 + R() * 1.8); }
   for (let i = 0; i < 6; i++) rock(-3 + R() * 10, -2 + R() * 6, 0.3 + R() * 0.5);   // keien bij de start
+
+  scene.add(mergeStatic(statics));
 
   // ---------- gras dat meebeweegt in de wind ----------
   const uniforms = { uTime: { value: 0 } };
@@ -210,7 +216,7 @@ export function buildWorld(scene) {
     scene.add(mesh);
     return mesh;
   }
-  scatter(tuftGeo(0.55, 4), grassMat(0xffffff, 0.12), 26000, () => {
+  scatter(tuftGeo(0.55, 4), grassMat(0xffffff, 0.12), 20000, () => {
     const x = (R() - 0.5) * 2 * (WALK + 10), z = (R() - 0.5) * 2 * (WALK + 10);
     if (riverDist(x, z) < 6) return null;
     if (fbm(x * 0.05, z * 0.05, 2) < 0.38) return null;   // plukjes, geen tapijt
@@ -229,12 +235,73 @@ export function buildWorld(scene) {
     return [x, z, 0.8 + R() * 0.6];
   });
 
+  const fogBase = new THREE.Color();
   return {
-    sun, uniforms, water,
-    update(t, focus) {
+    sun, uniforms, water, hemi,
+    // p: moment van de dag (0 = dageraad, 0,4 = middag, 0,75 = zonsondergang, 0,9 = nacht)
+    update(t, focus, p, senses) {
       uniforms.uTime.value = t;
+      const k = dayLook(p);
+      skyMat.uniforms.top.value.copy(k.top); skyMat.uniforms.mid.value.copy(k.mid); skyMat.uniforms.low.value.copy(k.low);
+      fogBase.copy(k.fog);
+      if (senses) fogBase.lerp(SENSE_FOG, 0.6);
+      scene.fog.color.copy(fogBase);
+      scene.fog.far = senses ? 120 : 230;
+      sun.color.copy(k.sun); sun.intensity = k.sunI * (senses ? 0.45 : 1);
+      hemi.color.copy(k.hemiSky); hemi.groundColor.copy(k.hemiGround); hemi.intensity = k.hemiI * (senses ? 0.6 : 1);
+      // de zon komt op in het oosten (+x) en gaat onder in het westen; 's nachts schijnt de maan
+      const day = p < 0.8, a = day ? p / 0.8 : (p - 0.8) / 0.2;
+      const elev = Math.max(0.12, Math.sin(a * Math.PI)) * (day ? 1 : 0.8), az = a * Math.PI;
+      sun.userData.offset.set(Math.cos(az) * 80 * Math.cos(elev), Math.sin(elev) * 80 + 6, -30);
       sun.position.copy(focus).add(sun.userData.offset); sun.target.position.copy(focus);
-      water.material.color.setHSL(0.49, 0.28, 0.42 + Math.sin(t * 0.7) * 0.01);
+      water.material.color.copy(k.water).offsetHSL(0, 0, Math.sin(t * 0.7) * 0.01);
     },
   };
 }
+
+// Alle losse stukken van een groep samenvoegen tot één mesh met kleuren per hoekpunt
+export function mergeStatic(group) {
+  group.updateMatrixWorld(true);
+  const pos = [], col = [];
+  group.traverse((o) => {
+    if (!o.isMesh) return;
+    const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
+    g.applyMatrix4(o.matrixWorld);
+    const p = g.attributes.position, c = o.material.color;
+    for (let i = 0; i < p.count; i++) { pos.push(p.getX(i), p.getY(i), p.getZ(i)); col.push(c.r, c.g, c.b); }
+    g.dispose();
+  });
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  return mesh;
+}
+
+// ---------- de kleuren van de dag ----------
+const C = (h) => new THREE.Color(h);
+const SENSE_FOG = C(0x4a5a6a);
+const DAY = [
+  { p: 0.00, top: C(0x3a4a78), mid: C(0xe8a07a), low: C(0x8a6a5a), fog: C(0xc8988a), sun: C(0xffb080), sunI: 1.2, hemiSky: C(0x9aa8d8), hemiGround: C(0x6a4a3a), hemiI: 0.7, water: C(0x5a6a8a) },
+  { p: 0.12, top: C(0x6a98c8), mid: C(0xf2d8a8), low: C(0xe0b88a), fog: C(0xe6d2a8), sun: C(0xffe0b0), sunI: 2.3, hemiSky: C(0xcfe0ff), hemiGround: C(0x8a6a3a), hemiI: 1.05, water: C(0x4f8a8c) },
+  { p: 0.40, top: C(0x5a8cc8), mid: C(0xd8e0d8), low: C(0xe0c89a), fog: C(0xdcd6c0), sun: C(0xfff2dc), sunI: 2.8, hemiSky: C(0xd8e8ff), hemiGround: C(0x8a7040), hemiI: 1.15, water: C(0x4a8a90) },
+  { p: 0.62, top: C(0x6f9cc8), mid: C(0xf2d39a), low: C(0xe8b47a), fog: C(0xe9cf9c), sun: C(0xffe2b0), sunI: 2.6, hemiSky: C(0xcfe0ff), hemiGround: C(0x8a6a3a), hemiI: 1.1, water: C(0x4f8a8c) },
+  { p: 0.74, top: C(0x5a6aa0), mid: C(0xf0905a), low: C(0xb86a4a), fog: C(0xe0906a), sun: C(0xff8a4a), sunI: 2.0, hemiSky: C(0xc8a0b8), hemiGround: C(0x6a4030), hemiI: 0.85, water: C(0x6a6a7a) },
+  { p: 0.80, top: C(0x2a2e58), mid: C(0x8a5a6a), low: C(0x4a3a4a), fog: C(0x5a4a5a), sun: C(0xb0a0d0), sunI: 0.5, hemiSky: C(0x6a70a8), hemiGround: C(0x3a2e30), hemiI: 0.55, water: C(0x3a4a5a) },
+  { p: 0.88, top: C(0x0e1430), mid: C(0x24304e), low: C(0x1a1e2e), fog: C(0x222a40), sun: C(0x9ab0e8), sunI: 0.55, hemiSky: C(0x5a6aa8), hemiGround: C(0x24202a), hemiI: 0.5, water: C(0x26344a) },
+  { p: 0.96, top: C(0x1a2244), mid: C(0x3a3a5a), low: C(0x2a2a3a), fog: C(0x3a3a50), sun: C(0x9ab0e8), sunI: 0.5, hemiSky: C(0x6a70a8), hemiGround: C(0x302830), hemiI: 0.5, water: C(0x2e3a50) },
+  { p: 1.00, top: C(0x3a4a78), mid: C(0xe8a07a), low: C(0x8a6a5a), fog: C(0xc8988a), sun: C(0xffb080), sunI: 1.2, hemiSky: C(0x9aa8d8), hemiGround: C(0x6a4a3a), hemiI: 0.7, water: C(0x5a6a8a) },
+];
+const LOOK = { top: C(0), mid: C(0), low: C(0), fog: C(0), sun: C(0), hemiSky: C(0), hemiGround: C(0), water: C(0), sunI: 0, hemiI: 0 };
+function dayLook(p) {
+  let i = 0; while (i < DAY.length - 2 && DAY[i + 1].p <= p) i++;
+  const a = DAY[i], b = DAY[i + 1], f = THREE.MathUtils.clamp((p - a.p) / (b.p - a.p), 0, 1);
+  for (const key of ['top', 'mid', 'low', 'fog', 'sun', 'hemiSky', 'hemiGround', 'water']) LOOK[key].copy(a[key]).lerp(b[key], f);
+  LOOK.sunI = a.sunI + (b.sunI - a.sunI) * f; LOOK.hemiI = a.hemiI + (b.hemiI - a.hemiI) * f;
+  return LOOK;
+}
+
+// De wind waait de hele dag uit het oosten: van +x naar -x (een beetje schuin)
+export const WIND = new THREE.Vector3(-1, 0, 0.25).normalize();

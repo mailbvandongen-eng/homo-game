@@ -1,5 +1,8 @@
 import * as THREE from '../lib/three.module.js';
-import { height, blockers, WALK, riverDist, tallGrassAt, rng } from './world.js';
+import { height, blockers, WALK, riverDist, tallGrassAt, rng, WIND, mergeStatic } from './world.js';
+
+// losse onderdelen die samen bewegen, samenvoegen tot één stuk
+const merged = (...parts) => { const g = new THREE.Group(); parts.forEach((p) => g.add(p)); return mergeStatic(g); };
 
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 const shadowAll = (g) => g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
@@ -21,17 +24,17 @@ export class Hominin {
     this.hips = new THREE.Group(); this.hips.position.y = 0.62; g.add(this.hips);
     this.torso = new THREE.Group(); this.hips.add(this.torso);
     const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.34, 3, 8), fur);
-    body.position.y = 0.26; body.scale.set(1, 1, 0.8); this.torso.add(body);
+    body.position.y = 0.26; body.scale.set(1, 1, 0.8);
     const belly = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 6), skin);
-    belly.position.set(0, 0.2, 0.08); belly.scale.set(1, 1.1, 0.7); this.torso.add(belly);
+    belly.position.set(0, 0.2, 0.08); belly.scale.set(1, 1.1, 0.7);
+    this.torso.add(merged(body, belly));
     this.head = new THREE.Group(); this.head.position.y = 0.6; this.torso.add(this.head);
-    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), fur); skull.scale.set(0.95, 1, 1.05); this.head.add(skull);
-    const face = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), skin); face.position.set(0, -0.03, 0.08); face.scale.set(1, 1, 0.9); this.head.add(face);
-    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), skin); muzzle.position.set(0, -0.07, 0.15); muzzle.scale.set(1.2, 0.8, 1); this.head.add(muzzle);
-    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.04, 0.05), dark); brow.position.set(0, 0.03, 0.15); this.head.add(brow);
-    for (const s of [-1, 1]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 4), dark); eye.position.set(s * 0.045, 0, 0.17); this.head.add(eye);
-    }
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), fur); skull.scale.set(0.95, 1, 1.05);
+    const face = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), skin); face.position.set(0, -0.03, 0.08); face.scale.set(1, 1, 0.9);
+    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), skin); muzzle.position.set(0, -0.07, 0.15); muzzle.scale.set(1.2, 0.8, 1);
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.04, 0.05), dark); brow.position.set(0, 0.03, 0.15);
+    const eyes = [-1, 1].map((s) => { const e = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 4), dark); e.position.set(s * 0.045, 0, 0.17); return e; });
+    this.head.add(merged(skull, face, muzzle, brow, ...eyes));
     this.armL = limb(0.42, 0.055, fur); this.armL.position.set(-0.24, 0.44, 0); this.torso.add(this.armL);
     this.armR = limb(0.42, 0.055, fur); this.armR.position.set(0.24, 0.44, 0); this.torso.add(this.armR);
     this.legL = limb(0.42, 0.07, fur); this.legL.position.set(-0.1, 0.02, 0); this.hips.add(this.legL);
@@ -39,6 +42,7 @@ export class Hominin {
     for (const leg of [this.legL, this.legR]) { const foot = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.2), skin); foot.position.set(0, -0.54, 0.05); leg.add(foot); }
     // wat je in je hand hebt
     this.held = new THREE.Group(); this.held.position.y = -0.55; this.armR.add(this.held);
+    this.heldL = new THREE.Group(); this.heldL.position.y = -0.55; this.armL.add(this.heldL);
     shadowAll(g);
     g.scale.setScalar(1.15);
     scene.add(g);
@@ -112,23 +116,26 @@ function impalaModel(male) {
   const coat = lam(0xa8643a), belly = lam(0xeadcc4), dark = lam(0x2a1c14), back = lam(0x8a4c2a);
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.75, 3, 8), coat);
-  body.rotation.x = Math.PI / 2; body.position.y = 0.95; g.add(body);
+  body.rotation.x = Math.PI / 2; body.position.y = 0.95;
   const top = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.7, 3, 6), back);
-  top.rotation.x = Math.PI / 2; top.position.y = 1.08; top.scale.set(1, 1, 0.6); g.add(top);
+  top.rotation.x = Math.PI / 2; top.position.y = 1.08; top.scale.set(1, 1, 0.6);
   const under = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.6, 3, 6), belly);
-  under.rotation.x = Math.PI / 2; under.position.y = 0.84; under.scale.set(1.15, 1, 0.8); g.add(under);
+  under.rotation.x = Math.PI / 2; under.position.y = 0.84; under.scale.set(1.15, 1, 0.8);
+  g.add(merged(body, top, under));
   const neck = new THREE.Group(); neck.position.set(0, 1.08, 0.48); g.add(neck);
   const nm = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.45, 3, 6), coat); nm.position.y = 0.25; neck.add(nm);
   neck.rotation.x = 0.45;
   const head = new THREE.Group(); head.position.y = 0.55; neck.add(head);
-  const hm = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.22, 3, 6), coat); hm.rotation.x = Math.PI / 2 - 0.3; hm.position.z = 0.1; head.add(hm);
+  const hm = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.22, 3, 6), coat); hm.rotation.x = Math.PI / 2 - 0.3; hm.position.z = 0.1;
+  const headParts = [hm];
   for (const s of [-1, 1]) {
-    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 4), coat); ear.position.set(s * 0.09, 0.1, -0.02); ear.rotation.z = -s * 0.8; head.add(ear);
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 4), coat); ear.position.set(s * 0.09, 0.1, -0.02); ear.rotation.z = -s * 0.8; headParts.push(ear);
     if (male) {
       const horn = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.5, 5), dark);
-      horn.position.set(s * 0.05, 0.28, -0.08); horn.rotation.set(-0.5, 0, -s * 0.2); head.add(horn);
+      horn.position.set(s * 0.05, 0.28, -0.08); horn.rotation.set(-0.5, 0, -s * 0.2); headParts.push(horn);
     }
   }
+  head.add(merged(...headParts));
   const tail = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.25, 5), belly); tail.position.set(0, 1.0, -0.68); tail.rotation.x = -2.4; g.add(tail);
   const legs = [];
   for (const [x, z] of [[-0.15, 0.4], [0.15, 0.4], [-0.15, -0.42], [0.15, -0.42]]) {
@@ -165,9 +172,12 @@ export class Herd {
       const dx = p.x - m.x, dz = p.z - m.z, dist = Math.hypot(dx, dz);
       // zien en horen: dichtbij valt veel meer op
       const range = 34 * notice;
+      // ruiken: waait de wind van jou naar het dier, dan ruikt het je van ver
+      const smell = dist < 48 && ((m.x - p.x) * WIND.x + (m.z - p.z) * WIND.z) / dist > 0.6;
       if (this.fleeing <= 0) {
         if (dist < range) m.aware += dt * (1 - dist / range) * 1.4 * (0.4 + notice);
-        else m.aware -= dt * 0.12;
+        if (smell) { m.aware += dt * (1 - dist / 48) * 0.9; m.smelled = true; }
+        if (dist >= range && !smell) m.aware -= dt * 0.12;
         if (dist < 4) m.aware = 2;
         m.aware = Math.max(0, m.aware);
       }
@@ -176,7 +186,10 @@ export class Herd {
     // onrust is besmettelijk: als één schrikt, kijkt de rest op
     if (maxAware > 1 && this.fleeing <= 0) {
       this.fleeing = 7;
-      ui.toast('De impala\'s schrikken en vluchten!');
+      // hebben ze je geroken, of gezien?
+      const first = this.members.reduce((a, b) => (b.aware > a.aware ? b : a));
+      const seen = Math.hypot(p.x - first.x, p.z - first.z) < 34 * notice;
+      ui.flee(!seen && first.smelled);
     }
     this.alarm = Math.min(1, maxAware);
 
@@ -184,9 +197,8 @@ export class Herd {
       this.fleeing -= dt;
       if (this.fleeing <= 0) {
         // ergens anders tot rust komen
-        for (const m of this.members) m.aware = 0;
+        for (const m of this.members) { m.aware = 0; m.smelled = false; }
         this.home.set(this.members[0].x, this.members[0].z);
-        ui.toast('De kudde is in de verte weer gaan grazen.');
       }
     }
 
@@ -294,8 +306,8 @@ export function carcass(scene, x, z) {
   }
   const skull = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.4, 3, 6), bone); skull.rotation.z = Math.PI / 2 - 0.3; skull.position.set(1.05, 0.15, 0.1); g.add(skull);
   const skin = new THREE.Mesh(new THREE.CircleGeometry(0.9, 7), hide); skin.rotation.x = -Math.PI / 2; skin.position.set(0.2, 0.03, 0.5); g.add(skin);
-  g.position.set(x, height(x, z), z); g.rotation.y = 0.6;
-  shadowAll(g);
-  scene.add(g);
-  return g;
+  const m = mergeStatic(g);
+  m.position.set(x, height(x, z), z); m.rotation.y = 0.6;
+  scene.add(m);
+  return m;
 }
