@@ -26,6 +26,19 @@ Wereld 3 (Homo heidelbergensis) is compleet: 3-1 De krijtkust (Boxgrove), 3-2 De
 - `v2/src/player.js`, `game.js`, `render.js`, `audio.js`, `input.js`
 - `?debug` achter de URL toont de botsingsvakken
 
+## 3D-proefstuk (v4): `v4/`
+
+Een proef met een heel andere opzet: een 3D-wereld met de camera hoog achter de hoofdpersoon (ergens tussen GTA 2 en GTA 5 in). Je loopt vrij rond, onderzoekt en overleeft, in plaats van naar een finish te rennen. Speel hem op `/homo-game/v4/`. Het spel in `v2/` en `v3/` is niet aangeraakt.
+
+- Eén stuk Riftvallei met *Homo habilis*: rivier, acacia's, rotsen, hoog gras, een kudde impala's en gieren boven een karkas
+- Oppakken, bekijken, proeven: paarse bessen (goed), rode bessen (ziek), bitterblad (geneest), botten openslaan met een kei (merg)
+- Voeding en gezondheid; ben je te zwak, dan zak je in elkaar en kom je zwak weer bij (geen game over)
+- Sluipen: gebukt in hoog gras zien de impala's je minder snel; kom je te dichtbij, dan vlucht de kudde
+- Zes ontdekkingen in het boekje, met zachte tips als je even vastzit
+- Telefoon: duimstick links, rechts vegen om rond te kijken. Computer: WASD/pijltjes, Shift, C, E en de muis
+- `v4/src/world.js` landschap, gras en licht · `actors.js` hoofdpersoon, impala's, gieren · `items.js` vondsten en ontdekkingen · `main.js` besturing, camera en spelregels
+- `v4/lib/three.module.js` is three.js r187 (MIT), gebundeld en verkleind
+
 ## Pixelversie (v3): `v3/` — het hoofdspel
 
 `/homo-game/` stuurt door naar `v3/`. De allereerste versie staat nog in `legacy/`.
