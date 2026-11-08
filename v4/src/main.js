@@ -1,7 +1,8 @@
 import * as THREE from '../lib/three.module.js';
 import { buildWorld, height, tallGrassAt, blockers } from './world.js';
 import { Hominin, Herd, Vultures, carcass } from './actors.js';
-import { ITEMS, DISCOVERIES, LOOKS, VERDICT, placeItems, heldMesh } from './items.js';
+import { ITEMS, DISCOVERIES, LOOKS, VERDICT, FINDS, placeItems, heldMesh } from './items.js';
+import { Hyenas, Leopard, Throws } from './predators.js';
 import { Glints, Motes, Birds, Butterflies, Senses } from './life.js';
 import { Sound } from './audio.js';
 import { ICON, ITEM_ICON } from './icons.js';
@@ -37,6 +38,9 @@ const birds = new Birds(scene, [[6, -14], [-20, 8], [30, -40], [60, 20], [-50, -
 const butterflies = new Butterflies(scene, bushes);
 const senses = new Senses(scene);
 const sound = new Sound();
+const hyenas = new Hyenas(scene, CARCASS);
+const leopard = new Leopard(scene, { x: 40, z: 50, branchY: 5.3 });   // zijn boom staat bij de rivier
+const throws = new Throws(scene);
 
 function resize() {
   renderer.setSize(innerWidth, innerHeight);
@@ -49,7 +53,7 @@ addEventListener('resize', resize); resize();
 // ---------- toestand ----------
 const state = {
   food: 55, health: 100, sick: 0, hands: [null, null], known: new Set(), found: new Set(),
-  started: false, collapsed: 0, sensing: false,
+  started: false, collapsed: 0, sensing: false, finds: new Set(), carcassMeat: 1,
 };
 const verdict = { get: (it) => (state.known.has(it) ? VERDICT[it] : null) };
 
@@ -107,7 +111,8 @@ function lookAt(target) {
     <p class="${known ? 'know' : 'q'}">${known ? def.known : def.unknown}</p>`);
 }
 $('journalBtn').onclick = () => {
-  showCard(`<div class="eyebrow">Wat je weet</div><h2>Ontdekkingen</h2><ul>${DISCOVERIES.map((d) => state.found.has(d.id) ? `<li>${d.text}</li>` : '<li class="no">… nog niet ontdekt</li>').join('')}</ul>`);
+  showCard(`<div class="eyebrow">Wat je weet</div><h2>Ontdekkingen</h2><ul>${DISCOVERIES.map((d) => state.found.has(d.id) ? `<li>${d.text}</li>` : '<li class="no">… nog niet ontdekt</li>').join('')}</ul>
+    <h2 style="font-size:18px;margin-top:12px">Vondsten</h2><ul>${Object.entries(FINDS).map(([k, f]) => state.finds.has(k) ? `<li><b>${f.name}</b>: ${f.text}</li>` : '<li class="no">… ergens verstopt</li>').join('')}</ul>`);
 };
 
 // ---------- eten en doen ----------
@@ -139,6 +144,47 @@ function crack() {
   toast('Krak! Het bot breekt open. Binnenin zit vet, zacht merg. Heerlijk en voedzaam!', 5);
   setTimeout(() => sound.good(), 700);
   discover('marrow');
+  // de eerste keer springt er een scherp scherfje van de kei: zo ontdek je hoe je afslagen maakt
+  if (!state.found.has('flake')) setTimeout(() => {
+    toast('Hé… er is een scherp scherfje van de kei gesprongen! Je raapt het op.', 5);
+    const h = state.hands[b] === null ? b : freeHand();
+    if (h < 0) dropAt('flake'); else { state.hands[h] = 'flake'; renderHands(); }
+    state.known.add('flake'); discover('flake');
+  }, 5200);
+}
+// twee stenen tegen elkaar slaan: één wordt een scherpe afslag
+function knap() {
+  const i = state.hands.indexOf('stone');
+  state.hands[i] = 'flake'; renderHands(); player.action = 0.5; sound.knap();
+  toast(state.found.has('flake') ? 'Tik! Weer een scherpe afslag.' : 'Tik! Er springt een scherpe afslag van de steen af.');
+  state.known.add('flake'); discover('flake');
+}
+// met een afslag de laatste reepjes vlees van het karkas snijden
+function cutMeat() {
+  if (state.carcassMeat <= 0) { toast('Er zit echt niets meer aan. Alleen de botten nog.'); return; }
+  state.carcassMeat = 0; player.action = 0.5; sound.eat();
+  state.food = Math.min(100, state.food + 25);
+  toast('Met de scherpe afslag snijd je de laatste reepjes vlees van de botten. Taai, maar het vult!', 5);
+  setTimeout(() => sound.good(), 700);
+  discover('cut');
+}
+// een platte steen omdraaien
+function turnStone(t) {
+  if (t.gone) return;
+  t.gone = true; player.action = 0.5; sound.pick();
+  t.mesh.position.x += 0.6; t.mesh.position.y += 0.15; t.mesh.rotation.z = 2.4;
+  if (t.under === 'grubs') {
+    state.food = Math.min(100, state.food + 10); sound.eat();
+    toast('Larven! Dikke witte larven onder de steen. Je eet ze op: knapperig en voedzaam.', 5);
+    discover('grubs');
+  } else if (t.under === 'scorpion') {
+    state.health -= 10; hurtFlash(); sound.bad();
+    toast('Au! Een schorpioen steekt je in je hand. Dat doet pijn, maar het zakt weer.', 5);
+  } else if (FINDS[t.under]) {
+    state.finds.add(t.under); sound.discover();
+    const f = FINDS[t.under];
+    showCard(`<div class="eyebrow">Vondst</div><h2>${f.name}</h2><p>${f.text}</p><p class="know">Je vondst staat in je boekje.</p>`);
+  }
 }
 // iets uit de wereld nemen (een kei oppakken, of één keer plukken van een struik)
 function take(t) {
@@ -169,14 +215,21 @@ let radial = null;
 function closeRadial() { radial = null; $('radial').innerHTML = ''; }
 function openRadial(target) {
   const opts = [];
+  const hasStone = state.hands.includes('stone');
   if (target.hand !== undefined) {
-    const i = target.hand, it = state.hands[i];
+    const i = target.hand, it = state.hands[i], other = state.hands[1 - i];
     opts.push({ icon: ICON.eye, fn: () => lookAt({ item: it }) });
     if (EDIBLE.has(it)) opts.push({ icon: ICON.mouth, q: !state.known.has(it), fn: () => { state.hands[i] = null; renderHands(); eat(it); } });
-    if ((it === 'bone' && state.hands.includes('stone')) || (it === 'stone' && state.hands.includes('bone'))) opts.push({ icon: ICON.crack, fn: crack });
+    if ((it === 'bone' && other === 'stone') || (it === 'stone' && other === 'bone')) opts.push({ icon: ICON.crack, fn: crack });
+    if (it === 'stone' && other === 'stone') opts.push({ icon: ICON.knap, fn: knap });
     opts.push({ icon: ICON.drop, fn: () => { state.hands[i] = null; renderHands(); dropAt(it); } });
+  } else if (target.kind === 'turn') {
+    opts.push({ icon: ICON.eye, fn: () => lookAt(target) });
+    opts.push({ icon: ICON.turn, fn: () => goAndDo(target, () => turnStone(target)) });
   } else if (target.look) {
     opts.push({ icon: ICON.eye, fn: () => lookAt(target) });
+    if ((target.look === 'hyena' || target.look === 'leopard') && hasStone) opts.push({ icon: ICON.throw, fn: () => throwAt(target.member) });
+    if (target.look === 'carcass' && state.hands.includes('flake')) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cutMeat) });
   } else {
     opts.push({ icon: ICON.eye, fn: () => lookAt(target) });
     opts.push({ icon: ICON.hand, fn: () => goAndDo(target, () => pickUp(target)) });
@@ -216,22 +269,67 @@ function placeRadial() {
 
 // iets neerleggen: een kei of bot komt weer in de wereld te liggen; eten laat je gewoon vallen
 function dropAt(it) {
-  if (it !== 'stone' && it !== 'bone') return;
-  const x = player.pos.x + Math.sin(player.yaw) * 0.6, z = player.pos.z + Math.cos(player.yaw) * 0.6;
+  dropAtPos(it, player.pos.x + Math.sin(player.yaw) * 0.6, player.pos.z + Math.cos(player.yaw) * 0.6);
+}
+function dropAtPos(it, x, z) {
+  if (it !== 'stone' && it !== 'bone' && it !== 'flake') return;
   const m = heldMesh(it); m.position.set(x, height(x, z) + 0.08, z); if (it === 'bone') m.rotation.set(0, 0, Math.PI / 2);
   m.traverse((o) => { o.castShadow = true; }); scene.add(m);
   const t = { kind: 'pick', item: it, x, z, mesh: m };
   things.push(t); glints.add(scene, t);
 }
 
+// ---------- gevaar ----------
+function hurtFlash() { const h = $('hurt'); h.style.transition = 'none'; h.style.opacity = 1; void h.offsetWidth; h.style.transition = 'opacity .9s'; h.style.opacity = 0; shake = 0.5; }
+let shake = 0;
+// een roofdier bijt: gezondheid omlaag; een hyena pakt je bot af, een luipaard laat je alles vallen
+function bite(attacker, dmg, big) {
+  if (state.collapsed > 0) return null;
+  state.health -= dmg; hurtFlash(); sound.bite(); walkTo = null;
+  let stolen = null;
+  if (attacker.kind === 'hyena' && state.hands.includes('bone')) {
+    stolen = 'bone'; state.hands[state.hands.indexOf('bone')] = null; renderHands();
+    toast('De hyena bijt je en rukt het bot uit je hand!', 4);
+  } else if (big) {
+    state.hands.forEach((it, i) => { if (it) { dropAt(it); state.hands[i] = null; } }); renderHands();
+    toast('Het luipaard springt je vanuit het niets aan! Je laat alles vallen.', 5);
+  } else toast('Au! De hyena bijt je in je been.', 3);
+  return stolen;
+}
+// een steen gooien naar een roofdier
+function throwAt(member) {
+  const i = state.hands.indexOf('stone');
+  if (i < 0) { toast('Je hebt geen steen in je hand.'); return; }
+  state.hands[i] = null; renderHands();
+  player.action = 0.5; sound.whoosh();
+  player.yaw = Math.atan2(member.x - player.pos.x, member.z - player.pos.z);
+  const from = player.pos.clone(); from.y += 1.3;
+  throws.throw(from, member, (x, z) => {
+    if (Math.hypot(member.x - x, member.z - z) < 1.8) {
+      sound.thud();
+      if (member.kind === 'hyena') hyenas.hit(member, predGame); else leopard.hit(predGame);
+    } else { sound.thud(); toast('Mis!'); }
+    dropAtPos('stone', x, z);
+  });
+}
+function nearestThreat() {
+  let best = null, bd = 18;
+  const list = [...hyenas.threats, ...(leopard.threat ? [leopard] : [])];
+  for (const m of list) { const d = Math.hypot(m.x - player.pos.x, m.z - player.pos.z); if (d < bd) { bd = d; best = m; } }
+  return best;
+}
+const predGame = { player, state, sound, toast, discover, bite, night: 0 };
+
 // ---------- wat kun je aantikken? ----------
 const LOOK_TARGETS = [{ look: 'carcass', x: CARCASS.x, z: CARCASS.z }];
 function targetPos(t) {
+  if (t.member && t.member.g) return { x: t.member.x, y: t.member.g.position.y + 0.8, z: t.member.z };
   if (t.member) return { x: t.member.x, y: height(t.member.x, t.member.z) + 1, z: t.member.z };
   return { x: t.x, y: height(t.x, t.z) + (t.bush ? 0.7 : t.look ? 0.4 : 0.2), z: t.z };
 }
 function tapAt(sx, sy) {
-  const cands = [...things.filter(available), ...LOOK_TARGETS, ...herd.members.map((m) => ({ look: 'impala', member: m }))];
+  const cands = [...things.filter(available), ...LOOK_TARGETS, ...herd.members.map((m) => ({ look: 'impala', member: m })),
+    ...hyenas.list.map((h) => ({ look: 'hyena', member: h })), { look: 'leopard', member: leopard }];
   let best = null, bd = 56;
   for (const c of cands) {
     const p = targetPos(c);
@@ -324,7 +422,21 @@ function findNear() {
   }
   return best;
 }
-function doAction() { if (near && state.collapsed <= 0) pickUp(near); }
+function doAction() {
+  if (state.collapsed > 0) return;
+  const th = nearestThreat();
+  if (th && state.hands.includes('stone')) { throwAt(th); return; }
+  if (!near) return;
+  if (near.kind === 'turn') turnStone(near); else pickUp(near);
+}
+let btnMode = '';
+function setBtn(mode) {
+  if (mode === btnMode) return;
+  btnMode = mode;
+  $('doBtn').innerHTML = mode === 'throw' ? ICON.throw : mode === 'turn' ? ICON.turn : ICON.hand;
+  $('doBtn').classList.toggle('danger', mode === 'throw');
+  $('doBtn').classList.toggle('ready', mode === 'hand' || mode === 'turn');
+}
 
 // de impala's schrikken
 const ui = {
@@ -370,18 +482,22 @@ function update(dt) {
 
   const sick = state.sick > 0;
   player.update(dt, dir, { speed: sick ? 0.6 : state.food < 15 ? 0.8 : 1, sick });
-  herd.update(dt, player, ui);
-  herd.members.forEach((m, i) => senses.track(i, m.x, m.z, m.yaw));
-  vultures.update(dt, t);
-
   // de dag
   if (state.started) dayP = (dayP + dt / DAY_LEN) % 1;
   const night = nightAmount(dayP);
+  herd.update(dt, player, ui);
+  predGame.night = night;
+  hyenas.update(dt, predGame);
+  leopard.update(dt, predGame, camera);
+  throws.update(dt);
+  herd.members.forEach((m, i) => senses.track(i, m.x, m.z, m.yaw));
+  vultures.update(dt, t);
+
   world.update(t, player.pos, dayP, state.sensing);
   renderer.toneMappingExposure = (state.sensing ? 0.8 : 1.05) + night * 0.25;
   const part = partOfDay(dayP);
   if (state.started && part !== lastPart && lastPart) {
-    if (part === 'evening') toast('De zon zakt. Het wordt avond op de savanne.');
+    if (part === 'evening') toast('De zon zakt. In de schemering gaan de roofdieren op jacht…', 5);
     if (part === 'night') toast('Het is nacht. De krekels zingen.');
     if (part === 'dawn') toast('De lucht kleurt rood: een nieuwe dag begint.');
   }
@@ -408,11 +524,23 @@ function update(dt) {
   camPos.y = Math.max(camPos.y, height(camPos.x, camPos.z) + 1.2);
   // niet midden in een boomstam of rots gaan staan
   for (const b of blockers) {
+    if (b.top) continue;
     const dx = camPos.x - b.x, dz = camPos.z - b.z, d = Math.hypot(dx, dz), min = b.r + 1.2;
     if (d < min && d > 0.001) { camPos.x = b.x + dx / d * min; camPos.z = b.z + dz / d * min; }
   }
+  // zit er grond of een rots tussen jou en de camera? Dan schuift de camera naar voren
+  let clear = 1;
+  const hx = player.pos.x, hy = player.pos.y + 1.2, hz = player.pos.z;
+  for (let k = 1; k <= 10; k++) {
+    const f = k / 10, x = hx + (camPos.x - hx) * f, y = hy + (camPos.y - hy) * f, z = hz + (camPos.z - hz) * f;
+    let blocked = y < height(x, z) + 0.4;
+    if (!blocked) for (const b of blockers) if (b.top && y < b.top + 0.3 && Math.hypot(x - b.x, z - b.z) < b.r + 0.4) { blocked = true; break; }
+    if (blocked) { clear = Math.max(0.25, (k - 1) / 10); break; }
+  }
+  if (clear < 1) camPos.set(hx + (camPos.x - hx) * clear, hy + (camPos.y - hy) * clear + (1 - clear) * 1.5, hz + (camPos.z - hz) * clear);
   if (sick) { camPos.x += Math.sin(t * 1.3) * 0.25; camPos.y += Math.sin(t * 0.9) * 0.15; }
   camera.position.lerp(camPos, 1 - Math.exp(-dt * 6));
+  if (shake > 0) { shake -= dt; camera.position.x += (Math.random() - 0.5) * shake * 0.6; camera.position.y += (Math.random() - 0.5) * shake * 0.6; }
   camera.lookAt(camTarget);
 
   // eten, ziek zijn, herstellen
@@ -438,7 +566,8 @@ function update(dt) {
 
   // de pak-knop licht op als er iets binnen bereik is
   near = state.collapsed > 0 ? null : findNear();
-  $('doBtn').classList.toggle('ready', !!near);
+  const threat = nearestThreat();
+  setBtn(threat && state.hands.includes('stone') ? 'throw' : near ? (near.kind === 'turn' ? 'turn' : 'hand') : '');
   placeRadial();
 
   // ontdekkingen die je door rond te lopen doet
@@ -471,11 +600,11 @@ function collapse() {
 }
 
 function frame() {
+  requestAnimationFrame(frame);   // eerst: een fout in één beeld mag het spel niet stilzetten
   const dt = Math.min(clock.getDelta(), 1 / 20);
   clock.elapsedTime += dt;
-  update(dt);
+  try { update(dt); } catch (e) { console.error(e); }
   renderer.render(scene, camera);
-  requestAnimationFrame(frame);
 }
 
 $('startBtn').onclick = () => {
@@ -483,7 +612,10 @@ $('startBtn').onclick = () => {
   state.started = true; sound.start();
   toast('Je bent alleen. Je hebt honger. Kijk om je heen.', 5);
   const el = document.documentElement;
-  if (matchMedia('(pointer: coarse)').matches && el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  // op een telefoon: volledig scherm en liggend vastzetten (lukt op Android; op een iPhone vraagt het scherm je te draaien)
+  if (matchMedia('(pointer: coarse)').matches && el.requestFullscreen) {
+    el.requestFullscreen({ navigationUI: 'hide' }).then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {});
+  }
 };
 
 renderHands();
@@ -493,7 +625,7 @@ frame();
 
 // voor testen
 window.__game = {
-  state, player, herd, things, camera, renderer, discover, tapAt, pickUp, openRadial,
+  state, player, herd, hyenas, leopard, things, camera, renderer, discover, throwAt, turnStone, knap, cutMeat, tapAt, pickUp, openRadial,
   setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setDay: (p) => { dayP = p; }, setSense,
   screenOf: (t) => { const a = anchorOf(t); return a && [a.x, a.y]; },
 };

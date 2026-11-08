@@ -79,12 +79,21 @@ li.no{color:#9a8f7a}
 @keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
 .card .big{width:64px;height:64px;float:right;margin:0 0 6px 10px}
 @media (max-aspect-ratio:1/1){#hands{bottom:calc(max(14px,var(--sab)) + 0px)}#act{bottom:calc(max(18px,var(--sab)) + 84px)}#joyHint{bottom:calc(max(26px,var(--sab)) + 84px)}}
+#rotate{position:fixed;inset:0;z-index:20;display:none;place-items:center;background:#2a2018;text-align:center;padding:30px;font-weight:800;font-size:20px;line-height:1.5}
+#rotate svg{width:90px;height:90px;display:block;margin:0 auto 16px;animation:turn 2.4s ease-in-out infinite}
+@keyframes turn{0%,30%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+@media (orientation:portrait) and (pointer:coarse){#rotate{display:grid}}
+#hurt{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 40%,#c01010cc 100%);transition:opacity .5s}
+#doBtn.danger{opacity:1;background:#f07a5a;box-shadow:0 4px 0 #a03a2a;animation:glowR 0.9s ease-in-out infinite}
+@keyframes glowR{0%,100%{box-shadow:0 4px 0 #a03a2a,0 0 0 0 #ff5a3aaa}50%{box-shadow:0 4px 0 #a03a2a,0 0 26px 10px #ff5a3a99}}
 </style>
 </head>
 <body>
 <div id="veil"></div>
 <div id="senseVeil"></div>
 <div id="fade"></div>
+<div id="hurt"></div>
+<div id="rotate"><div><svg viewBox="0 0 48 48" fill="none" stroke="#f6cf75" stroke-width="3" stroke-linejoin="round"><rect x="14" y="4" width="20" height="40" rx="4"/><path d="M21 38h6"/></svg>Draai je telefoon een kwartslag.<br>Dit spel speel je liggend.</div></div>
 <div class="hud" id="stats">
   <div class="lbl"><span>Voeding</span></div><div class="bar"><i id="food" style="background:#e8a83a"></i></div>
   <div class="lbl"><span>Gezondheid</span><span id="sick">ziek</span></div><div class="bar"><i id="health" style="background:#d8584a"></i></div>

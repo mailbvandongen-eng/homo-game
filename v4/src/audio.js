@@ -99,5 +99,18 @@ export class Sound {
     for (let i = 0; i < 18; i++) this.burst(140, 0.06, 0.12 * (1 - i / 18), 'lowpass', 0.3 + i * 0.11 + Math.random() * 0.03);
   }
   flutter() { if (!this.ctx) return; for (let i = 0; i < 8; i++) this.burst(1200, 0.04, 0.06, 'bandpass', i * 0.035, 3); }
+  // hyena: een stijgend "woe-oep" in de verte
+  whoop() { if (!this.ctx) return; this.tone(260, 0.7, 0.07, 'triangle', 380); this.tone(300, 0.6, 0.04, 'sine', 420, 0.05); }
+  // hyena: hoog, snel gegiechel
+  giggle() { if (!this.ctx) return; const b = 700 + Math.random() * 200; for (let i = 0; i < 7; i++) this.tone(b + (i % 2) * 140, 0.07, 0.035, 'sawtooth', -60, i * 0.085); }
+  yelp() { if (!this.ctx) return; this.tone(900, 0.25, 0.08, 'triangle', -500); this.tone(700, 0.3, 0.05, 'triangle', -400, 0.2); }
+  // diep gegrom van een grote kat
+  growl() { if (!this.ctx) return; this.burst(120, 0.8, 0.25, 'lowpass', 0, 2); this.tone(70, 0.8, 0.08, 'sawtooth', -10); }
+  // alarmroep van vogels: scherp en herhaald
+  alarm() { if (!this.ctx) return; for (let i = 0; i < 6; i++) this.tone(3200 - (i % 2) * 400, 0.06, 0.05, 'square', -300, i * 0.16); }
+  bite() { if (!this.ctx) return; this.burst(500, 0.18, 0.4, 'bandpass', 0, 0.8); this.tone(160, 0.25, 0.12, 'sawtooth', -80); }
+  whoosh() { if (!this.ctx) return; this.burst(1500, 0.3, 0.1, 'bandpass', 0, 0.6); }
+  thud() { if (!this.ctx) return; this.burst(200, 0.15, 0.25, 'lowpass'); }
+  knap() { if (!this.ctx) return; this.burst(3000, 0.08, 0.3, 'highpass'); this.burst(1800, 0.12, 0.2, 'bandpass', 0.05, 2); }
   sense(on) { if (this.ctx && on) this.tone(110, 0.6, 0.05, 'sine', 30); }
 }

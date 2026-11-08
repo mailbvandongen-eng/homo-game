@@ -27,6 +27,12 @@ export const ITEMS = {
     unknown: 'Je weet nog niet wat dit doet.',
     known: 'Vies bitter, maar als je ziek bent, helpt het.',
   },
+  flake: {
+    name: 'Scherpe afslag', color: '#b8a890',
+    look: 'Een dun, vlijmscherp scherfje steen. Pas op je vingers!',
+    unknown: 'Wat zou je hiermee kunnen snijden?',
+    known: 'Hiermee snijd je vlees van een karkas. Zo begon het gereedschap: de Oldowan-cultuur.',
+  },
   bone: {
     name: 'Dijbeen', color: '#e8dcc0',
     look: 'Een groot bot van een zebra. Er zit geen vlees meer aan.',
@@ -44,16 +50,29 @@ export const DISCOVERIES = [
   { id: 'marrow', text: 'In botten zit merg. Met een kei kraak je ze open.' },
   { id: 'sneak', text: 'Gebukt in het hoge gras zien dieren je niet zo snel.' },
   { id: 'wind', text: 'Dieren ruiken je als de wind van jou naar hen toe waait.' },
+  { id: 'flake', text: 'Als je twee stenen hard tegen elkaar slaat, springt er een scherpe afslag af.' },
+  { id: 'cut', text: 'Met een scherpe afslag snijd je de laatste reepjes vlees van een karkas.' },
+  { id: 'grubs', text: 'Onder stenen zitten larven: klein, maar voedzaam.' },
+  { id: 'hyena', text: 'Hyena\'s deinzen terug als je stenen naar ze gooit.' },
+  { id: 'leopard', text: 'Een luipaard besluipt je van achteren. Kijk hem recht aan, of gooi een steen.' },
 ];
+
+// Verstopte vondsten: zoals archeologen ze nu vinden
+export const FINDS = {
+  hammer: { name: 'Hamersteen', text: 'Een ronde kei vol putjes en krasjes. Hiermee werden afslagen van andere stenen geslagen. Archeologen vinden zulke hamerstenen tussen de oudste werktuigen van Oost-Afrika, zoals in de Olduvaikloof.' },
+};
 
 // Dingen die je alleen kunt bekijken
 export const LOOKS = {
   carcass: { name: 'Karkas van een zebra', look: 'Leeuwen hebben hier gegeten, daarna de hyena\'s en de gieren. Het vlees is op.', hint: 'Maar de grote botten zijn nog heel…' },
+  hyena: { name: 'Gevlekte hyena', look: 'Sterke kaken die zelfs botten kraken. Hyena\'s jagen zelf, maar stelen ook graag van anderen.', hint: 'Ze zijn brutaal als ze met meer zijn. Een steen maakt indruk.' },
+  leopard: { name: 'Luipaard', look: 'Hij ligt lui op een tak. Overdag slaapt hij; in de schemering gaat hij jagen.', hint: 'In de grot van Swartkrans ligt een schedel van een jonge mensachtige met twee gaatjes erin: precies de tanden van een luipaard.' },
+  flatstone: { name: 'Platte steen', look: 'Een platte steen, half in de grond. Wat zou eronder zitten?', hint: 'Je kunt hem omdraaien.' },
   impala: { name: 'Impala\'s', look: 'Slanke antilopen met lange poten. Ze grazen in een groep en kijken steeds op.', hint: 'Ze zijn snel en schichtig. Te voet haal je ze nooit in.' },
 };
 
 // Wat je ervan weet, als kleur bij de zintuigen: goed, slecht of nog onbekend
-export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good' };
+export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good' };
 
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 
@@ -126,6 +145,15 @@ export function placeItems(scene) {
     add({ kind: 'pick', item: 'bone', x, z, mesh: m, label: 'Pak het bot' });
   }
 
+  // platte stenen: eronder zitten larven, soms een schorpioen, en één keer de hamersteen
+  const flatMat = lam(0x9c8e7c);
+  for (const [x, z, under] of [[-6, -12, 'grubs'], [16, -8, 'scorpion'], [-30, -20, 'grubs'], [-58, -66, 'grubs'], [-75, -64, 'hammer'], [28, 18, 'scorpion'], [62, -30, 'grubs']]) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.5, 0.14, 7), flatMat);
+    m.position.set(x, height(x, z) + 0.04, z); m.rotation.set(0.05, x, 0.04); m.castShadow = true; m.receiveShadow = true;
+    scene.add(m);
+    add({ kind: 'turn', look: 'flatstone', x, z, mesh: m, under });
+  }
+
   return things;
 }
 
@@ -141,6 +169,7 @@ export function heldMesh(item) {
     return g;
   }
   if (item === 'stone') return new THREE.Mesh(new THREE.DodecahedronGeometry(0.1, 0), lam(c));
+  if (item === 'flake') { const m = new THREE.Mesh(new THREE.TetrahedronGeometry(0.09, 0), lam(c)); m.scale.set(1, 0.35, 1.4); return m; }
   if (item === 'leaf') { const m = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.22, 4), lam(c)); m.scale.z = 0.3; return m; }
   const g = new THREE.Group(), m = lam(c);
   for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 4), m); b.position.set((i % 2) * 0.06 - 0.03, Math.floor(i / 2) * 0.06, 0); g.add(b); }

@@ -194,7 +194,7 @@ export function buildWorld(scene) {
     m.scale.set(1, 0.55 + R() * 0.4, 0.8 + R() * 0.4);
     m.position.set(x, height(x, z) + s * 0.15, z); m.rotation.set(R(), R() * 6, R());
     statics.add(m);
-    if (s > 0.7) blockers.push({ x, z, r: s * 0.85 });
+    if (s > 0.7) blockers.push({ x, z, r: s * 0.85, top: height(x, z) + s * 0.75 });   // rotsen: met hoogte, voor de camera
   }
   for (let i = 0; i < 55; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 9)) rock(x, z, 0.4 + R() * 1.6); }
   for (let i = 0; i < 14; i++) { const a = R() * 6.28, d = 6 + R() * 14; rock(-40 + Math.cos(a) * d, -30 + Math.sin(a) * d, 0.8 + R() * 1.8); }

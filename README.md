@@ -36,7 +36,15 @@ Een proef met een heel andere opzet: een 3D-wereld met de camera hoog achter de 
 - **De pak-knop is een hand die oplicht** als er iets binnen bereik is; dingen om te pakken glinsteren.
 - **Zintuigen:** houd het oog ingedrukt (of Q). De wereld wordt stiller en donkerder; vondsten lichten op (groen = goed, rood = slecht, wit = onbekend), je ziet de hoefsporen van de kudde, de wind en de geur van het karkas.
 - **Wind:** waait uit het oosten. Staat de wind van jou naar de impala's, dan ruiken ze je van ver.
-- Vondsten: paarse bessen (goed), rode bessen (ziek), bitterblad (geneest), botten openslaan met een kei (merg). Zeven ontdekkingen in het boekje, met zachte tips.
+- Vondsten: paarse bessen (goed), rode bessen (ziek), bitterblad (geneest), botten openslaan met een kei (merg). Twaalf ontdekkingen in het boekje, met zachte tips.
+- **Gereedschap:** bij het eerste bot dat je kraakt springt er een scherpe afslag van de kei. Daarna sla je zelf afslagen (twee stenen in je handen). Met een afslag snijd je de laatste reepjes vlees van het karkas.
+- **Platte stenen omdraaien:** eronder zitten larven (eten), soms een schorpioen (au) en één keer een verstopte **vondst**: de hamersteen. Vondsten staan in het boekje.
+- **Roofdieren** (`v4/src/predators.js`):
+  - *Hyena's* bij het karkas: overdag lui, 's nachts brutaal. Ze giechelen, komen in een boog om je heen, en dan waagt er één een uitval (eerst een "woep" en kop omlaag). Ze bijten en pakken je bot af. Een gegooide steen jaagt ze weg.
+  - *Luipaard* in een boom bij de rivier: overdag ligt hij op een tak. In de schemering komt hij naar beneden; vogels slaan alarm en hij besluipt je van achteren. Kijk hem recht aan en hij verstijft en trekt zich terug; een steen jaagt hem de boom in. Springt hij je aan, dan laat je alles vallen. 's Nachts lichten zijn ogen op.
+  - De pak-knop wordt een **rode gooi-knop** als er gevaar is en je een steen vasthoudt. Je kunt ook op een roofdier tikken en gooien kiezen.
+- **Liggend:** op Android wordt het scherm liggend vastgezet; staand vraagt het spel je de telefoon te draaien.
+- De camera schuift naar voren als er grond of een rots tussen jou en de camera zit.
 - Voeding en gezondheid; ben je te zwak, dan zak je in elkaar en kom je zwak weer bij (geen game over).
 - **Sfeer:** dag en nacht in 14 minuten (ochtend, middag, oranje avond, nacht), opgewekt geluid (wind, vogels, krekels, ritselend gras, voetstappen, hoeven), vogeltjes die opvliegen, vlinders, stof in het zonlicht.
 - Telefoon: duimstick links, rechts vegen om rond te kijken. Computer: WASD/pijltjes, Shift, C, E, Q en de muis

@@ -14,15 +14,15 @@ export { Hominin } from './hominin.js';
 // Glad, met randlicht, net als de hoofdpersoon. Eén materiaal voor alle impala's; de kleur zit in de hoekpunten.
 const IMP = rimify(new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.8, metalness: 0 }), 0xffd8a0, 0.4);
 // onderdelen met elk hun eigen kleur samenvoegen tot één stuk
-function vc(...parts) { const m = merged(...parts); m.material = IMP; m.castShadow = true; m.receiveShadow = false; return m; }
-const P = (color, geo, x, y, z, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) => {
+export function vc(...parts) { const m = merged(...parts); m.material = IMP; m.castShadow = true; m.receiveShadow = false; return m; }
+export const P = (color, geo, x, y, z, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) => {
   const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color })); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.rotation.set(rx, ry, rz); return m;
 };
-const SPH = (r) => new THREE.SphereGeometry(r, 12, 9);
+export const SPH = (r) => new THREE.SphereGeometry(r, 12, 9);
 const COAT = 0xc0703c, FLANK = 0xd8a06a, BELLY = 0xf4ece0, DARK = 0x1e140e, BACK = 0x9a5028, HOOF = 0x2a2018;
 
 // Een poot in twee delen: boven (draait aan het lijf) en onder (de knie of hak), met een hoefje
-function legParts(color, upLen, loLen, thick) {
+export function legParts(color, upLen, loLen, thick) {
   const hip = new THREE.Group();
   hip.add(vc(P(color, new THREE.CylinderGeometry(thick, thick * 0.6, upLen, 8), 0, -upLen / 2, 0), P(color, SPH(thick * 1.25), 0, -0.02, 0, 1, 1.6, 1.2)));
   const knee = new THREE.Group(); knee.position.y = -upLen; hip.add(knee);
@@ -197,7 +197,7 @@ export class Herd {
   }
 }
 
-function turn(a, b, k) { let d = b - a; d = Math.atan2(Math.sin(d), Math.cos(d)); return a + d * Math.min(1, k); }
+export function turn(a, b, k) { let d = b - a; d = Math.atan2(Math.sin(d), Math.cos(d)); return a + d * Math.min(1, k); }
 
 // ---------- gieren die boven een karkas cirkelen ----------
 export class Vultures {
