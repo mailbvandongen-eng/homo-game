@@ -12,7 +12,8 @@ const DAY_LEN = 14 * 60;   // één dag en nacht duurt 14 minuten
 
 // ---------- scène ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+// scherp beeld: tot 2x de schermpixels (meer kost veel rekenkracht en zie je nauwelijks)
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -256,7 +257,7 @@ addEventListener('keyup', (e) => { keys.delete(e.code); if (e.code === 'KeyQ') s
 
 const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0, t0: 0, moved: 0 };
 const look = { id: null, lx: 0, ly: 0, last: -9, sx: 0, sy: 0, t0: 0, moved: 0 };
-let camYaw = Math.PI, camPitch = 0.42;
+let camYaw = Math.PI, camPitch = 0.42, camDist = 7.5;
 const ring = document.querySelector('#joy .ring'), knob = document.querySelector('#joy .knob');
 const canvas = renderer.domElement;
 canvas.addEventListener('pointerdown', (e) => {
@@ -401,7 +402,7 @@ function update(dt) {
     let d = player.yaw - camYaw; d = Math.atan2(Math.sin(d), Math.cos(d));
     camYaw += d * dt * 0.9 * Math.min(1, player.speed / 3);
   }
-  const dist = 7.5, up = 1.0;
+  const dist = camDist, up = 1.0;
   camTarget.set(player.pos.x + Math.sin(camYaw) * 2.2, player.pos.y + up, player.pos.z + Math.cos(camYaw) * 2.2);
   camPos.set(player.pos.x - Math.sin(camYaw) * Math.cos(camPitch) * dist, player.pos.y + up + Math.sin(camPitch) * dist, player.pos.z - Math.cos(camYaw) * Math.cos(camPitch) * dist);
   camPos.y = Math.max(camPos.y, height(camPos.x, camPos.z) + 1.2);
@@ -493,6 +494,6 @@ frame();
 // voor testen
 window.__game = {
   state, player, herd, things, camera, renderer, discover, tapAt, pickUp, openRadial,
-  setCam: (y, p) => { camYaw = y; camPitch = p; }, setDay: (p) => { dayP = p; }, setSense,
+  setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setDay: (p) => { dayP = p; }, setSense,
   screenOf: (t) => { const a = anchorOf(t); return a && [a.x, a.y]; },
 };

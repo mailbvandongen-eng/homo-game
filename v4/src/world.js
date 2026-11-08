@@ -81,12 +81,34 @@ export function buildWorld(scene) {
   const R = rng(7);
 
   // ---------- lucht en nevel ----------
-  const skyGeo = new THREE.SphereGeometry(600, 24, 12);
+  const skyGeo = new THREE.SphereGeometry(600, 32, 16);
   const skyMat = new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { top: { value: new THREE.Color(0x6f9cc8) }, mid: { value: new THREE.Color(0xf2d39a) }, low: { value: new THREE.Color(0xe8b47a) } },
+    uniforms: {
+      top: { value: new THREE.Color(0x6f9cc8) }, mid: { value: new THREE.Color(0xf2d39a) }, low: { value: new THREE.Color(0xe8b47a) },
+      sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color(0xfff0d0) }, cloud: { value: new THREE.Color(0xffffff) }, uTime: { value: 0 },
+    },
     vertexShader: 'varying vec3 vp; void main(){ vp = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-    fragmentShader: 'uniform vec3 top, mid, low; varying vec3 vp; void main(){ float y = vp.y; vec3 c = y > 0.0 ? mix(mid, top, pow(clamp(y*2.2,0.0,1.0), 0.7)) : low; gl_FragColor = vec4(c,1.0); }',
+    // verloop van de lucht, een zon met gloed en wolkenslierten
+    fragmentShader: `uniform vec3 top, mid, low, sunCol, cloud, sunDir; uniform float uTime; varying vec3 vp;
+      float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }
+      float fbm(vec2 p){ float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { s += a * n(p); p *= 2.03; a *= 0.5; } return s; }
+      void main(){
+        float y = vp.y;
+        vec3 c = y > 0.0 ? mix(mid, top, pow(clamp(y*2.2,0.0,1.0), 0.7)) : low;
+        float sd = max(dot(normalize(vp), normalize(sunDir)), 0.0);
+        c += sunCol * (pow(sd, 8.0) * 0.35 + pow(sd, 90.0) * 0.6 + smoothstep(0.9993, 0.9997, sd) * 2.0);
+        if (y > 0.0) {
+          vec2 uv = vp.xz / (y + 0.12) * 1.6 + vec2(uTime * 0.004, uTime * 0.002);
+          float cl = smoothstep(0.52, 0.8, fbm(uv)) * smoothstep(0.0, 0.25, y);
+          vec3 cc = mix(cloud, sunCol, pow(sd, 6.0) * 0.6);
+          c = mix(c, cc, cl * 0.75);
+        }
+        gl_FragColor = vec4(c, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
   });
   scene.add(new THREE.Mesh(skyGeo, skyMat));
   scene.fog = new THREE.Fog(0xe9cf9c, 45, 230);
@@ -96,14 +118,14 @@ export function buildWorld(scene) {
   scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffe2b0, 2.6);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
-  const sc = sun.shadow.camera; sc.left = -38; sc.right = 38; sc.top = 38; sc.bottom = -38; sc.near = 1; sc.far = 160;
+  sun.shadow.mapSize.set(2048, 2048);
+  const sc = sun.shadow.camera; sc.left = -32; sc.right = 32; sc.top = 32; sc.bottom = -32; sc.near = 1; sc.far = 160;
   sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.04;
   sun.userData.offset = new THREE.Vector3(-55, 60, -35);
   scene.add(sun, sun.target);
 
   // ---------- het land ----------
-  const seg = 180;
+  const seg = 240;
   const geo = new THREE.PlaneGeometry(SIZE, SIZE, seg, seg);
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position, cols = [];
@@ -114,7 +136,9 @@ export function buildWorld(scene) {
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
   geo.computeVertexNormals();
-  const ground = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+  // fijne korrel op de grond, zodat hij van dichtbij scherp en niet glad oogt
+  const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * SIZE / 5, uv.getY(i) * SIZE / 5);
+  const ground = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, map: groundTexture() }));
   ground.receiveShadow = true;
   scene.add(ground);
 
@@ -141,10 +165,21 @@ export function buildWorld(scene) {
       const br = new THREE.Mesh(new THREE.CylinderGeometry(0.08 * s, 0.14 * s, 2 * s, 5), trunkMat);
       br.position.set((k ? 0.6 : -0.6) * s, 4.2 * s, 0); br.rotation.z = (k ? -0.7 : 0.7); g.add(br);
     }
-    const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), R() < 0.5 ? crownMat : crownMat2);
-    crown.scale.set(4.2 * s, 0.8 * s, 3.6 * s); crown.position.y = 5 * s; crown.rotation.y = R() * 6;
-    crown.castShadow = true; g.add(crown);
-    const top = crown.clone(); top.scale.set(2.8 * s, 0.6 * s, 2.6 * s); top.position.set(0.8 * s, 5.5 * s, 0.4 * s); g.add(top);
+    // de platte paraplukroon van een acacia: een paar losse plukken blad naast elkaar
+    const cm = R() < 0.5 ? crownMat : crownMat2;
+    const n = 5 + Math.floor(R() * 3);
+    for (let k = 0; k < n; k++) {
+      const a = k / n * 6.28 + R() * 0.5, d = k === 0 ? 0 : (1.4 + R() * 1.2) * s;
+      const c = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), k % 3 === 2 ? crownMat2 : cm);
+      c.scale.set((1.6 + R() * 0.8) * s, (0.45 + R() * 0.2) * s, (1.5 + R() * 0.8) * s);
+      c.position.set(Math.cos(a) * d, (4.9 + R() * 0.6) * s, Math.sin(a) * d); c.rotation.y = R() * 6;
+      g.add(c);
+    }
+    // takken naar de plukken toe
+    for (let k = 0; k < 3; k++) {
+      const a = k * 2.1 + R(), br = new THREE.Mesh(new THREE.CylinderGeometry(0.06 * s, 0.11 * s, 1.8 * s, 5), trunkMat);
+      br.position.set(Math.cos(a) * 0.6 * s, 4.3 * s, Math.sin(a) * 0.6 * s); br.rotation.set(Math.sin(a) * 0.7, 0, -Math.cos(a) * 0.7); g.add(br);
+    }
     g.position.set(x, y - 0.1, z); g.rotation.y = R() * 6;
     statics.add(g);
     blockers.push({ x, z, r: 0.5 * s });
@@ -243,6 +278,9 @@ export function buildWorld(scene) {
       uniforms.uTime.value = t;
       const k = dayLook(p);
       skyMat.uniforms.top.value.copy(k.top); skyMat.uniforms.mid.value.copy(k.mid); skyMat.uniforms.low.value.copy(k.low);
+      skyMat.uniforms.sunCol.value.copy(k.sun).multiplyScalar(Math.min(1, k.sunI / 2));
+      skyMat.uniforms.cloud.value.copy(k.mid).lerp(k.top, 0.2).offsetHSL(0, -0.1, 0.08);
+      skyMat.uniforms.uTime.value = t;
       fogBase.copy(k.fog);
       if (senses) fogBase.lerp(SENSE_FOG, 0.6);
       scene.fog.color.copy(fogBase);
@@ -254,27 +292,53 @@ export function buildWorld(scene) {
       const elev = Math.max(0.12, Math.sin(a * Math.PI)) * (day ? 1 : 0.8), az = a * Math.PI;
       sun.userData.offset.set(Math.cos(az) * 80 * Math.cos(elev), Math.sin(elev) * 80 + 6, -30);
       sun.position.copy(focus).add(sun.userData.offset); sun.target.position.copy(focus);
+      skyMat.uniforms.sunDir.value.copy(sun.userData.offset).normalize();
       water.material.color.copy(k.water).offsetHSL(0, 0, Math.sin(t * 0.7) * 0.01);
     },
   };
 }
 
+// Een textuur met zand, steentjes en vlekjes (wordt vermenigvuldigd met de kleur van de grond)
+function groundTexture() {
+  const N = 256, c = document.createElement('canvas'); c.width = c.height = N;
+  const g = c.getContext('2d'), img = g.createImageData(N, N), R = rng(3);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    // naadloze ruis: vier hoeken mengen
+    const v = 0.5 * (fbm(x / 22, y / 22, 3) + fbm((x + N) / 22, (y + N) / 22, 3));
+    const grain = R();
+    let b = 205 + v * 50 + (grain - 0.5) * 34;
+    if (grain > 0.985) b -= 60;   // steentjes
+    if (grain < 0.01) b += 25;
+    const i = (y * N + x) * 4; img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.max(0, Math.min(255, b)); img.data[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 // Alle losse stukken van een groep samenvoegen tot één mesh met kleuren per hoekpunt
 export function mergeStatic(group) {
   group.updateMatrixWorld(true);
-  const pos = [], col = [];
+  const pos = [], nor = [], uvs = [], col = [];
   group.traverse((o) => {
     if (!o.isMesh) return;
     const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
-    g.applyMatrix4(o.matrixWorld);
-    const p = g.attributes.position, c = o.material.color;
-    for (let i = 0; i < p.count; i++) { pos.push(p.getX(i), p.getY(i), p.getZ(i)); col.push(c.r, c.g, c.b); }
+    g.applyMatrix4(o.matrixWorld);   // draait ook de normalen mee
+    const p = g.attributes.position, n = g.attributes.normal, uv = g.attributes.uv, c = o.material.color;
+    for (let i = 0; i < p.count; i++) {
+      pos.push(p.getX(i), p.getY(i), p.getZ(i));
+      if (n) nor.push(n.getX(i), n.getY(i), n.getZ(i)); else nor.push(0, 1, 0);
+      if (uv) uvs.push(uv.getX(i), uv.getY(i)); else uvs.push(0, 0);
+      col.push(c.r, c.g, c.b);
+    }
     g.dispose();
   });
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  geo.computeVertexNormals();
   const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
   mesh.castShadow = true; mesh.receiveShadow = true;
   return mesh;

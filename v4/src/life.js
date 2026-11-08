@@ -1,5 +1,5 @@
 import * as THREE from '../lib/three.module.js';
-import { height, WALK, WIND, rng } from './world.js';
+import { height, WALK, WIND, rng, mergeStatic } from './world.js';
 
 const R = rng(99);
 
@@ -87,8 +87,10 @@ export class Birds {
       const birds = [];
       for (let i = 0; i < 5; i++) {
         const g = new THREE.Group();
-        const b = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 4), body); b.scale.set(0.8, 0.8, 1.4); g.add(b);
-        const h = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), body); h.position.set(0, 0.05, 0.1); g.add(h);
+        const tmp = new THREE.Group();
+        const b = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 4), body); b.scale.set(0.8, 0.8, 1.4); tmp.add(b);
+        const h = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), body); h.position.set(0, 0.05, 0.1); tmp.add(h);
+        const bm = mergeStatic(tmp); bm.material = body; bm.castShadow = false; bm.receiveShadow = false; g.add(bm);   // lijf en kop in één stuk
         const wings = [];
         for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.1), wingM); w.position.x = s * 0.11; w.rotation.x = -Math.PI / 2; const piv = new THREE.Group(); piv.add(w); g.add(piv); wings.push(piv); }
         scene.add(g);
@@ -114,7 +116,7 @@ export class Birds {
       }
       const gy = height(f.x, f.z);
       // ver weg zie je ze toch niet: niet tekenen
-      const show = d < 45;
+      const show = d < 32;
       for (const b of f.birds) b.g.visible = show;
       if (!show) continue;
       for (const [i, b] of f.birds.entries()) {

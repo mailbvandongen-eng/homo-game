@@ -41,7 +41,10 @@ Een proef met een heel andere opzet: een 3D-wereld met de camera hoog achter de 
 - **Sfeer:** dag en nacht in 14 minuten (ochtend, middag, oranje avond, nacht), opgewekt geluid (wind, vogels, krekels, ritselend gras, voetstappen, hoeven), vogeltjes die opvliegen, vlinders, stof in het zonlicht.
 - Telefoon: duimstick links, rechts vegen om rond te kijken. Computer: WASD/pijltjes, Shift, C, E, Q en de muis
 - `v4/src/world.js` landschap, gras, licht en dag · `actors.js` hoofdpersoon, impala's, gieren · `items.js` vondsten en ontdekkingen · `life.js` vogels, vlinders, glinsteringen en zintuigen · `audio.js` geluid · `icons.js` icoontjes · `main.js` besturing, camera en spelregels
-- Bomen, rotsen, struiken en delen van dieren zijn samengevoegd, zodat een telefoon minder hoeft te tekenen (zo'n 230 tekenopdrachten per beeld)
+- **Beeld:** scherper (tot 2x de schermpixels), schaduwen van 2048 px, een lucht met zon, gloed en wolken, een korrelige grondtextuur en acacia's met een paraplukroon
+- **Hoofdpersoon** (`v4/src/hominin.js`): knieën, ellebogen, handen met vingers, een gezicht met ogen, zware wenkbrauwen en een platte neus, een vachttextuur met reliëf en randlicht. Hij ademt en kijkt rond als hij stilstaat, legt als hij ziek is een hand op zijn buik en buigt zijn knieën bij het sluipen.
+- **Impala's:** drie kleuren vacht met zwarte strepen achter, knieën die buigen in galop, hoorns met ribbels bij de mannetjes, de staart omhoog bij gevaar
+- Bomen, rotsen, struiken en delen van dieren zijn samengevoegd, zodat een telefoon minder hoeft te tekenen (zo'n 300 tekenopdrachten per beeld)
 - `v4/lib/three.module.js` is three.js r187 (MIT), gebundeld en verkleind
 
 ## Pixelversie (v3): `v3/` — het hoofdspel

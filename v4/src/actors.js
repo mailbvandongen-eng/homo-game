@@ -1,147 +1,76 @@
 import * as THREE from '../lib/three.module.js';
 import { height, blockers, WALK, riverDist, tallGrassAt, rng, WIND, mergeStatic } from './world.js';
+import { rimify } from './hominin.js';
 
 // losse onderdelen die samen bewegen, samenvoegen tot één stuk
 const merged = (...parts) => { const g = new THREE.Group(); parts.forEach((p) => g.add(p)); return mergeStatic(g); };
 
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
-const shadowAll = (g) => g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
 
-// Een ledemaat dat draait om zijn bovenkant
-function limb(len, r, mat) {
-  const pivot = new THREE.Group();
-  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 3, 6), mat);
-  m.position.y = -len / 2; pivot.add(m);
-  return pivot;
-}
-
-// ---------- de hoofdpersoon: Homo habilis ----------
-// Klein (zo'n 1,2 m), lange armen, behaard, nog een beetje voorovergebogen.
-export class Hominin {
-  constructor(scene) {
-    const fur = lam(0x5a3e2b), skin = lam(0x8a6248), dark = lam(0x2a1c14);
-    const g = new THREE.Group();
-    this.hips = new THREE.Group(); this.hips.position.y = 0.62; g.add(this.hips);
-    this.torso = new THREE.Group(); this.hips.add(this.torso);
-    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.34, 3, 8), fur);
-    body.position.y = 0.26; body.scale.set(1, 1, 0.8);
-    const belly = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 6), skin);
-    belly.position.set(0, 0.2, 0.08); belly.scale.set(1, 1.1, 0.7);
-    this.torso.add(merged(body, belly));
-    this.head = new THREE.Group(); this.head.position.y = 0.6; this.torso.add(this.head);
-    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), fur); skull.scale.set(0.95, 1, 1.05);
-    const face = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), skin); face.position.set(0, -0.03, 0.08); face.scale.set(1, 1, 0.9);
-    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), skin); muzzle.position.set(0, -0.07, 0.15); muzzle.scale.set(1.2, 0.8, 1);
-    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.04, 0.05), dark); brow.position.set(0, 0.03, 0.15);
-    const eyes = [-1, 1].map((s) => { const e = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 4), dark); e.position.set(s * 0.045, 0, 0.17); return e; });
-    this.head.add(merged(skull, face, muzzle, brow, ...eyes));
-    this.armL = limb(0.42, 0.055, fur); this.armL.position.set(-0.24, 0.44, 0); this.torso.add(this.armL);
-    this.armR = limb(0.42, 0.055, fur); this.armR.position.set(0.24, 0.44, 0); this.torso.add(this.armR);
-    this.legL = limb(0.42, 0.07, fur); this.legL.position.set(-0.1, 0.02, 0); this.hips.add(this.legL);
-    this.legR = limb(0.42, 0.07, fur); this.legR.position.set(0.1, 0.02, 0); this.hips.add(this.legR);
-    for (const leg of [this.legL, this.legR]) { const foot = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.2), skin); foot.position.set(0, -0.54, 0.05); leg.add(foot); }
-    // wat je in je hand hebt
-    this.held = new THREE.Group(); this.held.position.y = -0.55; this.armR.add(this.held);
-    this.heldL = new THREE.Group(); this.heldL.position.y = -0.55; this.armL.add(this.heldL);
-    shadowAll(g);
-    g.scale.setScalar(1.15);
-    scene.add(g);
-    this.obj = g;
-    this.pos = new THREE.Vector3(2, 0, -6);
-    this.vel = new THREE.Vector3();
-    this.yaw = 0;
-    this.phase = 0;
-    this.crouch = 0;          // 0 = staan, 1 = gebukt
-    this.sneaking = false;
-    this.speed = 0;
-    this.action = 0;          // korte animatie bij oppakken/eten
-  }
-
-  // dir: gewenste looprichting in de wereld (lengte 0..1)
-  update(dt, dir, mods) {
-    const want = this.sneaking ? 1.6 : dir.length() > 0.85 ? 5.4 : 2.6;
-    const max = want * mods.speed * (riverDist(this.pos.x, this.pos.z) < 6 ? 0.45 : 1);
-    const target = dir.clone().multiplyScalar(max);
-    this.vel.lerp(target, 1 - Math.exp(-dt * 8));
-    this.pos.addScaledVector(this.vel, dt);
-    // botsen met bomen en rotsen
-    for (const b of blockers) {
-      const dx = this.pos.x - b.x, dz = this.pos.z - b.z, d = Math.hypot(dx, dz), min = b.r + 0.3;
-      if (d < min && d > 0.001) { this.pos.x = b.x + dx / d * min; this.pos.z = b.z + dz / d * min; }
-    }
-    const lim = WALK - 4;
-    this.pos.x = THREE.MathUtils.clamp(this.pos.x, -lim, lim); this.pos.z = THREE.MathUtils.clamp(this.pos.z, -lim, lim);
-    this.pos.y = Math.max(height(this.pos.x, this.pos.z), -0.9);
-
-    this.speed = Math.hypot(this.vel.x, this.vel.z);
-    if (this.speed > 0.2) {
-      const ty = Math.atan2(this.vel.x, this.vel.z);
-      let d = ty - this.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
-      this.yaw += d * (1 - Math.exp(-dt * 10));
-    }
-    this.crouch += ((this.sneaking ? 1 : 0) - this.crouch) * (1 - Math.exp(-dt * 8));
-    this.phase += dt * (2.2 + this.speed * 1.9) * (this.speed > 0.15 ? 1 : 0);
-    this.action = Math.max(0, this.action - dt);
-    this.pose(mods);
-  }
-
-  pose(mods) {
-    const s = Math.min(1, this.speed / 5.4), w = Math.min(1, this.speed / 1.2);
-    const sw = Math.sin(this.phase), c = this.crouch;
-    this.obj.position.copy(this.pos);
-    this.obj.rotation.y = this.yaw;
-    this.hips.position.y = 0.62 - c * 0.2 + Math.abs(Math.cos(this.phase)) * 0.05 * w;
-    this.torso.rotation.x = 0.18 + s * 0.25 + c * 0.55 + (mods.sick ? 0.2 : 0);
-    this.torso.rotation.z = mods.sick ? Math.sin(performance.now() / 400) * 0.08 : 0;
-    this.head.rotation.x = -(0.12 + s * 0.2 + c * 0.45);
-    const amp = (0.55 + s * 0.4) * w * (1 - c * 0.4);
-    this.legL.rotation.x = sw * amp - c * 0.6; this.legR.rotation.x = -sw * amp - c * 0.6;
-    this.armL.rotation.x = -sw * amp * 0.8 + 0.1; this.armR.rotation.x = sw * amp * 0.8 + 0.1;
-    if (this.action > 0) { const a = Math.sin(this.action / 0.5 * Math.PI); this.armR.rotation.x = -1.2 * a; this.torso.rotation.x += 0.5 * a; }
-    this.armL.rotation.z = -0.12; this.armR.rotation.z = 0.12;
-  }
-
-  // Hoe goed val je op voor een dier? 1 = normaal
-  get noticeable() {
-    let n = this.sneaking ? 0.35 : 1;
-    if (this.speed > 4) n *= 1.6;
-    if (this.speed < 0.3) n *= 0.6;
-    if (tallGrassAt(this.pos.x, this.pos.z)) n *= this.sneaking ? 0.25 : 0.6;
-    return n;
-  }
-}
+// De hoofdpersoon staat in hominin.js
+export { Hominin } from './hominin.js';
 
 // ---------- impala's ----------
+// Glad, met randlicht, net als de hoofdpersoon. Eén materiaal voor alle impala's; de kleur zit in de hoekpunten.
+const IMP = rimify(new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.8, metalness: 0 }), 0xffd8a0, 0.4);
+// onderdelen met elk hun eigen kleur samenvoegen tot één stuk
+function vc(...parts) { const m = merged(...parts); m.material = IMP; m.castShadow = true; m.receiveShadow = false; return m; }
+const P = (color, geo, x, y, z, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) => {
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color })); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.rotation.set(rx, ry, rz); return m;
+};
+const SPH = (r) => new THREE.SphereGeometry(r, 12, 9);
+const COAT = 0xc0703c, FLANK = 0xd8a06a, BELLY = 0xf4ece0, DARK = 0x1e140e, BACK = 0x9a5028, HOOF = 0x2a2018;
+
+// Een poot in twee delen: boven (draait aan het lijf) en onder (de knie of hak), met een hoefje
+function legParts(color, upLen, loLen, thick) {
+  const hip = new THREE.Group();
+  hip.add(vc(P(color, new THREE.CylinderGeometry(thick, thick * 0.6, upLen, 8), 0, -upLen / 2, 0), P(color, SPH(thick * 1.25), 0, -0.02, 0, 1, 1.6, 1.2)));
+  const knee = new THREE.Group(); knee.position.y = -upLen; hip.add(knee);
+  knee.add(vc(P(color, new THREE.CylinderGeometry(thick * 0.5, thick * 0.38, loLen, 6), 0, -loLen / 2, 0), P(color, SPH(thick * 0.55), 0, 0, 0),
+    P(HOOF, new THREE.CylinderGeometry(thick * 0.42, thick * 0.5, 0.06, 6), 0, -loLen - 0.02, 0.01)));
+  return { hip, knee };
+}
+
 function impalaModel(male) {
-  const coat = lam(0xa8643a), belly = lam(0xeadcc4), dark = lam(0x2a1c14), back = lam(0x8a4c2a);
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.75, 3, 8), coat);
-  body.rotation.x = Math.PI / 2; body.position.y = 0.95;
-  const top = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.7, 3, 6), back);
-  top.rotation.x = Math.PI / 2; top.position.y = 1.08; top.scale.set(1, 1, 0.6);
-  const under = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.6, 3, 6), belly);
-  under.rotation.x = Math.PI / 2; under.position.y = 0.84; under.scale.set(1.15, 1, 0.8);
-  g.add(merged(body, top, under));
-  const neck = new THREE.Group(); neck.position.set(0, 1.08, 0.48); g.add(neck);
-  const nm = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.45, 3, 6), coat); nm.position.y = 0.25; neck.add(nm);
+  // lijf: drie kleuren zoals een echte impala (rood-bruine rug, lichte flanken, witte buik) en zwarte strepen achter
+  g.add(vc(
+    P(BACK, SPH(0.27), 0, 1.04, 0.0, 0.9, 0.85, 2.15),
+    P(FLANK, SPH(0.27), 0, 0.96, 0.0, 0.98, 0.8, 2.05),
+    P(COAT, SPH(0.24), 0, 1.0, 0.36, 1, 1.05, 1.1), P(COAT, SPH(0.25), 0, 1.0, -0.36, 1, 1.05, 1.15),
+    P(BELLY, SPH(0.22), 0, 0.86, 0, 1, 0.6, 1.9),
+    ...[-1, 1].map((k) => P(DARK, new THREE.BoxGeometry(0.02, 0.3, 0.035), k * 0.2, 0.95, -0.5, 1, 1, 1, 0.15, 0, 0)),
+  ));
+  // nek en kop
+  const neck = new THREE.Group(); neck.position.set(0, 1.1, 0.52); g.add(neck);
+  neck.add(vc(P(COAT, new THREE.CylinderGeometry(0.075, 0.12, 0.5, 8), 0, 0.25, 0), P(COAT, SPH(0.11), 0, 0.02, 0, 1, 1, 1.1),
+    P(BELLY, new THREE.CylinderGeometry(0.05, 0.08, 0.4, 6), 0, 0.22, 0.05)));
   neck.rotation.x = 0.45;
-  const head = new THREE.Group(); head.position.y = 0.55; neck.add(head);
-  const hm = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.22, 3, 6), coat); hm.rotation.x = Math.PI / 2 - 0.3; hm.position.z = 0.1;
-  const headParts = [hm];
-  for (const s of [-1, 1]) {
-    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 4), coat); ear.position.set(s * 0.09, 0.1, -0.02); ear.rotation.z = -s * 0.8; headParts.push(ear);
-    if (male) {
-      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.5, 5), dark);
-      horn.position.set(s * 0.05, 0.28, -0.08); horn.rotation.set(-0.5, 0, -s * 0.2); headParts.push(horn);
+  const head = new THREE.Group(); head.position.y = 0.52; neck.add(head);
+  const hp = [
+    P(COAT, SPH(0.09), 0, 0, 0, 0.95, 0.95, 1.1), P(COAT, new THREE.CylinderGeometry(0.045, 0.07, 0.24, 8), 0, -0.02, 0.15, 1, 1, 1, Math.PI / 2 - 0.25, 0, 0),
+    ...[-1, 1].map((k) => P(COAT, SPH(0.06), k * 0.08, 0.1, -0.03, 0.35, 1.5, 0.6, 0, 0, -k * 0.6)),
+    P(DARK, SPH(0.03), 0, -0.04, 0.27, 1.1, 0.8, 0.8),
+    ...[-1, 1].map((k) => P(DARK, SPH(0.018), k * 0.06, 0.03, 0.07)),
+    ...[-1, 1].map((k) => P(DARK, SPH(0.02), k * 0.12, 0.18, -0.03, 0.4, 0.8, 0.5)),
+    ...[-1, 1].map((k) => P(BELLY, SPH(0.026), k * 0.06, 0.035, 0.06, 1, 0.8, 0.5)),
+  ];
+  if (male) {
+    // lier-vormige hoorns met ribbels
+    for (const k of [-1, 1]) for (let i = 0; i < 6; i++) {
+      const t = i / 5;
+      hp.push(P(DARK, new THREE.CylinderGeometry(0.018 * (1 - t * 0.6), 0.022 * (1 - t * 0.5), 0.09, 5), k * (0.04 + Math.sin(t * 3) * 0.05), 0.12 + t * 0.4, -0.06 - t * 0.12 + Math.sin(t * 4) * 0.04, 1, 1, 1, -0.4 + t * 0.6, 0, -k * (0.25 - t * 0.5)));
     }
   }
-  head.add(merged(...headParts));
-  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.25, 5), belly); tail.position.set(0, 1.0, -0.68); tail.rotation.x = -2.4; g.add(tail);
+  head.add(vc(...hp));
+  const tail = new THREE.Group(); tail.position.set(0, 1.08, -0.62); g.add(tail);
+  tail.add(vc(P(BELLY, new THREE.CylinderGeometry(0.04, 0.03, 0.28, 6), 0, -0.14, 0), P(DARK, new THREE.BoxGeometry(0.015, 0.22, 0.03), 0, -0.15, -0.025)));
+  tail.rotation.x = -2.4;
   const legs = [];
-  for (const [x, z] of [[-0.15, 0.4], [0.15, 0.4], [-0.15, -0.42], [0.15, -0.42]]) {
-    const l = limb(0.7, 0.045, coat); l.position.set(x, 0.85, z); g.add(l); legs.push(l);
+  for (const [x, z, hind] of [[-0.14, 0.42, 0], [0.14, 0.42, 0], [-0.14, -0.42, 1], [0.14, -0.42, 1]]) {
+    const L = legParts(hind ? COAT : FLANK, hind ? 0.44 : 0.4, hind ? 0.42 : 0.44, hind ? 0.075 : 0.06);
+    L.hip.position.set(x, 0.92, z); L.hind = hind; g.add(L.hip); legs.push(L);
   }
-  shadowAll(g);
   return { g, neck, head, legs, tail };
 }
 
@@ -253,11 +182,18 @@ export class Herd {
     m.neck.rotation.x += ((graze ? 2.2 : 0.35 - m.look * 0.3) - m.neck.rotation.x) * (1 - Math.exp(-dt * 4));
     m.head.rotation.x = graze ? -0.2 + Math.sin(performance.now() / 300 + m.phase) * 0.15 : 0;
     const a = gallop ? 0.9 : 0.45;
-    m.legs[0].rotation.x = Math.sin(m.phase) * a * Math.min(1, m.speed);
-    m.legs[1].rotation.x = Math.sin(m.phase + (gallop ? 0.3 : Math.PI)) * a * Math.min(1, m.speed);
-    m.legs[2].rotation.x = Math.sin(m.phase + (gallop ? Math.PI : Math.PI)) * a * Math.min(1, m.speed);
-    m.legs[3].rotation.x = Math.sin(m.phase + (gallop ? Math.PI + 0.3 : 0)) * a * Math.min(1, m.speed);
-    m.tail.rotation.x = -2.4 + (m.look > 0.5 || gallop ? 1.2 : Math.sin(performance.now() / 200) * 0.2);
+    // vier poten met knieën: in galop gaan de voorpoten en achterpoten samen
+    const off = gallop ? [0, 0.3, Math.PI, Math.PI + 0.3] : [0, Math.PI, Math.PI, 0];
+    const mv = Math.min(1, m.speed);
+    m.legs.forEach((L, i) => {
+      const p = m.phase + off[i], sw = Math.sin(p) * a * mv;
+      L.hip.rotation.x = sw + (L.hind ? 0.12 : -0.05);
+      // voorpoot buigt naar achteren bij het optillen, achterpoot (hak) naar voren
+      const lift = Math.max(0, Math.cos(p)) * (gallop ? 1.3 : 0.8) * mv;
+      L.knee.rotation.x = L.hind ? -0.25 - lift * 0.6 : 0.05 + lift;
+    });
+    // staart omhoog bij gevaar (de witte onderkant als waarschuwing)
+    m.tail.rotation.x = -2.4 + (m.look > 0.5 || gallop ? 1.4 : Math.sin(performance.now() / 200) * 0.2);
   }
 }
 
