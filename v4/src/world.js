@@ -1,4 +1,5 @@
 import * as THREE from '../lib/three.module.js';
+import { variantsOf } from './assets.js';
 
 // Proefstuk Riftvallei: één stuk savanne met een rivier, acacia's, rotsen en hoog gras.
 // Alle maten in meters. Het midden van de kaart is (0, 0); je kunt tot WALK meter van het midden lopen.
@@ -66,18 +67,8 @@ export function tallGrassAt(x, z) {
 // Botsingen met bomen en rotsen: eenvoudige cirkels
 export const blockers = [];
 
-function grassColor(x, z, h) {
-  const n = fbm(x * 0.03 + 5, z * 0.03, 3);
-  const dry = new THREE.Color(0xc9a659), green = new THREE.Color(0x8a9a48), dirt = new THREE.Color(0x9c7a52), mud = new THREE.Color(0x6b5a40);
-  const c = dry.clone().lerp(green, THREE.MathUtils.clamp((n - 0.4) * 2.2, 0, 1));
-  const d = riverDist(x, z);
-  if (d < 16) c.lerp(green, 0.5 * (1 - d / 16));
-  if (d < 9) c.lerp(mud, 1 - d / 9);
-  if (h > 9) c.lerp(dirt, THREE.MathUtils.clamp((h - 9) / 6, 0, 0.8));
-  return c;
-}
 
-export function buildWorld(scene) {
+export function buildWorld(scene, A) {
   const R = rng(7);
 
   // ---------- lucht en nevel ----------
@@ -87,10 +78,11 @@ export function buildWorld(scene) {
     uniforms: {
       top: { value: new THREE.Color(0x6f9cc8) }, mid: { value: new THREE.Color(0xf2d39a) }, low: { value: new THREE.Color(0xe8b47a) },
       sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color(0xfff0d0) }, cloud: { value: new THREE.Color(0xffffff) }, uTime: { value: 0 },
+      tSky: { value: A.sky }, skyMix: { value: 1 }, skyTint: { value: new THREE.Color(1, 1, 1) },
     },
     vertexShader: 'varying vec3 vp; void main(){ vp = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     // verloop van de lucht, een zon met gloed en wolkenslierten
-    fragmentShader: `uniform vec3 top, mid, low, sunCol, cloud, sunDir; uniform float uTime; varying vec3 vp;
+    fragmentShader: `uniform vec3 top, mid, low, sunCol, cloud, sunDir, skyTint; uniform float uTime, skyMix; uniform sampler2D tSky; varying vec3 vp;
       float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }
       float fbm(vec2 p){ float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { s += a * n(p); p *= 2.03; a *= 0.5; } return s; }
@@ -105,6 +97,11 @@ export function buildWorld(scene) {
           vec3 cc = mix(cloud, sunCol, pow(sd, 6.0) * 0.6);
           c = mix(c, cc, cl * 0.75);
         }
+        // overdag: de echte luchtfoto (een veld in Zuid-Afrika), 's avonds en 's nachts het verloop hierboven
+        vec3 d = normalize(vp);
+        vec2 suv = vec2(atan(d.z, d.x) / 6.2831853 + 0.5, asin(clamp(d.y, -1.0, 1.0)) / 3.1415927 + 0.5);
+        vec3 photo = texture2D(tSky, suv).rgb * skyTint;
+        c = mix(c, photo, skyMix);
         gl_FragColor = vec4(c, 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -112,6 +109,7 @@ export function buildWorld(scene) {
   });
   scene.add(new THREE.Mesh(skyGeo, skyMat));
   scene.fog = new THREE.Fog(0xe9cf9c, 45, 230);
+  scene.environment = A.env;   // licht en weerspiegeling uit de luchtfoto
 
   // ---------- licht: lage middagzon ----------
   const hemi = new THREE.HemisphereLight(0xcfe0ff, 0x8a6a3a, 1.1);
@@ -125,149 +123,223 @@ export function buildWorld(scene) {
   scene.add(sun, sun.target);
 
   // ---------- het land ----------
-  const seg = 240;
+  const seg = 200;
   const geo = new THREE.PlaneGeometry(SIZE, SIZE, seg, seg);
   geo.rotateX(-Math.PI / 2);
-  const pos = geo.attributes.position, cols = [];
+  const pos = geo.attributes.position, cols = [], mix = [];
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), z = pos.getZ(i), h = height(x, z);
     pos.setY(i, h);
-    const c = grassColor(x, z, h); cols.push(c.r, c.g, c.b);
+    // hoeveel verdord gras en hoeveel kort groen gras; de rest is kale droge grond
+    const n = fbm(x * 0.03 + 5, z * 0.03, 3), n2 = fbm(x * 0.11, z * 0.11, 2), d = riverDist(x, z);
+    let grass = THREE.MathUtils.clamp((n - 0.22) * 2.6 + (n2 - 0.5) * 0.8, 0, 1), green = THREE.MathUtils.clamp((n - 0.55) * 3 + (d < 18 ? (1 - d / 18) * 0.8 : 0), 0, 1);
+    if (d < 9) { grass *= d / 9; green *= d / 9; }
+    if (h > 9) { const k = THREE.MathUtils.clamp(1 - (h - 9) / 5, 0, 1); grass *= k; green *= k; }
+    mix.push(grass, green);
+    // licht kleurverschil: natter en donkerder bij het water
+    const wet = d < 12 ? (1 - d / 12) * 0.35 : 0, v = 0.92 + (n2 - 0.5) * 0.16 - wet;
+    cols.push(v, v * (1 - wet * 0.1), v * (1 - wet * 0.2));
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  geo.setAttribute('aMix', new THREE.Float32BufferAttribute(mix, 2));
   geo.computeVertexNormals();
-  // fijne korrel op de grond, zodat hij van dichtbij scherp en niet glad oogt
-  const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * SIZE / 5, uv.getY(i) * SIZE / 5);
-  const ground = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, map: groundTexture() }));
+  const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * SIZE / 4, uv.getY(i) * SIZE / 4);
+  const gmat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, normalMap: A.tex.dry_ground_01_nor, normalScale: new THREE.Vector2(1.2, 1.2) });
+  gmat.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, { tBare: { value: A.tex.dry_ground_01_diff }, tDry: { value: A.tex.withered_grass_diff }, tGreen: { value: A.tex.sparse_grass_diff }, tRock: { value: A.tex.dry_ground_rocks_diff } });
+    sh.vertexShader = 'attribute vec2 aMix; varying vec2 vMix; varying vec2 vW;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvMix = aMix; vW = (modelMatrix * vec4(position, 1.0)).xz;');
+    sh.fragmentShader = 'uniform sampler2D tBare, tDry, tGreen, tRock; varying vec2 vMix; varying vec2 vW;\n' + sh.fragmentShader.replace('#include <map_fragment>', `
+      // elke foto op twee schalen, zodat je geen herhaling ziet
+      vec2 u1 = vW / 4.0, u2 = vW / 13.0 + vec2(0.37, 0.71);
+      float big = texture2D(tRock, vW / 37.0).g;
+      vec3 bare = mix(texture2D(tBare, u1).rgb, texture2D(tRock, u2).rgb, 0.45);
+      vec3 dry = mix(texture2D(tDry, u1 * 0.8).rgb, texture2D(tDry, u2).rgb, 0.4);
+      vec3 grn = texture2D(tGreen, u1 * 0.9).rgb;
+      vec3 g = mix(bare, dry, smoothstep(0.0, 1.0, vMix.x + (big - 0.5) * 0.6));
+      g = mix(g, grn, vMix.y * 0.85);
+      // Oost-Afrikaanse grond is warmer en roder dan deze foto's
+      diffuseColor.rgb *= g * vec3(1.12, 0.93, 0.74);`);
+  };
+  const ground = new THREE.Mesh(geo, gmat);
   ground.receiveShadow = true;
   scene.add(ground);
 
   // ---------- water ----------
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(SIZE, SIZE), new THREE.MeshPhongMaterial({ color: 0x4f8a8c, transparent: true, opacity: 0.82, shininess: 90, specular: 0xfff2d0 }));
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(SIZE, SIZE), new THREE.MeshStandardMaterial({ color: 0x3a5a50, transparent: true, opacity: 0.88, roughness: 0.08, metalness: 0.1, normalMap: A.tex.withered_grass_nor, normalScale: new THREE.Vector2(0.15, 0.15) }));
+  water.material.normalMap = A.tex.withered_grass_nor.clone(); water.material.normalMap.repeat.set(SIZE / 6, SIZE / 6);
   water.rotation.x = -Math.PI / 2; water.position.y = WATER - 0.35;
   scene.add(water);
 
   const ok = (x, z, minRiver = 12) => riverDist(x, z) > minRiver && Math.max(Math.abs(x), Math.abs(z)) < WALK - 8 && Math.hypot(x - 2, z + 8) > 8;
 
-  // Bomen en rotsen bewegen niet: ze worden straks samengevoegd tot één geheel (veel sneller op een telefoon)
-  const statics = new THREE.Group();
 
   // ---------- acacia's ----------
-  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5a4030, flatShading: true });
-  const crownMat = new THREE.MeshLambertMaterial({ color: 0x5f7a32, flatShading: true });
-  const crownMat2 = new THREE.MeshLambertMaterial({ color: 0x748c3a, flatShading: true });
+  // stam en takken met de bast van een koortsboom (een acacia); de kroon is gemaakt van kaartjes met fijn blad
+  const barkG = new THREE.Group(), leafG = new THREE.Group(), sideG = new THREE.Group();
+  const branch = (len, r1, r2, x, y, z, rx, rz) => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r2, r1, len, 7, 3)); m.position.set(x, y, z); m.rotation.set(rx, 0, rz); return m;
+  };
+  const card = (w, d) => new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2);
   function acacia(x, z, s) {
     const g = new THREE.Group(), y = height(x, z);
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18 * s, 0.32 * s, 4.2 * s, 6), trunkMat);
-    trunk.position.y = 2.1 * s; trunk.rotation.z = (R() - 0.5) * 0.25;
-    trunk.castShadow = true; g.add(trunk);
-    for (let k = 0; k < 2; k++) {
-      const br = new THREE.Mesh(new THREE.CylinderGeometry(0.08 * s, 0.14 * s, 2 * s, 5), trunkMat);
-      br.position.set((k ? 0.6 : -0.6) * s, 4.2 * s, 0); br.rotation.z = (k ? -0.7 : 0.7); g.add(br);
+    const lean = (R() - 0.5) * 0.3;
+    const tb = new THREE.Group(); g.add(tb);
+    tb.add(branch(3.2 * s, 0.3 * s, 0.2 * s, 0, 1.6 * s, 0, 0, lean));
+    // de stam splitst in een paar schuine takken die de platte kroon dragen
+    const tops = [];
+    const nb = 3 + Math.floor(R() * 2);
+    const S = new THREE.Vector3(-lean * 1.6 * s, 3.1 * s, 0);   // de top van de stam
+    for (let k = 0; k < nb; k++) {
+      const a = k / nb * 6.28 + R() * 0.8, out = (1.2 + R() * 1.3) * s, up = (1.6 + R() * 0.8) * s;
+      const E = S.clone().add(new THREE.Vector3(Math.cos(a) * out, up, Math.sin(a) * out));
+      const b = branch(S.distanceTo(E), 0.17 * s, 0.07 * s, 0, 0, 0, 0, 0);
+      b.position.copy(S).add(E).multiplyScalar(0.5); b.lookAt(E); b.rotateX(Math.PI / 2);
+      tb.add(b); tops.push([E.x, E.y, E.z]);
     }
-    // de platte paraplukroon van een acacia: een paar losse plukken blad naast elkaar
-    const cm = R() < 0.5 ? crownMat : crownMat2;
-    const n = 5 + Math.floor(R() * 3);
-    for (let k = 0; k < n; k++) {
-      const a = k / n * 6.28 + R() * 0.5, d = k === 0 ? 0 : (1.4 + R() * 1.2) * s;
-      const c = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), k % 3 === 2 ? crownMat2 : cm);
-      c.scale.set((1.6 + R() * 0.8) * s, (0.45 + R() * 0.2) * s, (1.5 + R() * 0.8) * s);
-      c.position.set(Math.cos(a) * d, (4.9 + R() * 0.6) * s, Math.sin(a) * d); c.rotation.y = R() * 6;
-      g.add(c);
+    // bladlagen boven op elke tak, plus een paar kaartjes aan de zijkant
+    const lg = new THREE.Group(), sg = new THREE.Group();
+    for (const [tx, ty, tz] of tops) for (let l = 0; l < 4; l++) {
+      const w = (2.2 + R() * 1.2) * s;
+      const c = new THREE.Mesh(card(w, w * (0.8 + R() * 0.3))); c.position.set(tx + (R() - 0.5) * s, ty + l * 0.22 * s + R() * 0.15, tz + (R() - 0.5) * s);
+      c.rotation.set((R() - 0.5) * 0.25, R() * 6.28, (R() - 0.5) * 0.25); lg.add(c);
     }
-    // takken naar de plukken toe
-    for (let k = 0; k < 3; k++) {
-      const a = k * 2.1 + R(), br = new THREE.Mesh(new THREE.CylinderGeometry(0.06 * s, 0.11 * s, 1.8 * s, 5), trunkMat);
-      br.position.set(Math.cos(a) * 0.6 * s, 4.3 * s, Math.sin(a) * 0.6 * s); br.rotation.set(Math.sin(a) * 0.7, 0, -Math.cos(a) * 0.7); g.add(br);
+    const cr = (2.6 + R() * 0.6) * s;
+    for (let k = 0; k < 6; k++) {
+      const a = k / 6 * 6.28 + R() * 0.4, c = new THREE.Mesh(new THREE.PlaneGeometry(2 * s, 1.1 * s));
+      c.position.set(Math.cos(a) * cr * 0.75, 3.1 * s + 2.0 * s, Math.sin(a) * cr * 0.75); c.rotation.y = -a + Math.PI / 2; sg.add(c);
     }
-    g.position.set(x, y - 0.1, z); g.rotation.y = R() * 6;
-    statics.add(g);
-    blockers.push({ x, z, r: 0.5 * s });
+    for (const [src, dst] of [[tb, barkG], [lg, leafG], [sg, sideG]]) {
+      const holder = new THREE.Group(); holder.position.set(x, y - 0.1, z); holder.rotation.y = R() * 6.28;
+      [...src.children].forEach((m) => holder.add(m)); dst.add(holder);
+    }
+    blockers.push({ x, z, r: 0.4 * s });
   }
   for (let i = 0; i < 70; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 10)) acacia(x, z, 0.8 + R() * 0.6); }
   [[-8, -14, 1.2], [14, -20, 1], [-30, 10, 1.1], [40, 50, 1.3]].forEach(([x, z, s]) => acacia(x, z, s));
+  const tag = (grp, mat) => { const m = mergeStatic(grp); m.material = mat; m.geometry.deleteAttribute('color'); m.castShadow = true; m.receiveShadow = true; return m; };
+  const barkTex = A.tex.fever_tree_bark_diff; barkTex.repeat.set(2, 3);
+  const barkNor = A.tex.fever_tree_bark_nor; barkNor.repeat.set(2, 3);
+  scene.add(tag(barkG, new THREE.MeshStandardMaterial({ map: barkTex, normalMap: barkNor, color: 0x9a8070, roughness: 0.95, metalness: 0 })));   // donkerder dan de gele koortsboom
+  const leafMat = (map, tint) => {
+    const m = new THREE.MeshStandardMaterial({ map, color: tint, alphaTest: 0.35, alphaToCoverage: true, side: THREE.DoubleSide, roughness: 0.9, metalness: 0, emissive: 0x1a2408 });
+    // bladeren laten licht door: beide kanten krijgen licht van boven, anders is de onderkant zwart
+    m.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader.replace('#include <beginnormal_vertex>', 'vec3 objectNormal = vec3(0.0, 1.0, 0.0);');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', 'float faceDirection = 1.0;\nvec3 normal = normalize(vNormal);\nvec3 nonPerturbedNormal = normal;');
+    };
+    return m;
+  };
+  const crowns = tag(leafG, leafMat(A.tex.leaf_top, 0xb8d870)); crowns.receiveShadow = false; scene.add(crowns);
+  const sides = tag(sideG, leafMat(A.tex.leaf_side, 0xb0d068)); sides.receiveShadow = false; scene.add(sides);
 
-  // ---------- rotsen ----------
-  const rockMat = new THREE.MeshLambertMaterial({ color: 0x9a8a78, flatShading: true });
+  // ---------- rotsen: gescande granieten keien uit Zuid-Afrika ----------
+  const rockVariants = [...variantsOf(A.models.namaqualand_boulder_02), ...variantsOf(A.models.namaqualand_boulder_05), ...variantsOf(A.models.namaqualand_rocks_01)];
+  const rockSpots = rockVariants.map(() => []);
   function rock(x, z, s) {
-    const m = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), rockMat);
-    m.scale.set(1, 0.55 + R() * 0.4, 0.8 + R() * 0.4);
-    m.position.set(x, height(x, z) + s * 0.15, z); m.rotation.set(R(), R() * 6, R());
-    statics.add(m);
-    if (s > 0.7) blockers.push({ x, z, r: s * 0.85, top: height(x, z) + s * 0.75 });   // rotsen: met hoogte, voor de camera
+    const vi = Math.floor(R() * rockVariants.length), v = rockVariants[vi];
+    const k = (s * 2) / Math.max(v.size.x, v.size.z);   // zo groot als de oude rots
+    rockSpots[vi].push([x, z, k, R() * 6.28]);
+    if (s > 0.7) blockers.push({ x, z, r: s * 0.9, top: height(x, z) + v.size.y * k * 0.9 });
   }
   for (let i = 0; i < 55; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 9)) rock(x, z, 0.4 + R() * 1.6); }
   for (let i = 0; i < 14; i++) { const a = R() * 6.28, d = 6 + R() * 14; rock(-40 + Math.cos(a) * d, -30 + Math.sin(a) * d, 0.8 + R() * 1.8); }
   for (let i = 0; i < 6; i++) rock(-3 + R() * 10, -2 + R() * 6, 0.3 + R() * 0.5);   // keien bij de start
+  const dm = new THREE.Object3D();
+  function instance(v, spots, shadow = true) {
+    for (const part of v.parts) {
+      const im = new THREE.InstancedMesh(part.geo, part.mat, spots.length);
+      spots.forEach(([x, z, k, ry, sink = 0.1], i) => { dm.position.set(x, height(x, z) - sink * k * v.size.y, z); dm.rotation.set(0, ry, 0); dm.scale.setScalar(k); dm.updateMatrix(); im.setMatrixAt(i, dm.matrix); });
+      im.castShadow = shadow; im.receiveShadow = true; im.computeBoundingSphere();
+      scene.add(im);
+    }
+  }
+  rockVariants.forEach((v, i) => rockSpots[i].length && instance(v, rockSpots[i]));
 
-  scene.add(mergeStatic(statics));
+  // ---------- struiken, dood hout en takken ----------
+  const bushVariants = variantsOf(A.models.wild_rooibos_bush);
+  const bushSpots = bushVariants.map(() => []);
+  for (let i = 0; i < 90; i++) {
+    const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (!ok(x, z, 8)) continue;
+    const vi = Math.floor(R() * bushVariants.length), v = bushVariants[vi];
+    bushSpots[vi].push([x, z, (1.0 + R() * 0.9) / v.size.y, R() * 6.28, 0.02]);
+  }
+  bushVariants.forEach((v, i) => bushSpots[i].length && instance(v, bushSpots[i]));
+  const logs = variantsOf(A.models.dead_tree_trunk), twigs = variantsOf(A.models.dry_branches_medium_01);
+  const logSpots = [], twigSpots = twigs.map(() => []);
+  for (let i = 0; i < 16; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 8)) logSpots.push([x, z, 1.1 + R() * 0.5, R() * 6.28, 0.15]); }
+  for (let i = 0; i < 40; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 6)) twigSpots[Math.floor(R() * twigs.length)].push([x, z, 0.8 + R() * 0.6, R() * 6.28, 0.05]); }
+  instance(logs[0], logSpots);
+  twigs.forEach((v, i) => twigSpots[i].length && instance(v, twigSpots[i], false));
+
 
   // ---------- gras dat meebeweegt in de wind ----------
   const uniforms = { uTime: { value: 0 } };
-  function tuftGeo(h, n) {
-    const p = [], c = [];
-    for (let k = 0; k < n; k++) {
-      const a = k / n * Math.PI + 0.3, w = 0.07, lean = 0.12;
-      const ox = Math.cos(a) * w, oz = Math.sin(a) * w, tx = Math.cos(a + 1.57) * lean, tz = Math.sin(a + 1.57) * lean;
-      p.push(-ox, 0, -oz, ox, 0, oz, tx, h * (0.75 + 0.25 * ((k * 7) % 3) / 2), tz);
-      c.push(0.72, 0.68, 0.5, 0.72, 0.68, 0.5, 1.05, 1.05, 1);
-    }
+  // twee gekruiste kaartjes met een foto van een gescande graspol (8 soorten in één atlas)
+  const cardGeo = (() => {
+    const a = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0), b = a.clone().rotateY(Math.PI / 2);
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-    g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3));
-    g.computeVertexNormals();
+    for (const k of ['position', 'normal', 'uv']) g.setAttribute(k, new THREE.Float32BufferAttribute([...a.attributes[k].array, ...b.attributes[k].array], k === 'uv' ? 2 : 3));
+    g.setIndex([...a.index.array, ...Array.from(b.index.array, (i) => i + 4)]);
     return g;
-  }
-  function grassMat(color, sway) {
-    const m = new THREE.MeshLambertMaterial({ color, vertexColors: true, side: THREE.DoubleSide });
+  })();
+  function grassMat(sway, dry) {
+    const m = new THREE.MeshLambertMaterial({ map: A.tex.grass_atlas, alphaTest: 0.4, alphaToCoverage: true, side: THREE.DoubleSide });
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uTime = uniforms.uTime;
-      sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>',
-        `#include <begin_vertex>
-        vec2 ip = vec2(instanceMatrix[3].x, instanceMatrix[3].z);
-        float w = sin(uTime * 1.6 + ip.x * 0.15 + ip.y * 0.1) * 0.6 + sin(uTime * 3.1 + ip.x * 0.7) * 0.25;
-        transformed.x += w * ${sway.toFixed(2)} * position.y;
-        transformed.z += w * ${(sway * 0.5).toFixed(2)} * position.y;`);
-      // gras krijgt licht van boven, niet van de bladzijde
-      sh.vertexShader = sh.vertexShader.replace('#include <beginnormal_vertex>', 'vec3 objectNormal = vec3(0.0, 1.0, 0.0);');
-      // en beide kanten van een sprietje krijgen hetzelfde licht (anders is de achterkant zwart)
-      sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', 'float faceDirection = 1.0;\nvec3 normal = normalize(vNormal);\nvec3 nonPerturbedNormal = normal;');
+      sh.vertexShader = 'uniform float uTime; attribute float aTile;\n' + sh.vertexShader
+        .replace('#include <uv_vertex>', `#include <uv_vertex>
+          vMapUv = vec2((mod(aTile, 4.0) + uv.x) / 4.0, 0.5 - floor(aTile / 4.0) * 0.5 + uv.y * 0.5);`)
+        .replace('#include <begin_vertex>', `#include <begin_vertex>
+          vec2 ip = vec2(instanceMatrix[3].x, instanceMatrix[3].z);
+          float w = sin(uTime * 1.6 + ip.x * 0.15 + ip.y * 0.1) * 0.6 + sin(uTime * 3.1 + ip.x * 0.7) * 0.25;
+          transformed.x += w * ${sway.toFixed(2)} * position.y * position.y;
+          transformed.z += w * ${(sway * 0.5).toFixed(2)} * position.y * position.y;`)
+        .replace('#include <beginnormal_vertex>', 'vec3 objectNormal = vec3(0.0, 1.0, 0.0);');
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <normal_fragment_begin>', 'float faceDirection = 1.0;\nvec3 normal = normalize(vNormal);\nvec3 nonPerturbedNormal = normal;')
+        // het gescande gras is groen; de savanne is droog en goudgeel
+        .replace('#include <map_fragment>', `#include <map_fragment>
+          float lum = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
+          diffuseColor.rgb = mix(diffuseColor.rgb * 1.4, lum * vec3(2.9, 2.35, 1.2), ${dry.toFixed(2)});`);
     };
     return m;
   }
   const dummy = new THREE.Object3D(), tint = new THREE.Color();
-  function scatter(geo, mat, count, place) {
-    const mesh = new THREE.InstancedMesh(geo, mat, count);
+  function scatter(mat, count, tiles, place) {
+    const mesh = new THREE.InstancedMesh(cardGeo, mat, count);
+    const tileAttr = new Float32Array(count);
     let n = 0, tries = 0;
     while (n < count && tries++ < count * 6) {
       const p = place(); if (!p) continue;
       const [x, z, s] = p;
-      dummy.position.set(x, height(x, z) - 0.05, z); dummy.rotation.set(0, R() * 6.28, 0); dummy.scale.setScalar(s); dummy.updateMatrix();
+      dummy.position.set(x, height(x, z) - 0.03, z); dummy.rotation.set(0, R() * 6.28, 0); dummy.scale.set(s, s, s); dummy.updateMatrix();
       mesh.setMatrixAt(n, dummy.matrix);
-      tint.copy(grassColor(x, z, 0)).offsetHSL((R() - 0.5) * 0.03, 0, (R() - 0.5) * 0.08);
+      tileAttr[n] = tiles[Math.floor(R() * tiles.length)];
+      tint.setRGB(1, 1, 1).offsetHSL((R() - 0.5) * 0.04, (R() - 0.5) * 0.1, (R() - 0.5) * 0.12);
       mesh.setColorAt(n, tint); n++;
     }
+    mesh.geometry = cardGeo.clone(); mesh.geometry.setAttribute('aTile', new THREE.InstancedBufferAttribute(tileAttr, 1));
     mesh.count = n; mesh.receiveShadow = true; mesh.frustumCulled = false;
     scene.add(mesh);
     return mesh;
   }
-  scatter(tuftGeo(0.55, 4), grassMat(0xffffff, 0.12), 20000, () => {
+  // kort gras: pollen, niet overal
+  scatter(grassMat(0.25, 0.8), 16000, [3, 4, 5, 6, 7], () => {
     const x = (R() - 0.5) * 2 * (WALK + 10), z = (R() - 0.5) * 2 * (WALK + 10);
     if (riverDist(x, z) < 6) return null;
-    if (fbm(x * 0.05, z * 0.05, 2) < 0.38) return null;   // plukjes, geen tapijt
-    return [x, z, 0.7 + R() * 0.8];
+    if (fbm(x * 0.05, z * 0.05, 2) < 0.4) return null;
+    return [x, z, 0.5 + R() * 0.5];
   });
-  const tallCol = new THREE.Color(0xd8b866);
-  const tall = scatter(tuftGeo(1.5, 5), grassMat(0xffffff, 0.16), 7000, () => {
+  // hoog gras om je in te verstoppen: hoge pollen met pluimen
+  scatter(grassMat(0.18, 0.85), 6500, [0, 1, 2, 6, 7], () => {
     const [px, pz, r] = TALL_GRASS[Math.floor(R() * TALL_GRASS.length)];
     const a = R() * 6.28, d = Math.sqrt(R()) * r;
-    return [px + Math.cos(a) * d, pz + Math.sin(a) * d, 0.8 + R() * 0.5];
+    return [px + Math.cos(a) * d, pz + Math.sin(a) * d, 1.3 + R() * 0.7];
   });
-  for (let i = 0; i < tall.count; i++) { tall.getColorAt(i, tint); tint.lerp(tallCol, 0.6); tall.setColorAt(i, tint); }
-  // riet langs de rivier
-  scatter(tuftGeo(1.3, 3), grassMat(0x9fb070, 0.1), 3500, () => {
+  // groen riet langs de rivier
+  scatter(grassMat(0.15, 0.15), 2500, [0, 1, 2], () => {
     const x = (R() - 0.5) * 2 * WALK, z = riverZ(x) + (R() < 0.5 ? -1 : 1) * (6 + R() * 4);
-    return [x, z, 0.8 + R() * 0.6];
+    return [x, z, 1.2 + R() * 0.6];
   });
 
   const fogBase = new THREE.Color();
@@ -281,6 +353,10 @@ export function buildWorld(scene) {
       skyMat.uniforms.sunCol.value.copy(k.sun).multiplyScalar(Math.min(1, k.sunI / 2));
       skyMat.uniforms.cloud.value.copy(k.mid).lerp(k.top, 0.2).offsetHSL(0, -0.1, 0.08);
       skyMat.uniforms.uTime.value = t;
+      const dayK = p < 0.1 ? THREE.MathUtils.smoothstep(p, 0.02, 0.1) : p < 0.62 ? 1 : 1 - THREE.MathUtils.smoothstep(p, 0.62, 0.74);
+      skyMat.uniforms.skyMix.value = dayK * (senses ? 0.4 : 1);
+      skyMat.uniforms.skyTint.value.setRGB(1, 1, 1).lerp(k.sun, 0.25);
+      scene.environmentIntensity = (0.15 + 0.85 * dayK) * (senses ? 0.5 : 1);
       fogBase.copy(k.fog);
       if (senses) fogBase.lerp(SENSE_FOG, 0.6);
       scene.fog.color.copy(fogBase);

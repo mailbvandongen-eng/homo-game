@@ -5,6 +5,7 @@ import { ITEMS, DISCOVERIES, LOOKS, VERDICT, FINDS, placeItems, heldMesh } from 
 import { Hyenas, Leopard, Throws } from './predators.js';
 import { Glints, Motes, Birds, Butterflies, Senses } from './life.js';
 import { Sound } from './audio.js';
+import { loadAssets } from './assets.js';
 import { ICON, ITEM_ICON } from './icons.js';
 
 const $ = (id) => document.getElementById(id);
@@ -22,15 +23,21 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 document.body.prepend(renderer.domElement);
 
+// eerst de gescande natuur laden (de knop Begin wacht daarop)
+const startBtn = document.getElementById('startBtn');
+startBtn.disabled = true; startBtn.textContent = 'Laden… 0%';
+const A = await loadAssets(renderer, (f) => { startBtn.textContent = `Laden… ${Math.round(f * 100)}%`; });
+startBtn.disabled = false; startBtn.textContent = 'Begin';
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 700);
-const world = buildWorld(scene);
+const world = buildWorld(scene, A);
 const player = new Hominin(scene);
 const herd = new Herd(scene, 42, -12, 9);
 const CARCASS = { x: -70, z: -78 };
 const vultures = new Vultures(scene, CARCASS.x, CARCASS.z);
 carcass(scene, CARCASS.x, CARCASS.z);
-const things = placeItems(scene);
+const things = placeItems(scene, A);
 const glints = new Glints(scene, things);
 const motes = new Motes(scene);
 const bushes = things.filter((t) => t.bush).map((t) => [t.x, t.z]);

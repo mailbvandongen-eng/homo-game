@@ -1,5 +1,8 @@
 import * as THREE from '../lib/three.module.js';
-import { height, riverZ, mergeStatic } from './world.js';
+import { height, riverZ } from './world.js';
+import { variantsOf } from './assets.js';
+
+let SHRUBS = [];   // gescande struiken (Poly Haven, CC0)
 
 // Wat je kunt vinden. "unknown" zie je zolang je het nog niet geprobeerd hebt.
 export const ITEMS = {
@@ -77,34 +80,34 @@ export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'go
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 
 // Een struik met bessen die je kunt plukken
-function bush(scene, x, z, berryColor, leafColor = 0x55702e, n = 3) {
-  const g = new THREE.Group(), leavesG = new THREE.Group();
-  const leaf = lam(leafColor);
-  for (let i = 0; i < 4; i++) {
-    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 0), leaf);
-    m.position.set(Math.cos(i * 1.7) * 0.35, 0.45 + (i % 2) * 0.2, Math.sin(i * 1.7) * 0.35);
-    m.scale.set(1, 0.8, 1); leavesG.add(m);
+function bush(scene, x, z, berryColor, leafColor = 0xffffff, n = 3) {
+  const g = new THREE.Group();
+  const v = SHRUBS[Math.abs(Math.round(x * 7 + z * 3)) % SHRUBS.length];
+  const k = 1.15 / v.size.y, rad = Math.max(v.size.x, v.size.z) * k * 0.35;
+  for (const part of v.parts) {
+    const mat = part.mat.clone(); mat.color = new THREE.Color(leafColor);
+    const m = new THREE.Mesh(part.geo, mat); m.scale.setScalar(k); m.castShadow = true; m.receiveShadow = true; g.add(m);
   }
-  g.add(mergeStatic(leavesG));   // één stuk in plaats van vier
   let berries = null;
   if (berryColor) {
     // alle bessen in één keer tekenen; minder tonen = de struik raakt leeg
-    const bm = new THREE.MeshLambertMaterial({ color: berryColor, emissive: berryColor, emissiveIntensity: 0.25 });
-    berries = new THREE.InstancedMesh(new THREE.SphereGeometry(0.06, 6, 4), bm, 14);
+    const bm = new THREE.MeshStandardMaterial({ color: berryColor, roughness: 0.25, emissive: berryColor, emissiveIntensity: 0.15 });
+    berries = new THREE.InstancedMesh(new THREE.SphereGeometry(0.045, 8, 6), bm, 14);
     const d = new THREE.Object3D();
     for (let i = 0; i < 14; i++) {
-      const a = i * 2.4, r = 0.6 + (i % 3) * 0.05;
-      d.position.set(Math.cos(a) * r * 0.8, 0.35 + (i % 4) * 0.15, Math.sin(a) * r * 0.8); d.updateMatrix();
+      const a = i * 2.4, r = rad * (0.85 + (i % 3) * 0.12);
+      d.position.set(Math.cos(a) * r, 0.35 + (i % 4) * 0.16, Math.sin(a) * r); d.updateMatrix();
       berries.setMatrixAt(i, d.matrix);
     }
     g.add(berries);
   }
-  g.position.set(x, height(x, z), z);
+  g.position.set(x, height(x, z), z); g.rotation.y = x;
   scene.add(g);
   return { g, berries, left: n, max: n };
 }
 
-export function placeItems(scene) {
+export function placeItems(scene, A) {
+  SHRUBS = variantsOf(A.models.shrub_03);
   const things = [];
   const add = (t) => { things.push(t); return t; };
 
@@ -118,19 +121,19 @@ export function placeItems(scene) {
 
   // bessenstruiken
   for (const [x, z] of [[9, 1], [-25, 30], [55, -40]]) {
-    const b = bush(scene, x, z, 0xd0302a);
+    const b = bush(scene, x, z, 0xd0302a, 0xd8e0b0);
     add({ kind: 'bush', item: 'redberry', x, z, bush: b, label: 'Pluk rode bessen' });
   }
   for (const [x, z] of [[-14, -22], [24, -32], [70, 15], [-50, -40]]) {
-    const b = bush(scene, x, z, 0x4a2a6a);
+    const b = bush(scene, x, z, 0x3a1a5a, 0xe8f0c8);
     add({ kind: 'bush', item: 'berry', x, z, bush: b, label: 'Pluk paarse bessen' });
   }
 
   // bitterblad: groeit alleen bij het water
   for (const x of [-6, 40, -55]) {
     const z = riverZ(x) - 10;
-    const b = bush(scene, x, z, null, 0x2e5420, 4);
-    b.g.scale.set(0.8, 1.4, 0.8);
+    const b = bush(scene, x, z, null, 0x5a8a40, 4);
+    b.g.scale.set(0.9, 1.3, 0.9);
     add({ kind: 'bush', item: 'leaf', x, z, bush: b, label: 'Pluk bitterblad' });
   }
 
