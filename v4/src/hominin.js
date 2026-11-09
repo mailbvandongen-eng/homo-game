@@ -1,5 +1,6 @@
 import * as THREE from '../lib/three.module.js';
 import { height, blockers, WALK, riverDist, tallGrassAt, mergeStatic } from './world.js';
+import { Rig } from './rig.js';
 
 // ---------- materialen ----------
 // Een vachtje: korte streepjes in een textuur, gebruikt als kleur én als reliëf
@@ -59,7 +60,9 @@ function mergeColored(group) { const m = mergeStatic(group); m.material = FACE; 
 // ---------- Homo habilis ----------
 // Klein (zo'n 1,25 m), lange armen, behaard, een vooruitstekend gezicht met zware wenkbrauwen.
 export class Hominin {
-  constructor(scene) {
+  constructor(scene, A) {
+    // met een geladen model: de echte (geboetseerde) mensaap van Animal Animator; anders de eigen figuur
+    if (A && A.models.chimp) { this.initRig(scene, A); this.initState(); return; }
     const fur = std(0x9a6c4c, { map: FUR, bumpMap: FUR, bumpScale: 2.5 });
     const furDark = std(0x5a3e2c, { map: FUR, bumpMap: FUR, bumpScale: 2.5 });
     const skin = std(0xb08268, { roughness: 0.65 });
@@ -137,6 +140,31 @@ export class Hominin {
     g.scale.setScalar(1.1);
     scene.add(g);
     this.obj = g;
+    this.initState();
+  }
+
+  // Het geboetseerde model: een chimpansee zonder vacht met o.a. een animatie van rechtop lopen.
+  // Een habilis liep rechter op dan een chimpansee: de armen gaan omlaag en de rug iets rechter.
+  initRig(scene, A) {
+    const S = 0.62;
+    this.rig = new Rig(A, 'chimp', { scale: S });
+    const b = (n) => this.rig.bone(n);
+    this.B = {
+      spine: b('DEF-spine.02'), chest: b('DEF-spine.04'), neck: b('DEF-neck.01'), head: b('DEF-head'),
+      armL: b('DEF-upper_arm.L'), armR: b('DEF-upper_arm.R'), foreL: b('DEF-forearm.L'), foreR: b('DEF-forearm.R'),
+      thighL: b('DEF-thigh.L'), thighR: b('DEF-thigh.R'), shinL: b('DEF-shin.L'), shinR: b('DEF-shin.R'),
+    };
+    // een iets donkerdere, warmere huid
+    this.rig.model.traverse((o) => { if (o.isMesh && o.material && /Body|Head/.test(o.material.name)) { o.material = o.material.clone(); o.material.color.setRGB(0.82, 0.7, 0.6); } });
+    // wat je in je handen hebt: vast aan de handbotten
+    const hold = (bone) => { const g = new THREE.Group(); g.scale.setScalar(1 / S); g.position.set(0, 0.07, 0.02); bone.add(g); return g; };
+    this.held = hold(b('DEF-hand.R')); this.heldL = hold(b('DEF-hand.L'));
+    scene.add(this.rig.root);
+    this.obj = this.rig.root;
+    this.side = new THREE.Vector3(); this.fwd = new THREE.Vector3();
+  }
+
+  initState() {
     this.pos = new THREE.Vector3(2, 0, -6);
     this.vel = new THREE.Vector3();
     this.yaw = 0;
@@ -178,10 +206,11 @@ export class Hominin {
     this.lookT -= dt;
     if (this.lookT < 0) { this.lookT = 2 + Math.random() * 4; this.lookTarget = this.idle > 1.5 ? (Math.random() - 0.5) * 1.6 : 0; }
     this.lookYaw += ((this.lookTarget || 0) - this.lookYaw) * (1 - Math.exp(-dt * 2.5));
-    this.pose(mods);
+    this.pose(mods, dt);
   }
 
-  pose(mods) {
+  pose(mods, dt = 1 / 60) {
+    if (this.rig) return this.poseRig(mods, dt);
     const s = Math.min(1, Math.max(0, (this.speed - 2.6) / 2.8));   // 0 = lopen, 1 = rennen
     const w = Math.min(1, this.speed / 1.2);                         // 0 = stil, 1 = in beweging
     const ph = this.phase, c = this.crouch, sick = mods.sick ? 1 : 0;
@@ -222,6 +251,28 @@ export class Hominin {
       this.armR.shoulder.rotation.x = -1.3 * a - lean * 0.6; this.armR.lower.rotation.x = -0.3;
       this.spine.rotation.x += 0.45 * a; this.hips.position.y -= 0.08 * a;
     }
+  }
+
+  poseRig(mods, dt) {
+    const r = this.rig, B = this.B, sick = mods.sick ? 1 : 0;
+    r.root.position.copy(this.pos);
+    r.root.rotation.y = this.yaw;
+    const moving = this.speed > 0.25;
+    // gebukt sluipen gaat op handen en voeten; rechtop lopen en rennen met de eigen animatie
+    if (this.sneaking) moving ? r.play('KnuckleWalk', { fade: 0.35, speed: Math.max(0.5, this.speed / 1.3) }) : r.play('01_Idle', { fade: 0.5 });
+    else if (moving) r.play('BipedalWalk', { fade: 0.25, speed: Math.min(2.2, Math.max(0.6, this.speed / 2.2)) });
+    else r.freeze('BipedalWalk', 0.0);
+    r.update(dt);
+    if (this.sneaking) return;
+    const side = r.side(this.side), fwd = this.fwd.set(0, 0, 1).applyQuaternion(r.root.quaternion);
+    // armen omlaag en dichter bij het lijf, rug wat rechter: meer mens, minder chimpansee
+    const run = Math.min(1, Math.max(0, (this.speed - 2.6) / 2.8));
+    r.bend(B.spine, side, -0.35 + run * 0.2 + sick * 0.4);
+    r.bend(B.armL, fwd, -0.4); r.bend(B.armR, fwd, 0.4);
+    if (!moving) { r.bend(B.thighL, side, -0.15); r.bend(B.thighR, side, -0.15); r.bend(B.shinL, side, 0.12); r.bend(B.shinR, side, 0.12); }
+    r.bend(B.head, new THREE.Vector3(0, 1, 0), this.lookYaw * 0.8);
+    // iets oppakken of eten: rechterarm naar voren en omlaag
+    if (this.action > 0) { const a = Math.sin(this.action / 0.5 * Math.PI); r.bend(B.spine, side, 0.5 * a); r.bend(B.armR, side, -1.1 * a); }
   }
 
   // Hoe goed val je op voor een dier? 1 = normaal

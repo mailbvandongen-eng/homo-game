@@ -32,7 +32,7 @@ startBtn.disabled = false; startBtn.textContent = 'Begin';
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 700);
 const world = buildWorld(scene, A);
-const player = new Hominin(scene);
+const player = new Hominin(scene, A);
 const herd = new Herd(scene, 42, -12, 9, A);
 const CARCASS = { x: -70, z: -78 };
 const vultures = new Vultures(scene, CARCASS.x, CARCASS.z);

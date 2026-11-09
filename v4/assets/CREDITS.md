@@ -21,7 +21,8 @@ Bewerkt met gltf-transform (vereenvoudigd, texturen verkleind naar webp). De gra
 | Bestand | Model | Maker | Licentie |
 |---|---|---|---|
 | models/hyena.glb | [Elder Spotted Hyena (Crocuta) - Sculpted, Furry](https://sketchfab.com/3d-models/elder-spotted-hyena-crocuta-sculpted-furry-dc49d898720f4b1297d7ee22452c9452) | Animal Animator, [animalanimator.com](https://animalanimator.com) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
+| models/chimp.glb | [Male Chimpanzee Hairless: Rigged, Animated](https://sketchfab.com/3d-models/c53e8ca04bb54d5e8649d95b437e2ca3) (gebruikt als *Homo habilis*: rechtop gezet, armen omlaag, huid donkerder) | Animal Animator, [animalanimator.com](https://animalanimator.com) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 | models/leopard.glb | [Leopard Animation Run](https://sketchfab.com/3d-models/leopard-animation-run-5a36868106f843d4a24d87334f1550fe) | [GremorySaiyan](https://sketchfab.com/GremorySaiyan) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 | models/gazelle.glb | [Gazella](https://sketchfab.com/3d-models/gazella-b2c70a0821ef4c6ca0c096e33bc97593) (gebaseerd op "Gazelle" van hendrikReyneke) | [kenchoo](https://sketchfab.com/kenchoo) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 
-Aanpassingen: vereenvoudigd en texturen verkleind (gltf-transform). Bij de hyena zijn de losse vachtkaartjes, het binnenste van de bek, de tanden en de tong weggelaten om hem licht genoeg te maken voor een telefoon.
+Aanpassingen: vereenvoudigd en texturen verkleind (gltf-transform). Bij de mensaap is de tong weggelaten. Bij de hyena zijn de losse vachtkaartjes, het binnenste van de bek, de tanden en de tong weggelaten om hem licht genoeg te maken voor een telefoon.

@@ -23,9 +23,16 @@ export class Rig {
     this.actions = {};
     for (const clip of A.anims[name] || []) this.actions[clip.name] = this.mixer.clipAction(clip);
     this.current = null;
+    this.bent = new Map();
   }
   // een bot zoeken op (een stukje van) zijn naam
-  bone(part) { return this.bones[part] || Object.values(this.bones).find((b) => b.name.includes(part)); }
+  bone(part) {
+    // three.js haalt tekens als . en : uit de namen ("hand.R" wordt "handR"); zoek daarom op dezelfde manier
+    const p = THREE.PropertyBinding.sanitizeNodeName(part);
+    const b = this.bones[p] || Object.values(this.bones).find((o) => o.name.includes(p));
+    if (!b) console.warn('bot niet gevonden:', part);
+    return b;
+  }
   action(part) { const k = Object.keys(this.actions).find((n) => n.includes(part)); return k && this.actions[k]; }
 
   play(part, { fade = 0.3, speed = 1, once = false } = {}) {
@@ -39,11 +46,16 @@ export class Rig {
   }
   // zet de animatie stil op een bepaald moment (0..1)
   freeze(part, at) { const a = this.action(part); if (!a) return; this.play(part, { fade: 0.2 }); a.time = a.getClip().duration * at; a.timeScale = 0; }
-  update(dt) { this.mixer.update(dt); this.model.updateMatrixWorld(true); }
+  update(dt) {
+    // botten die we zelf draaien eerst terugzetten: anders stapelt de extra draaiing zich op bij botten zonder animatie
+    for (const [b, q] of this.bent) b.quaternion.copy(q);
+    this.mixer.update(dt); this.model.updateMatrixWorld(true);
+  }
 
   // extra draaiing om een as in de wereld, na de animatie
   bend(b, worldAxis, angle) {
     if (!b || !angle) return;
+    if (!this.bent.has(b)) this.bent.set(b, b.quaternion.clone());
     b.parent.getWorldQuaternion(tmpQ).invert();
     tmpV.copy(worldAxis).applyQuaternion(tmpQ).normalize();
     tmpQ2.setFromAxisAngle(tmpV, angle);
