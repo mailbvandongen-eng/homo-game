@@ -33,6 +33,9 @@ export class Group {
   }
   nearest(p) { let best = null, bd = 1e9; for (const m of this.list) { const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return { m: best, d: bd }; }
   get sick() { return this.list.find((m) => m.sick > 0); }
+  // Na een goede nacht loopt Kem een dag met je mee. Staat hij naast je, dan plukt of snijdt hij ook.
+  startFollow() { const k = this.list[1]; if (k.sick > 0) return false; k.state = 'follow'; return true; }
+  helper(p) { const k = this.list[1]; return k.state === 'follow' && !k.carry && dist(k, p) < 9 ? k : null; }
 
   // Iets aan de groep geven. Geeft terug hoeveel de groep ervan opknapt (of null als ze het niet willen).
   give(it, game) {
@@ -66,6 +69,7 @@ export class Group {
       if (m.sick > 0) { m.sick -= dt; if (m.sick <= 0) game.toast(`${m.name} is weer opgeknapt. Maar het duurde lang…`, 5); }
       let tx = 0, tz = 0, spd = 0, face = null;
       const sleepy = night > 0.6;
+      if (m.carry && dist(m, HOME) < 11) { game.event('kemgift', m.carry); m.carry = null; }
       if (greet && m.child && m.sick <= 0) { m.state = 'greet'; m.t = 8; }
       switch (m.state) {
         case 'idle':
@@ -81,9 +85,14 @@ export class Group {
         case 'greet':
           if (d < 2.4 || m.t < 0) { m.state = 'idle'; m.t = 6; } else { tx = (p.x - m.x) / d; tz = (p.z - m.z) / d; spd = 3.4 * m.k; }
           break;
+        case 'follow':
+          if (night > 0.45 || m.sick > 0) { m.state = 'toSpot'; if (dist(m, HOME) > 20) game.toast('Het wordt donker. Kem loopt terug naar de slaapboom.', 4); break; }
+          if (game.danger > 0.55 && dist(m, HOME) > 15) { m.state = 'toSpot'; game.toast('Kem schrikt en rent terug naar de slaapboom!', 4); break; }
+          if (d > 2.6) { tx = (p.x - m.x) / d; tz = (p.z - m.z) / d; spd = Math.min(6.4, 1 + (d - 2.6) * 1.6); } else face = p;
+          break;
         case 'toSpot': {
           const gd = Math.hypot(sx - m.x, sz - m.z);
-          if (gd < 0.4) m.state = 'rest'; else { tx = (sx - m.x) / gd; tz = (sz - m.z) / gd; spd = 1.1 * m.k; }
+          if (gd < 0.4) m.state = 'rest'; else { tx = (sx - m.x) / gd; tz = (sz - m.z) / gd; spd = (gd > 8 ? 4.6 : 1.1) * m.k; }
           break;
         }
         case 'rest':   // slapen, of ziek op de grond zitten

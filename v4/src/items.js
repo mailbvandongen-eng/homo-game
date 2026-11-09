@@ -68,6 +68,8 @@ export const DISCOVERIES = [
   { id: 'sleep', text: 'Samen bij de slaapboom ben je \'s nachts veilig.' },
   { id: 'kill', text: 'Waar grote katten gejaagd hebben, blijft vlees achter. Wie het eerst komt…' },
   { id: 'meat', text: 'Vlees vult veel meer dan bessen. Maar de geur lokt hyena\'s.' },
+  { id: 'drought', text: 'In de droge tijd raken de struiken dichtbij leeg. Verderop hangt nog fruit.' },
+  { id: 'rain', text: 'Na de droogte komt de regen, en alles groeit weer.' },
   { id: 'sabre', text: 'Een sabeltandkat jaag je niet weg. Wacht tot hij verzadigd is.' },
 ];
 
@@ -102,8 +104,9 @@ function bush(scene, x, z, berryColor, leafColor = 0xffffff, n = 3) {
   const g = new THREE.Group();
   const v = SHRUBS[Math.abs(Math.round(x * 7 + z * 3)) % SHRUBS.length];
   const k = 1.15 / v.size.y, rad = Math.max(v.size.x, v.size.z) * k * 0.35;
+  const mats = [];
   for (const part of v.parts) {
-    const mat = part.mat.clone(); mat.color = new THREE.Color(leafColor);
+    const mat = part.mat.clone(); mat.color = new THREE.Color(leafColor); mats.push(mat);
     const m = new THREE.Mesh(part.geo, mat); m.scale.setScalar(k); m.castShadow = true; m.receiveShadow = true; g.add(m);
   }
   let berries = null;
@@ -121,7 +124,7 @@ function bush(scene, x, z, berryColor, leafColor = 0xffffff, n = 3) {
   }
   g.position.set(x, height(x, z), z); g.rotation.y = x;
   scene.add(g);
-  return { g, berries, left: n, max: n };
+  return { g, berries, left: n, max: n, mats, green: new THREE.Color(leafColor), dry: 0 };
 }
 
 export function placeItems(scene, A) {
@@ -142,8 +145,10 @@ export function placeItems(scene, A) {
     const b = bush(scene, x, z, 0xd0302a, 0xd8e0b0);
     add({ kind: 'bush', item: 'redberry', x, z, bush: b, label: 'Pluk rode bessen' });
   }
-  for (const [x, z] of [[-14, -22], [24, -32], [70, 15], [-50, -40]]) {
-    const b = bush(scene, x, z, 0x3a1a5a, 0xe8f0c8);
+  // dichtbij kleine struiken, ver weg (en voorbij het leger van de katten) de rijke
+  for (const [x, z, n] of [[-14, -22], [24, -32], [70, 15, 4], [-50, -40], [95, -60, 5], [-92, 2, 6]]) {
+    const b = bush(scene, x, z, 0x3a1a5a, 0xe8f0c8, n || 3);
+    if (n) b.g.scale.setScalar(1 + (n - 3) * 0.12);
     add({ kind: 'bush', item: 'berry', x, z, bush: b, label: 'Pluk paarse bessen' });
   }
 
