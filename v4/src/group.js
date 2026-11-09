@@ -42,6 +42,8 @@ export class Group {
     const s = game.state, sick = this.sick, kem = this.list[1];
     for (const m of this.list) m.busy = 2.5;
     if (it === 'meat') return { gain: 30, text: 'Vlees! Iedereen komt erbij zitten. Kleine Ibo krijgt het eerste stuk.' };
+    if (it === 'honey') return { gain: 40, text: 'Honing! Tor lacht zijn laatste tanden bloot. Iedereen likt zijn vingers af, Ibo het langst.' };
+    if (it === 'egg') return { gain: 15, text: 'Ibo tikt het ei open en slurpt het leeg. Hij kijkt je aan: nog een?' };
     if (it === 'bone') return { gain: 18, text: 'Tor legt het bot op een steen en kraakt het open. Het merg wordt eerlijk gedeeld.' };
     if (it === 'berry') return { gain: 8, text: 'Ibo propt de bessen in zijn mond en grijnst paars.' };
     if (it === 'leaf') {
@@ -88,6 +90,7 @@ export class Group {
         case 'follow':
           if (night > 0.45 || m.sick > 0) { m.state = 'toSpot'; if (dist(m, HOME) > 20) game.toast('Het wordt donker. Kem loopt terug naar de slaapboom.', 4); break; }
           if (game.danger > 0.55 && dist(m, HOME) > 15) { m.state = 'toSpot'; game.toast('Kem schrikt en rent terug naar de slaapboom!', 4); break; }
+          if (m.busy > 0) { face = p; break; }   // hij staat stil: hij heeft iets gezien
           if (d > 2.6) { tx = (p.x - m.x) / d; tz = (p.z - m.z) / d; spd = Math.min(6.4, 1 + (d - 2.6) * 1.6); } else face = p;
           break;
         case 'toSpot': {

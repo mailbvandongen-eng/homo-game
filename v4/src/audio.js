@@ -159,5 +159,13 @@ export class Sound {
   sting() { if (!this.ctx) return; this.tone(98, 2.2, 0.12, 'sawtooth', -30); this.tone(147, 2.0, 0.07, 'triangle', -40, 0.1); this.burst(90, 1.5, 0.25, 'lowpass', 0, 1); }
   // rustig ademen: slapen
   sleep() { if (!this.ctx) return; [392, 330, 293.7, 220].forEach((f, i) => this.tone(f, 1.6, 0.04, 'sine', 0, i * 0.5)); }
+  // een slang sist
+  hiss(v = 1) { if (!this.ctx) return; this.burst(5200, 0.8, 0.1 * v, 'highpass'); this.burst(3400, 0.5, 0.05 * v, 'bandpass', 0.1, 2); }
+  // bijen
+  buzz(v = 1) { if (!this.ctx) return; this.tone(190 + Math.random() * 30, 0.5, 0.02 * v, 'sawtooth', 25); this.tone(385, 0.45, 0.008 * v, 'square', -30); }
+  // een grote vogel krijst
+  squawk(v = 1) { if (!this.ctx) return; this.tone(1500, 0.16, 0.06 * v, 'sawtooth', -700); this.tone(1100, 0.22, 0.05 * v, 'square', -500, 0.17); }
+  // mensachtigen schreeuwen
+  shout(v = 1) { if (!this.ctx) return; this.tone(330, 0.3, 0.07 * v, 'sawtooth', 160); this.tone(420, 0.35, 0.06 * v, 'sawtooth', -120, 0.32); this.tone(300, 0.25, 0.05 * v, 'triangle', 200, 0.5); }
   sense(on) { if (this.ctx && on) this.tone(110, 0.6, 0.05, 'sine', 30); }
 }

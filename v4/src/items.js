@@ -48,6 +48,18 @@ export const ITEMS = {
     unknown: 'Dit is veel meer eten dan bessen. Opeten, of naar de groep brengen?',
     known: 'Vlees vult enorm. Maar hyena\'s ruiken het van ver en komen erop af.',
   },
+  egg: {
+    name: 'Ei', color: '#e8dcc0',
+    look: 'Een groot, gespikkeld ei. Nog warm van het nest.',
+    unknown: 'Zou je dit kunnen eten?',
+    known: 'Klein, maar vet en krachtig. De moeder geeft ze niet zomaar af.',
+  },
+  honey: {
+    name: 'Honingraat', color: '#e8a020',
+    look: 'Een stuk raat, zwaar van de honing. Het plakt aan je vingers en ruikt naar bloemen.',
+    unknown: 'Het ruikt zoet. Heel zoet.',
+    known: 'Het zoetste en krachtigste eten dat er is. De groep is er dol op.',
+  },
 };
 
 // Ontdekkingen: dit is wat je in het proefstuk kunt leren
@@ -70,6 +82,12 @@ export const DISCOVERIES = [
   { id: 'meat', text: 'Vlees vult veel meer dan bessen. Maar de geur lokt hyena\'s.' },
   { id: 'drought', text: 'In de droge tijd raken de struiken dichtbij leeg. Verderop hangt nog fruit.' },
   { id: 'rain', text: 'Na de droogte komt de regen, en alles groeit weer.' },
+  { id: 'wounded', text: 'Een gewond dier is niet snel moe, maar wel eerder dan jij. Blijf volgen.' },
+  { id: 'snake', text: 'Een slang hoor je alleen als je zelf stil bent. Je zintuigen laten hem zien.' },
+  { id: 'egg', text: 'In een nest liggen eieren: vet en krachtig. Maar de moeder verdedigt ze.' },
+  { id: 'honey', text: 'Honing is het zoetste eten dat er is.' },
+  { id: 'bees', text: 'Bijen steken overdag. In de schemering zijn ze loom: dan haal je de honing.' },
+  { id: 'strangers', text: 'Vreemden zijn niet altijd vijanden. Wie iets geeft, krijgt iets terug.' },
   { id: 'sabre', text: 'Een sabeltandkat jaag je niet weg. Wacht tot hij verzadigd is.' },
 ];
 
@@ -88,6 +106,13 @@ export const LOOKS = {
   zebra: { name: 'Zebra\'s', look: 'Gestreepte paarden van de vlakte. Ze grazen samen: veel ogen zien meer dan twee.', hint: 'Voor jou zijn ze te snel en te sterk. Maar er zijn jagers die ze wel aankunnen…' },
   sabre: { name: 'Sabeltandkat', look: 'Een zware kat met hoektanden als messen. Overdag ligt hij in het hoge gras; soms gaat hij op jacht.', hint: 'Met die tanden kan hij niet alles van de botten krijgen. Er blijft altijd iets over.' },
   kill: { name: 'Verse prooi', look: 'Een zebra, net gedood. De buik is open, het vlees is nog warm.', hint: 'Met je handen krijg je de taaie huid niet open. Je hebt iets scherps nodig.' },
+  wounded: { name: 'Gewonde gazelle', look: 'Ze loopt alleen en trekt met een achterpoot. De kudde heeft haar achtergelaten.', hint: 'Ze is nog steeds sneller dan jij. Maar voor hoe lang?' },
+  prey: { name: 'Gazelle', look: 'Ze ligt stil in het gras. Dit is meer vlees dan je in dagen hebt gezien.', hint: 'Zonder iets scherps krijg je de huid niet open. En de geur verspreidt zich al.' },
+  bird: { name: 'Trap', look: 'Een zware loopvogel, bijna zo hoog als je heup. Ze broedt op de grond.', hint: 'Ze valt alles aan wat bij haar nest komt. Een steen maakt indruk.' },
+  nest: { name: 'Leeg nest', look: 'Een kuiltje met takjes en dons. De eieren zijn weg.', hint: 'Volgend seizoen broedt ze ergens anders.' },
+  snake: { name: 'Pofadder', look: 'Dik, traag en precies de kleur van droog gras. Hij vlucht niet: hij blijft liggen en vertrouwt op zijn schutkleur.', hint: 'Loop er met een boog omheen. Of jaag hem weg met een steen.' },
+  bees: { name: 'Bijennest', look: 'Een nest wilde bijen aan een boomstam. Er druipt honing uit.', hint: 'Overdag verdedigen ze het fel. Maar bijen vliegen niet in het donker…' },
+  stranger: { name: 'Vreemden', look: 'Ze lijken op jullie, maar je kent ze niet. Een andere groep, bij hun eigen water.', hint: 'Ze verjagen je met stenen. Tenzij je laat zien dat je niets kwaads wilt: leg eten neer en ga op afstand staan.' },
   tree: { name: 'De slaapboom', look: 'Een oude acacia met een brede kroon. Hier slaapt je groep, al zolang je je kunt herinneren.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
   tor: { name: 'Tor', look: 'De oudste van de groep. Zijn haar is grijs en hij loopt moeilijk, maar hij weet waar het water blijft staan als het droog is.', hint: 'Hij kan zelf niet meer ver lopen om eten te zoeken.' },
   kem: { name: 'Kem', look: 'Jong en nieuwsgierig. Kem slaat graag stenen tegen elkaar en eet alles wat je meebrengt.', hint: 'Echt alles. Ook wat je zelf nog niet kent.' },
@@ -95,7 +120,7 @@ export const LOOKS = {
 };
 
 // Wat je ervan weet, als kleur bij de zintuigen: goed, slecht of nog onbekend
-export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good', meat: 'good' };
+export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good', meat: 'good', egg: 'good', honey: 'good' };
 
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 
@@ -201,6 +226,8 @@ export function heldMesh(item) {
   }
   if (item === 'stone') return new THREE.Mesh(new THREE.DodecahedronGeometry(0.1, 0), lam(c));
   if (item === 'flake') { const m = new THREE.Mesh(new THREE.TetrahedronGeometry(0.09, 0), lam(c)); m.scale.set(1, 0.35, 1.4); return m; }
+  if (item === 'egg') { const m = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), lam(c)); m.scale.set(1, 1.3, 1); return m; }
+  if (item === 'honey') { const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.12), new THREE.MeshLambertMaterial({ color: c, emissive: 0x4a2c00, flatShading: true })); return m; }
   if (item === 'leaf') { const m = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.22, 4), lam(c)); m.scale.z = 0.3; return m; }
   const g = new THREE.Group(), m = lam(c);
   for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 4), m); b.position.set((i % 2) * 0.06 - 0.03, Math.floor(i / 2) * 0.06, 0); g.add(b); }
