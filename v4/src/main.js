@@ -516,7 +516,11 @@ addEventListener('keyup', (e) => { keys.delete(e.code); if (e.code === 'KeyQ') s
 
 const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0, t0: 0, moved: 0 };
 const look = { id: null, lx: 0, ly: 0, last: -9, sx: 0, sy: 0, t0: 0, moved: 0 };
-let camYaw = Math.PI, camPitch = 0.42, camDist = 7.5;
+// De camera hangt dicht achter je schouder. Met twee vingers (of het muiswiel) zoom je in en uit; dat wordt onthouden.
+const ZOOM = [2.2, 10];
+let camYaw = Math.PI, camPitch = 0.26, camDist = THREE.MathUtils.clamp(+localStorage.getItem('homoV4zoom') || 4, ...ZOOM);
+const pinch = { id: null, x: 0, y: 0, d0: 1, z0: 1 };
+function setZoom(d) { camDist = THREE.MathUtils.clamp(d, ...ZOOM); try { localStorage.setItem('homoV4zoom', camDist.toFixed(2)); } catch (e) { /* geen opslag */ } }
 const ring = document.querySelector('#joy .ring'), knob = document.querySelector('#joy .knob');
 const canvas = renderer.domElement;
 canvas.addEventListener('pointerdown', (e) => {
@@ -526,6 +530,10 @@ canvas.addEventListener('pointerdown', (e) => {
     $('joyHint').style.display = 'none';
   } else if (look.id === null) {
     Object.assign(look, { id: e.pointerId, lx: e.clientX, ly: e.clientY, sx: e.clientX, sy: e.clientY, t0: performance.now(), moved: 0 });
+  } else if (pinch.id === null && e.pointerType !== 'mouse') {
+    // een tweede vinger erbij: knijpen om te zoomen
+    Object.assign(pinch, { id: e.pointerId, x: e.clientX, y: e.clientY, d0: Math.max(20, Math.hypot(e.clientX - look.lx, e.clientY - look.ly)), z0: camDist });
+    look.moved = 99;
   }
   canvas.setPointerCapture(e.pointerId);
 });
@@ -537,10 +545,14 @@ canvas.addEventListener('pointermove', (e) => {
     if (d > max) { dx *= max / d; dy *= max / d; }
     joy.x = dx / max; joy.y = dy / max;
     knob.style.left = joy.ox + dx + 'px'; knob.style.top = joy.oy + dy + 'px';
+  } else if (pinch.id !== null && (e.pointerId === look.id || e.pointerId === pinch.id)) {
+    if (e.pointerId === look.id) { look.lx = e.clientX; look.ly = e.clientY; } else { pinch.x = e.clientX; pinch.y = e.clientY; }
+    setZoom(pinch.z0 * pinch.d0 / Math.max(20, Math.hypot(pinch.x - look.lx, pinch.y - look.ly)));
+    look.last = clock.elapsedTime;
   } else if (e.pointerId === look.id) {
     look.moved = Math.max(look.moved, Math.hypot(e.clientX - look.sx, e.clientY - look.sy));
     camYaw -= (e.clientX - look.lx) * 0.006;
-    camPitch = THREE.MathUtils.clamp(camPitch + (e.clientY - look.ly) * 0.003, 0.15, 0.95);
+    camPitch = THREE.MathUtils.clamp(camPitch + (e.clientY - look.ly) * 0.003, 0.04, 0.95);
     look.lx = e.clientX; look.ly = e.clientY; look.last = clock.elapsedTime;
   }
 });
@@ -551,11 +563,15 @@ const endPointer = (e) => {
     if (tap(joy) && e.type === 'pointerup') tapAt(e.clientX, e.clientY);
     joy.id = null; joy.x = joy.y = 0; ring.style.display = knob.style.display = 'none';
   }
+  if (e.pointerId === pinch.id) pinch.id = null;
   if (e.pointerId === look.id) {
     if (tap(look) && e.type === 'pointerup') tapAt(e.clientX, e.clientY);
     look.id = null;
+    // de andere vinger van het knijpen kijkt verder rond
+    if (pinch.id !== null) { Object.assign(look, { id: pinch.id, lx: pinch.x, ly: pinch.y, sx: pinch.x, sy: pinch.y, moved: 99 }); pinch.id = null; }
   }
 };
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); setZoom(camDist * Math.exp(e.deltaY * 0.0012)); }, { passive: false });
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
 
@@ -794,10 +810,12 @@ function update(dt) {
     let d = player.yaw - camYaw; d = Math.atan2(Math.sin(d), Math.cos(d));
     camYaw += d * dt * 0.9 * Math.min(1, player.speed / 3);
   }
-  const dist = camDist, up = 1.0;
-  camTarget.set(player.pos.x + Math.sin(camYaw) * 2.2, player.pos.y + up, player.pos.z + Math.cos(camYaw) * 2.2);
-  camPos.set(player.pos.x - Math.sin(camYaw) * Math.cos(camPitch) * dist, player.pos.y + up + Math.sin(camPitch) * dist, player.pos.z - Math.cos(camYaw) * Math.cos(camPitch) * dist);
-  camPos.y = Math.max(camPos.y, height(camPos.x, camPos.z) + 1.2);
+  // dichtbij schuift de camera opzij, zodat je over je schouder de vlakte in kijkt
+  const dist = camDist, up = 1.0, near = THREE.MathUtils.clamp((6.5 - dist) / 3.5, 0, 1);
+  const sx = -Math.cos(camYaw) * 0.55 * near, sz = Math.sin(camYaw) * 0.55 * near, ahead = 2.2 + near * 3.5;
+  camTarget.set(player.pos.x + sx + Math.sin(camYaw) * ahead, player.pos.y + up, player.pos.z + sz + Math.cos(camYaw) * ahead);
+  camPos.set(player.pos.x + sx - Math.sin(camYaw) * Math.cos(camPitch) * dist, player.pos.y + up + Math.sin(camPitch) * dist, player.pos.z + sz - Math.cos(camYaw) * Math.cos(camPitch) * dist);
+  camPos.y = Math.max(camPos.y, height(camPos.x, camPos.z) + 1.2 - near * 0.5);
   // niet midden in een boomstam of rots gaan staan
   for (const b of blockers) {
     if (b.top) continue;
@@ -819,6 +837,8 @@ function update(dt) {
   if (camOverride) { camera.position.copy(camOverride.pos); camTarget.copy(camOverride.look); }   // alleen voor tests
   if (shake > 0) { shake -= dt; camera.position.x += (Math.random() - 0.5) * shake * 0.6; camera.position.y += (Math.random() - 0.5) * shake * 0.6; }
   camera.lookAt(camTarget);
+  // dichtbij schuift het beeld wat omhoog: zo sta je vrij van de knoppen en zie je meer grond voor je voeten
+  camera.setViewOffset(innerWidth, innerHeight, 0, Math.round(innerHeight * 0.14 * near), innerWidth, innerHeight);
 
   // eten, ziek zijn, herstellen
   if (state.started && state.sleeping <= 0) {
@@ -923,7 +943,7 @@ frame();
 // voor testen
 window.__game = {
   state, player, herd, hyenas, leopard, zebras, sabres, group, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap, cutMeat, tapAt, pickUp, openRadial,
-  setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; },
+  setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setZoom, zoom: () => camDist,
   lookFrom: (pos, look) => { camOverride = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },
   // als lookFrom, maar met hoogtes ten opzichte van de grond op de plek waar je naar kijkt
   lookRel: (pos, look) => { const h = height(look[0], look[2]); camOverride = { pos: new THREE.Vector3(pos[0], pos[1] + h, pos[2]), look: new THREE.Vector3(look[0], look[1] + h, look[2]) }; }, setDay: (p) => { dayP = p; }, setSense,
