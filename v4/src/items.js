@@ -42,6 +42,12 @@ export const ITEMS = {
     unknown: 'Zou er binnenin nog iets zitten?',
     known: 'Met een kei sla je het open: er zit merg in, vet en voedzaam.',
   },
+  meat: {
+    name: 'Rauw vlees', color: '#a83a32',
+    look: 'Een flinke lap vers vlees van een zebra. Het ruikt sterk. Jij bent niet de enige die dat ruikt…',
+    unknown: 'Dit is veel meer eten dan bessen. Opeten, of naar de groep brengen?',
+    known: 'Vlees vult enorm. Maar hyena\'s ruiken het van ver en komen erop af.',
+  },
 };
 
 // Ontdekkingen: dit is wat je in het proefstuk kunt leren
@@ -58,6 +64,11 @@ export const DISCOVERIES = [
   { id: 'grubs', text: 'Onder stenen zitten larven: klein, maar voedzaam.' },
   { id: 'hyena', text: 'Hyena\'s deinzen terug als je stenen naar ze gooit.' },
   { id: 'leopard', text: 'Een luipaard besluipt je van achteren. Kijk hem recht aan, of gooi een steen.' },
+  { id: 'share', text: 'Wie eten deelt, heeft een groep. En een groep houdt je in leven.' },
+  { id: 'sleep', text: 'Samen bij de slaapboom ben je \'s nachts veilig.' },
+  { id: 'kill', text: 'Waar grote katten gejaagd hebben, blijft vlees achter. Wie het eerst komt…' },
+  { id: 'meat', text: 'Vlees vult veel meer dan bessen. Maar de geur lokt hyena\'s.' },
+  { id: 'sabre', text: 'Een sabeltandkat jaag je niet weg. Wacht tot hij verzadigd is.' },
 ];
 
 // Verstopte vondsten: zoals archeologen ze nu vinden
@@ -72,10 +83,17 @@ export const LOOKS = {
   leopard: { name: 'Luipaard', look: 'Hij ligt lui op een tak. Overdag slaapt hij; in de schemering gaat hij jagen.', hint: 'In de grot van Swartkrans ligt een schedel van een jonge mensachtige met twee gaatjes erin: precies de tanden van een luipaard.' },
   flatstone: { name: 'Platte steen', look: 'Een platte steen, half in de grond. Wat zou eronder zitten?', hint: 'Je kunt hem omdraaien.' },
   gazelle: { name: 'Gazellen', look: 'Slanke antilopen met gebogen hoorns. Ze grazen in een groep en kijken steeds op.', hint: 'Ze zijn snel en schichtig. Te voet haal je ze nooit in.' },
+  zebra: { name: 'Zebra\'s', look: 'Gestreepte paarden van de vlakte. Ze grazen samen: veel ogen zien meer dan twee.', hint: 'Voor jou zijn ze te snel en te sterk. Maar er zijn jagers die ze wel aankunnen…' },
+  sabre: { name: 'Sabeltandkat', look: 'Een zware kat met hoektanden als messen. Overdag ligt hij in het hoge gras; soms gaat hij op jacht.', hint: 'Met die tanden kan hij niet alles van de botten krijgen. Er blijft altijd iets over.' },
+  kill: { name: 'Verse prooi', look: 'Een zebra, net gedood. De buik is open, het vlees is nog warm.', hint: 'Met je handen krijg je de taaie huid niet open. Je hebt iets scherps nodig.' },
+  tree: { name: 'De slaapboom', look: 'Een oude acacia met een brede kroon. Hier slaapt je groep, al zolang je je kunt herinneren.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
+  tor: { name: 'Tor', look: 'De oudste van de groep. Zijn haar is grijs en hij loopt moeilijk, maar hij weet waar het water blijft staan als het droog is.', hint: 'Hij kan zelf niet meer ver lopen om eten te zoeken.' },
+  kem: { name: 'Kem', look: 'Jong en nieuwsgierig. Kem slaat graag stenen tegen elkaar en eet alles wat je meebrengt.', hint: 'Echt alles. Ook wat je zelf nog niet kent.' },
+  ibo: { name: 'Kleine Ibo', look: 'Het kind van de groep. Hij rent je tegemoet als je terugkomt.', hint: 'Hij heeft altijd honger.' },
 };
 
 // Wat je ervan weet, als kleur bij de zintuigen: goed, slecht of nog onbekend
-export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good' };
+export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good', meat: 'good' };
 
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 
@@ -170,6 +188,11 @@ export function heldMesh(item) {
     for (const k of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), m); e.position.y = k * 0.24; g.add(e); }
     g.rotation.x = Math.PI / 2;
     return g;
+  }
+  if (item === 'meat') {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.11, 7, 5), lam(c)); m.scale.set(1.25, 0.5, 0.8);
+    const fat = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), lam(new THREE.Color('#e8d0b8'))); fat.scale.set(1.3, 0.4, 0.6); fat.position.set(0.05, 0.035, 0.03);
+    return new THREE.Group().add(m, fat);
   }
   if (item === 'stone') return new THREE.Mesh(new THREE.DodecahedronGeometry(0.1, 0), lam(c));
   if (item === 'flake') { const m = new THREE.Mesh(new THREE.TetrahedronGeometry(0.09, 0), lam(c)); m.scale.set(1, 0.35, 1.4); return m; }

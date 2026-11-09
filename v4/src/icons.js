@@ -33,6 +33,10 @@ export const ICON = {
   book: svg('<path d="M8 10c6-2 11-1 16 3 5-4 10-5 16-3v28c-6-2-11-1-16 3-5-4-10-5-16-3z"/><path d="M24 13v28"/>'),
   sound: svg('<path d="M8 19h7l10-8v26l-10-8H8z"/><path d="M31 18c3 3 3 9 0 12M36 13c6 6 6 16 0 22"/>'),
   mute: svg('<path d="M8 19h7l10-8v26l-10-8H8z"/><path d="M32 19l10 10M42 19L32 29"/>'),
+  // geven: een open hand met iets erop
+  give: svg('<path d="M6 32c6-3 10-3 14 0l8 2c3 1 3 4 0 4l-8-1"/><path d="M28 36l12-5c3-1 4 2 2 4l-14 8c-4 2-8 2-12 0l-10-4"/><circle cx="26" cy="15" r="7"/><path d="M26 4v2M36 9l-2 1M16 9l2 1"/>'),
+  // slapen: een maansikkel
+  sleep: svg('<path d="M34 8a17 17 0 1 0 6 26A14 14 0 0 1 34 8z"/><path d="M8 10h6l-6 7h6M18 4h4l-4 5h4"/>'),
   close: svg('<path d="M14 14l20 20M34 14L14 34"/>'),
 };
 
@@ -43,5 +47,6 @@ export const ITEM_ICON = {
   redberry: '<svg viewBox="0 0 48 48"><path d="M24 6c-2 6-6 8-6 12" stroke="#4a6a2a" stroke-width="2.5" fill="none"/><path d="M24 8c6-4 12-2 14 2-6 2-10 1-14-2z" fill="#5e8a32"/>' + [[16, 22], [28, 22], [22, 30], [12, 32], [32, 32], [24, 40]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="6.5" fill="#d8302a" stroke="#5a1410" stroke-width="2"/><circle cx="${x - 2}" cy="${y - 2}" r="1.8" fill="#ffb0a0"/>`).join('') + '</svg>',
   leaf: '<svg viewBox="0 0 48 48"><path d="M10 40C8 22 20 8 40 8c0 20-12 32-30 32z" fill="#3c6a2a" stroke="#1a3010" stroke-width="2.5"/><path d="M12 38L34 14M20 30l-2-8M26 24l6 1" stroke="#8ab86a" stroke-width="2" fill="none"/></svg>',
   flake: '<svg viewBox="0 0 48 48"><path d="M8 34L30 8l12 8-8 22z" fill="#b8a890" stroke="#3a3028" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 32l18-20" stroke="#e8dcc8" stroke-width="2"/></svg>',
+  meat: '<svg viewBox="0 0 48 48"><path d="M8 28c-2-10 6-18 16-18s18 6 16 16-10 14-20 12S9 34 8 28z" fill="#a83a32" stroke="#3a1410" stroke-width="2.5"/><path d="M14 26c2-6 8-9 14-8" stroke="#e8c8b0" stroke-width="3.5" fill="none" stroke-linecap="round"/><ellipse cx="30" cy="27" rx="4" ry="3" fill="#e8dcc0" stroke="#3a1410" stroke-width="2"/></svg>',
   bone: '<svg viewBox="0 0 48 48"><path d="M14 30l16-16" stroke="#3a3028" stroke-width="9" stroke-linecap="round"/><path d="M14 30l16-16" stroke="#e8dcc0" stroke-width="5" stroke-linecap="round"/><g fill="#e8dcc0" stroke="#3a3028" stroke-width="2.5"><circle cx="9" cy="31" r="5"/><circle cx="15" cy="37" r="5"/><circle cx="33" cy="11" r="5"/><circle cx="39" cy="17" r="5"/></g></svg>',
 };

@@ -23,6 +23,12 @@ export class Sound {
     // gras: ritselt als je loopt
     this.rustle = this.loop(2600, 'bandpass', 0.7, 0);
     this.gust = 0; this.chirpT = 2; this.cricketT = 1; this.callT = 20;
+    // spanning: een lage, zwevende dreun die aanzwelt als er gevaar is, en een hartslag
+    this.drone = ctx.createGain(); this.drone.gain.value = 0;
+    const df = ctx.createBiquadFilter(); df.type = 'lowpass'; df.frequency.value = 160; this.droneF = df;
+    for (const f of [55, 55.7, 82.1]) { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.connect(df); o.start(); }
+    df.connect(this.drone).connect(this.out);
+    this.heartT = 0; this.motifT = 25; this.danger = 0;
   }
 
   loop(freq, type, q, vol) {
@@ -58,9 +64,23 @@ export class Sound {
 
   // elke frame: achtergrondgeluiden bijwerken
   // night: 0..1, move: snelheid, tall: in hoog gras, senses: zintuigen aan
-  tick(dt, { night, move, tall, senses }) {
+  // danger: 0..1, hoe dichtbij het gevaar is
+  tick(dt, { night, move, tall, senses, danger = 0 }) {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
+    this.danger = danger;
+    this.drone.gain.setTargetAtTime(danger < 0.15 ? 0 : 0.05 + danger * 0.16, now, 0.6);
+    this.droneF.frequency.setTargetAtTime(120 + danger * 260, now, 0.5);
+    // de hartslag gaat sneller naarmate het gevaar dichterbij is
+    this.heartT -= dt;
+    if (danger > 0.3 && this.heartT < 0) {
+      this.heartT = 1.05 - danger * 0.6;
+      this.tone(62, 0.13, 0.25 * danger, 'sine', -18); this.tone(54, 0.16, 0.18 * danger, 'sine', -14, 0.17);
+    }
+    // is alles rustig, dan klinkt af en toe een zacht wijsje (zoals een duimpiano)
+    this.motifT -= dt;
+    if (danger > 0.1) this.motifT = Math.max(this.motifT, 18);
+    else if (this.motifT < 0 && night < 0.5) { this.motifT = 45 + Math.random() * 40; this.motif(); }
     this.gust -= dt;
     if (this.gust < 0) { this.gust = 1.5 + Math.random() * 3; this.wind.g.gain.setTargetAtTime(0.03 + Math.random() * 0.07, now, 1.2); this.wind.f.frequency.setTargetAtTime(250 + Math.random() * 250, now, 1.5); }
     this.rustle.g.gain.setTargetAtTime(Math.min(1, move / 5) * (tall ? 0.09 : 0.025), now, 0.08);
@@ -68,7 +88,7 @@ export class Sound {
 
     // vogels overdag
     this.chirpT -= dt;
-    if (this.chirpT < 0 && night < 0.5) { this.chirpT = 1.5 + Math.random() * 5; this.bird(); }
+    if (this.chirpT < 0 && night < 0.5 && danger < 0.45) { this.chirpT = 1.5 + Math.random() * 5; this.bird(); }
     // in de verte roept af en toe een grotere vogel (zoals een neushoornvogel)
     this.callT -= dt;
     if (this.callT < 0 && night < 0.5) { this.callT = 25 + Math.random() * 30; for (let i = 0; i < 4; i++) this.tone(420 - i * 20, 0.18, 0.025, 'triangle', -60, i * 0.32); }
@@ -76,7 +96,8 @@ export class Sound {
     this.cricketT -= dt;
     if (this.cricketT < 0) {
       this.cricketT = 0.25 + Math.random() * 0.6;
-      const v = 0.004 + night * 0.02, f = 4200 + Math.random() * 600;
+      // bij groot gevaar vallen ze stil
+      const v = (0.004 + night * 0.02) * (danger > 0.45 ? 0.15 : 1), f = 4200 + Math.random() * 600;
       for (let i = 0; i < 3; i++) this.tone(f, 0.03, v, 'sine', 0, i * 0.045);
     }
   }
@@ -112,5 +133,31 @@ export class Sound {
   whoosh() { if (!this.ctx) return; this.burst(1500, 0.3, 0.1, 'bandpass', 0, 0.6); }
   thud() { if (!this.ctx) return; this.burst(200, 0.15, 0.25, 'lowpass'); }
   knap() { if (!this.ctx) return; this.burst(3000, 0.08, 0.3, 'highpass'); this.burst(1800, 0.12, 0.2, 'bandpass', 0.05, 2); }
+  // een paar zachte tonen uit een vijftonige ladder
+  motif(base = 293.7, n = 5 + Math.floor(Math.random() * 3)) {
+    if (!this.ctx) return;
+    const scale = [1, 9 / 8, 5 / 4, 3 / 2, 5 / 3, 2, 9 / 4];
+    let k = 2 + Math.floor(Math.random() * 3), t = 0;
+    for (let i = 0; i < n; i++) {
+      k = Math.max(0, Math.min(scale.length - 1, k + Math.floor(Math.random() * 5) - 2));
+      const f = base * scale[k];
+      this.tone(f, 0.9, 0.035, 'triangle', 0, t); this.tone(f * 2.01, 0.25, 0.012, 'sine', 0, t);
+      t += Math.random() < 0.3 ? 0.56 : 0.28;
+    }
+  }
+  // thuiskomen: een warm, stijgend loopje
+  home() { if (!this.ctx) return; [293.7, 367, 440, 587].forEach((f, i) => { this.tone(f, 1.1, 0.04, 'triangle', 0, i * 0.2); this.tone(f * 2.01, 0.3, 0.012, 'sine', 0, i * 0.2); }); }
+  // een grote kat brult
+  roar(v = 1) {
+    if (!this.ctx) return;
+    this.burst(170, 1.3, 0.5 * v, 'lowpass', 0, 3); this.burst(420, 0.9, 0.12 * v, 'bandpass', 0.05, 2);
+    this.tone(92, 1.2, 0.2 * v, 'sawtooth', -40); this.tone(61, 1.3, 0.16 * v, 'sawtooth', -18, 0.05);
+  }
+  // zebra's: een hoog, hikkend geblaf
+  bray() { if (!this.ctx) return; for (let i = 0; i < 5; i++) { this.tone(520, 0.14, 0.06, 'square', 420, i * 0.24); this.tone(900, 0.08, 0.04, 'sawtooth', -300, i * 0.24 + 0.14); } }
+  // er gebeurt iets groots in de verte
+  sting() { if (!this.ctx) return; this.tone(98, 2.2, 0.12, 'sawtooth', -30); this.tone(147, 2.0, 0.07, 'triangle', -40, 0.1); this.burst(90, 1.5, 0.25, 'lowpass', 0, 1); }
+  // rustig ademen: slapen
+  sleep() { if (!this.ctx) return; [392, 330, 293.7, 220].forEach((f, i) => this.tone(f, 1.6, 0.04, 'sine', 0, i * 0.5)); }
   sense(on) { if (this.ctx && on) this.tone(110, 0.6, 0.05, 'sine', 30); }
 }

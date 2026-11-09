@@ -25,6 +25,8 @@ Bewerkt met gltf-transform (vereenvoudigd, texturen verkleind naar webp). De gra
 | models/chimp.glb (nu niet in gebruik) | [Male Chimpanzee Hairless: Rigged, Animated](https://sketchfab.com/3d-models/c53e8ca04bb54d5e8649d95b437e2ca3) (gebruikt als *Homo habilis*: rechtop gezet, armen omlaag, huid donkerder) | Animal Animator, [animalanimator.com](https://animalanimator.com) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 | models/leopard.glb | [Leopard Animation Run](https://sketchfab.com/3d-models/leopard-animation-run-5a36868106f843d4a24d87334f1550fe) | [GremorySaiyan](https://sketchfab.com/GremorySaiyan) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 | models/gazelle.glb | [Gazella](https://sketchfab.com/3d-models/gazella-b2c70a0821ef4c6ca0c096e33bc97593) (gebaseerd op "Gazelle" van hendrikReyneke) | [kenchoo](https://sketchfab.com/kenchoo) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
+| models/sabre.glb | [SABRE](https://sketchfab.com/3d-models/sabre-2610092060b24576a85e6cfaa558dd39) (sabeltandkat; tien van de animaties behouden) | [slang107123456789](https://sketchfab.com/slang107123456789), met dank aan rroobboo 999 | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
+| models/zebra.glb | [Zebra - Rigged](https://sketchfab.com/3d-models/zebra-rigged-5d6ff2749afc438b9989f91ecb242574) (vijf animaties behouden, materiaal omgezet) | [NoaSeller](https://sketchfab.com/NoaSeller) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 
 Aanpassingen: vereenvoudigd en texturen verkleind (gltf-transform). Bij de mensaap is de tong weggelaten. Bij de hyena zijn de losse vachtkaartjes, het binnenste van de bek, de tanden en de tong weggelaten om hem licht genoeg te maken voor een telefoon.
 

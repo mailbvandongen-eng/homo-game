@@ -215,7 +215,7 @@ export function buildWorld(scene, A) {
     blockers.push({ x, z, r: 0.4 * s });
   }
   for (let i = 0; i < 70; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 10)) acacia(x, z, 0.8 + R() * 0.6); }
-  [[-8, -14, 1.2], [14, -20, 1], [-30, 10, 1.1], [40, 50, 1.3]].forEach(([x, z, s]) => acacia(x, z, s));
+  [[-8, -14, 1.75], [14, -20, 1], [-30, 10, 1.1], [40, 50, 1.3]].forEach(([x, z, s]) => acacia(x, z, s));
   const tag = (grp, mat) => { const m = mergeStatic(grp); m.material = mat; m.geometry.deleteAttribute('color'); m.castShadow = true; m.receiveShadow = true; return m; };
   const barkTex = A.tex.fever_tree_bark_diff; barkTex.repeat.set(2, 3);
   const barkNor = A.tex.fever_tree_bark_nor; barkNor.repeat.set(2, 3);

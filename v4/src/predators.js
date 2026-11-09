@@ -30,9 +30,11 @@ export class Hyenas {
 
   update(dt, game) {
     const p = game.player.pos, night = game.night;
-    const range = 14 + night * 22;
+    const range = 14 + night * 22 + (game.state.hands.includes('meat') ? 16 : 0);
     const nearHome = Math.hypot(p.x - this.home.x, p.z - this.home.z);
-    const holdsBone = game.state.hands.includes('bone');
+    // vlees ruiken ze van ver: wie buit draagt, wordt gevolgd
+    const holdsMeat = game.state.hands.includes('meat');
+    const holdsBone = holdsMeat || game.state.hands.includes('bone');
     for (const h of this.list) {
       const d = Math.hypot(p.x - h.x, p.z - h.z) || 0.01;
       h.t -= dt;
@@ -67,7 +69,7 @@ export class Hyenas {
           break;
         case 'retreat': case 'flee':
           tx = (h.x - p.x) / d; tz = (h.z - p.z) / d; spd = h.state === 'flee' ? 8 : 5; run = true;
-          if (h.t < 0) { h.state = 'roam'; h.t = 3; if (h.carry) { game.toast('De hyena heeft het bot meegenomen. Er liggen er meer bij het karkas.'); h.carry = null; } }
+          if (h.t < 0) { h.state = 'roam'; h.t = 3; if (h.carry) { game.toast(h.carry === 'meat' ? 'De hyena is er met je vlees vandoor.' : 'De hyena heeft het bot meegenomen. Er liggen er meer bij het karkas.'); h.carry = null; } }
           break;
       }
       h.speed += (spd - h.speed) * (1 - Math.exp(-dt * 5));
