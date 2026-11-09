@@ -86,6 +86,27 @@ li.no{color:#9a8f7a}
 #hurt{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 40%,#c01010cc 100%);transition:opacity .5s}
 #doBtn.danger{opacity:1;background:#f07a5a;box-shadow:0 4px 0 #a03a2a;animation:glowR 0.9s ease-in-out infinite}
 @keyframes glowR{0%,100%{box-shadow:0 4px 0 #a03a2a,0 0 0 0 #ff5a3aaa}50%{box-shadow:0 4px 0 #a03a2a,0 0 26px 10px #ff5a3a99}}
+
+/* ---------- knoppen als keien, met icoontjes als rotstekeningen ---------- */
+:root{--oker:#e8a253;--oker2:#c8743a;--steen:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.45 0 0 0 0 0.4 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+.round,.hand{background:var(--steen),radial-gradient(circle at 36% 30%,#7a6a58,#4a3e32 55%,#2e2620 100%)!important;color:var(--oker)!important;border-radius:47% 53% 44% 56%/53% 45% 55% 47%!important;box-shadow:inset 0 -5px 0 #0006,inset 0 2px 1px #fff3,0 4px 8px #0008!important;opacity:.92}
+.round svg,.hand svg,#radial button svg{filter:url(#rough)}
+.round:active{transform:translateY(2px) scale(.97)}
+.round.on{color:#ffd27a!important;box-shadow:inset 0 -5px 0 #0006,inset 0 2px 1px #fff3,0 0 0 3px var(--oker),0 4px 8px #0008!important}
+#doBtn{opacity:.92}
+#doBtn.ready{animation:glowO 1.4s ease-in-out infinite}
+#doBtn.danger{color:#ff8a5a!important;animation:glowR 0.9s ease-in-out infinite}
+@keyframes glowO{0%,100%{box-shadow:inset 0 -5px 0 #0006,0 4px 8px #0008,0 0 0 0 #e8a25300}50%{box-shadow:inset 0 -5px 0 #0006,0 4px 8px #0008,0 0 22px 8px #e8a25388}}
+@keyframes glowR{0%,100%{box-shadow:inset 0 -5px 0 #0006,0 4px 8px #0008,0 0 0 0 #ff5a3a00}50%{box-shadow:inset 0 -5px 0 #0006,0 4px 8px #0008,0 0 26px 10px #ff5a3a99}}
+#act{grid-template-areas:"sense jump" "sneak do"!important}
+#jumpBtn{grid-area:jump}
+.hand .bg{color:var(--oker)}
+#radial button{background:var(--steen),radial-gradient(circle at 36% 30%,#7a6a58,#3a3028)!important;color:var(--oker)!important;border-radius:47% 53% 44% 56%/53% 45% 55% 47%!important}
+#radial button i{background:#c8743a!important}
+#joy .ring{box-shadow:inset 0 0 0 3px #e8a25366!important}
+#joy .knob{background:radial-gradient(circle at 36% 30%,#8a7a68,#4a3e32)!important}
+#joyHint{box-shadow:inset 0 0 0 3px #e8a25333!important}
+.bar{background:#2e2620aa!important;box-shadow:inset 0 0 0 1px #e8a25344!important}
 </style>
 </head>
 <body>
@@ -112,23 +133,27 @@ li.no{color:#9a8f7a}
 <div class="hud" id="act">
   <button class="round" id="senseBtn" aria-label="Zintuigen (ingedrukt houden)"></button>
   <button class="round" id="sneakBtn" aria-label="Sluipen"></button>
-  <button class="round big" id="doBtn" aria-label="Pak op"></button>
+  <button class="round" id="jumpBtn" aria-label="Springen"></button>
+  <button class="round big" id="doBtn" aria-label="Actie: slaan, gooien, gebruiken"></button>
 </div>
 <div class="hud" id="radial"></div>
+<button class="round small" id="swap" aria-label="Ruilen" style="position:fixed;display:none;z-index:4;margin:-23px 0 0 -23px;pointer-events:auto"></button>
+<!-- ruwe randen voor de rotstekening-icoontjes -->
+<svg width="0" height="0" style="position:absolute"><filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter></svg>
 
 <div class="screen open" id="intro"><div class="card">
   <div class="eyebrow">Proefstuk · Riftvallei · 2,4 miljoen jaar geleden</div>
   <h2>Homo habilis</h2>
   <p>Je bent alleen op de savanne en je hebt honger. Kijk om je heen. Wat kun je eten? Wat is gevaarlijk? Je moet het zelf ontdekken.</p>
   <ul>
-    <li><b>Lopen:</b> zet je duim links op het scherm en schuif. Ver schuiven is rennen.</li>
-    <li><b>Rondkijken:</b> veeg rechts over het scherm.</li>
-    <li><b>Iets onderzoeken:</b> tik erop. Dan kun je het bekijken, pakken of proeven.</li>
-    <li><b>Zintuigen:</b> houd het oog ingedrukt. Wat valt je op?</li>
+    <li><b>Lopen:</b> duim links op het scherm en schuif. <b>Rondkijken:</b> veeg rechts.</li>
+    <li><b>Oppakken:</b> loop er gewoon tegenaan. Tik op een hand om iets neer te leggen of te eten.</li>
+    <li><b>Grote kei:</b> slaan, gooien, omdraaien… hij past zich aan. Erboven: <b>springen</b>.</li>
+    <li><b>Tik op iets</b> om het te bekijken of te proeven. <b>Houd het oog ingedrukt</b> voor je zintuigen.</li>
   </ul>
-  <p class="desk" style="font-size:13px;color:#b8ad94">Op een computer: WASD of pijltjes om te lopen, Shift om te rennen, C om te sluipen, E om op te pakken, Q ingedrukt voor je zintuigen, klikken om iets te onderzoeken en slepen om rond te kijken.</p>
+  <p class="desk" style="font-size:13px;color:#b8ad94">Op een computer: WASD of pijltjes om te lopen, Shift om te rennen, spatie om te springen, E voor de actie, C om te sluipen, Q ingedrukt voor je zintuigen, klikken om iets te onderzoeken en slepen om rond te kijken.</p>
   <div class="row" style="justify-content:center"><button class="btn" id="startBtn">Begin</button></div>
-  <p style="font-size:11px;color:#9a8f7a;margin-top:10px;text-align:center">Hoofdpersoon (een rechtop gezette mensaap) en hyena door <a style="color:#b8ad94" href="https://animalanimator.com">Animal Animator</a>, luipaard door GremorySaiyan, gazelle door kenchoo (Sketchfab, CC BY 4.0). Natuur: Poly Haven (CC0). <a style="color:#b8ad94" href="assets/CREDITS.md">Alle bronnen</a></p>
+  <p style="font-size:11px;color:#9a8f7a;margin-top:10px;text-align:center">Hoofdpersoon door gb.prof.69 met bewegingen van Quaternius (CC0); hyena door <a style="color:#b8ad94" href="https://animalanimator.com">Animal Animator</a>, luipaard door GremorySaiyan, gazelle door kenchoo (Sketchfab, CC BY 4.0). Natuur: Poly Haven (CC0). <a style="color:#b8ad94" href="assets/CREDITS.md">Alle bronnen</a></p>
 </div></div>
 
 <div class="screen" id="cardScreen"><div class="card" id="card"></div></div>

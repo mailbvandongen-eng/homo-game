@@ -62,7 +62,7 @@ function mergeColored(group) { const m = mergeStatic(group); m.material = FACE; 
 export class Hominin {
   constructor(scene, A) {
     // met een geladen model: de echte (geboetseerde) mensaap van Animal Animator; anders de eigen figuur
-    if (A && A.models.chimp) { this.initRig(scene, A); this.initState(); return; }
+    if (A && A.models.hominin) { this.initHuman(scene, A); this.initState(); return; }
     const fur = std(0x9a6c4c, { map: FUR, bumpMap: FUR, bumpScale: 2.5 });
     const furDark = std(0x5a3e2c, { map: FUR, bumpMap: FUR, bumpScale: 2.5 });
     const skin = std(0xb08268, { roughness: 0.65 });
@@ -143,29 +143,46 @@ export class Hominin {
     this.initState();
   }
 
-  // Het geboetseerde model: een chimpansee zonder vacht met o.a. een animatie van rechtop lopen.
-  // Een habilis liep rechter op dan een chimpansee: de armen gaan omlaag en de rug iets rechter.
-  initRig(scene, A) {
-    const S = 0.62;
-    this.rig = new Rig(A, 'chimp', { scale: S });
-    const b = (n) => this.rig.bone(n);
-    this.B = {
-      spine: b('DEF-spine.02'), chest: b('DEF-spine.04'), neck: b('DEF-neck.01'), head: b('DEF-head'),
-      armL: b('DEF-upper_arm.L'), armR: b('DEF-upper_arm.R'), foreL: b('DEF-forearm.L'), foreR: b('DEF-forearm.R'),
-      thighL: b('DEF-thigh.L'), thighR: b('DEF-thigh.R'), shinL: b('DEF-shin.L'), shinR: b('DEF-shin.R'),
+  // Het echte model: een neanderthaler (gb.prof.69, CC BY 4.0) met bewegingen uit de Universal Animation Library
+  // (Quaternius, CC0), overgezet op zijn skelet. Kleiner gemaakt tot zo'n 1,35 m, zoals een vroege mens.
+  initHuman(scene, A) {
+    const S = 1.35 / 162;   // het model is in centimeters en 1,62 m lang
+    this.S = S;
+    this.rig = new Rig(A, 'hominin', { scale: S });
+    const act = (n) => { const a = this.rig.action(n); a.play(); a.setEffectiveWeight(0); a.timeScale = 0; return a; };
+    // bewegingen die samen gemengd worden, met hun eigen snelheid (m/s) bij deze lengte
+    this.loco = {
+      idle: { a: act('Idle_Loop') }, cidle: { a: act('Crouch_Idle_Loop') }, air: { a: act('Jump_Loop') },
+      walk: { a: act('Walk_Loop'), v: 1.25 }, jog: { a: act('Jog_Fwd_Loop'), v: 3.0 }, sprint: { a: act('Sprint_Loop'), v: 5.2 },
+      cwalk: { a: act('Crouch_Fwd_Loop'), v: 1.0 },
     };
-    // een iets donkerdere, warmere huid
-    this.rig.model.traverse((o) => { if (o.isMesh && o.material && /Body|Head/.test(o.material.name)) { o.material = o.material.clone(); o.material.color.setRGB(0.82, 0.7, 0.6); } });
-    // wat je in je handen hebt: vast aan de handbotten
-    const hold = (bone) => { const g = new THREE.Group(); g.scale.setScalar(1 / S); g.position.set(0, 0.07, 0.02); bone.add(g); return g; };
-    this.held = hold(b('DEF-hand.R')); this.heldL = hold(b('DEF-hand.L'));
+    for (const k in this.loco) this.loco[k].w = k === 'idle' ? 1 : 0;
+    this.locoPhase = 0; this.once = null;
+    // wat je in je handen hebt: vast aan de handbotten (het skelet is in centimeters, dus terugschalen)
+    this.rig.root.updateMatrixWorld(true);
+    const hold = (bone, side) => {
+      const ws = bone.getWorldScale(new THREE.Vector3()).x, g = new THREE.Group();
+      g.scale.setScalar(1 / ws); g.position.set(side * 0.02 / ws, 0.08 / ws, 0.03 / ws);   // in de handpalm
+      bone.add(g); return g;
+    };
+    this.held = hold(this.rig.bone('hand_r'), -1); this.heldL = hold(this.rig.bone('hand_l'), 1);
     scene.add(this.rig.root);
     this.obj = this.rig.root;
-    this.side = new THREE.Vector3(); this.fwd = new THREE.Vector3();
+  }
+
+  // Een beweging één keer afspelen bovenop de rest (slaan, gooien, oppakken, geraakt worden).
+  // at: moment (0..1) waarop onAt wordt uitgevoerd, bijv. het loslaten van de steen
+  playOnce(name, { speed = 1, at = 0.5, onAt = null, upto = 1, slow = 0.35 } = {}) {
+    if (!this.rig) { this.action = 0.5; onAt && onAt(); return; }
+    const a = this.rig.action(name); if (!a) { onAt && onAt(); return; }
+    if (this.once) this.once.a.setEffectiveWeight(0);
+    a.reset(); a.play(); a.timeScale = speed; a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true;
+    this.once = { a, len: a.getClip().duration * upto, at: a.getClip().duration * at, onAt, slow };
   }
 
   initState() {
     this.pos = new THREE.Vector3(2, 0, -6);
+    this.y = 0; this.vy = 0; this.onGround = true; this.jumpReq = false; this.landed = false;
     this.vel = new THREE.Vector3();
     this.yaw = 0;
     this.phase = 0;
@@ -178,18 +195,31 @@ export class Hominin {
 
   // dir: gewenste looprichting in de wereld (lengte 0..1)
   update(dt, dir, mods) {
-    const want = this.sneaking ? 1.6 : dir.length() > 0.85 ? 5.4 : 2.6;
+    // traploos: hoe verder je de stick duwt, hoe sneller (lopen tot 2,6 m/s, daarna rennen tot 5,4 m/s)
+    const mag = Math.min(1, dir.length());
+    let want = this.sneaking ? 1.6 * mag : mag < 0.7 ? 2.6 * mag / 0.7 : 2.6 + (mag - 0.7) / 0.3 * 2.8;
+    if (this.once) want *= this.once.slow;   // tijdens slaan of gooien loop je bijna niet
     const max = want * mods.speed * (riverDist(this.pos.x, this.pos.z) < 6 ? 0.45 : 1);
-    const target = dir.clone().multiplyScalar(max);
-    this.vel.lerp(target, 1 - Math.exp(-dt * 8));
+    const target = mag > 0.001 ? dir.clone().normalize().multiplyScalar(max) : dir.clone().set(0, 0, 0);
+    this.vel.lerp(target, 1 - Math.exp(-dt * (this.onGround ? 6 : 1.5)));
     this.pos.addScaledVector(this.vel, dt);
     for (const b of blockers) {
+      if (b.top && this.y > b.top - 0.15) continue;   // over een lage rots heen springen
       const dx = this.pos.x - b.x, dz = this.pos.z - b.z, d = Math.hypot(dx, dz), min = b.r + 0.3;
       if (d < min && d > 0.001) { this.pos.x = b.x + dx / d * min; this.pos.z = b.z + dz / d * min; }
     }
     const lim = WALK - 4;
     this.pos.x = THREE.MathUtils.clamp(this.pos.x, -lim, lim); this.pos.z = THREE.MathUtils.clamp(this.pos.z, -lim, lim);
-    this.pos.y = Math.max(height(this.pos.x, this.pos.z), -0.9);
+    // springen en vallen
+    const gy = Math.max(height(this.pos.x, this.pos.z), -0.9);
+    this.landed = false;
+    if (this.jumpReq && this.onGround && !this.sneaking) { this.vy = 5.2; this.onGround = false; }
+    this.jumpReq = false;
+    if (!this.onGround) {
+      this.vy -= 15 * dt; this.y += this.vy * dt;
+      if (this.y <= gy) { this.y = gy; this.vy = 0; this.onGround = true; this.landed = true; }
+    } else this.y = gy;
+    this.pos.y = this.y;
 
     this.speed = Math.hypot(this.vel.x, this.vel.z);
     if (this.speed > 0.2) {
@@ -198,7 +228,7 @@ export class Hominin {
       this.yaw += d * (1 - Math.exp(-dt * 10));
     }
     this.crouch += ((this.sneaking ? 1 : 0) - this.crouch) * (1 - Math.exp(-dt * 8));
-    this.phase += dt * (2.4 + this.speed * 1.75) * (this.speed > 0.15 ? 1 : 0);
+    if (!this.rig) this.phase += dt * (2.4 + this.speed * 1.75) * (this.speed > 0.15 ? 1 : 0);
     this.action = Math.max(0, this.action - dt);
     this.time += dt;
     // stilstaan: rustig ademen en af en toe rondkijken
@@ -253,26 +283,47 @@ export class Hominin {
     }
   }
 
+  // Vloeiend mengen: stilstaan, lopen, joggen en sprinten tegelijk, met gewichten die meegroeien met de snelheid.
+  // Alle loopbewegingen lopen in de pas (dezelfde fase), zodat er bij het overgaan niets verspringt.
   poseRig(mods, dt) {
-    const r = this.rig, B = this.B, sick = mods.sick ? 1 : 0;
+    const r = this.rig, L = this.loco, s = this.speed, sick = mods.sick ? 1 : 0;
     r.root.position.copy(this.pos);
     r.root.rotation.y = this.yaw;
-    const moving = this.speed > 0.25;
-    // gebukt sluipen gaat op handen en voeten; rechtop lopen en rennen met de eigen animatie
-    if (this.sneaking) moving ? r.play('KnuckleWalk', { fade: 0.35, speed: Math.max(0.5, this.speed / 1.3) }) : r.play('01_Idle', { fade: 0.5 });
-    else if (moving) r.play('BipedalWalk', { fade: 0.25, speed: Math.min(2.2, Math.max(0.6, this.speed / 2.2)) });
-    else r.freeze('BipedalWalk', 0.0);
+    const ss = THREE.MathUtils.smoothstep;
+    const w = { idle: 0, cidle: 0, air: 0, walk: 0, jog: 0, sprint: 0, cwalk: 0 };
+    if (!this.onGround) w.air = 1;
+    else if (this.sneaking) { const m = ss(s, 0.1, 0.6); w.cidle = 1 - m; w.cwalk = m; }
+    else {
+      const m = ss(s, 0.1, 0.5); w.idle = 1 - m;
+      if (s <= L.walk.v * 1.6) w.walk = m;
+      else if (s <= L.jog.v) { const f = (s - L.walk.v * 1.6) / (L.jog.v - L.walk.v * 1.6); w.walk = m * (1 - f); w.jog = m * f; }
+      else { const f = Math.min(1, (s - L.jog.v) / (L.sprint.v - L.jog.v)); w.jog = m * (1 - f); w.sprint = m * f; }
+    }
+    // gewichten zacht laten meebewegen
+    const k = 1 - Math.exp(-dt * 9);
+    for (const n in L) L[n].w += (w[n] - L[n].w) * k;
+    // gezamenlijke fase van de loopbewegingen
+    let mv = 0, V = 0, T = 0;
+    for (const n of ['walk', 'jog', 'sprint', 'cwalk']) { mv += L[n].w; V += L[n].w * L[n].v; T += L[n].w * L[n].a.getClip().duration; }
+    if (mv > 0.01) { V /= mv; T /= mv; this.locoPhase = (this.locoPhase + dt * Math.min(2.2, Math.max(0.5, s / V)) / T) % 1; }
+    for (const n of ['walk', 'jog', 'sprint', 'cwalk']) L[n].a.time = this.locoPhase * L[n].a.getClip().duration;
+    for (const n of ['idle', 'cidle', 'air']) { const a = L[n].a; a.time = (a.time + dt) % a.getClip().duration; }
+    this.phase = this.locoPhase * Math.PI * 4 * (mv > 0.2 ? 1 : 0);   // voor de voetstappen: twee per ronde
+    // eenmalige beweging eroverheen
+    let o = 0;
+    if (this.once) {
+      const O = this.once, t = O.a.time;
+      if (O.onAt && t >= O.at) { const f = O.onAt; O.onAt = null; f(); }
+      o = Math.min(1, t / 0.12, (O.len - t) / 0.18);
+      if (t >= O.len - 0.001) { O.a.setEffectiveWeight(0); O.a.stop(); this.once = null; o = 0; }
+      else O.a.setEffectiveWeight(Math.max(0, o));
+    }
+    for (const n in L) L[n].a.setEffectiveWeight(L[n].w * (1 - o));
     r.update(dt);
-    if (this.sneaking) return;
-    const side = r.side(this.side), fwd = this.fwd.set(0, 0, 1).applyQuaternion(r.root.quaternion);
-    // armen omlaag en dichter bij het lijf, rug wat rechter: meer mens, minder chimpansee
-    const run = Math.min(1, Math.max(0, (this.speed - 2.6) / 2.8));
-    r.bend(B.spine, side, -0.35 + run * 0.2 + sick * 0.4);
-    r.bend(B.armL, fwd, -0.4); r.bend(B.armR, fwd, 0.4);
-    if (!moving) { r.bend(B.thighL, side, -0.15); r.bend(B.thighR, side, -0.15); r.bend(B.shinL, side, 0.12); r.bend(B.shinR, side, 0.12); }
-    r.bend(B.head, new THREE.Vector3(0, 1, 0), this.lookYaw * 0.8);
-    // iets oppakken of eten: rechterarm naar voren en omlaag
-    if (this.action > 0) { const a = Math.sin(this.action / 0.5 * Math.PI); r.bend(B.spine, side, 0.5 * a); r.bend(B.armR, side, -1.1 * a); }
+    // ziek: wat voorovergebogen; stilstaand rondkijken
+    const side = r.side(this._side || (this._side = new THREE.Vector3()));
+    if (sick) r.bend(r.bone('spine_02'), side, 0.35);
+    if (this.lookYaw && !this.once) r.bend(r.bone('head'), this._up || (this._up = new THREE.Vector3(0, 1, 0)), this.lookYaw * 0.7);
   }
 
   // Hoe goed val je op voor een dier? 1 = normaal

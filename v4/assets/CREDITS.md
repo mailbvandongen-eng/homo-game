@@ -21,8 +21,13 @@ Bewerkt met gltf-transform (vereenvoudigd, texturen verkleind naar webp). De gra
 | Bestand | Model | Maker | Licentie |
 |---|---|---|---|
 | models/hyena.glb | [Elder Spotted Hyena (Crocuta) - Sculpted, Furry](https://sketchfab.com/3d-models/elder-spotted-hyena-crocuta-sculpted-furry-dc49d898720f4b1297d7ee22452c9452) | Animal Animator, [animalanimator.com](https://animalanimator.com) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
-| models/chimp.glb | [Male Chimpanzee Hairless: Rigged, Animated](https://sketchfab.com/3d-models/c53e8ca04bb54d5e8649d95b437e2ca3) (gebruikt als *Homo habilis*: rechtop gezet, armen omlaag, huid donkerder) | Animal Animator, [animalanimator.com](https://animalanimator.com) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
+| models/hominin.glb | [Neanderthal](https://sketchfab.com/3d-models/neanderthal-f7a0890f15654e02b4ec34f5db48f52e) (de hoofdpersoon; kleiner gemaakt, zonder speer, haar vereenvoudigd, zonder gezichtsuitdrukkingen) | [gb.prof.69](https://sketchfab.com/gb.prof.69) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
+| models/chimp.glb (nu niet in gebruik) | [Male Chimpanzee Hairless: Rigged, Animated](https://sketchfab.com/3d-models/c53e8ca04bb54d5e8649d95b437e2ca3) (gebruikt als *Homo habilis*: rechtop gezet, armen omlaag, huid donkerder) | Animal Animator, [animalanimator.com](https://animalanimator.com) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 | models/leopard.glb | [Leopard Animation Run](https://sketchfab.com/3d-models/leopard-animation-run-5a36868106f843d4a24d87334f1550fe) | [GremorySaiyan](https://sketchfab.com/GremorySaiyan) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 | models/gazelle.glb | [Gazella](https://sketchfab.com/3d-models/gazella-b2c70a0821ef4c6ca0c096e33bc97593) (gebaseerd op "Gazelle" van hendrikReyneke) | [kenchoo](https://sketchfab.com/kenchoo) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 
 Aanpassingen: vereenvoudigd en texturen verkleind (gltf-transform). Bij de mensaap is de tong weggelaten. Bij de hyena zijn de losse vachtkaartjes, het binnenste van de bek, de tanden en de tong weggelaten om hem licht genoeg te maken voor een telefoon.
+
+# Bewegingen van de hoofdpersoon
+
+`anims/hominin.json`: bewegingen uit de [Universal Animation Library](https://quaternius.itch.io/universal-animation-library) van **Quaternius** (CC0), overgezet op het skelet van de neanderthaler met een eigen script (`/root/tools/homo-assets/retarget.html`). Gebruikt: stilstaan, lopen, joggen, sprinten, gebukt staan en lopen, springen, oppakken, iets doen met de handen, een stoot, een slag van boven, een werpbeweging, geraakt worden, neervallen, zwemmen, rollen en duwen.

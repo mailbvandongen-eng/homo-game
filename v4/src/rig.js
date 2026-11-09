@@ -33,7 +33,7 @@ export class Rig {
     if (!b) console.warn('bot niet gevonden:', part);
     return b;
   }
-  action(part) { const k = Object.keys(this.actions).find((n) => n.includes(part)); return k && this.actions[k]; }
+  action(part) { const k = this.actions[part] ? part : Object.keys(this.actions).find((n) => n.includes(part)); return k && this.actions[k]; }
 
   play(part, { fade = 0.3, speed = 1, once = false } = {}) {
     const a = this.action(part); if (!a) return;

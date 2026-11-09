@@ -78,7 +78,9 @@ function discover(id) {
 }
 
 // ---------- knoppen met icoontjes ----------
-$('doBtn').innerHTML = ICON.hand;
+$('doBtn').innerHTML = ICON.strike;
+$('jumpBtn').innerHTML = ICON.jump;
+$('swap').innerHTML = ICON.swap;
 $('sneakBtn').innerHTML = ICON.sneak;
 $('senseBtn').innerHTML = ICON.sense;
 $('journalIcon').innerHTML = ICON.book;
@@ -232,14 +234,14 @@ function openRadial(target) {
     opts.push({ icon: ICON.drop, fn: () => { state.hands[i] = null; renderHands(); dropAt(it); } });
   } else if (target.kind === 'turn') {
     opts.push({ icon: ICON.eye, fn: () => lookAt(target) });
-    opts.push({ icon: ICON.turn, fn: () => goAndDo(target, () => turnStone(target)) });
+    opts.push({ icon: ICON.turn, fn: () => goAndDo(target, () => act('PickUp_Table', () => turnStone(target), 1.4)) });
   } else if (target.look) {
     opts.push({ icon: ICON.eye, fn: () => lookAt(target) });
     if ((target.look === 'hyena' || target.look === 'leopard') && hasStone) opts.push({ icon: ICON.throw, fn: () => throwAt(target.member) });
     if (target.look === 'carcass' && state.hands.includes('flake')) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cutMeat) });
   } else {
     opts.push({ icon: ICON.eye, fn: () => lookAt(target) });
-    opts.push({ icon: ICON.hand, fn: () => goAndDo(target, () => pickUp(target)) });
+    opts.push({ icon: ICON.hand, fn: () => goAndDo(target, () => grab(target)) });
     if (EDIBLE.has(target.item)) opts.push({ icon: ICON.mouth, q: !state.known.has(target.item), fn: () => goAndDo(target, () => tasteFrom(target)) });
   }
   radial = { target, buttons: [] };
@@ -278,11 +280,11 @@ function placeRadial() {
 function dropAt(it) {
   dropAtPos(it, player.pos.x + Math.sin(player.yaw) * 0.6, player.pos.z + Math.cos(player.yaw) * 0.6);
 }
-function dropAtPos(it, x, z) {
+function dropAtPos(it, x, z, thrown = false) {
   if (it !== 'stone' && it !== 'bone' && it !== 'flake') return;
   const m = heldMesh(it); m.position.set(x, height(x, z) + 0.08, z); if (it === 'bone') m.rotation.set(0, 0, Math.PI / 2);
   m.traverse((o) => { o.castShadow = true; }); scene.add(m);
-  const t = { kind: 'pick', item: it, x, z, mesh: m };
+  const t = { kind: 'pick', item: it, x, z, mesh: m, noAuto: !thrown };
   things.push(t); glints.add(scene, t);
 }
 
@@ -293,6 +295,7 @@ let shake = 0;
 function bite(attacker, dmg, big) {
   if (state.collapsed > 0) return null;
   state.health -= dmg; hurtFlash(); sound.bite(); walkTo = null;
+  player.playOnce('Hit_Chest', { speed: 1, slow: 0.5 });
   let stolen = null;
   if (attacker.kind === 'hyena' && state.hands.includes('bone')) {
     stolen = 'bone'; state.hands[state.hands.indexOf('bone')] = null; renderHands();
@@ -304,26 +307,18 @@ function bite(attacker, dmg, big) {
   return stolen;
 }
 // een steen gooien naar een roofdier
-function throwAt(member) {
+function throwAt(member, kind = member.kind) {
   const i = state.hands.indexOf('stone');
   if (i < 0) { toast('Je hebt geen steen in je hand.'); return; }
   state.hands[i] = null; renderHands();
-  player.action = 0.5; sound.whoosh();
-  player.yaw = Math.atan2(member.x - player.pos.x, member.z - player.pos.z);
+  sound.whoosh();
   const from = player.pos.clone(); from.y += 1.3;
   throws.throw(from, member, (x, z) => {
-    if (Math.hypot(member.x - x, member.z - z) < 1.8) {
-      sound.thud();
-      if (member.kind === 'hyena') hyenas.hit(member, predGame); else leopard.hit(predGame);
-    } else { sound.thud(); toast('Mis!'); }
-    dropAtPos('stone', x, z);
+    sound.thud();
+    if (Math.hypot(member.x - x, member.z - z) < 1.8) hitTarget({ m: member, kind: kind || 'gazelle' });
+    else toast('Mis!');
+    dropAtPos('stone', x, z, true);
   });
-}
-function nearestThreat() {
-  let best = null, bd = 18;
-  const list = [...hyenas.threats, ...(leopard.threat ? [leopard] : [])];
-  for (const m of list) { const d = Math.hypot(m.x - player.pos.x, m.z - player.pos.z); if (d < bd) { bd = d; best = m; } }
-  return best;
 }
 const predGame = { player, state, sound, toast, discover, bite, night: 0 };
 
@@ -354,7 +349,8 @@ addEventListener('keydown', (e) => {
   if (e.repeat) return;
   keys.add(e.code);
   if (e.code === 'KeyC') toggleSneak();
-  if (e.code === 'KeyE' || e.code === 'Space') doAction();
+  if (e.code === 'KeyE' || e.code === 'KeyF') doAction();
+  if (e.code === 'Space') player.jumpReq = true;
   if (e.code === 'KeyQ') setSense(true);
   if (e.code === 'Escape') { closeCard(); closeRadial(); }
 });
@@ -407,7 +403,8 @@ canvas.addEventListener('pointercancel', endPointer);
 
 function toggleSneak() { player.sneaking = !player.sneaking; $('sneakBtn').classList.toggle('on', player.sneaking); }
 $('sneakBtn').onclick = toggleSneak;
-$('doBtn').onclick = () => doAction();
+$('doBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); doAction(); });
+$('jumpBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); player.jumpReq = true; });
 function setSense(on) {
   if (state.sensing === on) return;
   state.sensing = on; $('senseBtn').classList.toggle('on', on); $('senseVeil').classList.toggle('on', on);
@@ -418,32 +415,116 @@ sb.addEventListener('pointerdown', (e) => { e.preventDefault(); sb.setPointerCap
 for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) sb.addEventListener(ev, () => setSense(false));
 sb.addEventListener('contextmenu', (e) => e.preventDefault());
 
-// ---------- wat is er dichtbij om te pakken? ----------
-let near = null;
-function findNear() {
-  let best = null, bd = 2.3;
+// ---------- vanzelf oppakken ----------
+// Loop ergens tegenaan en het gaat in een vrije hand (bij een struik: één keer per keer dat je ertegenaan loopt).
+// Zijn je handen vol, dan verschijnt er een ruilknopje bij het ding.
+const touching = new Set();
+let swapTarget = null;
+function grab(t) { if (state.collapsed > 0) return; player.playOnce('PickUp_Table', { speed: 1.9, at: 0.45, onAt: () => pickUp(t) }); }
+function autoPickup() {
   for (const t of things) {
-    if (!available(t)) continue;
-    const d = Math.hypot(t.x - player.pos.x, t.z - player.pos.z);
-    if (d < bd) { bd = d; best = t; }
+    if (!available(t) || t.kind === 'turn') { touching.delete(t); continue; }
+    const d = Math.hypot(t.x - player.pos.x, t.z - player.pos.z), r = t.bush ? 1.25 : 0.85;
+    if (t.noAuto) { if (d > 1.8) t.noAuto = false; continue; }   // net neergelegd: pas weer oppakken als je even weg bent geweest
+    if (d < r && player.onGround) {
+      if (touching.has(t)) continue;
+      touching.add(t);
+      if (freeHand() >= 0) grab(t); else swapTarget = t;
+    } else { touching.delete(t); if (swapTarget === t) swapTarget = null; }
+  }
+  // het ruilknopje bij het ding
+  const sw = $('swap');
+  if (swapTarget && available(swapTarget)) {
+    const a = anchorOf(swapTarget);
+    if (a) { sw.style.display = 'grid'; sw.style.left = a.x + 'px'; sw.style.top = (a.y - 40) + 'px'; } else sw.style.display = 'none';
+  } else { sw.style.display = 'none'; swapTarget = null; }
+}
+$('swap').onclick = () => {
+  const t = swapTarget; if (!t) return;
+  // welke hand laat je los? Liever eten dan gereedschap (een kei of afslag heb je nog nodig)
+  const food = (x) => EDIBLE.has(x), H = state.hands;
+  const i = food(H[0]) && !food(H[1]) ? 0 : food(H[1]) && !food(H[0]) ? 1 : 1;
+  const it = H[i]; H[i] = null; renderHands(); dropAt(it);
+  swapTarget = null; grab(t);
+};
+
+// ---------- de actieknop: wat er gebeurt hangt af van wat er om je heen is ----------
+const fwdOf = () => [Math.sin(player.yaw), Math.cos(player.yaw)];
+function targets() {
+  const list = hyenas.list.filter((h) => h.state !== 'flee').map((h) => ({ m: h, kind: 'hyena', threat: hyenas.threats.includes(h) }));
+  if (!['tree', 'up', 'down'].includes(leopard.state)) list.push({ m: leopard, kind: 'leopard', threat: leopard.threat });
+  for (const g of herd.members) list.push({ m: g, kind: 'gazelle', threat: false });
+  return list;
+}
+// het beste doel: een aanvaller (van welke kant ook), anders iets wat ongeveer voor je staat
+function bestTarget(range = 18) {
+  const [fx, fz] = fwdOf();
+  let best = null, bs = -1e9;
+  for (const t of targets()) {
+    const dx = t.m.x - player.pos.x, dz = t.m.z - player.pos.z, d = Math.hypot(dx, dz);
+    if (d > range) continue;
+    const front = (dx * fx + dz * fz) / (d || 1);
+    if (!t.threat && front < 0.45) continue;
+    const score = (t.threat ? 100 : 0) - d + front * 3;
+    if (score > bs) { bs = score; best = { ...t, d }; }
   }
   return best;
 }
-function doAction() {
-  if (state.collapsed > 0) return;
-  const th = nearestThreat();
-  if (th && state.hands.includes('stone')) { throwAt(th); return; }
-  if (!near) return;
-  if (near.kind === 'turn') turnStone(near); else pickUp(near);
+function act(anim, fn, speed = 1.6) { player.playOnce(anim, { speed, at: 0.5, onAt: fn }); }
+function hitTarget(t) {
+  if (t.kind === 'hyena') hyenas.hit(t.m, predGame);
+  else if (t.kind === 'leopard') leopard.hit(predGame);
+  else if (herd.fleeing <= 0) { herd.fleeing = 7; sound.flee(); toast('Raak! Maar de gazellen zijn veel sneller dan jij.'); }
 }
-let btnMode = '';
-function setBtn(mode) {
-  if (mode === btnMode) return;
-  btnMode = mode;
-  $('doBtn').innerHTML = mode === 'throw' ? ICON.throw : mode === 'turn' ? ICON.turn : ICON.hand;
-  $('doBtn').classList.toggle('danger', mode === 'throw');
-  $('doBtn').classList.toggle('ready', mode === 'hand' || mode === 'turn');
+// slaan: met een steen of bot in je hand een harde klap, anders met je vuist
+function strike() {
+  const armed = state.hands.some((h) => h === 'stone' || h === 'bone');
+  player.playOnce(armed ? 'Sword_Attack' : 'Punch_Cross', { speed: armed ? 1.5 : 1.3, at: armed ? 0.42 : 0.4, slow: 0.25, onAt: () => {
+    sound.whoosh();
+    const t = bestTarget(2.6);
+    if (t) { sound.thud(); hitTarget(t); }
+  } });
 }
+function doThrow(t) {
+  player.yaw = Math.atan2(t.m.x - player.pos.x, t.m.z - player.pos.z);
+  player.playOnce('Spell_Simple_Shoot', { speed: 1.5, at: 0.4, slow: 0.2, onAt: () => throwAt(t.m, t.kind) });
+}
+function useTarget() {
+  let best = null, bd = 1.8;
+  for (const t of things) if (t.kind === 'turn' && available(t)) { const d = Math.hypot(t.x - player.pos.x, t.z - player.pos.z); if (d < bd) { bd = d; best = t; } }
+  return best;
+}
+function actionContext() {
+  if (state.collapsed > 0) return null;
+  const H = state.hands, stone = H.includes('stone');
+  const t = bestTarget();
+  if (t && t.d < 2.6) return { mode: 'strike', icon: ICON.strike, danger: true, run: strike };
+  if (t && stone && (t.threat || t.kind !== 'gazelle' || t.d < 14)) return { mode: 'throw', icon: ICON.throw, danger: t.threat || t.kind !== 'gazelle', run: () => doThrow(t) };
+  const u = useTarget();
+  if (u) return { mode: 'turn', icon: ICON.turn, ready: true, at: u, run: () => act('PickUp_Table', () => turnStone(u), 1.4) };
+  if (H.includes('flake') && state.carcassMeat > 0 && Math.hypot(player.pos.x - CARCASS.x, player.pos.z - CARCASS.z) < 3) return { mode: 'cut', icon: ICON.cut, ready: true, run: () => act('Interact', cutMeat) };
+  if (H.includes('bone') && stone) return { mode: 'crack', icon: ICON.crack, ready: true, run: () => act('Interact', crack) };
+  if (H[0] === 'stone' && H[1] === 'stone') return { mode: 'knap', icon: ICON.knap, ready: true, run: () => act('Interact', knap) };
+  return { mode: 'strike', icon: ICON.strike, run: strike };
+}
+let ctx = null, btnMode = '';
+// drukt je terwijl hij nog bezig is (bijv. bukken), dan volgt de actie zodra hij klaar is
+let pendingAction = 0;
+function doAction() { if (player.once) { pendingAction = 1.2; return; } if (ctx) ctx.run(); }
+function updateAction() {
+  ctx = actionContext();
+  const mode = ctx ? ctx.mode + (ctx.danger ? '!' : '') : '';
+  if (mode !== btnMode) {
+    btnMode = mode;
+    $('doBtn').innerHTML = ctx ? ctx.icon : ICON.strike;
+    $('doBtn').classList.toggle('danger', !!(ctx && ctx.danger));
+    $('doBtn').classList.toggle('ready', !!(ctx && ctx.ready));
+  }
+  marker.visible = !!(ctx && ctx.at);
+  if (marker.visible) marker.position.set(ctx.at.x, height(ctx.at.x, ctx.at.z) + 0.05, ctx.at.z);
+}
+const marker = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.55, 28), new THREE.MeshBasicMaterial({ color: 0xe39a4a, transparent: true, opacity: 0.8, depthWrite: false }));
+marker.rotation.x = -Math.PI / 2; scene.add(marker);
 
 // de gazellen schrikken
 const ui = {
@@ -574,9 +655,9 @@ function update(dt) {
   $('veil').style.opacity = sick ? 1 : 0;
 
   // de pak-knop licht op als er iets binnen bereik is
-  near = state.collapsed > 0 ? null : findNear();
-  const threat = nearestThreat();
-  setBtn(threat && state.hands.includes('stone') ? 'throw' : near ? (near.kind === 'turn' ? 'turn' : 'hand') : '');
+  if (state.collapsed <= 0) autoPickup();
+  updateAction();
+  if (pendingAction > 0) { pendingAction -= dt; if (!player.once) { pendingAction = 0; doAction(); } }
   placeRadial();
 
   // ontdekkingen die je door rond te lopen doet
@@ -610,7 +691,7 @@ function collapse() {
 
 function frame() {
   requestAnimationFrame(frame);   // eerst: een fout in één beeld mag het spel niet stilzetten
-  const dt = Math.min(clock.getDelta(), 1 / 20);
+  const dt = Math.min(clock.getDelta(), window.__dtCap || 1 / 20);   // __dtCap: alleen voor trage testbrowsers
   clock.elapsedTime += dt;
   try { update(dt); } catch (e) { console.error(e); }
   renderer.render(scene, camera);

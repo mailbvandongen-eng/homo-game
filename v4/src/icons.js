@@ -24,6 +24,12 @@ export const ICON = {
   cut: svg('<path d="M8 36L30 8l10 6-24 26z"/><path d="M12 40c8 2 18 2 28-2"/>'),
   // omdraaien: een pijl in een boog
   turn: svg('<path d="M10 30c0-10 8-16 16-16h8"/><path d="M28 8l7 6-7 6"/><path d="M8 38h32"/>'),
+  // slaan: een vuist
+  strike: svg('<path d="M14 22c0-4 2-6 5-6s4 2 4 5M23 20c0-4 2-6 5-6s4 2 4 5M32 20c0-3 2-5 4-5s4 2 4 5v8c0 9-6 15-14 15h-2c-7 0-12-5-12-12v-6c0-3 2-5 4-5s4 2 4 5"/><path d="M4 12l5 4M8 6l3 6M2 20h6"/>'),
+  // springen: een figuurtje dat opspringt boven een boog
+  jump: svg('<circle cx="26" cy="9" r="4"/><path d="M26 14v12M26 18l-8 4M26 18l8-3M26 26l-6 8M26 26l7 6"/><path d="M8 44c6-6 26-6 32 0" stroke-dasharray="3 5"/>'),
+  // ruilen: twee pijlen
+  swap: svg('<path d="M8 18h28l-7-7M40 30H12l7 7"/>'),
   book: svg('<path d="M8 10c6-2 11-1 16 3 5-4 10-5 16-3v28c-6-2-11-1-16 3-5-4-10-5-16-3z"/><path d="M24 13v28"/>'),
   sound: svg('<path d="M8 19h7l10-8v26l-10-8H8z"/><path d="M31 18c3 3 3 9 0 12M36 13c6 6 6 16 0 22"/>'),
   mute: svg('<path d="M8 19h7l10-8v26l-10-8H8z"/><path d="M32 19l10 10M42 19L32 29"/>'),

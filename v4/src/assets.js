@@ -4,7 +4,7 @@ import { GLTFLoader, HDRLoader } from '../lib/three-addons.js';
 // Gescande natuur van Poly Haven (CC0): keien, struiken, dood hout, grond- en bastfoto's en een luchtfoto.
 // Alles wordt geladen voordat het spel begint; onProgress krijgt een getal van 0 tot 1.
 // dieren met botten en animaties (Sketchfab, CC BY 4.0, zie assets/CREDITS.md)
-const ANIMALS = ['hyena', 'leopard', 'gazelle', 'chimp'];
+const ANIMALS = ['hyena', 'leopard', 'gazelle', 'hominin'];
 const MODELS = [...ANIMALS, 'namaqualand_boulder_02', 'namaqualand_boulder_05', 'namaqualand_rocks_01', 'wild_rooibos_bush', 'shrub_03', 'dead_tree_trunk', 'dry_branches_medium_01'];
 const TEXTURES = [
   ['dry_ground_01_diff', true], ['dry_ground_01_nor', false], ['withered_grass_diff', true], ['withered_grass_nor', false],
@@ -13,7 +13,7 @@ const TEXTURES = [
 ];
 
 export async function loadAssets(renderer, onProgress = () => {}) {
-  const total = MODELS.length + TEXTURES.length + 1;
+  const total = MODELS.length + TEXTURES.length + 2;
   let done = 0;
   const tick = (x) => { onProgress(++done / total); return x; };
   const tl = new THREE.TextureLoader(), gl = new GLTFLoader();
@@ -34,7 +34,10 @@ export async function loadAssets(renderer, onProgress = () => {}) {
     return tick({ sky: t, env });
   });
 
-  const [T, M, H] = await Promise.all([tex, models, hdr]);
+  // bewegingen voor de hoofdpersoon (overgezet uit de Universal Animation Library)
+  const moves = fetch('./assets/anims/hominin.json').then((r) => r.json()).then((j) => tick(j.map((c) => THREE.AnimationClip.parse(c))));
+  const [T, M, H, MV] = await Promise.all([tex, models, hdr, moves]);
+  anims.hominin = MV;
   return { tex: Object.fromEntries(T), models: Object.fromEntries(M), anims, sky: H.sky, env: H.env };
 }
 
