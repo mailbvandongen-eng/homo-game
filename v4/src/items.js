@@ -71,7 +71,7 @@ export const LOOKS = {
   hyena: { name: 'Gevlekte hyena', look: 'Sterke kaken die zelfs botten kraken. Hyena\'s jagen zelf, maar stelen ook graag van anderen.', hint: 'Ze zijn brutaal als ze met meer zijn. Een steen maakt indruk.' },
   leopard: { name: 'Luipaard', look: 'Hij ligt lui op een tak. Overdag slaapt hij; in de schemering gaat hij jagen.', hint: 'In de grot van Swartkrans ligt een schedel van een jonge mensachtige met twee gaatjes erin: precies de tanden van een luipaard.' },
   flatstone: { name: 'Platte steen', look: 'Een platte steen, half in de grond. Wat zou eronder zitten?', hint: 'Je kunt hem omdraaien.' },
-  impala: { name: 'Impala\'s', look: 'Slanke antilopen met lange poten. Ze grazen in een groep en kijken steeds op.', hint: 'Ze zijn snel en schichtig. Te voet haal je ze nooit in.' },
+  gazelle: { name: 'Gazellen', look: 'Slanke antilopen met gebogen hoorns. Ze grazen in een groep en kijken steeds op.', hint: 'Ze zijn snel en schichtig. Te voet haal je ze nooit in.' },
 };
 
 // Wat je ervan weet, als kleur bij de zintuigen: goed, slecht of nog onbekend

@@ -33,7 +33,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 700);
 const world = buildWorld(scene, A);
 const player = new Hominin(scene);
-const herd = new Herd(scene, 42, -12, 9);
+const herd = new Herd(scene, 42, -12, 9, A);
 const CARCASS = { x: -70, z: -78 };
 const vultures = new Vultures(scene, CARCASS.x, CARCASS.z);
 carcass(scene, CARCASS.x, CARCASS.z);
@@ -45,8 +45,8 @@ const birds = new Birds(scene, [[6, -14], [-20, 8], [30, -40], [60, 20], [-50, -
 const butterflies = new Butterflies(scene, bushes);
 const senses = new Senses(scene);
 const sound = new Sound();
-const hyenas = new Hyenas(scene, CARCASS);
-const leopard = new Leopard(scene, { x: 40, z: 50, branchY: 5.3 });   // zijn boom staat bij de rivier
+const hyenas = new Hyenas(scene, CARCASS, A);
+const leopard = new Leopard(scene, { x: 40, z: 50, branchY: 5.3 }, A);   // zijn boom staat bij de rivier
 const throws = new Throws(scene);
 
 function resize() {
@@ -335,7 +335,7 @@ function targetPos(t) {
   return { x: t.x, y: height(t.x, t.z) + (t.bush ? 0.7 : t.look ? 0.4 : 0.2), z: t.z };
 }
 function tapAt(sx, sy) {
-  const cands = [...things.filter(available), ...LOOK_TARGETS, ...herd.members.map((m) => ({ look: 'impala', member: m })),
+  const cands = [...things.filter(available), ...LOOK_TARGETS, ...herd.members.map((m) => ({ look: 'gazelle', member: m })),
     ...hyenas.list.map((h) => ({ look: 'hyena', member: h })), { look: 'leopard', member: leopard }];
   let best = null, bd = 56;
   for (const c of cands) {
@@ -445,13 +445,13 @@ function setBtn(mode) {
   $('doBtn').classList.toggle('ready', mode === 'hand' || mode === 'turn');
 }
 
-// de impala's schrikken
+// de gazellen schrikken
 const ui = {
   toast,
   flee(smelled) {
     sound.flee();
     if (smelled) { toast('Ze hebben je geroken! De wind waaide van jou naar hen toe.', 5); discover('wind'); }
-    else toast('De impala\'s zien je en vluchten!');
+    else toast('De gazellen zien je en vluchten!');
   },
 };
 
@@ -459,6 +459,7 @@ const ui = {
 // eigen klok: tijd in seconden sinds de start
 const clock = { elapsedTime: 0, last: performance.now(), getDelta() { const n = performance.now(), d = (n - this.last) / 1000; this.last = n; return d; } };
 const dir = new THREE.Vector3(), camTarget = new THREE.Vector3(), camPos = new THREE.Vector3();
+let camOverride = null;
 let hintStage = 0, sneakNear = 0, playTime = 0, dayP = 0.12, lastPart = '', stepPhase = 0;
 
 function partOfDay(p) { return p < 0.06 ? 'dawn' : p < 0.7 ? 'day' : p < 0.8 ? 'evening' : p < 0.97 ? 'night' : 'dawn'; }
@@ -547,6 +548,7 @@ function update(dt) {
   if (clear < 1) camPos.set(hx + (camPos.x - hx) * clear, hy + (camPos.y - hy) * clear + (1 - clear) * 1.5, hz + (camPos.z - hz) * clear);
   if (sick) { camPos.x += Math.sin(t * 1.3) * 0.25; camPos.y += Math.sin(t * 0.9) * 0.15; }
   camera.position.lerp(camPos, 1 - Math.exp(-dt * 6));
+  if (camOverride) { camera.position.copy(camOverride.pos); camTarget.copy(camOverride.look); }   // alleen voor tests
   if (shake > 0) { shake -= dt; camera.position.x += (Math.random() - 0.5) * shake * 0.6; camera.position.y += (Math.random() - 0.5) * shake * 0.6; }
   camera.lookAt(camTarget);
 
@@ -594,7 +596,7 @@ function update(dt) {
     if (hintStage === 0 && pt > 45 && state.found.size === 0) { hintStage = 1; toast('Je maag knort. Er groeien struiken met bessen in de buurt. Tik erop.', 5); }
     if (hintStage <= 1 && pt > 100 && !state.found.has('vultures')) { hintStage = 2; toast('Kijk eens om je heen: in de verte cirkelen gieren. Wat zou daar liggen?', 6); }
     if (hintStage <= 2 && pt > 160) { hintStage = 3; toast('Houd het oog ingedrukt en gebruik je zintuigen. Wat valt je op?', 6); }
-    if (hintStage <= 3 && pt > 240 && !state.found.has('sneak')) { hintStage = 4; toast('Impala\'s zijn schichtig. Kun je dichtbij komen zonder dat ze je zien of ruiken?', 6); }
+    if (hintStage <= 3 && pt > 240 && !state.found.has('sneak')) { hintStage = 4; toast('Gazellen zijn schichtig. Kun je dichtbij komen zonder dat ze je zien of ruiken?', 6); }
   }
 
   if (toastTimer > 0) { toastTimer -= dt; if (toastTimer <= 0) $('toast').classList.remove('on'); }
@@ -633,6 +635,7 @@ frame();
 // voor testen
 window.__game = {
   state, player, herd, hyenas, leopard, things, camera, renderer, discover, throwAt, turnStone, knap, cutMeat, tapAt, pickUp, openRadial,
-  setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setDay: (p) => { dayP = p; }, setSense,
+  setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; },
+  lookFrom: (pos, look) => { camOverride = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; }, setDay: (p) => { dayP = p; }, setSense,
   screenOf: (t) => { const a = anchorOf(t); return a && [a.x, a.y]; },
 };

@@ -1,110 +1,20 @@
 import * as THREE from '../lib/three.module.js';
 import { height, WALK, riverDist, rng } from './world.js';
-import { vc, P, SPH, legParts, turn } from './actors.js';
+import { turn } from './actors.js';
+import { Rig } from './rig.js';
 
 const R = rng(55);
-
-// ---------- modellen ----------
-// Gevlekte hyena: hoge schouders, lage achterkant, ronde oren, donkere snuit en vlekken
-function hyenaModel() {
-  const TAN = 0xb89a6a, SPOT = 0x3a2a1e, MUZ = 0x2a1e16, MANE = 0x6a5440;
-  const g = new THREE.Group();
-  const spots = [];
-  for (let i = 0; i < 18; i++) {
-    const t = R() * 2 - 1, a = R() * 2.4 - 1.2, side = R() < 0.5 ? -1 : 1;
-    spots.push(P(SPOT, SPH(0.035), side * Math.cos(a) * 0.21, 0.72 + Math.sin(a) * 0.17 + t * 0.06, t * 0.42, 0.5, 1, 1));
-  }
-  const body = new THREE.Group(); g.add(body);
-  body.add(vc(
-    P(TAN, SPH(0.24), 0, 0.72, 0, 0.9, 0.85, 1.9),
-    P(TAN, SPH(0.25), 0, 0.8, 0.3, 1, 1.05, 1.05), P(TAN, SPH(0.21), 0, 0.64, -0.36, 1, 1, 1.05),
-    P(MANE, new THREE.BoxGeometry(0.05, 0.08, 0.55), 0, 1.0, 0.2, 1, 1, 1, -0.2, 0, 0),
-    ...spots,
-  ));
-  body.rotation.x = -0.12;   // voor hoger dan achter
-  const neck = new THREE.Group(); neck.position.set(0, 0.9, 0.48); g.add(neck);
-  neck.add(vc(P(TAN, new THREE.CylinderGeometry(0.11, 0.15, 0.32, 8), 0, 0.12, 0.04, 1, 1, 1, 0.9, 0, 0), P(MANE, new THREE.BoxGeometry(0.05, 0.08, 0.3), 0, 0.2, -0.02, 1, 1, 1, 0.9, 0, 0)));
-  const head = new THREE.Group(); head.position.set(0, 0.18, 0.2); neck.add(head);
-  head.add(vc(
-    P(TAN, SPH(0.13), 0, 0, 0, 1, 0.95, 1.05),
-    P(MUZ, new THREE.CylinderGeometry(0.06, 0.09, 0.2, 8), 0, -0.04, 0.16, 1, 1, 1, Math.PI / 2, 0, 0),
-    P(MUZ, SPH(0.04), 0, -0.02, 0.26),
-    ...[-1, 1].map((k) => P(TAN, SPH(0.06), k * 0.1, 0.11, -0.03, 0.9, 1, 0.35)),
-    ...[-1, 1].map((k) => P(MUZ, SPH(0.018), k * 0.06, 0.04, 0.1)),
-  ));
-  const tail = new THREE.Group(); tail.position.set(0, 0.68, -0.58); g.add(tail);
-  tail.add(vc(P(TAN, new THREE.CylinderGeometry(0.03, 0.025, 0.25, 6), 0, -0.12, 0), P(SPOT, SPH(0.05), 0, -0.26, 0, 1, 1.6, 1)));
-  tail.rotation.x = -2.6;
-  const legs = [];
-  for (const [x, z, hind] of [[-0.13, 0.36, 0], [0.13, 0.36, 0], [-0.13, -0.38, 1], [0.13, -0.38, 1]]) {
-    const L = legParts(hind ? TAN : TAN, hind ? 0.3 : 0.38, hind ? 0.3 : 0.36, 0.07);
-    L.hip.position.set(x, hind ? 0.62 : 0.76, z); L.hind = hind; g.add(L.hip); legs.push(L);
-  }
-  g.scale.setScalar(1.05);
-  return { g, neck, head, legs, tail };
-}
-
-// Luipaard: lang en laag, goudgeel met rozetten, een lange staart
-function leopardModel() {
-  const GOLD = 0xd8a850, ROS = 0x2a1e12, WHITE = 0xf2e8d8;
-  const g = new THREE.Group();
-  const spots = [];
-  for (let i = 0; i < 34; i++) {
-    const t = R() * 2 - 1, a = R() * 2.6 - 1.3, side = R() < 0.5 ? -1 : 1;
-    spots.push(P(ROS, new THREE.TorusGeometry(0.03, 0.009, 4, 8), side * Math.cos(a) * 0.19, 0.58 + Math.sin(a) * 0.14, t * 0.5, 1, 1, 1, 0, Math.PI / 2, 0));
-  }
-  g.add(vc(
-    P(GOLD, SPH(0.21), 0, 0.58, 0, 0.95, 0.85, 2.5),
-    P(WHITE, SPH(0.17), 0, 0.5, 0.02, 0.95, 0.6, 2.2),
-    ...spots,
-  ));
-  const neck = new THREE.Group(); neck.position.set(0, 0.64, 0.5); g.add(neck);
-  neck.add(vc(P(GOLD, new THREE.CylinderGeometry(0.09, 0.13, 0.26, 8), 0, 0.06, 0.05, 1, 1, 1, 1.1, 0, 0)));
-  const head = new THREE.Group(); head.position.set(0, 0.1, 0.18); neck.add(head);
-  head.add(vc(
-    P(GOLD, SPH(0.12), 0, 0, 0, 1.05, 0.9, 1),
-    P(WHITE, SPH(0.06), 0, -0.05, 0.1, 1.2, 0.8, 1),
-    P(ROS, SPH(0.022), 0, -0.01, 0.15, 1.2, 0.8, 1),
-    ...[-1, 1].map((k) => P(GOLD, SPH(0.04), k * 0.09, 0.1, -0.02, 1, 1, 0.4)),
-    ...Array.from({ length: 8 }, (_, i) => P(ROS, SPH(0.012), Math.cos(i) * 0.08, 0.06 + Math.sin(i * 2) * 0.02, -0.02 + (i % 3) * 0.03)),
-  ));
-  // ogen die 's nachts oplichten
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xc8ff70, toneMapped: false, transparent: true, opacity: 0 });
-  for (const k of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.017, 8, 6), eyeMat); e.position.set(k * 0.05, 0.03, 0.1); head.add(e); }
-  const tail = new THREE.Group(); tail.position.set(0, 0.6, -0.5); g.add(tail);
-  const tparts = [];
-  for (let i = 0; i < 7; i++) tparts.push(P(i === 6 ? ROS : GOLD, SPH(0.035 - i * 0.002), 0, -i * 0.025, -i * 0.11, 1, 1, 1.8));
-  tail.add(vc(...tparts));
-  const legs = [];
-  for (const [x, z, hind] of [[-0.12, 0.38, 0], [0.12, 0.38, 0], [-0.12, -0.38, 1], [0.12, -0.38, 1]]) {
-    const L = legParts(GOLD, 0.27, 0.27, 0.07);
-    L.hip.position.set(x, 0.58, z); L.hind = hind; g.add(L.hip); legs.push(L);
-  }
-  return { g, neck, head, legs, tail, eyeMat };
-}
-
-// Lopen of rennen op vier poten
-function gait(m, dt, speed, run, crouch = 0) {
-  m.phase += dt * (run ? 11 : 6) * (speed > 0.2 ? 1 : 0);
-  const a = (run ? 0.85 : 0.45) * Math.min(1, speed);
-  const off = run ? [0, 0.3, Math.PI, Math.PI + 0.3] : [0, Math.PI, Math.PI, 0];
-  m.legs.forEach((L, i) => {
-    const p = m.phase + off[i];
-    L.hip.rotation.x = Math.sin(p) * a - crouch * (L.hind ? -0.6 : 0.5);
-    const lift = Math.max(0, Math.cos(p)) * (run ? 1.2 : 0.7) * Math.min(1, speed);
-    L.knee.rotation.x = (L.hind ? -0.2 - lift * 0.6 : lift) + crouch * (L.hind ? -0.9 : 1.0);
-  });
-  m.g.rotation.x = run ? Math.sin(m.phase) * 0.08 : 0;
-}
 
 // ---------- hyena's ----------
 // Een groepje bij het karkas. Overdag lui, 's nachts brutaal. Ze komen nieuwsgierig dichterbij,
 // giechelen, en dan waagt er één een uitval. Een steen laat ze terugdeinzen.
 export class Hyenas {
-  constructor(scene, home) {
+  constructor(scene, home, A) {
     this.home = home; this.list = []; this.mood = 0; this.rushT = 4;
     for (let i = 0; i < 3; i++) {
-      const m = hyenaModel();
+      // echt model met animaties (Animal Animator, CC BY 4.0); het kijkt naar +x, dus een kwartslag draaien
+      const rig = new Rig(A, 'hyena', { scale: 0.5 + i * 0.03, facing: -Math.PI / 2 });
+      const m = { g: rig.root, rig };
       const a = i * 2.1;
       const h = { ...m, kind: 'hyena', x: home.x + Math.cos(a) * 6, z: home.z + Math.sin(a) * 6, yaw: R() * 6, speed: 0, phase: R() * 6, state: 'rest', t: R() * 5, carry: null };
       scene.add(m.g); this.list.push(h);
@@ -181,14 +91,16 @@ export class Hyenas {
   }
 
   pose(h, dt, run) {
-    h.g.position.set(h.x, height(h.x, h.z) + (run ? Math.abs(Math.sin(h.phase)) * 0.12 : 0), h.z);
+    h.g.position.set(h.x, height(h.x, h.z), h.z);
     h.g.rotation.y = h.yaw;
-    const resting = h.state === 'rest' && h.speed < 0.2;
-    gait(h, dt, h.speed, run, resting ? 0.6 : 0);
-    if (resting) h.g.position.y -= 0.2;
-    const down = h.state === 'windup' ? 0.7 : h.state === 'curious' ? 0.25 : 0;
-    h.neck.rotation.x += (down - h.neck.rotation.x) * (1 - Math.exp(-dt * 6));
-    h.tail.rotation.x = -2.6 + (h.state === 'flee' ? -0.4 : h.state === 'curious' ? 0.6 : 0);
+    // welke animatie past bij wat hij doet?
+    const near = Math.hypot(h.x - this.home.x, h.z - this.home.z) < 5;
+    if (h.state === 'windup') h.rig.play('Lunge', { fade: 0.15, speed: 1.6, once: true });
+    else if (run || h.speed > 3.5) h.rig.play('Run', { fade: 0.2, speed: Math.max(0.6, h.speed / 7) });
+    else if (h.speed > 0.25) h.rig.play('Walk', { fade: 0.3, speed: Math.max(0.5, h.speed / 1.5) });
+    else if (h.state === 'rest' && near) h.rig.play('Eat', { fade: 0.5 });   // knagen op een bot bij het karkas
+    else h.rig.play('Idle', { fade: 0.4 });
+    h.rig.update(dt);
   }
 }
 
@@ -196,9 +108,16 @@ export class Hyenas {
 // Overdag ligt hij in zijn boom. In de schemering komt hij naar beneden en besluipt je van achteren.
 // Kijk hem recht aan en hij aarzelt; een steen jaagt hem terug de boom in.
 export class Leopard {
-  constructor(scene, tree) {
+  constructor(scene, tree, A) {
     this.tree = tree;
-    const m = leopardModel();
+    // echt model met een renbeweging (GremorySaiyan, CC BY 4.0); kijkt naar +x
+    const rig = new Rig(A, 'leopard', { scale: 0.024, facing: -Math.PI / 2 });
+    // ogen die 's nachts oplichten
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xc8ff70, toneMapped: false, transparent: true, opacity: 0, depthWrite: false });
+    const eyes = new THREE.Group();
+    for (const k of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), eyeMat); e.position.x = k * 0.05; eyes.add(e); }
+    scene.add(eyes);
+    const m = { g: rig.root, rig, eyeMat, eyes, head: rig.bone('Bip01_Head') };
     Object.assign(this, m, { kind: 'leopard', x: tree.x, z: tree.z, yaw: 0, speed: 0, phase: 0, state: 'tree', t: 0, watched: 0, cool: 0, y: 0 });
     scene.add(m.g);
   }
@@ -275,13 +194,19 @@ export class Leopard {
     if (this.state === 'tree') { this.x = this.tree.x + 0.6; this.z = this.tree.z; y = gy + branch; this.yaw = 1.2; }
     if (this.state === 'down') y = gy + branch * Math.max(0, this.t / 1.2);
     if (this.state === 'up') { this.x = this.tree.x + 0.6; this.z = this.tree.z; y = gy + branch * (1 - Math.max(0, this.t / 1.2)); }
-    this.g.position.set(this.x, y, this.z);
+    this.g.position.set(this.x, y - crouch * 0.12, this.z);
     this.g.rotation.y = this.yaw;
-    gait(this, dt, this.speed, run, crouch * 0.8 + (this.state === 'tree' ? 1 : 0));
-    if (this.state === 'tree') { this.g.position.y -= 0.25; this.legs.forEach((L) => { L.hip.rotation.x = L.hind ? -1.2 : 1.2; }); }
-    this.neck.rotation.x = crouch ? 0.3 : this.state === 'tree' ? 0.2 : 0;
-    this.tail.rotation.x = 0.2 + Math.sin(performance.now() / (crouch ? 180 : 600)) * (crouch ? 0.25 : 0.1);
-    this.tail.rotation.y = Math.sin(performance.now() / 700) * 0.3;
+    // het model kan alleen rennen: langzaam afgespeeld is het sluipen, stilgezet is het loeren of liggen
+    const rest = this.state === 'tree' || this.state === 'freeze' || this.speed < 0.15;
+    if (rest) this.rig.freeze('Principal', this.state === 'tree' ? 0.55 : 0.1);
+    else this.rig.play('Principal', { fade: 0.2, speed: run ? Math.min(1.4, this.speed / 8) : Math.max(0.22, this.speed / 7) });
+    this.rig.update(dt);
+    // ogen bij de kop
+    if (this.head) {
+      this.head.getWorldPosition(this.eyes.position);
+      this.eyes.position.x += Math.sin(this.yaw) * 0.1; this.eyes.position.z += Math.cos(this.yaw) * 0.1; this.eyes.position.y += 0.02;
+      this.eyes.rotation.y = this.yaw;
+    }
     this.eyeMat.opacity = Math.max(night, game.state.sensing ? 1 : 0) * (this.state === 'tree' && !game.state.sensing ? 0.4 : 1);
   }
 }

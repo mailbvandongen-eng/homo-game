@@ -1,6 +1,7 @@
 import * as THREE from '../lib/three.module.js';
 import { height, blockers, WALK, riverDist, tallGrassAt, rng, WIND, mergeStatic } from './world.js';
 import { rimify } from './hominin.js';
+import { Rig } from './rig.js';
 
 // losse onderdelen die samen bewegen, samenvoegen tot één stuk
 const merged = (...parts) => { const g = new THREE.Group(); parts.forEach((p) => g.add(p)); return mergeStatic(g); };
@@ -31,65 +32,30 @@ export function legParts(color, upLen, loLen, thick) {
   return { hip, knee };
 }
 
-function impalaModel(male) {
-  const g = new THREE.Group();
-  // lijf: drie kleuren zoals een echte impala (rood-bruine rug, lichte flanken, witte buik) en zwarte strepen achter
-  g.add(vc(
-    P(BACK, SPH(0.27), 0, 1.04, 0.0, 0.9, 0.85, 2.15),
-    P(FLANK, SPH(0.27), 0, 0.96, 0.0, 0.98, 0.8, 2.05),
-    P(COAT, SPH(0.24), 0, 1.0, 0.36, 1, 1.05, 1.1), P(COAT, SPH(0.25), 0, 1.0, -0.36, 1, 1.05, 1.15),
-    P(BELLY, SPH(0.22), 0, 0.86, 0, 1, 0.6, 1.9),
-    ...[-1, 1].map((k) => P(DARK, new THREE.BoxGeometry(0.02, 0.3, 0.035), k * 0.2, 0.95, -0.5, 1, 1, 1, 0.15, 0, 0)),
-  ));
-  // nek en kop
-  const neck = new THREE.Group(); neck.position.set(0, 1.1, 0.52); g.add(neck);
-  neck.add(vc(P(COAT, new THREE.CylinderGeometry(0.075, 0.12, 0.5, 8), 0, 0.25, 0), P(COAT, SPH(0.11), 0, 0.02, 0, 1, 1, 1.1),
-    P(BELLY, new THREE.CylinderGeometry(0.05, 0.08, 0.4, 6), 0, 0.22, 0.05)));
-  neck.rotation.x = 0.45;
-  const head = new THREE.Group(); head.position.y = 0.52; neck.add(head);
-  const hp = [
-    P(COAT, SPH(0.09), 0, 0, 0, 0.95, 0.95, 1.1), P(COAT, new THREE.CylinderGeometry(0.045, 0.07, 0.24, 8), 0, -0.02, 0.15, 1, 1, 1, Math.PI / 2 - 0.25, 0, 0),
-    ...[-1, 1].map((k) => P(COAT, SPH(0.06), k * 0.08, 0.1, -0.03, 0.35, 1.5, 0.6, 0, 0, -k * 0.6)),
-    P(DARK, SPH(0.03), 0, -0.04, 0.27, 1.1, 0.8, 0.8),
-    ...[-1, 1].map((k) => P(DARK, SPH(0.018), k * 0.06, 0.03, 0.07)),
-    ...[-1, 1].map((k) => P(DARK, SPH(0.02), k * 0.12, 0.18, -0.03, 0.4, 0.8, 0.5)),
-    ...[-1, 1].map((k) => P(BELLY, SPH(0.026), k * 0.06, 0.035, 0.06, 1, 0.8, 0.5)),
-  ];
-  if (male) {
-    // lier-vormige hoorns met ribbels
-    for (const k of [-1, 1]) for (let i = 0; i < 6; i++) {
-      const t = i / 5;
-      hp.push(P(DARK, new THREE.CylinderGeometry(0.018 * (1 - t * 0.6), 0.022 * (1 - t * 0.5), 0.09, 5), k * (0.04 + Math.sin(t * 3) * 0.05), 0.12 + t * 0.4, -0.06 - t * 0.12 + Math.sin(t * 4) * 0.04, 1, 1, 1, -0.4 + t * 0.6, 0, -k * (0.25 - t * 0.5)));
-    }
-  }
-  head.add(vc(...hp));
-  const tail = new THREE.Group(); tail.position.set(0, 1.08, -0.62); g.add(tail);
-  tail.add(vc(P(BELLY, new THREE.CylinderGeometry(0.04, 0.03, 0.28, 6), 0, -0.14, 0), P(DARK, new THREE.BoxGeometry(0.015, 0.22, 0.03), 0, -0.15, -0.025)));
-  tail.rotation.x = -2.4;
-  const legs = [];
-  for (const [x, z, hind] of [[-0.14, 0.42, 0], [0.14, 0.42, 0], [-0.14, -0.42, 1], [0.14, -0.42, 1]]) {
-    const L = legParts(hind ? COAT : FLANK, hind ? 0.44 : 0.4, hind ? 0.42 : 0.44, hind ? 0.075 : 0.06);
-    L.hip.position.set(x, 0.92, z); L.hind = hind; g.add(L.hip); legs.push(L);
-  }
-  return { g, neck, head, legs, tail };
-}
-
 export class Herd {
-  constructor(scene, cx, cz, n) {
+  constructor(scene, cx, cz, n, A) {
     const R = rng(21);
     this.members = [];
     this.alarm = 0;           // 0..1: hoe onrustig de kudde is
     this.fleeing = 0;         // seconden dat de kudde nog vlucht
     this.home = new THREE.Vector2(cx, cz);
     for (let i = 0; i < n; i++) {
-      const m = impalaModel(i === 0 || i === 4);
+      // echt model (kenchoo, CC BY 4.0); het kan alleen stilstaan, de poten laten we zelf bewegen
+      const rig = new Rig(A, 'gazelle', { scale: 0.21 * (0.92 + R() * 0.15) });
+      const b = (n) => rig.bone(n);
+      const m = {
+        g: rig.root, rig, side: new THREE.Vector3(), grz: 0,
+        neckB: b('Neck_'), neck2B: b('Neck.001'),
+        legs: [['FrontLeg.L', 'FrontLowLeg.L', 0], ['FrontLeg.R', 'FrontLowLeg.R', 0], ['BackLeg.L', 'BackLowLeg.L', 1], ['BackLeg.R', 'BackLowLeg.R', 1]]
+          .map(([t, l, hind]) => ({ top: b(t), low: b(l), hind })),
+      };
+      rig.play('Animation', { fade: 0 }); rig.action('Animation').time = R() * 10;
       const a = R() * 6.28, d = R() * 9;
       const it = {
         ...m, x: cx + Math.cos(a) * d, z: cz + Math.sin(a) * d, yaw: R() * 6.28, speed: 0,
         graze: R() * 4, aware: 0, phase: R() * 6, look: 0, R,
         goal: null,
       };
-      m.g.scale.setScalar(0.92 + R() * 0.15);
       scene.add(m.g); this.members.push(it);
     }
   }
@@ -172,28 +138,27 @@ export class Herd {
 
   pose(m, dt) {
     const y = height(m.x, m.z);
-    m.phase += dt * (m.speed > 4 ? 11 : 5) * (m.speed > 0.2 ? 1 : 0);
+    m.phase += dt * (m.speed > 4 ? 10 : 5.5) * (m.speed > 0.2 ? 1 : 0);
     const gallop = m.speed > 4, eating = m.speed < 0.2 && m.look < 0.3;
-    m.g.position.set(m.x, y + (gallop ? Math.abs(Math.sin(m.phase)) * 0.35 : 0), m.z);
+    m.g.position.set(m.x, y + (gallop ? Math.abs(Math.sin(m.phase)) * 0.22 : 0), m.z);
     m.g.rotation.y = m.yaw;
-    m.g.rotation.x = gallop ? Math.sin(m.phase) * 0.12 : 0;
+    m.g.rotation.x = gallop ? Math.sin(m.phase) * 0.08 : 0;
+    m.rig.update(dt);   // eerst de eigen animatie: kop, oren, ademen
+    const side = m.rig.side(m.side);
     // kop omlaag om te grazen, omhoog als hij oplet
-    const graze = eating ? 1 : 0;
-    m.neck.rotation.x += ((graze ? 2.2 : 0.35 - m.look * 0.3) - m.neck.rotation.x) * (1 - Math.exp(-dt * 4));
-    m.head.rotation.x = graze ? -0.2 + Math.sin(performance.now() / 300 + m.phase) * 0.15 : 0;
-    const a = gallop ? 0.9 : 0.45;
-    // vier poten met knieën: in galop gaan de voorpoten en achterpoten samen
+    m.grz += ((eating ? 1 : 0) - m.grz) * (1 - Math.exp(-dt * 3));
+    m.rig.bend(m.neckB, side, m.grz * 1.0 - m.look * 0.25);
+    m.rig.bend(m.neck2B, side, m.grz * 0.5);
+    // vier poten: in galop gaan de voorpoten en achterpoten samen
+    const a = gallop ? 0.75 : 0.4, mv = Math.min(1, m.speed);
     const off = gallop ? [0, 0.3, Math.PI, Math.PI + 0.3] : [0, Math.PI, Math.PI, 0];
-    const mv = Math.min(1, m.speed);
     m.legs.forEach((L, i) => {
-      const p = m.phase + off[i], sw = Math.sin(p) * a * mv;
-      L.hip.rotation.x = sw + (L.hind ? 0.12 : -0.05);
+      const p = m.phase + off[i];
+      m.rig.bend(L.top, side, Math.sin(p) * a * mv);
       // voorpoot buigt naar achteren bij het optillen, achterpoot (hak) naar voren
-      const lift = Math.max(0, Math.cos(p)) * (gallop ? 1.3 : 0.8) * mv;
-      L.knee.rotation.x = L.hind ? -0.25 - lift * 0.6 : 0.05 + lift;
+      const lift = Math.max(0, Math.cos(p)) * (gallop ? 1.2 : 0.7) * mv;
+      m.rig.bend(L.low, side, L.hind ? -lift * 0.7 : lift);
     });
-    // staart omhoog bij gevaar (de witte onderkant als waarschuwing)
-    m.tail.rotation.x = -2.4 + (m.look > 0.5 || gallop ? 1.4 : Math.sin(performance.now() / 200) * 0.2);
   }
 }
 
