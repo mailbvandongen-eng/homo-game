@@ -31,6 +31,10 @@ canvas{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;display:blo
 #loading{bottom:max(18px,var(--sab));left:50%;transform:translateX(-50%);font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:#fffc;text-shadow:0 1px 3px #000}
 #toast{top:max(12px,var(--sat));left:50%;transform:translateX(-50%);width:max-content;max-width:min(560px,58vw);text-align:center;font-weight:500;font-size:15px;line-height:1.4;padding:8px 34px;background:linear-gradient(90deg,transparent,#0c0f12cc 14%,#0c0f12cc 86%,transparent);text-shadow:0 1px 3px #000;opacity:0;transition:opacity .4s}
 #toast.on{opacity:1}
+#hint{bottom:calc(max(14px,var(--sab)) + 92px);left:50%;transform:translateX(-50%);width:max-content;max-width:min(460px,70vw);text-align:center;font-size:14px;font-weight:500;line-height:1.35;padding:7px 16px;border-radius:999px;background:#0c0f12b3;box-shadow:inset 0 0 0 1px #f4f2ec33;text-shadow:0 1px 2px #000;opacity:0;transition:opacity .5s}
+#hint.on{opacity:1}
+#homeEdge{left:0;top:0;display:none;flex-direction:column;align-items:center;gap:1px;font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--ink);text-shadow:0 1px 3px #000;margin:-22px 0 0 -22px;width:44px}
+#homeEdge svg{fill:#e39a4a;stroke:#000a;filter:drop-shadow(0 1px 3px #000a)}
 
 /* ---------- knoppen ---------- */
 .btn{font:inherit;border:0;border-radius:3px;font-weight:700;font-size:14px;letter-spacing:.16em;text-transform:uppercase;color:#0c0f12;background:var(--ink);touch-action:manipulation;cursor:pointer;transition:transform .1s,background .2s}
@@ -145,6 +149,8 @@ li.no::before{background:none;box-shadow:inset 0 0 0 1px var(--faint)}
   <button class="round small" id="menuBtn" aria-label="Meer: geluid en wat je weet"></button>
 </div>
 <div class="hud" id="toast"></div>
+<div class="hud" id="hint"></div>
+<div class="hud" id="homeEdge"><svg id="homeEdgeDir" viewBox="0 0 24 24" width="30" height="30" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2l7 18-7-5-7 5z"/></svg><span id="homeEdgeDist"></span></div>
 <div class="hud" id="hands">
   <button class="hand" id="hand0" aria-label="Linkerhand"></button>
   <button class="hand right" id="hand1" aria-label="Rechterhand"></button>

@@ -14,7 +14,7 @@ import { Giant } from './giant.js';
 
 const $ = (id) => document.getElementById(id);
 const EDIBLE = new Set(['berry', 'redberry', 'leaf', 'meat', 'egg', 'honey']);
-const GIVE = ['meat', 'honey', 'bone', 'egg', 'berry', 'leaf', 'redberry'];   // wat je aan de groep kunt geven, het beste eerst
+const GIVE = ['meat', 'honey', 'hide', 'bone', 'egg', 'berry', 'leaf', 'redberry'];   // wat je aan de groep kunt geven, het beste eerst
 const DAY_LEN = 14 * 60;   // één dag en nacht duurt 14 minuten
 
 // ---------- scène ----------
@@ -125,7 +125,7 @@ function handsFull() {
   toast('Je handen zijn vol. Leg eerst iets neer: tik op een hand.');
   for (const i of [0, 1]) { const h = $('hand' + i); h.classList.remove('shake'); void h.offsetWidth; h.classList.add('shake'); }
 }
-for (const i of [0, 1]) $('hand' + i).onclick = () => { if (state.hands[i]) openRadial({ hand: i }); };
+for (const i of [0, 1]) $('hand' + i).onclick = () => { if (state.hands[i]) { did.hand = true; openRadial({ hand: i }); } };
 
 // ---------- bekijken ----------
 function closeCard() { $('cardScreen').classList.remove('open'); }
@@ -262,6 +262,29 @@ function cutKill() {
   discover('kill'); discover('cut');
   kemHelps(null, k);
 }
+// met een afslag de huid van de prooi snijden
+function cutHide() {
+  const k = sabres.kill; if (!k || !k.hide) return;
+  if (!state.hands.includes('flake')) { toast('Met je handen krijg je de taaie huid niet los. Je hebt iets scherps nodig.', 5); return; }
+  const h = freeHand();
+  if (h < 0) { handsFull(); return; }
+  k.hide = 0; state.hands[h] = 'hide'; renderHands(); sound.eat(); killLook(k);
+  toast('Je snijdt langs de buik en de poten en trekt een groot stuk huid los. Zwaar, stug en warm.', 5);
+  discover('cut'); discover('hide');
+}
+// zo ziet een gedode prooi eruit: bloed op de grond, een open flank met ribben; zonder huid rood en kaal
+let killMesh = null;
+function killLook(k) {
+  if (killMesh) { scene.remove(killMesh); killMesh = null; }
+  if (!k) return;
+  const g = new THREE.Group(), y = height(k.x, k.z), yaw = k.zebra ? k.zebra.yaw : 0;
+  const red = new THREE.MeshLambertMaterial({ color: 0x7a1410 }), bone = new THREE.MeshLambertMaterial({ color: 0xe6dcc4 });
+  const pool = new THREE.Mesh(new THREE.CircleGeometry(1, 18), new THREE.MeshBasicMaterial({ color: 0x3a0806, transparent: true, opacity: 0.75, depthWrite: false }));
+  pool.rotation.x = -Math.PI / 2; pool.scale.set(1.5, 1.05, 1); pool.position.y = 0.04; pool.renderOrder = 1; g.add(pool);
+  const wound = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 7), red); wound.scale.set(k.hide ? 1 : 1.9, 1.05, k.hide ? 1.25 : 1.5); wound.position.set(0, 0.36, 0); g.add(wound);
+  for (let i = 0; i < 4; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.022, 5, 10, Math.PI), bone); r.rotation.y = Math.PI / 2; r.position.set(-0.24 + i * 0.16, 0.38, 0); r.scale.set(1.3, 1.12, 1); g.add(r); }
+  g.position.set(k.x, y, k.z); g.rotation.y = yaw; scene.add(g); killMesh = g;
+}
 // iets aan de groep geven: het beste wat je in je handen hebt
 function giveItem() { const it = GIVE.find((x) => state.hands.includes(x) && !(x === 'leaf' && !group.sick)) || GIVE.find((x) => state.hands.includes(x)); return it; }
 function give(it = giveItem()) {
@@ -284,7 +307,7 @@ function groupTakes(dt) {
   layT -= dt; if (layT > 0) return;
   layT = 1.5;
   if (state.sleeping > 0 || state.lost) return;
-  const t = things.find((x) => x.kind === 'pick' && !x.gone && ['meat', 'honey', 'bone', 'egg', 'berry'].includes(x.item) && Math.hypot(x.x - HOME.x, x.z - HOME.z) < 12);
+  const t = things.find((x) => x.kind === 'pick' && !x.gone && ['meat', 'honey', 'hide', 'bone', 'egg', 'berry'].includes(x.item) && Math.hypot(x.x - HOME.x, x.z - HOME.z) < 12);
   if (t && share(t.item)) removeThing(t);
 }
 // bij de groep gaan slapen: de nacht gaat voorbij
@@ -393,6 +416,7 @@ function turnTick(dt) {
 }
 function turnStone(t) {
   if (t.gone) return;
+  did.turn = true;
   t.gone = true; player.action = 0.5; sound.pick();
   turning.push({ m: t.mesh, x: t.mesh.position.x, z: t.mesh.position.z, t: 0 });
   if (t.under === 'grubs') {
@@ -451,11 +475,12 @@ function openRadial(target) {
     opts.push({ icon: ICON.turn, fn: () => goAndDo(target, () => act('PickUp_Table', () => turnStone(target), 1.4)) });
   } else if (target.look) {
     opts.push({ icon: ICON.eye, fn: () => lookAt(target) });
-    if (['hyena', 'leopard', 'sabre', 'zebra', 'wounded', 'bird', 'snake', 'stranger'].includes(target.look) && hasStone) opts.push({ icon: ICON.throw, fn: () => throwAt(target.member) });
+    if (['hyena', 'leopard', 'sabre', 'zebra', 'wounded', 'bird', 'snake', 'stranger'].includes(target.look) && hasStone) opts.push({ icon: ICON.throw, fn: () => quickThrow(target.member) });
     // snijden: zonder afslag merk je vanzelf dat het niet gaat
     const flake = state.hands.includes('flake'), cut = (fn) => () => (state.hands.includes('flake') ? act('Interact', fn) : fn());
     if (target.look === 'carcass' && flake) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cut(cutMeat)) });
     if (target.look === 'kill' && sabres.kill && sabres.kill.meat > 0) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cut(cutKill)) });
+    if (target.look === 'kill' && sabres.kill && sabres.kill.hide) opts.push({ icon: ICON.hide, fn: () => goAndDo(target, cut(cutHide)) });
     if (target.look === 'prey' && target.enc.meat > 0) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cut(() => enc.cutPrey(target.enc, predGame)), 2.4) });
     if (target.look === 'giantdead' && giant.meat > 0) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cut(() => giant.cut(predGame)), 3.2) });
     if (target.look === 'bees' && target.enc.honey > 0) opts.push({ icon: ICON.hand, fn: () => goAndDo(target, () => act('Interact', () => enc.takeHoney(target.enc, predGame)), 2.6) });
@@ -502,7 +527,7 @@ function dropAt(it, rock = lastRock) {
   if (t) t.byPlayer = true;
 }
 function dropAtPos(it, x, z, thrown = false, rock = null) {
-  if (!['stone', 'bone', 'flake', 'meat', 'egg', 'honey', 'berry'].includes(it)) return null;
+  if (!['stone', 'bone', 'flake', 'meat', 'egg', 'honey', 'hide', 'berry'].includes(it)) return null;
   if (it === 'stone' && !rock) rock = { type: 'lava', hits: 0 };
   const m = heldMesh(it, rock); m.position.set(x, height(x, z) + 0.08, z); if (it === 'bone') m.rotation.set(0, 0, Math.PI / 2);
   m.traverse((o) => { o.castShadow = true; }); scene.add(m);
@@ -538,13 +563,13 @@ function bite(attacker, dmg, big) {
   return stolen;
 }
 // een steen gooien naar een roofdier
-function throwAt(member, kind = member.kind) {
+function throwAt(member, kind = member.kind, dur) {
   const i = state.hands[1] === 'stone' ? 1 : state.hands.indexOf('stone');
   if (i < 0) { toast('Je hebt geen steen in je hand.'); return; }
   const rock = state.rock[i];
   state.hands[i] = null; renderHands();
   sound.whoosh();
-  const from = player.pos.clone(); from.y += 1.3;
+  const from = player.toss ? player.handPos() : player.pos.clone().setY(player.pos.y + 1.3);
   throws.throw(from, member, (x, z) => {
     sound.thud();
     if (member.free) {
@@ -554,13 +579,74 @@ function throwAt(member, kind = member.kind) {
     } else if (Math.hypot(member.x - x, member.z - z) < 1.8) hitTarget({ m: member, kind: kind || 'gazelle' });
     else toast('Mis!');
     dropAtPos('stone', x, z, true, rock);
-  }, heldMesh('stone', rock));
+  }, heldMesh('stone', rock), dur);
 }
-// zonder doel: de steen een eind voor je uit gooien
-function throwAhead() {
-  const d = 12, free = { free: true, x: player.pos.x + Math.sin(player.yaw) * d, z: player.pos.z + Math.cos(player.yaw) * d };
-  player.playOnce('Spell_Simple_Shoot', { speed: 1.5, at: 0.4, slow: 0.2, onAt: () => throwAt(free, null) });
+// ---------- mikken en gooien ----------
+// Houd de vuist vast: je haalt uit en een ring laat zien waar de kei neerkomt. Schuif opzij om te richten en omhoog of omlaag
+// voor harder of zachter; loslaten is gooien. Een korte tik gooit meteen naar wat voor je staat, maar minder zuiver.
+const RANGE = [4, 26];
+const aimRing = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.22, 36), new THREE.MeshBasicMaterial({ color: 0xf4f2ec, transparent: true, opacity: 0.9, depthWrite: false, depthTest: false }));
+aimRing.rotation.x = -Math.PI / 2; aimRing.visible = false; aimRing.renderOrder = 3; scene.add(aimRing);
+const aimArc = new THREE.Line(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(24 * 3), 3)), new THREE.LineBasicMaterial({ color: 0xf4f2ec, transparent: true, opacity: 0.8, depthTest: false }));
+aimArc.frustumCulled = false; aimArc.visible = false; scene.add(aimArc);
+let aim = null;
+const clampRange = (d) => Math.max(RANGE[0], Math.min(RANGE[1], d));
+const flight = (d) => d / (11 + 13 * (d - RANGE[0]) / (RANGE[1] - RANGE[0]));   // hoe verder, hoe harder en vlakker de worp
+// hoe snel een dier beweegt, om een rennend doel een stukje voor te kunnen gooien
+const seenAt = new WeakMap();
+function trackTargets(dt) {
+  for (const t of targets()) {
+    const o = seenAt.get(t.m);
+    if (o) { o.vx = (t.m.x - o.x) / dt; o.vz = (t.m.z - o.z) / dt; o.x = t.m.x; o.z = t.m.z; } else seenAt.set(t.m, { x: t.m.x, z: t.m.z, vx: 0, vz: 0 });
+  }
 }
+function aimStart(src, m) {
+  if (aim || player.toss || player.once || !state.hands.includes('stone')) return false;
+  if (state.hands[1] !== 'stone') { state.hands.reverse(); state.rock.reverse(); renderHands(); }   // gooien doe je met rechts
+  if (!m) { const t = bestTarget(RANGE[1]); m = t && t.m; }
+  let yaw = camYaw, dist = 12;
+  if (m) {
+    let v = seenAt.get(m); if (!v || Math.hypot(v.vx, v.vz) > 14) v = { vx: 0, vz: 0 };
+    const T = flight(clampRange(Math.hypot(m.x - player.pos.x, m.z - player.pos.z))) + 0.3;
+    const x = m.x + v.vx * T - player.pos.x, z = m.z + v.vz * T - player.pos.z;
+    yaw = Math.atan2(x, z); dist = clampRange(Math.hypot(x, z));
+  }
+  aim = { yaw, dist, t0: performance.now(), moved: 0, src, cam: camYaw };
+  player.windUp();
+  return true;
+}
+function aimMove(dx, dy) {
+  if (!aim) return;
+  aim.moved += Math.abs(dx) + Math.abs(dy);
+  aim.yaw -= dx * 0.005; aim.dist = clampRange(aim.dist - dy * 0.07);
+}
+function aimTick(dt) {
+  if (aim && (!state.hands.includes('stone') || player.once || state.collapsed > 0 || state.sleeping > 0)) { aim = null; player.cancelToss(); }
+  aimRing.visible = aimArc.visible = !!aim && (performance.now() - aim.t0 > 200 || aim.moved > 12);
+  if (!aim) return;
+  // met de toetsen mik je door rond te kijken; op een aanraakscherm draait de camera rustig mee met waar je mikt
+  if (aim.src === 'key') { aim.yaw += camYaw - aim.cam; aim.cam = camYaw; }
+  else camYaw += Math.atan2(Math.sin(aim.yaw - camYaw), Math.cos(aim.yaw - camYaw)) * Math.min(1, dt * 2.5);
+  player.yaw = aim.yaw;
+  const P = player.pos, x = P.x + Math.sin(aim.yaw) * aim.dist, z = P.z + Math.cos(aim.yaw) * aim.dist, y = height(x, z);
+  aimRing.position.set(x, y + 0.07, z);
+  const T = flight(aim.dist), arc = Math.max(0.2, 12 * T * T / 8), a = aimArc.geometry.attributes.position, y0 = P.y + 1.6;
+  for (let i = 0; i < 24; i++) { const k = i / 23; a.setXYZ(i, P.x + (x - P.x) * k, y0 + (y + 0.15 - y0) * k + 4 * k * (1 - k) * arc, P.z + (z - P.z) * k); }
+  a.needsUpdate = true;
+}
+function aimRelease(cancel) {
+  if (!aim) return;
+  const a = aim; aim = null;
+  if (cancel) { player.cancelToss(); return; }
+  did.throw = true;
+  const quick = performance.now() - a.t0 < 280 && a.moved < 12;
+  const spread = window.__sure ? 0 : (quick ? 0.1 : 0.025) * a.dist, ra = Math.random() * 6.283, rr = Math.sqrt(Math.random()) * spread;
+  const to = { free: true, x: player.pos.x + Math.sin(a.yaw) * a.dist + Math.cos(ra) * rr, z: player.pos.z + Math.cos(a.yaw) * a.dist + Math.sin(ra) * rr };
+  player.yaw = a.yaw;
+  player.letFly(() => throwAt(to, null, flight(a.dist)));
+}
+// meteen gooien, zonder mikken: naar dit dier, of anders naar wat voor je staat
+function quickThrow(m) { if (aimStart('tap', m)) aimRelease(); }
 // wat er in de wereld gebeurt rond de jacht van de sabeltandkatten
 function event(name, k) {
   if (name === 'kemgift') {
@@ -571,7 +657,7 @@ function event(name, k) {
   const far = k ? Math.hypot(k.x - player.pos.x, k.z - player.pos.z) : 0;
   if (name === 'hunt') { sound.sting(); toast(far < 60 ? 'De zebra\'s stuiven uit elkaar. Iets jaagt op ze!' : 'In de verte stuiven zebra\'s weg in een stofwolk. Iets jaagt daar…', 5); }
   if (name === 'kill') {
-    vultures.center.set(k.x, height(k.x, k.z), k.z); LOOK_TARGETS.push({ look: 'kill', x: k.x, z: k.z, kill: k });
+    vultures.center.set(k.x, height(k.x, k.z), k.z); LOOK_TARGETS.push({ look: 'kill', x: k.x, z: k.z, kill: k }); killLook(k);
     setTimeout(() => toast('De gieren draaien al boven een nieuwe plek. Daar ligt vers vlees. Maar van wie is het nu nog?', 6), 9000);
   }
   if (name === 'open') {
@@ -583,6 +669,7 @@ function event(name, k) {
   if (name === 'cleared') {
     hyenas.home = CARCASS; vultures.center.set(CARCASS.x, height(CARCASS.x, CARCASS.z), CARCASS.z);
     const i = LOOK_TARGETS.findIndex((t) => t.look === 'kill'); if (i >= 0) LOOK_TARGETS.splice(i, 1);
+    killLook(null);
   }
   if (name === 'home') {
     sound.home();
@@ -611,14 +698,14 @@ function tapAt(sx, sy) {
     if (Math.hypot(p.x - player.pos.x, p.z - player.pos.z) > (c.look ? 90 : 35)) continue;
     v3.set(p.x, p.y, p.z).project(camera); if (v3.z > 1) continue;
     const d = Math.hypot((v3.x + 1) / 2 * innerWidth - sx, (1 - v3.y) / 2 * innerHeight - sy);
-    if (d < bd) { bd = d; best = c; }
+    if (d < bd || (d < 150 && !best && ['kill', 'prey', 'giantdead', 'carcass'].includes(c.look) && Math.hypot(p.x - player.pos.x, p.z - player.pos.z) < 5)) { bd = Math.min(bd, d); best = c; }
   }
   // dubbeltik op een platte steen: meteen omdraaien
   const now = performance.now();
   if (best && best.kind === 'turn' && lastTap.t === best && now - lastTap.at < 500) {
     closeRadial(); lastTap.t = null; goAndDo(best, () => act('PickUp_Table', () => turnStone(best), 1.4)); return;
   }
-  lastTap.t = best; lastTap.at = now;
+  lastTap.t = best; lastTap.at = now; if (best) did.tap = true;
   if (best) { openRadial(best); sound.pick(); } else closeRadial();
 }
 
@@ -628,12 +715,12 @@ addEventListener('keydown', (e) => {
   if (e.repeat) return;
   keys.add(e.code);
   if (e.code === 'KeyC') setSneak(!player.sneaking);
-  if (e.code === 'KeyE' || e.code === 'KeyF') doAction();
+  if (e.code === 'KeyE' || e.code === 'KeyF') { if (!(ctx && ctx.mode === 'throw' && aimStart('key'))) doAction(); }
   if (e.code === 'Space') player.jumpReq = true;
   if (e.code === 'KeyQ') setSense(true);
   if (e.code === 'Escape') { closeCard(); closeRadial(); }
 });
-addEventListener('keyup', (e) => { keys.delete(e.code); if (e.code === 'KeyQ') setSense(false); });
+addEventListener('keyup', (e) => { keys.delete(e.code); if (e.code === 'KeyQ') setSense(false); if (e.code === 'KeyE' || e.code === 'KeyF') aimRelease(); });
 
 const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0, t0: 0, moved: 0 };
 const look = { id: null, lx: 0, ly: 0, last: -9, sx: 0, sy: 0, t0: 0, moved: 0, touch: false, pinched: false, yaw0: 0, pitch0: 0 };
@@ -702,14 +789,22 @@ const endPointer = (e) => {
     if (pinch.id !== null) { Object.assign(look, { id: pinch.id, lx: pinch.x, ly: pinch.y, sx: pinch.x, sy: pinch.y, moved: 99, pinched: true }); pinch.id = null; }
   }
 };
-canvas.addEventListener('wheel', (e) => { e.preventDefault(); setZoom(camDist * Math.exp(e.deltaY * 0.0012)); }, { passive: false });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); if (aim) { aim.dist = clampRange(aim.dist - e.deltaY * 0.012); aim.moved = 99; return; } setZoom(camDist * Math.exp(e.deltaY * 0.0012)); }, { passive: false });
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
 
 let coverTold = false;
 function setSneak(on) { player.sneaking = on; }
 function flick(up) { if (!up) setSneak(true); else if (player.sneaking) setSneak(false); else player.jumpReq = true; }
-$('doBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); doAction(); });
+// de vuist: tikken is doen; met een kei in je hand is vasthouden mikken en loslaten gooien
+const aimPtr = { id: null, x: 0, y: 0 };
+$('doBtn').addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  if (ctx && ctx.mode === 'throw' && aimStart('touch')) { Object.assign(aimPtr, { id: e.pointerId, x: e.clientX, y: e.clientY }); $('doBtn').setPointerCapture(e.pointerId); }
+  else doAction();
+});
+$('doBtn').addEventListener('pointermove', (e) => { if (e.pointerId !== aimPtr.id) return; aimMove(e.clientX - aimPtr.x, e.clientY - aimPtr.y); aimPtr.x = e.clientX; aimPtr.y = e.clientY; });
+for (const ev of ['pointerup', 'pointercancel']) $('doBtn').addEventListener(ev, (e) => { if (e.pointerId !== aimPtr.id) return; aimPtr.id = null; aimRelease(ev === 'pointercancel'); });
 function setSense(on) {
   if (state.sensing === on) return;
   state.sensing = on; $('senseVeil').classList.toggle('on', on);
@@ -798,14 +893,25 @@ function strike() {
     if (t) { sound.thud(); hitTarget(t, armed ? 'stone' : 'fist'); }
   } });
 }
-function doThrow(t) {
-  player.yaw = Math.atan2(t.m.x - player.pos.x, t.m.z - player.pos.z);
-  player.playOnce('Spell_Simple_Shoot', { speed: 1.5, at: 0.4, slow: 0.2, onAt: () => throwAt(t.m, t.kind) });
-}
 function useTarget() {
   let best = null, bd = 1.8;
   for (const t of things) if (t.kind === 'turn' && available(t)) { const d = Math.hypot(t.x - player.pos.x, t.z - player.pos.z); if (d < bd) { bd = d; best = t; } }
   return best;
+}
+// een dood dier waar je naast staat en waar nog iets af te snijden valt
+function carcassNear() {
+  const P = player.pos, near = (t, r) => Math.hypot(t.x - P.x, t.z - P.z) < r, cut = (fn) => () => (state.hands.includes('flake') ? act('Interact', fn) : fn());
+  const k = sabres.kill;
+  if (k && near(k, 3.2) && (k.meat > 0 || k.hide)) return { run: cut(k.meat > 0 ? cutKill : cutHide) };
+  const prey = enc.lookTargets().find((t) => t.look === 'prey' && t.enc.meat > 0 && near(t, 3));
+  if (prey) return { run: cut(() => enc.cutPrey(prey.enc, predGame)) };
+  const gd = giant.lookTargets(player).find((t) => t.look === 'giantdead' && giant.meat > 0 && near(t, 5));
+  if (gd) return { run: cut(() => giant.cut(predGame)) };
+  if (state.carcassMeat > 0 && state.hands.includes('flake') && near(CARCASS, 3)) return { run: cut(cutMeat) };
+  return null;
+}
+function hiveNear(r) {
+  return enc.lookTargets().find((t) => t.look === 'bees' && t.enc.honey > 0 && Math.hypot(t.x - player.pos.x, t.z - player.pos.z) < r);
 }
 function actionContext() {
   if (state.collapsed > 0 || state.sleeping > 0) return null;
@@ -813,11 +919,55 @@ function actionContext() {
   const t = bestTarget();
   if (t && t.d < 2.6) return { mode: 'strike', icon: ICON.strike, danger: true, run: strike };
   const prey = t && !t.threat && !['hyena', 'leopard'].includes(t.kind);
-  if (t && stone && (!prey || t.d < 14)) return { mode: 'throw', icon: ICON.throw, danger: !prey, run: () => doThrow(t) };
+  if (t && stone && (!prey || t.d < 14)) return { mode: 'throw', icon: ICON.throw, danger: !prey, run: () => quickThrow(t.m) };
+  // naast een dood dier: de knop snijdt (eerst het vlees, dan de huid)
+  const body = carcassNear();
+  if (body) return { mode: 'cut', icon: ICON.cut, run: body.run };
+  // naast een bijennest: de knop graait naar de honing
+  const hive = hiveNear(3.6);
+  if (hive && H.includes(null)) return { mode: 'take', icon: ICON.hand, run: () => goAndDo(hive, () => act('Interact', () => enc.takeHoney(hive.enc, predGame)), 2.6) };
   // met een kei in je hand en niets om te raken: gooien
-  if (stone) return { mode: 'throw', icon: ICON.throw, run: throwAhead };
+  if (stone) return { mode: 'throw', icon: ICON.throw, run: () => quickThrow() };
   // al het andere (snijden, kraken, omdraaien) doe je door het ding zelf aan te tikken
   return { mode: 'strike', icon: ICON.strike, run: strike };
+}
+// ---------- aanwijzingen ----------
+// Geen handleiding vooraf: één aanwijzing tegelijk, op het moment dat je hem nodig hebt, en elk maar één keer (ook bij een volgend spel).
+const coarse = matchMedia('(pointer: coarse)').matches;
+const hintSeen = new Set(JSON.parse(localStorage.getItem('homo4-hints') || '[]'));
+const did = {}; let homeShown = false, moved = 0, playT = 0, hintCur = null, hintT = 0, hintGap = 1.5;
+const hintLast = new THREE.Vector3();
+const nearTurn = (r) => things.some((t) => t.kind === 'turn' && !t.gone && Math.hypot(t.x - player.pos.x, t.z - player.pos.z) < r);
+const HINTS = [
+  { id: 'move', when: () => true, done: () => moved > 5, text: coarse ? 'Schuif met je linkerduim om te lopen. Veeg rechts om rond te kijken.' : 'Loop met WASD of de pijltjes. Sleep om rond te kijken.' },
+  { id: 'tap', when: () => moved > 5, done: () => did.tap, text: (coarse ? 'Tik' : 'Klik') + ' op iets om te zien wat het is.' },
+  { id: 'cut', now: true, when: () => !!carcassNear() && state.hands.includes('flake'), done: () => state.hands.includes('meat') || state.hands.includes('hide'), text: coarse ? 'De vuist: snijd met je afslag.' : 'E: snijd met je afslag.' },
+  { id: 'honey', now: true, when: () => !!hiveNear(3.6), done: () => state.hands.includes('honey'), text: coarse ? 'De vuist: graai naar de honing.' : 'E: graai naar de honing.' },
+  { id: 'turn', now: true, when: () => nearTurn(5), done: () => did.turn, text: (coarse ? 'Dubbeltik' : 'Dubbelklik') + ' op de platte steen om hem om te draaien.' },
+  { id: 'sneak', now: true, when: () => hyenas.list.some((h) => Math.hypot(h.x - player.pos.x, h.z - player.pos.z) < 35), done: () => player.sneaking, text: coarse ? 'Veeg rechts kort omlaag om te bukken. Gebukt zien ze je minder snel.' : 'C om te bukken. Gebukt zien ze je minder snel.' },
+  { id: 'home', now: true, when: () => homeShown, done: () => !homeShown, text: 'De pijl wijst naar de slaapboom.' },
+  { id: 'hand', when: () => state.hands.some(Boolean), done: () => did.hand, text: (coarse ? 'Tik' : 'Klik') + ' op je hand om te zien wat je ermee kunt.' },
+  { id: 'throw', when: () => state.hands.includes('stone') && hintSeen.has('hand'), done: () => did.throw, text: coarse ? 'Houd de vuist vast om te mikken: schuif om te richten, laat los om te gooien.' : 'Houd E vast om te mikken, scrol voor de afstand, laat los om te gooien.' },
+  { id: 'sense', when: () => playT > 45, done: () => state.sensing, text: 'Sta even stil: dan hoor, ruik en voel je meer.' },
+];
+function hintTick(dt) {
+  if (!state.started || state.sleeping > 0 || state.collapsed > 0) return;
+  playT += dt; moved += Math.min(2, Math.hypot(player.pos.x - hintLast.x, player.pos.z - hintLast.z)); hintLast.copy(player.pos);
+  const close = (h) => { hintSeen.add(h.id); try { localStorage.setItem('homo4-hints', JSON.stringify([...hintSeen])); } catch (e) { /* privémodus */ } };
+  // iets wat nu speelt (een nest, een platte steen, een hyena) gaat voor op een algemene aanwijzing; die komt later terug
+  const urgent = hintCur && !hintCur.now && HINTS.find((h) => h.now && !hintSeen.has(h.id) && h.when() && !h.done());
+  if (urgent) { hintCur = urgent; hintT = 0; $('hint').textContent = urgent.text; }
+  if (hintCur) {
+    hintT += dt;
+    if (hintCur.done() || hintT > 14) { close(hintCur); hintCur = null; hintGap = 2.5; $('hint').classList.remove('on'); }
+    return;
+  }
+  hintGap -= dt; if (hintGap > 0) return;
+  for (const h of HINTS) {
+    if (hintSeen.has(h.id) || !h.when()) continue;
+    if (h.done()) { close(h); continue; }   // al vanzelf gedaan: dan hoeft het niet meer gezegd
+    hintCur = h; hintT = 0; $('hint').textContent = h.text; $('hint').classList.add('on'); break;
+  }
 }
 // ---------- bij de groep gaat het vanzelf ----------
 // Kom je met eten de kring in, dan nemen ze het van je over. Stenen en afslagen houd je zelf.
@@ -935,7 +1085,7 @@ function update(dt) {
   predGame.night = night; predGame.danger = danger;
   hyenas.update(dt, predGame);
   leopard.update(dt, predGame, camera);
-  throws.update(dt); knapTick(dt); turnTick(dt);
+  throws.update(dt); knapTick(dt); turnTick(dt); hintTick(dt); trackTargets(dt); aimTick(dt);
   zebras.update(dt, predGame);
   sabres.update(dt, predGame);
   group.update(dt, predGame);
@@ -1050,9 +1200,19 @@ function update(dt) {
   const hdx = HOME.x - player.pos.x, hdz = HOME.z - player.pos.z, hd = Math.hypot(hdx, hdz);
   bodySignals(dt, sick, hd);
   if (player.sneaking && !coverTold && player.nearCover) { coverTold = true; toast('Gebukt achter een rots of struik ben je onzichtbaar voor wie aan de andere kant staat.', 6); }
+  // moet je naar huis (avond, nacht, of eten voor de groep in je handen), dan wijst een pijl aan de schermrand de weg
+  const homeward = ['evening', 'night'].includes(partOfDay(dayP)) || !!handOver() || state.sensing;
+  homeShown = state.started && hd > 22 && homeward && state.sleeping <= 0 && state.collapsed <= 0;
+  $('homeEdge').style.display = homeShown ? 'flex' : 'none';
   if (hd > 22) {
+    const ang = Math.atan2(hdx * -fz + hdz * fx, hdx * fx + hdz * fz);
     $('homeDist').textContent = Math.round(hd) + ' m';
-    $('homeDir').style.transform = `rotate(${Math.atan2(hdx * -fz + hdz * fx, hdx * fx + hdz * fz)}rad)`;
+    $('homeDir').style.transform = `rotate(${ang}rad)`;
+    if (homeShown) {
+      const e = $('homeEdge');
+      e.style.transform = `translate(${innerWidth / 2 + Math.sin(ang) * innerWidth * 0.38}px, ${innerHeight / 2 - Math.cos(ang) * innerHeight * 0.3}px)`;
+      $('homeEdgeDir').style.transform = `rotate(${ang}rad)`; $('homeEdgeDist').textContent = Math.round(hd) + ' m';
+    }
   }
   $('sick').style.display = sick ? 'inline' : 'none';
   $('veil').style.opacity = sick ? 1 : 0;
@@ -1121,11 +1281,12 @@ addEventListener('pointerdown', firstTouch, true); addEventListener('keydown', f
 renderHands();
 player.update(0.016, dir, { speed: 1 });
 camYaw = Math.atan2(42 - player.pos.x, -12 - player.pos.z);   // begin met de kudde in beeld
+player.yaw = camYaw;   // en je kijkt met hem mee, over zijn rug
 frame();
 begin();
 
 // voor testen
-window.__game = { begin,
+window.__game = { begin, bestTarget, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hintCur && hintCur.id, [...hintSeen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, flick, setSneak, still: () => stillT, FLICK,
   setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setZoom, zoom: () => camDist,
   lookFrom: (pos, look) => { camOverride = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },

@@ -59,7 +59,17 @@ function mergeColored(group) { const m = mergeStatic(group); m.material = FACE; 
 
 // ---------- Homo habilis ----------
 // Klein (zo'n 1,25 m), lange armen, behaard, een vooruitstekend gezicht met zware wenkbrauwen.
-const HOLD = 0.05;   // hoe ver een ding uit de handpalm steekt (m)
+const HOLD = 0.05;
+// Houdingen van de worp, als draaiingen in het lijf van de mens zelf (x = opzij, y = omhoog, z = vooruit; de rechterarm zit aan -x):
+// 0 = gewoon, 1 = uitgehaald (elleboog hoog en naar achteren, romp weggedraaid), 2 = losgelaten (arm gestrekt naar voren, romp erin)
+const rot = (...steps) => steps.reduce((q, [x, y, z, a]) => q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(x, y, z), a)), new THREE.Quaternion());
+const TOSS = [
+  ['spine_02', [rot(), rot([1, 0, 0, -0.12], [0, 1, 0, -0.55]), rot([1, 0, 0, 0.3], [0, 1, 0, 0.45])]],
+  ['upperarm_r', [rot(), rot([0, 0, 1, -1.45], [0, 1, 0, -0.5]), rot([1, 0, 0, -2.2])]],
+  ['lowerarm_r', [rot(), rot([0, 0, 1, -1.5]), rot()]],
+  ['upperarm_l', [rot(), rot([1, 0, 0, -1.1]), rot([1, 0, 0, 0.5])]],
+];
+const TQ = { root: new THREE.Quaternion(), inv: new THREE.Quaternion(), q: new THREE.Quaternion(), w: new THREE.Quaternion() };   // hoe ver een ding uit de handpalm steekt (m)
 export class Hominin {
   constructor(scene, A) {
     // met een geladen model: de echte (geboetseerde) mensaap van Animal Animator; anders de eigen figuur
@@ -204,7 +214,8 @@ export class Hominin {
     // traploos: hoe verder je de stick duwt, hoe sneller (lopen tot 2,6 m/s, daarna rennen tot 5,4 m/s)
     const mag = Math.min(1, dir.length());
     let want = this.sneaking ? 1.6 * mag : mag < 0.7 ? 2.6 * mag / 0.7 : 2.6 + (mag - 0.7) / 0.3 * 2.8;
-    if (this.once) want *= this.once.slow;   // tijdens slaan of gooien loop je bijna niet
+    if (this.once) want *= this.once.slow;   // tijdens slaan loop je bijna niet
+    if (this.toss) want *= 0.3;              // en tijdens mikken en gooien ook niet
     const max = want * mods.speed * (riverDist(this.pos.x, this.pos.z) < 6 ? 0.45 : 1);
     const target = mag > 0.001 ? dir.clone().normalize().multiplyScalar(max) : dir.clone().set(0, 0, 0);
     this.vel.lerp(target, 1 - Math.exp(-dt * (this.onGround ? 6 : 1.5)));
@@ -330,6 +341,27 @@ export class Hominin {
     const side = r.side(this._side || (this._side = new THREE.Vector3()));
     if (sick) r.bend(r.bone('spine_02'), side, 0.35);
     if (this.lookYaw && !this.once) r.bend(r.bone('head'), this._up || (this._up = new THREE.Vector3(0, 1, 0)), this.lookYaw * 0.7);
+    if (this.toss) this.tossPose(dt, r);
+  }
+
+  // ---- gooien: bovenhands, met het hele lijf ----
+  // windUp: uithalen en zo blijven staan (tijdens het mikken); letFly: de worp, fn loopt op het moment van loslaten
+  windUp() { if (!this.toss) this.toss = { ph: 'cock', t: 0 }; }
+  letFly(fn) { this.windUp(); this.toss.fn = fn; this.toss.go = true; }
+  cancelToss() { this.toss = null; }
+  handPos(out = new THREE.Vector3()) { return this.held ? this.held.getWorldPosition(out) : out.copy(this.pos).setY(this.pos.y + 1.4); }
+  tossPose(dt, r) {
+    const T = this.toss; if (!T.freeze) T.t += dt;
+    if (T.ph === 'cock' && T.go && T.t > 0.22) { T.ph = 'swing'; T.t = 0; }
+    else if (T.ph === 'swing' && T.t > 0.15) { T.ph = 'follow'; T.t = 0; const f = T.fn; T.fn = null; if (f) f(); }
+    else if (T.ph === 'follow' && T.t > 0.55) { this.toss = null; return; }
+    const ease = (x) => x * x * (3 - 2 * x);
+    const [from, to, k] = T.ph === 'cock' ? [0, 1, ease(Math.min(1, T.t / 0.22))] : T.ph === 'swing' ? [1, 2, Math.min(1, T.t / 0.15) ** 1.6] : [2, 0, ease(Math.min(1, T.t / 0.55))];
+    const root = r.root.getWorldQuaternion(TQ.root), inv = TQ.inv.copy(root).invert();
+    for (const [name, poses] of TOSS) {
+      const q = TQ.q.copy(poses[from]).slerp(poses[to], k);
+      r.bendQ(r.bone(name), TQ.w.copy(root).multiply(q).multiply(inv));
+    }
   }
 
   // Zit je gebukt vlak achter een rots of struik, dan ziet een dier op (x, z) je niet

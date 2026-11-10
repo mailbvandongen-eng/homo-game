@@ -22,7 +22,16 @@ export class Hyenas {
   }
   get threats() { return this.list.filter((h) => h.state === 'curious' || h.state === 'windup' || h.state === 'rush'); }
 
+  // Meestal schrikt een geraakte hyena en druipt af. Maar met de troep om zich heen, of in het donker, wordt er soms een kwaad.
   hit(h, game) {
+    const pack = this.list.filter((o) => o !== h && o.state !== 'flee' && Math.hypot(o.x - h.x, o.z - h.z) < 15).length;
+    this.hits = (this.hits || 0) + 1;
+    if (this.hits > 1 && !h.angry && !window.__sure && R() < 0.18 + 0.12 * Math.min(2, pack) + 0.2 * game.night) {
+      h.angry = true; h.state = 'windup'; h.t = 1.1; game.sound.growl();
+      game.toast('Raak! Maar deze schrikt niet. Hij gromt, zet zijn nekharen op… en komt op je af!', 5);
+      return;
+    }
+    h.angry = false; game.toast('Raak! De hyena jankt en maakt zich uit de voeten.', 4);
     h.state = 'flee'; h.t = 12; game.sound.yelp();
     for (const o of this.list) if (o !== h && o.state !== 'flee') { o.state = 'retreat'; o.t = 6; }
     game.discover('hyena');
@@ -57,15 +66,15 @@ export class Hyenas {
         }
         case 'windup':   // kop omlaag: hij gaat zo aanvallen
           spd = 0; h.yaw = turn(h.yaw, Math.atan2(p.x - h.x, p.z - h.z), dt * 8);
-          if (h.t < 0) { h.state = 'rush'; h.t = 2.5; }
+          if (h.t < 0) { h.state = 'rush'; h.t = h.angry ? 4.5 : 2.5; }
           break;
         case 'rush':
           tx = (p.x - h.x) / d; tz = (p.z - h.z) / d; spd = 7.5; run = true;
           if (d < 1.3) {
-            h.state = 'retreat'; h.t = 8;
+            h.state = 'retreat'; h.t = 8; h.angry = false;
             const stole = game.bite(h, 12);
             if (stole) { h.carry = stole; h.state = 'flee'; h.t = 14; }
-          } else if (h.t < 0) { h.state = 'retreat'; h.t = 4; }
+          } else if (h.t < 0) { h.state = 'retreat'; h.t = 4; h.angry = false; }
           break;
         case 'retreat': case 'flee':
           tx = (h.x - p.x) / d; tz = (h.z - p.z) / d; spd = h.state === 'flee' ? 8 : 5; run = true;
@@ -216,19 +225,21 @@ export class Leopard {
 // ---------- een steen gooien ----------
 export class Throws {
   constructor(scene) { this.scene = scene; this.list = []; }
-  throw(from, target, onArrive, mesh) {
+  // dur: hoe lang de steen onderweg is. Een harde worp is kort onderweg en vliegt dus vlak; een zachte gaat met een boog.
+  throw(from, target, onArrive, mesh, dur) {
     const m = mesh || new THREE.Mesh(new THREE.DodecahedronGeometry(0.1, 0), new THREE.MeshLambertMaterial({ color: 0x8a7c6c, flatShading: true }));
     m.castShadow = true; this.scene.add(m);
     const to = { x: target.x, z: target.z };
-    this.list.push({ m, from: from.clone(), target, to, t: 0, dur: Math.max(0.45, Math.hypot(to.x - from.x, to.z - from.z) / 22), onArrive });
+    dur = dur || Math.max(0.4, Math.hypot(to.x - from.x, to.z - from.z) / 20);
+    this.list.push({ m, from: from.clone(), target, to, t: 0, dur, arc: Math.max(0.2, 12 * dur * dur / 8), onArrive });
   }
   update(dt) {
     for (const s of this.list) {
       s.t += dt;
       // richt een beetje mee als het doel beweegt
       s.to.x += (s.target.x - s.to.x) * Math.min(1, dt * 6); s.to.z += (s.target.z - s.to.z) * Math.min(1, dt * 6);
-      const k = Math.min(1, s.t / s.dur), ty = height(s.to.x, s.to.z) + 0.7;
-      s.m.position.set(s.from.x + (s.to.x - s.from.x) * k, s.from.y + (ty - s.from.y) * k + Math.sin(k * Math.PI) * 1.6, s.from.z + (s.to.z - s.from.z) * k);
+      const k = Math.min(1, s.t / s.dur), ty = height(s.to.x, s.to.z) + (s.target.free ? 0.15 : 0.7);
+      s.m.position.set(s.from.x + (s.to.x - s.from.x) * k, s.from.y + (ty - s.from.y) * k + 4 * k * (1 - k) * s.arc, s.from.z + (s.to.z - s.from.z) * k);
       s.m.rotation.x += dt * 14; s.m.rotation.z += dt * 9;
       if (k >= 1) { s.done = true; this.scene.remove(s.m); s.onArrive(s.to.x, s.to.z); }
     }

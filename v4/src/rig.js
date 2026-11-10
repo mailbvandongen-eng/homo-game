@@ -62,6 +62,15 @@ export class Rig {
     b.quaternion.premultiply(tmpQ2);
     b.updateMatrixWorld(true);
   }
+  // als bend, maar met een hele draaiing (in de wereld) in één keer
+  bendQ(b, q) {
+    if (!b) return;
+    if (!this.bent.has(b)) this.bent.set(b, b.quaternion.clone());
+    b.parent.getWorldQuaternion(tmpQ);
+    tmpQ2.copy(tmpQ).invert().multiply(q).multiply(tmpQ);
+    b.quaternion.premultiply(tmpQ2);
+    b.updateMatrixWorld(true);
+  }
   // de zij-as van het dier in de wereld (om deze as zwaaien de poten naar voren en achteren)
   side(out = new THREE.Vector3()) { return out.set(1, 0, 0).applyQuaternion(this.root.getWorldQuaternion(tmpQ)); }
 }

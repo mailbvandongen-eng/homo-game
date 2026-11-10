@@ -15,6 +15,7 @@ let ROCKV = null;
 const rockMats = {};
 // een kei van een bepaalde soort: een gescande rots in het klein, gekleurd naar zijn soort
 export function stoneMesh(type = 'lava', size = 0.14) {
+  if (!ROCKS[type]) type = 'lava';
   if (!ROCKV) return new THREE.Mesh(new THREE.DodecahedronGeometry(size / 2, 0), lam(ROCKS[type].tint));
   const v = ROCKV[Object.keys(ROCKS).indexOf(type) % ROCKV.length], g = new THREE.Group();
   const k = size / Math.max(v.size.x, v.size.y, v.size.z);
@@ -82,6 +83,12 @@ export const ITEMS = {
     unknown: 'Het ruikt zoet. Heel zoet.',
     known: 'Het zoetste en krachtigste eten dat er is. De groep is er dol op.',
   },
+  hide: {
+    name: 'Zebrahuid', color: '#d8cdb8',
+    look: 'Een stuk huid, zwaar en nog warm. De haren zijn stug, de binnenkant is glad.',
+    unknown: 'Eten kun je het niet. Maar het is groot, taai en zacht tegelijk…',
+    known: 'Op een huid lig je zachter en warmer dan op de kale grond. Breng hem naar de slaapboom.',
+  },
 };
 
 // Ontdekkingen: dit is wat je in het proefstuk kunt leren
@@ -109,6 +116,7 @@ export const DISCOVERIES = [
   { id: 'snake', text: 'Een slang hoor je alleen als je zelf stil bent. Je zintuigen laten hem zien.' },
   { id: 'egg', text: 'In een nest liggen eieren: vet en krachtig. Maar de moeder verdedigt ze.' },
   { id: 'honey', text: 'Honing is het zoetste eten dat er is.' },
+  { id: 'hide', text: 'Met een scherpe afslag snijd je ook de huid van een dier. Daar lig je \'s nachts warm op.' },
   { id: 'bees', text: 'Bijen steken overdag. In de schemering zijn ze loom: dan haal je de honing.' },
   { id: 'strangers', text: 'Vreemden zijn niet altijd vijanden. Wie iets geeft, krijgt iets terug.' },
   { id: 'sabre', text: 'Een sabeltandkat jaag je niet weg. Wacht tot hij verzadigd is.' },
@@ -153,7 +161,7 @@ export const LOOKS = {
 };
 
 // Wat je ervan weet, als kleur bij de zintuigen: goed, slecht of nog onbekend
-export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good', meat: 'good', egg: 'good', honey: 'good' };
+export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good', meat: 'good', egg: 'good', honey: 'good', hide: 'good' };
 
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 
@@ -265,6 +273,12 @@ export function heldMesh(item, rock) {
   if (item === 'stone') { const m = stoneMesh(rock && rock.type, 0.13); m.children.forEach((o) => { o.position.y = -m.userData.h / m.scale.x / 2; }); return m; }
   if (item === 'flake') { const m = new THREE.Mesh(new THREE.TetrahedronGeometry(0.09, 0), lam(c)); m.scale.set(1, 0.35, 1.4); return m; }
   if (item === 'egg') { const m = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), lam(c)); m.scale.set(1, 1.3, 1); return m; }
+  if (item === 'hide') {
+    // een opgerolde lap huid: licht, met donkere strepen
+    const g = new THREE.Group(), roll = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.3, 8), lam(c)); roll.rotation.z = Math.PI / 2; g.add(roll);
+    for (const x of [-0.1, -0.03, 0.04, 0.11]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.073, 0.073, 0.03, 8), lam(new THREE.Color('#2a2420'))); b.rotation.z = Math.PI / 2; b.position.x = x; g.add(b); }
+    return g;
+  }
   if (item === 'honey') { const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.12), new THREE.MeshLambertMaterial({ color: c, emissive: 0x4a2c00, flatShading: true })); return m; }
   if (item === 'leaf') { const m = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.22, 4), lam(c)); m.scale.z = 0.3; return m; }
   const g = new THREE.Group(), m = lam(c);
