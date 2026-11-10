@@ -130,7 +130,7 @@ function lookAt(target) {
 }
 $('journalBtn').onclick = () => {
   showCard(`<div class="eyebrow">Wat je weet</div><h2>Ontdekkingen</h2><ul>${DISCOVERIES.map((d) => state.found.has(d.id) ? `<li>${d.text}</li>` : '<li class="no">… nog niet ontdekt</li>').join('')}</ul>
-    <h2 style="font-size:18px;margin-top:12px">Vondsten</h2><ul>${Object.entries(FINDS).map(([k, f]) => state.finds.has(k) ? `<li><b>${f.name}</b>: ${f.text}</li>` : '<li class="no">… ergens verstopt</li>').join('')}</ul>`);
+    <h3>Vondsten</h3><ul>${Object.entries(FINDS).map(([k, f]) => state.finds.has(k) ? `<li><b>${f.name}</b>: ${f.text}</li>` : '<li class="no">… ergens verstopt</li>').join('')}</ul>`);
 };
 
 // ---------- eten en doen ----------

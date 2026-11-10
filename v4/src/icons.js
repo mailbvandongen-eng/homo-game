@@ -1,5 +1,5 @@
 // Eenvoudige icoontjes als SVG, zodat de knoppen geen tekst nodig hebben
-const svg = (body, vb = 48) => `<svg viewBox="0 0 ${vb} ${vb}" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+const svg = (body, vb = 48) => `<svg viewBox="0 0 ${vb} ${vb}" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 
 export const ICON = {
   // een open hand: oppakken
