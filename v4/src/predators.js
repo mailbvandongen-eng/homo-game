@@ -39,7 +39,7 @@ export class Hyenas {
       const d = Math.hypot(p.x - h.x, p.z - h.z) || 0.01;
       h.t -= dt;
       let tx = 0, tz = 0, spd = 0, run = false;
-      const interested = d < range && (nearHome < 30 || holdsBone || night > 0.5) && game.state.collapsed <= 0 && !game.shield;
+      const interested = d < range && (nearHome < 30 || holdsBone || night > 0.5) && game.state.collapsed <= 0 && !game.shield && !(h.state !== 'rush' && h.state !== 'windup' && game.player.hiddenFrom(h.x, h.z));
       switch (h.state) {
         case 'rest': case 'roam':
           if (h.t < 0 || !h.goal) { if (h.t < 0) { h.state = h.state === 'rest' && R() < 0.6 ? 'roam' : 'rest'; h.t = 3 + R() * 6; } h.goal = { x: this.home.x + (R() - 0.5) * (20 + night * 50), z: this.home.z + (R() - 0.5) * (20 + night * 50) }; }
@@ -193,9 +193,9 @@ export class Leopard {
     // in de boom liggen, of naar beneden springen / naar boven klimmen
     const branch = this.tree.branchY, gy = height(this.x, this.z);
     let y = gy;
-    if (this.state === 'tree') { this.x = this.tree.x + 0.6; this.z = this.tree.z; y = gy + branch; this.yaw = 1.2; }
+    if (this.state === 'tree') { this.x = this.tree.x + 0.1; this.z = this.tree.z + 0.1; y = gy + branch; this.yaw = 1.2; }
     if (this.state === 'down') y = gy + branch * Math.max(0, this.t / 1.2);
-    if (this.state === 'up') { this.x = this.tree.x + 0.6; this.z = this.tree.z; y = gy + branch * (1 - Math.max(0, this.t / 1.2)); }
+    if (this.state === 'up') { this.x = this.tree.x + 0.1; this.z = this.tree.z + 0.1; y = gy + branch * (1 - Math.max(0, this.t / 1.2)); }
     this.g.position.set(this.x, y - crouch * 0.12, this.z);
     this.g.rotation.y = this.yaw;
     // het model kan alleen rennen: langzaam afgespeeld is het sluipen, stilgezet is het loeren of liggen

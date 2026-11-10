@@ -6,6 +6,7 @@ import { HOME } from './group.js';
 
 // Ontmoetingen onderweg: ver van de slaapboom ligt er steeds iets op je pad.
 // Elke ontmoeting is een kleine keuze: een kans op eten, met een prijs.
+const SNAKE = 0.016, UP = new THREE.Vector3(0, 1, 0);   // de cobra is in zijn bestand zo'n 100 eenheden lang: hier anderhalve meter
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const ORDER = ['gazelle', 'snake', 'nest', 'bees', 'strangers'];
@@ -133,7 +134,7 @@ export class Encounters {
       return;
     }
     if (!e.seen && d < 32) { e.seen = true; game.toast('Daar loopt een gazelle helemaal alleen. Ze trekt met haar achterpoot…', 5); }
-    const scared = d < (game.player.sneaking ? 7 : 16);
+    const scared = d < (game.player.sneaking ? 7 : 16) && !game.player.hiddenFrom(m.x, m.z);
     let spd = 0;
     if (scared) {
       // weg van jou; maar ze wordt snel moe
@@ -174,24 +175,26 @@ export class Encounters {
 
   // ---------- de slang ----------
   mk_snake(x, z) {
-    const g = new THREE.Group(), segs = [];
-    for (let i = 0; i < 13; i++) {
-      const r = i === 0 ? 0.075 : 0.065 * (1 - Math.max(0, i - 8) * 0.14);
-      const s = new THREE.Mesh(new THREE.SphereGeometry(r, 7, 5), lam(i % 3 === 1 ? 0x6a5438 : 0x9a8060));
-      s.scale.set(1, 0.7, 1.7); s.castShadow = true; g.add(s); segs.push(s);
-    }
+    // een cobra met botten; hij kan plat liggen, zich oprichten en uithalen (zie assets/CREDITS.md)
+    const rig = new Rig(this.A, 'cobra', { scale: SNAKE, facing: -Math.PI / 2 }), g = rig.root;
+    rig.model.position.set(33 * SNAKE, 0, -10 * SNAKE);   // het midden van het lijf op de plek zelf
+    // de botten van staart naar kop: daarlangs loopt de golf als hij wegkronkelt
+    rig.chain = [['Tail_07', 'Tail_06', 'Tail_05', 'Tail_04', 'Tail_03', 'Tail_02', 'Tail_01'], ['Spine_01', 'Spine_02', 'Spine_03', 'Neck_01', 'Neck_02']].map((c) => c.map((n) => rig.bone(n)));
+    rig.play('lie');
     g.position.set(x, height(x, z), z); g.rotation.y = Math.random() * 6.28; this.scene.add(g);
-    return { x, z, g, segs, state: 'lie', hissT: 0, t: 0, wig: Math.random() * 6, halo: halo(this.scene, 0xff5a3a, 1.6) };
+    return { x, z, g, rig, anim: 'lie', state: 'lie', hissT: 0, t: 0, wig: Math.random() * 6, halo: halo(this.scene, 0xff5a3a, 1.6) };
   }
   up_snake(e, dt, game) {
     const p = game.player.pos, s = game.state, d = dist(e, p) || 0.01;
     const up = e.shown || e.state === 'flee';
     e.wig += dt * (e.state === 'flee' ? 14 : up ? 3 : 0.6);
-    e.segs.forEach((sg, i) => {
-      const lift = up && e.state === 'lie' ? Math.max(0, 3 - i) * 0.09 : 0;
-      sg.position.set(Math.sin(i * 0.85 + e.wig) * 0.16, 0.04 + lift, -i * 0.14 + lift * 0.4);
-      sg.rotation.y = Math.cos(i * 0.85 + e.wig) * 0.7;
-    });
+    const want = e.state === 'strike' ? 'strike' : e.state === 'lie' && e.shown ? 'alert' : 'lie';
+    if (want !== e.anim) {
+      e.anim = want; e.rig.play(want, { fade: want === 'strike' ? 0.12 : 0.5, once: want === 'strike' });
+      if (want === 'alert') e.rig.current.setLoop(THREE.LoopPingPong, Infinity);   // heen en weer wiegen, zonder sprongetje
+    }
+    e.rig.update(dt);
+    if (e.state === 'flee') e.rig.chain.forEach((c, k) => c.forEach((bn, i) => e.rig.bend(bn, UP, Math.sin(e.wig + (k ? i : -i) * 0.9) * 0.3)));
     e.halo.visible = (s.sensing && d < 26 || !!e.shown) && e.state === 'lie';
     e.halo.position.set(e.x, height(e.x, e.z) + 0.3, e.z); e.halo.material.opacity = e.shown && !s.sensing ? 0.35 : 0.9;
     if (e.state === 'flee') {
@@ -200,6 +203,7 @@ export class Encounters {
       if (e.t < 0) e.done = true;
       return;
     }
+    if (e.state === 'strike') { e.t -= dt; if (e.t < 0) this.flee(e, p); return; }
     e.g.rotation.y = turn(e.g.rotation.y, Math.atan2(p.x - e.x, p.z - e.z), dt * (up ? 3 : 0.4));
     if (s.sensing && d < 14 && !e.shown) { e.shown = true; game.toast('Daar! Tussen het gras ligt een slang, precies in de kleur van de grond.', 5); game.discover('snake'); }
     // sissen hoor je alleen als je zelf stil bent
@@ -211,14 +215,16 @@ export class Encounters {
     if (d < 1.05 && game.player.onGround && s.collapsed <= 0 && s.sleeping <= 0) {
       game.hurt(18); s.sick = Math.max(s.sick, 70); game.discover('snake');
       game.toast(e.shown ? 'Te dichtbij! De slang bijt in je enkel. Het gif brandt. Bitterblad helpt.' : 'Au! Een slang! Je trapte er bijna op en hij bijt in je enkel. Het gif brandt. Bitterblad helpt.', 7);
-      this.flee(e, p);
+      this.strike(e, p);
     }
   }
+  // uithalen: even de beet laten zien, daarna maakt hij zich uit de voeten
+  strike(e, at) { e.state = 'strike'; e.t = 1.1; e.g.rotation.y = Math.atan2(at.x - e.x, at.z - e.z); e.halo.visible = false; }
   flee(e, from) { e.state = 'flee'; e.t = 5; e.g.rotation.y = Math.atan2(e.x - from.x, e.z - from.z); e.halo.visible = false; }
   hit_snake(e, how, game) {
     if (e.state !== 'lie') return;
-    if (how === 'fist') { game.hurt(18); game.state.sick = Math.max(game.state.sick, 70); game.toast('Met je blote hand? De slang is sneller en bijt. Het gif brandt. Bitterblad helpt.', 6); }
-    else game.toast('Raak! De slang schiet weg in het gras.', 4);
+    if (how === 'fist') { game.hurt(18); game.state.sick = Math.max(game.state.sick, 70); game.toast('Met je blote hand? De slang is sneller en bijt. Het gif brandt. Bitterblad helpt.', 6); game.discover('snake'); this.strike(e, game.player.pos); return; }
+    game.toast('Raak! De slang schiet weg in het gras.', 4);
     game.discover('snake'); this.flee(e, game.player.pos);
   }
   rm_snake(e) { this.scene.remove(e.g, e.halo); }
@@ -309,7 +315,7 @@ export class Encounters {
 
   // ---------- het bijennest ----------
   mk_bees(x, z, game, tree) {
-    const r = (tree ? tree.r : 0.4) + 0.12, hx = x + r * 0.7, hz = z + r * 0.7, y = height(x, z) + 1.55;
+    const r = tree ? 0.26 : 0.52, hx = x + r * 0.7, hz = z + r * 0.7, y = height(x, z) + 1.55;
     const hive = new THREE.Group();
     const comb = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), lam(0x8a6a2a)); comb.scale.set(0.9, 1.35, 0.9); comb.castShadow = true;
     const hole = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 4), lam(0x1e1408)); hole.position.set(0.09, -0.05, 0.09);
@@ -450,19 +456,10 @@ export class Encounters {
       if (e.kind === 'gazelle') out.push(e.dead ? { look: 'prey', x: e.x, z: e.z, enc: e } : { look: 'wounded', member: e.m });
       if (e.kind === 'nest') { out.push({ look: 'bird', member: e.bird }); if (e.eggs.every((t) => t.gone)) out.push({ look: 'nest', x: e.x, z: e.z }); }
       if (e.kind === 'snake' && e.state === 'lie' && e.shown) out.push({ look: 'snake', member: e });
-      if (e.kind === 'bees') out.push({ look: 'bees', x: e.hx, z: e.hz, high: e.hy });
+      if (e.kind === 'bees') out.push({ look: 'bees', x: e.hx, z: e.hz, high: e.hy, enc: e });
       if (e.kind === 'strangers') for (const m of e.list) out.push({ look: 'stranger', member: m });
     }
     return out;
-  }
-  // de actieknop: vlees snijden van de gazelle, of honing pakken
-  context(game) {
-    const p = game.player.pos;
-    for (const e of this.list) {
-      if (e.kind === 'gazelle' && e.dead && e.meat > 0 && dist(e, p) < 3) return { mode: 'cutprey', icon: 'cut', ready: game.state.hands.includes('flake'), run: () => this.cutPrey(e, game) };
-      if (e.kind === 'bees' && e.honey > 0 && dist(e, p) < 2.6) return { mode: 'honey', icon: 'hand', ready: true, run: () => this.takeHoney(e, game) };
-    }
-    return null;
   }
   // hoe spannend is het? (voor het geluid)
   danger() {

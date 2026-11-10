@@ -37,7 +37,7 @@ export class Zebras {
       z.t -= dt;
       let tx = 0, tz = 0, spd = 0;
       const d = Math.hypot(p.x - z.x, p.z - z.z);
-      if (z.state !== 'flee' && d < (game.player.sneaking ? 7 : 14)) { this.scare(p, 5); game.sound.flee(); }
+      if (z.state !== 'flee' && d < (game.player.sneaking ? 7 : 14) && !game.player.hiddenFrom(z.x, z.z)) { this.scare(p, 5); game.sound.flee(); }
       if (z.state === 'flee') {
         const f = z.from, fd = Math.hypot(z.x - f.x, z.z - f.z) || 1;
         tx = (z.x - f.x) / fd; tz = (z.z - f.z) / fd; spd = 12.5 * z.slow;
@@ -166,7 +166,7 @@ export class Sabres {
       const d = dist(c, p) || 0.01;
       c.t -= dt; c.cool = Math.max(0, c.cool - dt);
       let tx = 0, tz = 0, spd = 0, anim = 'Layout', aspeed = 1, face = null;
-      const canSee = game.state.collapsed <= 0;
+      const canSee = game.state.collapsed <= 0 && !(c.state !== 'attack' && game.player.hiddenFrom(c.x, c.z));
       // bewaken: bij de prooi op grotere afstand dan in het gras
       const guard = c.state === 'feed' ? [17, 8] : c.state === 'lie' ? [9, 4.5] : null;
       if (guard && canSee && c.cool <= 0) {

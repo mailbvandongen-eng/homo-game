@@ -66,6 +66,8 @@ export function tallGrassAt(x, z) {
 
 // Botsingen met bomen en rotsen: eenvoudige cirkels
 export const blockers = [];
+// waar je gebukt achter kunt wegduiken: grote rotsen en dichte struiken
+export const cover = [];
 
 
 export function buildWorld(scene, A) {
@@ -174,63 +176,36 @@ export function buildWorld(scene, A) {
 
 
   // ---------- acacia's ----------
-  // stam en takken met de bast van een koortsboom (een acacia); de kroon is gemaakt van kaartjes met fijn blad
-  const barkG = new THREE.Group(), leafG = new THREE.Group(), sideG = new THREE.Group();
-  const branch = (len, r1, r2, x, y, z, rx, rz) => {
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(r2, r1, len, 7, 3)); m.position.set(x, y, z); m.rotation.set(rx, 0, rz); return m;
-  };
-  const card = (w, d) => new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2);
+  // een schermacacia als model (Sketchfab, zie assets/CREDITS.md), op elke plek herhaald met een eigen maat en draaiing
+  const acaciaSpots = [];
   function acacia(x, z, s) {
-    const g = new THREE.Group(), y = height(x, z);
-    const lean = (R() - 0.5) * 0.3;
-    const tb = new THREE.Group(); g.add(tb);
-    tb.add(branch(3.2 * s, 0.3 * s, 0.2 * s, 0, 1.6 * s, 0, 0, lean));
-    // de stam splitst in een paar schuine takken die de platte kroon dragen
-    const tops = [];
-    const nb = 3 + Math.floor(R() * 2);
-    const S = new THREE.Vector3(-lean * 1.6 * s, 3.1 * s, 0);   // de top van de stam
-    for (let k = 0; k < nb; k++) {
-      const a = k / nb * 6.28 + R() * 0.8, out = (1.2 + R() * 1.3) * s, up = (1.6 + R() * 0.8) * s;
-      const E = S.clone().add(new THREE.Vector3(Math.cos(a) * out, up, Math.sin(a) * out));
-      const b = branch(S.distanceTo(E), 0.17 * s, 0.07 * s, 0, 0, 0, 0, 0);
-      b.position.copy(S).add(E).multiplyScalar(0.5); b.lookAt(E); b.rotateX(Math.PI / 2);
-      tb.add(b); tops.push([E.x, E.y, E.z]);
-    }
-    // bladlagen boven op elke tak, plus een paar kaartjes aan de zijkant
-    const lg = new THREE.Group(), sg = new THREE.Group();
-    for (const [tx, ty, tz] of tops) for (let l = 0; l < 4; l++) {
-      const w = (2.2 + R() * 1.2) * s;
-      const c = new THREE.Mesh(card(w, w * (0.8 + R() * 0.3))); c.position.set(tx + (R() - 0.5) * s, ty + l * 0.22 * s + R() * 0.15, tz + (R() - 0.5) * s);
-      c.rotation.set((R() - 0.5) * 0.25, R() * 6.28, (R() - 0.5) * 0.25); lg.add(c);
-    }
-    const cr = (2.6 + R() * 0.6) * s;
-    for (let k = 0; k < 6; k++) {
-      const a = k / 6 * 6.28 + R() * 0.4, c = new THREE.Mesh(new THREE.PlaneGeometry(2 * s, 1.1 * s));
-      c.position.set(Math.cos(a) * cr * 0.75, 3.1 * s + 2.0 * s, Math.sin(a) * cr * 0.75); c.rotation.y = -a + Math.PI / 2; sg.add(c);
-    }
-    for (const [src, dst] of [[tb, barkG], [lg, leafG], [sg, sideG]]) {
-      const holder = new THREE.Group(); holder.position.set(x, y - 0.1, z); holder.rotation.y = R() * 6.28;
-      [...src.children].forEach((m) => holder.add(m)); dst.add(holder);
-    }
-    blockers.push({ x, z, r: 0.4 * s });
+    // evenveel trekkingen als de oude, getekende boom: zo blijft de rest van de wereld op zijn plek
+    R(); const nb = 3 + Math.floor(R() * 2); for (let i = 0; i < nb * 35 + 10; i++) R();
+    acaciaSpots.push([x, z, s * 0.85, (x * 12.9898 + z * 78.233) % 6.28]);
+    blockers.push({ x, z, r: Math.max(0.3, 0.3 * s) });   // iets ruimer dan de dunne stam: de reus en de dekking rekenen ermee
   }
   for (let i = 0; i < 70; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 10)) acacia(x, z, 0.8 + R() * 0.6); }
   [[-8, -14, 1.75], [14, -20, 1], [-30, 10, 1.1], [40, 50, 1.3]].forEach(([x, z, s]) => acacia(x, z, s));
-  const tag = (grp, mat) => { const m = mergeStatic(grp); m.material = mat; m.geometry.deleteAttribute('color'); m.castShadow = true; m.receiveShadow = true; return m; };
-  const barkTex = A.tex.fever_tree_bark_diff; barkTex.repeat.set(2, 3);
-  const barkNor = A.tex.fever_tree_bark_nor; barkNor.repeat.set(2, 3);
-  scene.add(tag(barkG, new THREE.MeshStandardMaterial({ map: barkTex, normalMap: barkNor, color: 0x9a8070, roughness: 0.95, metalness: 0 })));   // donkerder dan de gele koortsboom
   const leafMat = (map, tint) => {
     const m = new THREE.MeshStandardMaterial({ map, color: tint, alphaTest: 0.35, alphaToCoverage: true, side: THREE.DoubleSide, roughness: 0.9, metalness: 0, emissive: 0x1a2408 });
     // bladeren laten licht door: beide kanten krijgen licht van boven, anders is de onderkant zwart
     m.onBeforeCompile = (sh) => {
       sh.vertexShader = sh.vertexShader.replace('#include <beginnormal_vertex>', 'vec3 objectNormal = vec3(0.0, 1.0, 0.0);');
       sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', 'float faceDirection = 1.0;\nvec3 normal = normalize(vNormal);\nvec3 nonPerturbedNormal = normal;');
+      // fijne blaadjes verdwijnen op afstand uit de verkleinde textuur: dekking versterken
+      sh.fragmentShader = sh.fragmentShader.replace('#include <alphatest_fragment>', 'diffuseColor.a = min(1.0, diffuseColor.a * 2.5);\n#include <alphatest_fragment>');
     };
     return m;
   };
-  const crowns = tag(leafG, leafMat(A.tex.leaf_top, 0xb8d870)); crowns.receiveShadow = false; scene.add(crowns);
-  const sides = tag(sideG, leafMat(A.tex.leaf_side, 0xb0d068)); sides.receiveShadow = false; scene.add(sides);
+  const am = new THREE.Object3D();
+  A.models.acacia.updateMatrixWorld(true);
+  A.models.acacia.traverse((o) => {
+    if (!o.isMesh) return;
+    const leaf = o.material.alphaTest > 0, geo = o.geometry.clone().applyMatrix4(o.matrixWorld);
+    const im = new THREE.InstancedMesh(geo, leaf ? leafMat(o.material.map, 0xd0e0a8) : o.material, acaciaSpots.length);
+    acaciaSpots.forEach(([x, z, k, ry], i) => { am.position.set(x, height(x, z) - 0.1, z); am.rotation.set(0, ry, 0); am.scale.setScalar(k); am.updateMatrix(); im.setMatrixAt(i, am.matrix); });
+    im.castShadow = true; im.receiveShadow = !leaf; im.computeBoundingSphere(); scene.add(im);
+  });
 
   // ---------- rotsen: gescande granieten keien uit Zuid-Afrika ----------
   const rockVariants = [...variantsOf(A.models.namaqualand_boulder_02), ...variantsOf(A.models.namaqualand_boulder_05), ...variantsOf(A.models.namaqualand_rocks_01)];
@@ -240,6 +215,7 @@ export function buildWorld(scene, A) {
     const k = (s * 2) / Math.max(v.size.x, v.size.z);   // zo groot als de oude rots
     rockSpots[vi].push([x, z, k, R() * 6.28]);
     if (s > 0.7) blockers.push({ x, z, r: s * 0.9, top: height(x, z) + v.size.y * k * 0.9 });
+    if (s > 0.7 && v.size.y * k > 0.8) cover.push({ x, z, r: s * 0.9 });
   }
   for (let i = 0; i < 55; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 9)) rock(x, z, 0.4 + R() * 1.6); }
   for (let i = 0; i < 14; i++) { const a = R() * 6.28, d = 6 + R() * 14; rock(-40 + Math.cos(a) * d, -30 + Math.sin(a) * d, 0.8 + R() * 1.8); }
@@ -261,7 +237,9 @@ export function buildWorld(scene, A) {
   for (let i = 0; i < 90; i++) {
     const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (!ok(x, z, 8)) continue;
     const vi = Math.floor(R() * bushVariants.length), v = bushVariants[vi];
-    bushSpots[vi].push([x, z, (1.0 + R() * 0.9) / v.size.y, R() * 6.28, 0.02]);
+    const bh = 1.0 + R() * 0.9;
+    bushSpots[vi].push([x, z, bh / v.size.y, R() * 6.28, 0.02]);
+    if (bh > 1.2) cover.push({ x, z, r: Math.max(v.size.x, v.size.z) * bh / v.size.y * 0.35 });
   }
   bushVariants.forEach((v, i) => bushSpots[i].length && instance(v, bushSpots[i]));
   const logs = variantsOf(A.models.dead_tree_trunk), twigs = variantsOf(A.models.dry_branches_medium_01);

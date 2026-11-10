@@ -37,6 +37,7 @@ export const ICON = {
   give: svg('<path d="M6 32c6-3 10-3 14 0l8 2c3 1 3 4 0 4l-8-1"/><path d="M28 36l12-5c3-1 4 2 2 4l-14 8c-4 2-8 2-12 0l-10-4"/><circle cx="26" cy="15" r="7"/><path d="M26 4v2M36 9l-2 1M16 9l2 1"/>'),
   // slapen: een maansikkel
   sleep: svg('<path d="M34 8a17 17 0 1 0 6 26A14 14 0 0 1 34 8z"/><path d="M8 10h6l-6 7h6M18 4h4l-4 5h4"/>'),
+  menu: svg('<circle cx="10" cy="24" r="2.5"/><circle cx="24" cy="24" r="2.5"/><circle cx="38" cy="24" r="2.5"/>'),
   close: svg('<path d="M14 14l20 20M34 14L14 34"/>'),
 };
 

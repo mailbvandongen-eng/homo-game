@@ -171,5 +171,8 @@ export class Sound {
   stomp(v = 1) { if (!this.ctx) return; this.burst(70, 0.3, 0.5 * v, 'lowpass', 0, 1.5); this.tone(48, 0.28, 0.14 * v, 'sine', -18); }
   rumble(v = 1) { if (!this.ctx) return; this.tone(38, 2.4, 0.11 * v, 'sawtooth', 9); this.tone(57, 2.2, 0.06 * v, 'triangle', -6, 0.15); this.burst(60, 2.2, 0.2 * v, 'lowpass', 0, 2); }
   trumpet(v = 1) { if (!this.ctx) return; this.tone(420, 0.25, 0.07 * v, 'sawtooth', 330); this.tone(760, 1.0, 0.09 * v, 'sawtooth', -230, 0.22); this.tone(1130, 0.9, 0.04 * v, 'square', -340, 0.24); this.burst(900, 1.1, 0.14 * v, 'bandpass', 0.2, 3); }
+  // je eigen lijf en je groep laten van zich horen
+  belly() { if (!this.ctx) return; this.tone(74, 0.45, 0.1, 'sawtooth', -22); this.tone(52, 0.7, 0.09, 'sawtooth', 26, 0.4); this.burst(160, 0.5, 0.08, 'lowpass', 0.3, 2); }
+  cry(v = 1) { if (!this.ctx) return; for (let i = 0; i < 3; i++) { this.tone(640, 0.45, 0.035 * v, 'triangle', -190, i * 0.6); this.tone(960, 0.4, 0.015 * v, 'sine', -280, i * 0.6); } }
   sense(on) { if (this.ctx && on) this.tone(110, 0.6, 0.05, 'sine', 30); }
 }

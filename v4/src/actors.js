@@ -66,14 +66,14 @@ export class Herd {
     for (const m of this.members) {
       const dx = p.x - m.x, dz = p.z - m.z, dist = Math.hypot(dx, dz);
       // zien en horen: dichtbij valt veel meer op
-      const range = 34 * notice;
+      const range = player.hiddenFrom(m.x, m.z) ? 0 : 34 * notice;
       // ruiken: waait de wind van jou naar het dier, dan ruikt het je van ver
       const smell = dist < 48 && ((m.x - p.x) * WIND.x + (m.z - p.z) * WIND.z) / dist > 0.6;
       if (this.fleeing <= 0) {
         if (dist < range) m.aware += dt * (1 - dist / range) * 1.4 * (0.4 + notice);
         if (smell) { m.aware += dt * (1 - dist / 48) * 0.9; m.smelled = true; }
         if (dist >= range && !smell) m.aware -= dt * 0.12;
-        if (dist < 4) m.aware = 2;
+        if (dist < 4 && range > 0) m.aware = 2;
         m.aware = Math.max(0, m.aware);
       }
       maxAware = Math.max(maxAware, m.aware);
@@ -166,31 +166,26 @@ export function turn(a, b, k) { let d = b - a; d = Math.atan2(Math.sin(d), Math.
 
 // ---------- gieren die boven een karkas cirkelen ----------
 export class Vultures {
-  constructor(scene, x, z) {
+  constructor(scene, x, z, A) {
     this.center = new THREE.Vector3(x, height(x, z), z);
     this.birds = [];
-    const mat = lam(0x3a2e26), neckMat = lam(0xd8c0a8);
     for (let i = 0; i < 4; i++) {
-      const g = new THREE.Group();
-      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.6, 3, 6), mat); body.rotation.x = Math.PI / 2; g.add(body);
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 4), neckMat); head.position.z = 0.6; g.add(head);
-      const wings = [];
-      for (const s of [-1, 1]) {
-        const w = new THREE.Group(); w.position.x = s * 0.15;
-        const wm = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.05, 0.6), mat); wm.position.x = s * 0.8; w.add(wm);
-        g.add(w); wings.push(w);
-      }
-      g.scale.setScalar(1.4);
+      const rig = new Rig(A, 'vulture', { scale: 1.1, facing: Math.PI }), g = rig.root;
+      rig.model.traverse((o) => { if (o.isMesh) o.receiveShadow = false; });
+      rig.play('Armature', { speed: 0 });
       scene.add(g);
-      this.birds.push({ g, wings, a: i / 4 * 6.28, r: 7 + i * 2.5, h: 18 + i * 3, sp: 0.25 + i * 0.04 });
+      this.birds.push({ g, rig, a: i / 4 * 6.28, r: 7 + i * 2.5, h: 18 + i * 3, sp: 0.25 + i * 0.04, flap: 3 + i * 3.1 });
     }
   }
   update(dt, t) {
     for (const b of this.birds) {
       b.a += dt * b.sp;
       b.g.position.set(this.center.x + Math.cos(b.a) * b.r, this.center.y + b.h + Math.sin(t * 0.5 + b.a) * 1.2, this.center.z + Math.sin(b.a) * b.r);
-      b.g.rotation.set(0, -b.a, 0.35);
-      for (const [k, w] of b.wings.entries()) w.rotation.z = (k ? -1 : 1) * (0.08 + Math.sin(t * 1.3 + b.a * 3) * 0.06);
+      b.g.rotation.set(0, -b.a, 0.35 + Math.sin(t * 0.7 + b.a) * 0.06);
+      // meestal zweven ze op de warme lucht; af en toe twee trage vleugelslagen
+      b.flap -= dt; if (b.flap < -5) b.flap = 6 + Math.random() * 9;
+      b.rig.current.time = b.flap < 0 ? -b.flap % 2.5 : 0;
+      if (b.g.visible) b.rig.update(0);
     }
   }
 }

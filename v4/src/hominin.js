@@ -1,5 +1,5 @@
 import * as THREE from '../lib/three.module.js';
-import { height, blockers, WALK, riverDist, tallGrassAt, mergeStatic } from './world.js';
+import { height, blockers, cover, WALK, riverDist, tallGrassAt, mergeStatic } from './world.js';
 import { Rig } from './rig.js';
 
 // ---------- materialen ----------
@@ -325,6 +325,20 @@ export class Hominin {
     if (sick) r.bend(r.bone('spine_02'), side, 0.35);
     if (this.lookYaw && !this.once) r.bend(r.bone('head'), this._up || (this._up = new THREE.Vector3(0, 1, 0)), this.lookYaw * 0.7);
   }
+
+  // Zit je gebukt vlak achter een rots of struik, dan ziet een dier op (x, z) je niet
+  hiddenFrom(x, z) {
+    if (!this.sneaking) return false;
+    const p = this.pos, dx = p.x - x, dz = p.z - z, L = Math.hypot(dx, dz);
+    if (L < 2.5) return false;
+    for (const c of cover) {
+      if (Math.hypot(c.x - p.x, c.z - p.z) > c.r + 2.2) continue;
+      const cx = c.x - x, cz = c.z - z, f = (cx * dx + cz * dz) / (L * L);
+      if (f > 0 && f < 1 && Math.abs(cx * dz - cz * dx) / L < c.r * 0.9) return true;
+    }
+    return false;
+  }
+  get nearCover() { const p = this.pos; return cover.some((c) => Math.hypot(c.x - p.x, c.z - p.z) < c.r + 2.2); }
 
   // Hoe goed val je op voor een dier? 1 = normaal
   get noticeable() {

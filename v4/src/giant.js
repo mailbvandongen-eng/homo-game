@@ -28,7 +28,7 @@ export class Giant {
     this.prints.count = 0; this.prints.frustumCulled = false; this.prints.renderOrder = 2; scene.add(this.prints);
     this.spots = []; this.pn = 0; this.walked = 0; this.dummy = new THREE.Object3D();
     this.block = { x: 0, z: 0, r: 1.5, beast: true }; blockers.push(this.block);
-    this.vultures = new Vultures(scene, GRAVE.x, GRAVE.z);
+    this.vultures = new Vultures(scene, GRAVE.x, GRAVE.z, A);
     // de kies die overblijft als de regen het karkas heeft opgeruimd
     const mm = new THREE.MeshLambertMaterial({ color: 0xe6dcc4, flatShading: true });
     this.molar = new THREE.Group();
@@ -119,7 +119,7 @@ export class Giant {
     }
     if (this.dead) return this.updateDead(dt, game, t, d);
     const awake = game.state.collapsed <= 0 && game.state.sleeping <= 0;
-    const sneak = game.player.sneaking, near = sneak ? 8 : 20, close = sneak ? 4.5 : 11;
+    const sneak = game.player.sneaking, hid = game.player.hiddenFrom(this.x, this.z), near = hid ? 4 : sneak ? 8 : 20, close = hid ? 3 : sneak ? 4.5 : 11;
     this.calm = Math.max(0, this.calm - dt);
     if (d < 48 && !this.seen) { this.seen = true; game.toast('Daar staat hij. Een stier zo hoog als een boom, met slagtanden langer dan jij. De grond trilt als hij loopt.', 7); game.sound.rumble(1); }
     // bij de reus durven de hyena's niet te komen
@@ -253,9 +253,5 @@ export class Giant {
     for (const s of this.spots) { if (!s) continue; const k = dist(s, p); if (k < bd) { bd = k; best = s; } }
     if (best) out.push({ look: 'track', x: best.x, z: best.z });
     return out;
-  }
-  context(game) {
-    if (this.dead && this.meat > 0 && dist(this.body, game.player.pos) < 3.6) return { mode: 'cutgiant', icon: 'cut', ready: game.state.hands.includes('flake'), run: () => this.cut(game) };
-    return null;
   }
 }

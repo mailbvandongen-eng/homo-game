@@ -4,12 +4,11 @@ import { GLTFLoader, HDRLoader } from '../lib/three-addons.js';
 // Gescande natuur van Poly Haven (CC0): keien, struiken, dood hout, grond- en bastfoto's en een luchtfoto.
 // Alles wordt geladen voordat het spel begint; onProgress krijgt een getal van 0 tot 1.
 // dieren met botten en animaties (Sketchfab, CC BY 4.0, zie assets/CREDITS.md)
-const ANIMALS = ['hyena', 'leopard', 'gazelle', 'hominin', 'sabre', 'zebra', 'elephant'];
-const MODELS = [...ANIMALS, 'namaqualand_boulder_02', 'namaqualand_boulder_05', 'namaqualand_rocks_01', 'wild_rooibos_bush', 'shrub_03', 'dead_tree_trunk', 'dry_branches_medium_01'];
+const ANIMALS = ['hyena', 'leopard', 'gazelle', 'hominin', 'sabre', 'zebra', 'elephant', 'cobra', 'vulture'];
+const MODELS = [...ANIMALS, 'acacia', 'namaqualand_boulder_02', 'namaqualand_boulder_05', 'namaqualand_rocks_01', 'wild_rooibos_bush', 'shrub_03', 'dead_tree_trunk', 'dry_branches_medium_01'];
 const TEXTURES = [
   ['dry_ground_01_diff', true], ['dry_ground_01_nor', false], ['withered_grass_diff', true], ['withered_grass_nor', false],
-  ['sparse_grass_diff', true], ['dry_ground_rocks_diff', true], ['fever_tree_bark_diff', true], ['fever_tree_bark_nor', false],
-  ['grass_atlas', true], ['leaf_top', true], ['leaf_side', true],
+  ['sparse_grass_diff', true], ['dry_ground_rocks_diff', true], ['grass_atlas', true],
 ];
 
 export async function loadAssets(renderer, onProgress = () => {}) {
