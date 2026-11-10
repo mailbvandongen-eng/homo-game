@@ -73,7 +73,7 @@ addEventListener('resize', resize); resize();
 const state = {
   food: 55, health: 100, sick: 0, hands: [null, null], rock: [null, null], rockKnown: new Set(), known: new Set(), found: new Set(),
   started: false, collapsed: 0, sensing: false, finds: new Set(), carcassMeat: 1,
-  group: 50, day: 1, sleeping: 0, slept: false, brought: {}, starve: 0, rainDay: 0, lost: false,
+  group: 50, day: 1, sleeping: 0, slept: false, brought: {}, given: new Set(), starve: 0, rainDay: 0, lost: false,
 };
 const verdict = { get: (it) => (state.known.has(it) ? VERDICT[it] : null) };
 
@@ -88,6 +88,44 @@ function discover(id) {
   setTimeout(() => { toast('Ontdekt: ' + d.text, 5); sound.discover(); }, 1400);
   $('journalCount').textContent = state.found.size;
   if (state.found.size === DISCOVERIES.length) setTimeout(() => toast('Je hebt alles in dit proefstuk ontdekt. Zo begon het: kijken, proberen en onthouden.', 8), 7500);
+}
+
+// ---------- opdrachten ----------
+// Rondlopen is vrij, maar verder kom je door te doen wat de groep nodig heeft. Eén opdracht tegelijk; elke opdracht leert één ding.
+// Wat je al gedaan hebt telt meteen. Zijn ze allemaal klaar, dan kan de groep verder trekken.
+const QUESTS = [
+  { id: 'eat', title: 'Breng eten naar de slaapboom', intro: 'Ibo huilt van de honger. Zoek iets eetbaars en breng het naar de slaapboom.', done: () => state.given.size > 0 },
+  { id: 'sleep', title: 'Slaap bij de groep', intro: 'Alleen in het donker overleef je niet. Zorg dat je bij de slaapboom bent als de zon ondergaat.', done: () => state.found.has('sleep') },
+  { id: 'marrow', title: 'Kraak een bot open', intro: 'Tor tikt met een kei op een oud bot en kijkt je aan. Wat zou erin zitten?', done: () => state.found.has('marrow') },
+  { id: 'flake', title: 'Maak iets scherps', intro: 'Met je tanden krijg je geen huid open. Kem slaat twee keien tegen elkaar. Probeer het ook.', done: () => state.found.has('flake') },
+  { id: 'meat', title: 'Breng vlees naar de groep', intro: 'Bessen vullen niet genoeg. Waar gieren cirkelen ligt vlees. Snijd het los en breng het thuis.', done: () => state.given.has('meat') },
+  { id: 'hyena', title: 'Verjaag een hyena', intro: 'De hyena\'s komen elke nacht dichterbij. Laat zien dat je raak kunt gooien.', done: () => state.found.has('hyena') },
+  { id: 'honey', title: 'Breng honing naar de groep', intro: 'Tor wijst naar een holle boom waar het zoemt. Maar hoe kom je erbij zonder gestoken te worden?', done: () => state.given.has('honey') },
+  { id: 'hide', title: 'Breng een huid naar de slaapboom', intro: 'De nachten worden kouder en Ibo rilt. Een dier heeft meer dan alleen vlees.', done: () => state.given.has('hide') },
+];
+const quest = { i: 0, wait: 3, said: true, over: false };
+function questTick(dt) {
+  if (!state.started || quest.over) return;
+  const q = QUESTS[quest.i];
+  if (!q) {
+    quest.wait -= dt; if (quest.wait > 0 || state.sleeping > 0 || state.collapsed > 0) return;
+    quest.over = true; $('questN').textContent = '✓'; $('questT').textContent = 'De groep is klaar om verder te trekken'; sound.discover();
+    showCard(`<div class="eyebrow">De savanne</div><h2>De groep trekt verder</h2><p>Je hebt geleerd wat hier te leren viel: eten vinden en delen, botten kraken, een scherpe rand slaan, vlees en huid snijden, gooien, wachten op het goede moment.</p>
+      <p>De struiken raken leeg en het gras verdort. Tor wijst naar het noorden, waar het water blijft staan. Daar wacht iets nieuws.</p><p class="fine">Het volgende gebied is nog in de maak. Je kunt hier vrij blijven rondlopen.</p>`);
+    return;
+  }
+  if (quest.wait > 0) { quest.wait -= dt; return; }
+  if (!quest.said) {
+    quest.said = true; toast(q.intro, 7);
+    const el = $('quest'); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  }
+  $('quest').classList.add('on'); $('questN').textContent = `${quest.i + 1}/${QUESTS.length}`; $('questT').textContent = q.title;
+  if (q.done()) {
+    // wat daarna ook al klaar is, slaan we stil over
+    let n = quest.i + 1; while (QUESTS[n] && QUESTS[n].done()) n++;
+    quest.i = n; quest.wait = 7; quest.said = false; sound.good();
+    $('questN').textContent = '✓'; setTimeout(() => toast('Gelukt: ' + q.title.toLowerCase() + '.', 4), 2600);
+  }
 }
 
 // ---------- knoppen met icoontjes ----------
@@ -154,7 +192,8 @@ function lookAt(target) {
     <p class="${known ? 'know' : 'q'}">${known ? def.known : def.unknown}</p>`);
 }
 $('journalBtn').onclick = () => {
-  showCard(`<div class="eyebrow">Wat je weet</div><h2>Ontdekkingen</h2><ul>${DISCOVERIES.map((d) => state.found.has(d.id) ? `<li>${d.text}</li>` : '<li class="no">… nog niet ontdekt</li>').join('')}</ul>
+  showCard(`<div class="eyebrow">Wat de groep nodig heeft</div><h2>Opdrachten</h2><ul>${QUESTS.map((q, i) => i < quest.i ? `<li class="done">${q.title}</li>` : i === quest.i ? `<li class="now">${q.title}</li>` : '<li class="no">…</li>').join('')}</ul>
+    <div class="eyebrow" style="margin-top:14px">Wat je weet</div><h2>Ontdekkingen</h2><ul>${DISCOVERIES.map((d) => state.found.has(d.id) ? `<li>${d.text}</li>` : '<li class="no">… nog niet ontdekt</li>').join('')}</ul>
     <h3>Vondsten</h3><ul>${Object.entries(FINDS).map(([k, f]) => state.finds.has(k) ? `<li><b>${f.name}</b>: ${f.text}</li>` : '<li class="no">… ergens verstopt</li>').join('')}</ul>
     <p class="fine" style="margin-top:12px">${$('credits').innerHTML}</p>`);
 };
@@ -283,7 +322,10 @@ function killLook(k) {
   pool.rotation.x = -Math.PI / 2; pool.scale.set(1.5, 1.05, 1); pool.position.y = 0.04; pool.renderOrder = 1; g.add(pool);
   const wound = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 7), red); wound.scale.set(k.hide ? 1 : 1.9, 1.05, k.hide ? 1.25 : 1.5); wound.position.set(0, 0.36, 0); g.add(wound);
   for (let i = 0; i < 4; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.022, 5, 10, Math.PI), bone); r.rotation.y = Math.PI / 2; r.position.set(-0.24 + i * 0.16, 0.38, 0); r.scale.set(1.3, 1.12, 1); g.add(r); }
-  g.position.set(k.x, y, k.z); g.rotation.y = yaw; scene.add(g); killMesh = g;
+  // het dier ligt op zijn zij naast de plek waar het stond: leg de wond op het lijf zelf, met de ribben dwars op de rug
+  let cx = k.x, cz = k.z;
+  if (k.zebra) { k.zebra.g.updateMatrixWorld(true); const c = new THREE.Box3().setFromObject(k.zebra.g).getCenter(new THREE.Vector3()); cx = c.x; cz = c.z; }
+  g.position.set(cx, height(cx, cz), cz); g.rotation.y = yaw + Math.PI / 2; scene.add(g); killMesh = g;
 }
 // iets aan de groep geven: het beste wat je in je handen hebt
 function giveItem() { const it = GIVE.find((x) => state.hands.includes(x) && !(x === 'leaf' && !group.sick)) || GIVE.find((x) => state.hands.includes(x)); return it; }
@@ -297,7 +339,7 @@ function share(it) {
   toast(r.text, 6);
   if (r.gain === null) return false;
   state.group = THREE.MathUtils.clamp(state.group + r.gain, 0, 100);
-  if (r.gain > 0) state.brought[it] = (state.brought[it] || 0) + 1;
+  if (r.gain > 0) { state.brought[it] = (state.brought[it] || 0) + 1; state.given.add(it); }
   if (r.bad) sound.bad(); else { sound.eat(); setTimeout(() => sound.good(), 600); discover('share'); }
   return true;
 }
@@ -1085,7 +1127,7 @@ function update(dt) {
   predGame.night = night; predGame.danger = danger;
   hyenas.update(dt, predGame);
   leopard.update(dt, predGame, camera);
-  throws.update(dt); knapTick(dt); turnTick(dt); hintTick(dt); trackTargets(dt); aimTick(dt);
+  throws.update(dt); knapTick(dt); turnTick(dt); hintTick(dt); questTick(dt); trackTargets(dt); aimTick(dt);
   zebras.update(dt, predGame);
   sabres.update(dt, predGame);
   group.update(dt, predGame);
@@ -1286,7 +1328,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { begin, bestTarget, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hintCur && hintCur.id, [...hintSeen]], actionContext,
+window.__game = { begin, bestTarget, quest, QUESTS, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hintCur && hintCur.id, [...hintSeen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, flick, setSneak, still: () => stillT, FLICK,
   setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setZoom, zoom: () => camDist,
   lookFrom: (pos, look) => { camOverride = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },
