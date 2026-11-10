@@ -28,6 +28,7 @@ canvas{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;display:blo
 #homeDir{fill:var(--ink);stroke:#0009}
 
 /* ---------- melding: tekst op een donkere band, als een ondertitel ---------- */
+#loading{bottom:max(18px,var(--sab));left:50%;transform:translateX(-50%);font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:#fffc;text-shadow:0 1px 3px #000}
 #toast{top:max(12px,var(--sat));left:50%;transform:translateX(-50%);width:max-content;max-width:min(560px,58vw);text-align:center;font-weight:500;font-size:15px;line-height:1.4;padding:8px 34px;background:linear-gradient(90deg,transparent,#0c0f12cc 14%,#0c0f12cc 86%,transparent);text-shadow:0 1px 3px #000;opacity:0;transition:opacity .4s}
 #toast.on{opacity:1}
 
@@ -156,21 +157,8 @@ li.no::before{background:none;box-shadow:inset 0 0 0 1px var(--faint)}
 <div class="hud" id="radial"></div>
 <button class="round small" id="swap" aria-label="Ruilen" style="position:fixed;display:none;z-index:4;margin:-23px 0 0 -23px;pointer-events:auto"></button>
 
-<div class="screen open" id="intro"><div class="card">
-  <div class="eyebrow">Proefstuk · Riftvallei · 2,4 miljoen jaar geleden</div>
-  <h2>Homo habilis</h2>
-  <p>Je groep wacht bij de slaapboom en iedereen heeft honger. Trek de savanne op. Wat kun je eten? Wat is gevaarlijk? Je moet het zelf ontdekken. Breng eten mee terug, voor het donker wordt.</p>
-  <ul>
-    <li><b>Lopen:</b> duim links op het scherm en schuif. <b>Rondkijken:</b> veeg rechts. <b>Zoomen:</b> knijp met twee vingers.</li>
-    <li><b>Bukken:</b> veeg rechts kort en snel omlaag. Veeg omhoog om weer te staan, en nog eens omhoog om te <b>springen</b>.</li>
-    <li><b>Oppakken:</b> loop er gewoon tegenaan. <b>Tik op iets</b>, ook op je eigen handen, om te zien wat je ermee kunt.</li>
-    <li><b>De vuist:</b> slaan, of gooien als je een kei hebt. Meer knoppen zijn er niet.</li>
-    <li><b>Sta stil</b> en je zintuigen gaan open: je hoort, ruikt en voelt meer. Je groep weet zelf wat ze met je eten moet.</li>
-  </ul>
-  <p class="desk">Op een computer: WASD of pijltjes om te lopen, Shift om te rennen, spatie om te springen, E om te slaan of te gooien, C om te bukken, Q ingedrukt voor je zintuigen, klikken om iets te onderzoeken, slepen om rond te kijken en het muiswiel om in en uit te zoomen.</p>
-  <div class="row" style="justify-content:center"><button class="btn" id="startBtn">Begin</button></div>
-  <p class="fine" style="margin-top:12px;text-align:center">Hoofdpersoon door gb.prof.69 met bewegingen van Quaternius (CC0); hyena en olifant door <a href="https://animalanimator.com">Animal Animator</a>, luipaard door GremorySaiyan, gazelle door kenchoo, sabeltandkat door slang107123456789, zebra door NoaSeller (Sketchfab, CC BY 4.0). Natuur: Poly Haven (CC0). <a href="assets/CREDITS.md">Alle bronnen</a></p>
-</div></div>
+<div class="hud" id="loading">Laden…</div>
+<template id="credits">Hoofdpersoon door gb.prof.69 met bewegingen van Quaternius (CC0); hyena en olifant door <a href="https://animalanimator.com">Animal Animator</a>, luipaard door GremorySaiyan, gazelle door kenchoo, sabeltandkat door slang107123456789, zebra door NoaSeller (Sketchfab, CC BY 4.0). Natuur: Poly Haven (CC0). <a href="assets/CREDITS.md">Alle bronnen</a></template>
 
 <div class="screen" id="cardScreen"><div class="card" id="card"></div></div>
 
@@ -180,7 +168,7 @@ window.__V = '__VERSION__'; window.__VA = '__ASSETS__';
 (function () {
   if (__V[0] === '_') return;
   const check = () => fetch('./version.json?' + Date.now(), { cache: 'no-store' }).then((r) => r.json()).then((j) => {
-    const atStart = document.getElementById('intro').classList.contains('open');
+    const atStart = !window.__played;
     if (j.v && j.v !== __V && atStart && !location.search.includes(j.v)) location.replace('./?v=' + j.v);
   }).catch(() => {});
   check(); document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });

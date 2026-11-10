@@ -130,7 +130,7 @@ export const LOOKS = {
   carcass: { name: 'Karkas van een zebra', look: 'Leeuwen hebben hier gegeten, daarna de hyena\'s en de gieren. Het vlees is op.', hint: 'Maar de grote botten zijn nog heel…' },
   hyena: { name: 'Gevlekte hyena', look: 'Sterke kaken die zelfs botten kraken. Hyena\'s jagen zelf, maar stelen ook graag van anderen.', hint: 'Ze zijn brutaal als ze met meer zijn. Een steen maakt indruk.' },
   leopard: { name: 'Luipaard', look: 'Hij ligt lui op een tak. Overdag slaapt hij; in de schemering gaat hij jagen.', hint: 'In de grot van Swartkrans ligt een schedel van een jonge mensachtige met twee gaatjes erin: precies de tanden van een luipaard.' },
-  flatstone: { name: 'Platte steen', look: 'Een platte steen, half in de grond. Wat zou eronder zitten?', hint: 'Je kunt hem omdraaien.' },
+  flatstone: { name: 'Platte steen', look: 'Een platte steen, half in de grond. Wat zou eronder zitten?', hint: 'Dubbeltik om hem om te draaien.' },
   gazelle: { name: 'Gazellen', look: 'Slanke antilopen met gebogen hoorns. Ze grazen in een groep en kijken steeds op.', hint: 'Ze zijn snel en schichtig. Te voet haal je ze nooit in.' },
   zebra: { name: 'Zebra\'s', look: 'Gestreepte paarden van de vlakte. Ze grazen samen: veel ogen zien meer dan twee.', hint: 'Voor jou zijn ze te snel en te sterk. Maar er zijn jagers die ze wel aankunnen…' },
   sabre: { name: 'Sabeltandkat', look: 'Een zware kat met hoektanden als messen. Overdag ligt hij in het hoge gras; soms gaat hij op jacht.', hint: 'Met die tanden kan hij niet alles van de botten krijgen. Er blijft altijd iets over.' },

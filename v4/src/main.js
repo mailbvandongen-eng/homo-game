@@ -21,18 +21,16 @@ const DAY_LEN = 14 * 60;   // één dag en nacht duurt 14 minuten
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 // scherp beeld: tot 2x de schermpixels (meer kost veel rekenkracht en zie je nauwelijks)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(innerWidth, innerHeight);
+renderer.setSize(innerWidth, innerHeight, false);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 document.body.prepend(renderer.domElement);
 
-// eerst de gescande natuur laden (de knop Begin wacht daarop)
-const startBtn = document.getElementById('startBtn');
-startBtn.disabled = true; startBtn.textContent = 'Laden… 0%';
-const A = await loadAssets(renderer, (f) => { startBtn.textContent = `Laden… ${Math.round(f * 100)}%`; });
-startBtn.disabled = false; startBtn.textContent = 'Begin';
+// eerst de gescande natuur laden; daarna begint het spel vanzelf
+const loading = document.getElementById('loading');
+const A = await loadAssets(renderer, (f) => { loading.textContent = `Laden… ${Math.round(f * 100)}%`; });
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 700);
@@ -59,8 +57,12 @@ const group = new Group(scene, A);
 const enc = new Encounters(scene, A);   // wat je onderweg tegenkomt
 const giant = new Giant(scene, A);      // de reuzenolifant die zijn ronde loopt
 
+// De maat van het beeld volgt het scherm. Een telefoon meldt na draaien of volledig scherm niet altijd (op tijd) een
+// resize, dus de lus kijkt elk beeld of de maat nog klopt; de stijl van het canvas laten we aan de CSS.
+let sizeW = 0, sizeH = 0;
 function resize() {
-  renderer.setSize(innerWidth, innerHeight);
+  sizeW = innerWidth; sizeH = innerHeight;
+  renderer.setSize(innerWidth, innerHeight, false);
   camera.aspect = innerWidth / innerHeight;
   camera.fov = camera.aspect < 1 ? 70 : 55;   // staand scherm: wat ruimer kijken
   camera.updateProjectionMatrix();
@@ -153,7 +155,8 @@ function lookAt(target) {
 }
 $('journalBtn').onclick = () => {
   showCard(`<div class="eyebrow">Wat je weet</div><h2>Ontdekkingen</h2><ul>${DISCOVERIES.map((d) => state.found.has(d.id) ? `<li>${d.text}</li>` : '<li class="no">… nog niet ontdekt</li>').join('')}</ul>
-    <h3>Vondsten</h3><ul>${Object.entries(FINDS).map(([k, f]) => state.finds.has(k) ? `<li><b>${f.name}</b>: ${f.text}</li>` : '<li class="no">… ergens verstopt</li>').join('')}</ul>`);
+    <h3>Vondsten</h3><ul>${Object.entries(FINDS).map(([k, f]) => state.finds.has(k) ? `<li><b>${f.name}</b>: ${f.text}</li>` : '<li class="no">… ergens verstopt</li>').join('')}</ul>
+    <p class="fine" style="margin-top:12px">${$('credits').innerHTML}</p>`);
 };
 
 // ---------- eten en doen ----------
@@ -375,11 +378,23 @@ function kemHelps(t, k) {
   const what = m.carry === 'meat' ? 'snijdt ook een lap vlees los' : 'plukt ook een handvol';
   setTimeout(() => toast(`Kem ${what}. Hij draagt het naar de boom.`, 4), 1800);
 }
-// een platte steen omdraaien
+// een platte steen omdraaien: hij kantelt over zijn rand en valt ondersteboven naast zijn kuil
+const turning = [];
+function turnTick(dt) {
+  for (let i = turning.length - 1; i >= 0; i--) {
+    const q = turning[i], m = q.m, r = 0.46; q.t = Math.min(1, q.t + dt / 0.9);
+    const a = Math.PI * (q.t < 0.5 ? 0.9 * q.t : 0.45 + 2.2 * (q.t - 0.5) ** 2), yaw = m.rotation.y;   // traag optillen, dan valt hij
+    const k = r * (Math.cos(a) - 1);
+    m.position.x = q.x + Math.cos(yaw) * k; m.position.z = q.z - Math.sin(yaw) * k;
+    m.position.y = height(m.position.x, m.position.z) + 0.04 + r * Math.sin(a);
+    m.rotation.z = 0.04 + a;
+    if (q.t >= 1) { turning.splice(i, 1); sound.thud?.(); }
+  }
+}
 function turnStone(t) {
   if (t.gone) return;
   t.gone = true; player.action = 0.5; sound.pick();
-  t.mesh.position.x += 0.6; t.mesh.position.y += 0.15; t.mesh.rotation.z = 2.4;
+  turning.push({ m: t.mesh, x: t.mesh.position.x, z: t.mesh.position.z, t: 0 });
   if (t.under === 'grubs') {
     state.food = Math.min(100, state.food + 10); sound.eat();
     toast('Larven! Dikke witte larven onder de steen. Je eet ze op: knapperig en voedzaam.', 5);
@@ -585,6 +600,7 @@ function targetPos(t) {
   if (t.high) return { x: t.x, y: t.high, z: t.z };
   return { x: t.x, y: height(t.x, t.z) + (t.bush ? 0.7 : t.look ? 0.4 : 0.2), z: t.z };
 }
+const lastTap = { t: null, at: 0 };
 function tapAt(sx, sy) {
   const cands = [...things.filter(available), ...LOOK_TARGETS, ...herd.members.map((m) => ({ look: 'gazelle', member: m })),
     ...hyenas.list.map((h) => ({ look: 'hyena', member: h })), { look: 'leopard', member: leopard },
@@ -597,6 +613,12 @@ function tapAt(sx, sy) {
     const d = Math.hypot((v3.x + 1) / 2 * innerWidth - sx, (1 - v3.y) / 2 * innerHeight - sy);
     if (d < bd) { bd = d; best = c; }
   }
+  // dubbeltik op een platte steen: meteen omdraaien
+  const now = performance.now();
+  if (best && best.kind === 'turn' && lastTap.t === best && now - lastTap.at < 500) {
+    closeRadial(); lastTap.t = null; goAndDo(best, () => act('PickUp_Table', () => turnStone(best), 1.4)); return;
+  }
+  lastTap.t = best; lastTap.at = now;
   if (best) { openRadial(best); sound.pick(); } else closeRadial();
 }
 
@@ -913,7 +935,7 @@ function update(dt) {
   predGame.night = night; predGame.danger = danger;
   hyenas.update(dt, predGame);
   leopard.update(dt, predGame, camera);
-  throws.update(dt); knapTick(dt);
+  throws.update(dt); knapTick(dt); turnTick(dt);
   zebras.update(dt, predGame);
   sabres.update(dt, predGame);
   group.update(dt, predGame);
@@ -1074,28 +1096,36 @@ function frame() {
   requestAnimationFrame(frame);   // eerst: een fout in één beeld mag het spel niet stilzetten
   const dt = Math.min(clock.getDelta(), window.__dtCap || 1 / 20);   // __dtCap: alleen voor trage testbrowsers
   clock.elapsedTime += dt;
+  if (innerWidth !== sizeW || innerHeight !== sizeH) resize();
   try { update(dt); } catch (e) { console.error(e); }
   renderer.render(scene, camera);
 }
 
-$('startBtn').onclick = () => {
-  $('intro').classList.remove('open');
-  state.started = true; sound.start();
+// geen beginscherm: zodra alles geladen is sta je in de savanne. Geluid en volledig scherm mogen pas na de eerste aanraking.
+function begin() {
+  if (state.started) return;
+  loading.remove(); state.started = true;
   toast('Je groep heeft honger, en jij ook. Zoek eten en breng het voor het donker naar de slaapboom.', 7);
+}
+function firstTouch() {
+  removeEventListener('pointerdown', firstTouch, true); removeEventListener('keydown', firstTouch, true);
+  window.__played = true; sound.start();
   const el = document.documentElement;
   // op een telefoon: volledig scherm en liggend vastzetten (lukt op Android; op een iPhone vraagt het scherm je te draaien)
   if (matchMedia('(pointer: coarse)').matches && el.requestFullscreen) {
     el.requestFullscreen({ navigationUI: 'hide' }).then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {});
   }
-};
+}
+addEventListener('pointerdown', firstTouch, true); addEventListener('keydown', firstTouch, true);
 
 renderHands();
 player.update(0.016, dir, { speed: 1 });
 camYaw = Math.atan2(42 - player.pos.x, -12 - player.pos.z);   // begin met de kudde in beeld
 frame();
+begin();
 
 // voor testen
-window.__game = {
+window.__game = { begin,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, flick, setSneak, still: () => stillT, FLICK,
   setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setZoom, zoom: () => camDist,
   lookFrom: (pos, look) => { camOverride = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },
