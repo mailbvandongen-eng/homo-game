@@ -1,7 +1,7 @@
 import * as THREE from '../lib/three.module.js';
 import { buildWorld, height, tallGrassAt, blockers, cover } from './world.js';
 import { Hominin, Herd, Vultures, carcass } from './actors.js';
-import { ITEMS, DISCOVERIES, LOOKS, VERDICT, FINDS, placeItems, heldMesh } from './items.js';
+import { ITEMS, ROCKS, DISCOVERIES, LOOKS, VERDICT, FINDS, placeItems, heldMesh } from './items.js';
 import { Hyenas, Leopard, Throws } from './predators.js';
 import { Zebras, Sabres } from './hunt.js';
 import { Group, HOME } from './group.js';
@@ -69,7 +69,7 @@ addEventListener('resize', resize); resize();
 
 // ---------- toestand ----------
 const state = {
-  food: 55, health: 100, sick: 0, hands: [null, null], known: new Set(), found: new Set(),
+  food: 55, health: 100, sick: 0, hands: [null, null], rock: [null, null], rockKnown: new Set(), known: new Set(), found: new Set(),
   started: false, collapsed: 0, sensing: false, finds: new Set(), carcassMeat: 1,
   group: 50, day: 1, sleeping: 0, slept: false, brought: {}, starve: 0, rainDay: 0, lost: false,
 };
@@ -101,14 +101,21 @@ setSoundIcon();
 $('soundBtn').onclick = () => { sound.setMuted(!sound.muted); setSoundIcon(); };
 
 // ---------- je handen ----------
+// Elke kei heeft een soort en onthoudt hoe vaak erop geslagen is: state.rock loopt gelijk met state.hands.
+let nextRock = null, lastRock = null;
 function renderHands() {
+  lastRock = null;
   for (const i of [0, 1]) {
-    const it = state.hands[i];
-    $('hand' + i).classList.toggle('empty', !it);
-    $('hand' + i).innerHTML = `<span class="bg" style="opacity:${it ? 0.15 : 0.5}">${ICON.hand}</span>` + (it ? `<span class="it">${ITEM_ICON[it]}</span>` : '');
+    if (state.hands[i] !== 'stone') { if (state.rock[i]) lastRock = state.rock[i]; state.rock[i] = null; }
+    else if (!state.rock[i]) { state.rock[i] = nextRock || { type: 'lava', hits: 0 }; nextRock = null; }
   }
-  for (const [grp, it] of [[player.heldL, state.hands[0]], [player.held, state.hands[1]]]) {
-    grp.clear(); const m = heldMesh(it); if (m) grp.add(m);
+  for (const i of [0, 1]) {
+    const it = state.hands[i], css = state.rock[i] ? `filter:${ROCKS[state.rock[i].type].css} drop-shadow(0 2px 3px #0008)` : '';
+    $('hand' + i).classList.toggle('empty', !it);
+    $('hand' + i).innerHTML = `<span class="bg" style="opacity:${it ? 0.15 : 0.5}">${ICON.hand}</span>` + (it ? `<span class="it" style="${css}">${ITEM_ICON[it]}</span>` : '');
+  }
+  for (const [grp, i] of [[player.heldL, 0], [player.held, 1]]) {
+    grp.clear(); const m = heldMesh(state.hands[i], state.rock[i]); if (m) grp.add(m);
   }
 }
 function freeHand() { return state.hands[1] === null ? 1 : state.hands[0] === null ? 0 : -1; }
@@ -134,7 +141,13 @@ function lookAt(target) {
     showCard(`<div class="eyebrow">Bekijken</div><h2>${L.name}</h2><p>${L.look}</p><p class="q">${L.hint}</p>`);
     return;
   }
-  const it = target.item, def = ITEMS[it], known = state.known.has(it);
+  const it = target.item;
+  let def = ITEMS[it], known = state.known.has(it);
+  if (it === 'stone' && target.rock) {
+    const R = ROCKS[target.rock.type], tried = state.rockKnown.has(target.rock.type);
+    def = { name: R.name, look: R.look + (target.rock.hits ? ' Er zitten verse butsen in.' : ''), known: tried ? R.good : def.known + ' Maar is elke kei hetzelfde?', unknown: def.unknown };
+    known = known || tried;
+  }
   showCard(`<div class="eyebrow">Bekijken</div><span class="big">${ITEM_ICON[it]}</span><h2>${def.name}</h2><p>${def.look}</p>
     <p class="${known ? 'know' : 'q'}">${known ? def.known : def.unknown}</p>`);
 }
@@ -196,11 +209,35 @@ function crack() {
   }, 5200);
 }
 // twee stenen tegen elkaar slaan: één wordt een scherpe afslag
-function knap() {
-  const i = state.hands.indexOf('stone');
-  state.hands[i] = 'flake'; renderHands(); player.action = 0.5; sound.knap();
+// De kei die je aantikt is de kern, de andere de klopsteen. Het kost een paar klappen, en niet elke kei breekt scherp.
+function knap(i) {
+  if (state.hands[i] === 'stone' && !state.rock[i]) renderHands();
+  const r = state.rock[i];
+  if (!r || state.hands[1 - i] !== 'stone') return;
+  const R = ROCKS[r.type]; r.hits++; r.at = player.pos.clone(); player.action = 0.5;
+  const again = () => knapAgain(i, r);
+  if (R.crumble) {
+    sound.crack();
+    if (r.hits < R.crumble) { toast('Dof. Er springen korrels af, maar geen scherpe rand…', 3); again(); return; }
+    state.hands[i] = null; renderHands(); state.rockKnown.add(r.type);
+    toast('De kei valt in gruis uit elkaar. Deze soort is te zacht. Zoek een gladde, harde kei.', 6); discover('rock');
+    return;
+  }
+  sound.knap();
+  if (r.hits < R.hits) { toast(r.hits === 1 ? 'Tik! Een splinter, te klein om vast te houden. Nog eens.' : 'Tak! Er loopt een barst langs de rand. Bijna…', 3); again(); return; }
+  state.hands[i] = 'flake'; renderHands(); state.rockKnown.add(r.type);
   toast(state.found.has('flake') ? 'Tik! Weer een scherpe afslag.' : 'Tik! Er springt een scherpe afslag van de steen af.');
   state.known.add('flake'); discover('flake');
+}
+// doorslaan zolang je stil blijft staan met beide keien in je handen
+let knapQ = null;
+function knapAgain(i, r) { knapQ = { i, r, t: 0.35 }; }
+function knapTick(dt) {
+  const q = knapQ; if (!q) return;
+  if (state.rock[q.i] !== q.r || state.hands[1 - q.i] !== 'stone' || walkTo || q.r.at.distanceTo(player.pos) > 0.4 || state.collapsed > 0) { knapQ = null; return; }
+  if (player.once) return;
+  q.t -= dt;
+  if (q.t <= 0) { knapQ = null; act('Interact', () => knap(q.i)); }
 }
 // met een afslag de laatste reepjes vlees van het karkas snijden
 function cutMeat() {
@@ -368,7 +405,7 @@ function pickUp(t) {
   if (!available(t)) return;
   const h = freeHand();
   if (h < 0) { handsFull(); return; }
-  take(t); state.hands[h] = t.item; renderHands();
+  take(t); nextRock = t.rock || null; state.hands[h] = t.item; renderHands(); nextRock = null;
   player.action = 0.5; sound.pick();
   if (t.bush) kemHelps(t);
 }
@@ -389,10 +426,10 @@ function openRadial(target) {
   const hasStone = state.hands.includes('stone');
   if (target.hand !== undefined) {
     const i = target.hand, it = state.hands[i], other = state.hands[1 - i];
-    opts.push({ icon: ICON.eye, fn: () => lookAt({ item: it }) });
+    opts.push({ icon: ICON.eye, fn: () => lookAt({ item: it, rock: state.rock[i] }) });
     if (EDIBLE.has(it)) opts.push({ icon: ICON.mouth, q: !state.known.has(it), fn: () => { state.hands[i] = null; renderHands(); eat(it); } });
     if ((it === 'bone' && other === 'stone') || (it === 'stone' && other === 'bone')) opts.push({ icon: ICON.crack, fn: () => act('Interact', crack) });
-    if (it === 'stone' && other === 'stone') opts.push({ icon: ICON.knap, fn: () => act('Interact', knap) });
+    if (it === 'stone' && other === 'stone') opts.push({ icon: ICON.knap, fn: () => act('Interact', () => knap(i)) });
     opts.push({ icon: ICON.drop, fn: () => { state.hands[i] = null; renderHands(); dropAt(it); } });
   } else if (target.kind === 'turn') {
     opts.push({ icon: ICON.eye, fn: () => lookAt(target) });
@@ -445,15 +482,16 @@ function placeRadial() {
 }
 
 // iets neerleggen: een kei of bot komt weer in de wereld te liggen; eten laat je gewoon vallen
-function dropAt(it) {
-  const t = dropAtPos(it, player.pos.x + Math.sin(player.yaw) * 0.6, player.pos.z + Math.cos(player.yaw) * 0.6);
+function dropAt(it, rock = lastRock) {
+  const t = dropAtPos(it, player.pos.x + Math.sin(player.yaw) * 0.6, player.pos.z + Math.cos(player.yaw) * 0.6, false, rock);
   if (t) t.byPlayer = true;
 }
-function dropAtPos(it, x, z, thrown = false) {
+function dropAtPos(it, x, z, thrown = false, rock = null) {
   if (!['stone', 'bone', 'flake', 'meat', 'egg', 'honey', 'berry'].includes(it)) return null;
-  const m = heldMesh(it); m.position.set(x, height(x, z) + 0.08, z); if (it === 'bone') m.rotation.set(0, 0, Math.PI / 2);
+  if (it === 'stone' && !rock) rock = { type: 'lava', hits: 0 };
+  const m = heldMesh(it, rock); m.position.set(x, height(x, z) + 0.08, z); if (it === 'bone') m.rotation.set(0, 0, Math.PI / 2);
   m.traverse((o) => { o.castShadow = true; }); scene.add(m);
-  const t = { kind: 'pick', item: it, x, z, mesh: m, noAuto: !thrown };
+  const t = { kind: 'pick', item: it, x, z, mesh: m, noAuto: !thrown, rock };
   things.push(t); glints.add(scene, t);
   return t;
 }
@@ -477,7 +515,7 @@ function bite(attacker, dmg, big) {
     stolen = loot; state.hands[state.hands.indexOf(loot)] = null; renderHands();
     toast(loot === 'meat' ? 'De hyena bijt je en rukt het vlees uit je hand!' : 'De hyena bijt je en rukt het bot uit je hand!', 4);
   } else if (big) {
-    state.hands.forEach((it, i) => { if (it) { dropAt(it); state.hands[i] = null; } }); renderHands();
+    state.hands.forEach((it, i) => { if (it) { dropAt(it, state.rock[i]); state.hands[i] = null; } }); renderHands();
     if (attacker.kind === 'sabre') { toast('De sabeltandkat slaat je tegen de grond! Je laat alles vallen. Weg hier!', 5); discover('sabre'); }
     else if (attacker.kind === 'giant') toast('De reus schept je op en smijt je door de lucht! Je laat alles vallen. Blijf uit zijn buurt!', 6);
     else toast('Het luipaard springt je vanuit het niets aan! Je laat alles vallen.', 5);
@@ -486,17 +524,27 @@ function bite(attacker, dmg, big) {
 }
 // een steen gooien naar een roofdier
 function throwAt(member, kind = member.kind) {
-  const i = state.hands.indexOf('stone');
+  const i = state.hands[1] === 'stone' ? 1 : state.hands.indexOf('stone');
   if (i < 0) { toast('Je hebt geen steen in je hand.'); return; }
+  const rock = state.rock[i];
   state.hands[i] = null; renderHands();
   sound.whoosh();
   const from = player.pos.clone(); from.y += 1.3;
   throws.throw(from, member, (x, z) => {
     sound.thud();
-    if (Math.hypot(member.x - x, member.z - z) < 1.8) hitTarget({ m: member, kind: kind || 'gazelle' });
+    if (member.free) {
+      // zomaar een worp: raakt hij toevallig iets, dan telt dat ook
+      const hit = bestTargetAt(x, z, 1.8);
+      if (hit) hitTarget(hit);
+    } else if (Math.hypot(member.x - x, member.z - z) < 1.8) hitTarget({ m: member, kind: kind || 'gazelle' });
     else toast('Mis!');
-    dropAtPos('stone', x, z, true);
-  });
+    dropAtPos('stone', x, z, true, rock);
+  }, heldMesh('stone', rock));
+}
+// zonder doel: de steen een eind voor je uit gooien
+function throwAhead() {
+  const d = 12, free = { free: true, x: player.pos.x + Math.sin(player.yaw) * d, z: player.pos.z + Math.cos(player.yaw) * d };
+  player.playOnce('Spell_Simple_Shoot', { speed: 1.5, at: 0.4, slow: 0.2, onAt: () => throwAt(free, null) });
 }
 // wat er in de wereld gebeurt rond de jacht van de sabeltandkatten
 function event(name, k) {
@@ -705,6 +753,11 @@ function bestTarget(range = 18) {
   }
   return best;
 }
+function bestTargetAt(x, z, r) {
+  let best = null, bd = r;
+  for (const t of targets()) { const d = Math.hypot(t.m.x - x, t.m.z - z); if (d < bd) { bd = d; best = t; } }
+  return best;
+}
 function act(anim, fn, speed = 1.6) { player.playOnce(anim, { speed, at: 0.5, onAt: fn }); }
 function hitTarget(t, how = 'throw') {
   if (enc.owns(t.kind)) enc.hit(t, how, predGame);
@@ -739,6 +792,8 @@ function actionContext() {
   if (t && t.d < 2.6) return { mode: 'strike', icon: ICON.strike, danger: true, run: strike };
   const prey = t && !t.threat && !['hyena', 'leopard'].includes(t.kind);
   if (t && stone && (!prey || t.d < 14)) return { mode: 'throw', icon: ICON.throw, danger: !prey, run: () => doThrow(t) };
+  // met een kei in je hand en niets om te raken: gooien
+  if (stone) return { mode: 'throw', icon: ICON.throw, run: throwAhead };
   // al het andere (snijden, kraken, omdraaien) doe je door het ding zelf aan te tikken
   return { mode: 'strike', icon: ICON.strike, run: strike };
 }
@@ -858,7 +913,7 @@ function update(dt) {
   predGame.night = night; predGame.danger = danger;
   hyenas.update(dt, predGame);
   leopard.update(dt, predGame, camera);
-  throws.update(dt);
+  throws.update(dt); knapTick(dt);
   zebras.update(dt, predGame);
   sabres.update(dt, predGame);
   group.update(dt, predGame);
@@ -1041,7 +1096,7 @@ frame();
 
 // voor testen
 window.__game = {
-  state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, flick, setSneak, still: () => stillT, FLICK,
+  state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, flick, setSneak, still: () => stillT, FLICK,
   setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setZoom, zoom: () => camDist,
   lookFrom: (pos, look) => { camOverride = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },
   // als lookFrom, maar met hoogtes ten opzichte van de grond op de plek waar je naar kijkt

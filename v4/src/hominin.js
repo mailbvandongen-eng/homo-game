@@ -59,6 +59,7 @@ function mergeColored(group) { const m = mergeStatic(group); m.material = FACE; 
 
 // ---------- Homo habilis ----------
 // Klein (zo'n 1,25 m), lange armen, behaard, een vooruitstekend gezicht met zware wenkbrauwen.
+const HOLD = 0.05;   // hoe ver een ding uit de handpalm steekt (m)
 export class Hominin {
   constructor(scene, A) {
     // met een geladen model: de echte (geboetseerde) mensaap van Animal Animator; anders de eigen figuur
@@ -162,7 +163,12 @@ export class Hominin {
     this.rig.root.updateMatrixWorld(true);
     const hold = (bone, side) => {
       const ws = bone.getWorldScale(new THREE.Vector3()).x, g = new THREE.Group();
-      g.scale.setScalar(1 / ws); g.position.set(side * 0.02 / ws, 0.08 / ws, 0.03 / ws);   // in de handpalm
+      g.scale.setScalar(1 / ws);
+      // in de handpalm: tussen de knokkels en de pols, een stukje naar de palmkant
+      const sfx = side < 0 ? '_r' : '_l', loc = (n) => bone.worldToLocal(this.rig.bone(n + sfx).getWorldPosition(new THREE.Vector3()));
+      const idx = loc('index_01'), pk = loc('pinky_01'), mid = loc('middle_01'), tip = loc('middle_03');
+      const n = idx.clone().cross(pk).normalize(); if (n.dot(loc('thumb_03').sub(idx)) < 0) n.negate();
+      g.position.copy(mid).lerp(tip, 0.25).addScaledVector(n, HOLD / ws);
       bone.add(g); return g;
     };
     this.held = hold(this.rig.bone('hand_r'), -1); this.heldL = hold(this.rig.bone('hand_l'), 1);

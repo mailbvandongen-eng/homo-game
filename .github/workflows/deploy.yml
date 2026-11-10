@@ -23,6 +23,14 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+      - name: Stamp version
+        # elke uitrol krijgt een eigen map voor de code, zodat telefoons nooit oude en nieuwe bestanden mengen
+        run: |
+          V=${GITHUB_SHA::8}
+          A=$(git rev-parse HEAD:v4/assets | cut -c1-8)
+          mv v4/src v4/src-$V
+          sed -i "s|./src/main.js|./src-$V/main.js|; s|__VERSION__|$V|; s|__ASSETS__|$A|" v4/index.html
+          echo "{\"v\":\"$V\"}" > v4/version.json
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload game

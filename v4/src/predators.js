@@ -216,11 +216,11 @@ export class Leopard {
 // ---------- een steen gooien ----------
 export class Throws {
   constructor(scene) { this.scene = scene; this.list = []; }
-  throw(from, target, onArrive) {
-    const m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.1, 0), new THREE.MeshLambertMaterial({ color: 0x8a7c6c, flatShading: true }));
+  throw(from, target, onArrive, mesh) {
+    const m = mesh || new THREE.Mesh(new THREE.DodecahedronGeometry(0.1, 0), new THREE.MeshLambertMaterial({ color: 0x8a7c6c, flatShading: true }));
     m.castShadow = true; this.scene.add(m);
     const to = { x: target.x, z: target.z };
-    this.list.push({ m, from: from.clone(), target, to, t: 0, dur: 0.45, onArrive });
+    this.list.push({ m, from: from.clone(), target, to, t: 0, dur: Math.max(0.45, Math.hypot(to.x - from.x, to.z - from.z) / 22), onArrive });
   }
   update(dt) {
     for (const s of this.list) {

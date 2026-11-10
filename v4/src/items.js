@@ -4,13 +4,35 @@ import { variantsOf } from './assets.js';
 
 let SHRUBS = [];   // gescande struiken (Poly Haven, CC0)
 
+// Drie soorten keien. Niet elke steen breekt goed: daar kom je al doende achter.
+// hits = klappen tot er een bruikbare afslag af springt; crumble = klappen tot hij in gruis valt.
+export const ROCKS = {
+  lava: { name: 'Donkere kei', tint: 0x80808c, css: 'brightness(.6)', hits: 3, look: 'Een donkere, gladde kei, zwaar voor zijn grootte. Tik je ertegen, dan klinkt hij helder.', good: 'Breekt scherp: hier sla je goede afslagen van.' },
+  quartz: { name: 'Bleke kei', tint: 0xffffff, glow: 0x4a4640, css: 'brightness(1.3)', hits: 4, look: 'Een bleke, keiharde kei. Er glinstert iets in als je hem draait.', good: 'Taai en hard. Het kost meer klappen, maar de rand is scherp.' },
+  sand: { name: 'Korrelige kei', tint: 0xe0a860, css: 'sepia(1) saturate(1.6)', crumble: 2, look: 'Een geelbruine, ruwe kei. Wrijf je erover, dan blijven er korrels aan je vingers hangen.', good: 'Te zacht: hij valt in gruis. Goed om mee te gooien, niet om afslagen van te slaan.' },
+};
+let ROCKV = null;
+const rockMats = {};
+// een kei van een bepaalde soort: een gescande rots in het klein, gekleurd naar zijn soort
+export function stoneMesh(type = 'lava', size = 0.14) {
+  if (!ROCKV) return new THREE.Mesh(new THREE.DodecahedronGeometry(size / 2, 0), lam(ROCKS[type].tint));
+  const v = ROCKV[Object.keys(ROCKS).indexOf(type) % ROCKV.length], g = new THREE.Group();
+  const k = size / Math.max(v.size.x, v.size.y, v.size.z);
+  v.parts.forEach((p, i) => {
+    const key = type + i, mat = rockMats[key] || (rockMats[key] = Object.assign(p.mat.clone(), { color: new THREE.Color(ROCKS[type].tint), emissive: new THREE.Color(ROCKS[type].glow || 0) }));
+    const m = new THREE.Mesh(p.geo, mat); m.castShadow = true; g.add(m);
+  });
+  g.scale.setScalar(k); g.userData.h = v.size.y * k;
+  return g;
+}
+
 // Wat je kunt vinden. "unknown" zie je zolang je het nog niet geprobeerd hebt.
 export const ITEMS = {
   stone: {
     name: 'Kei', color: '#9a8a78',
     look: 'Een vuistgrote kei. Hard en zwaar, hij past precies in je hand.',
     unknown: 'Wat zou je hiermee kunnen doen?',
-    known: 'Hiermee kun je botten openslaan.',
+    known: 'Hiermee kun je botten openslaan, en gooien.',
   },
   berry: {
     name: 'Paarse bessen', color: '#6a3a8a',
@@ -71,7 +93,8 @@ export const DISCOVERIES = [
   { id: 'marrow', text: 'In botten zit merg. Met een kei kraak je ze open.' },
   { id: 'sneak', text: 'Gebukt in het hoge gras zien dieren je niet zo snel.' },
   { id: 'wind', text: 'Dieren ruiken je als de wind van jou naar hen toe waait.' },
-  { id: 'flake', text: 'Als je twee stenen hard tegen elkaar slaat, springt er een scherpe afslag af.' },
+  { id: 'flake', text: 'Als je twee stenen hard tegen elkaar slaat, springt er na een paar klappen een scherpe afslag af.' },
+  { id: 'rock', text: 'Niet elke steen breekt scherp. Gladde, harde keien geven afslagen; korrelige vallen in gruis.' },
   { id: 'cut', text: 'Met een scherpe afslag snijd je de laatste reepjes vlees van een karkas.' },
   { id: 'grubs', text: 'Onder stenen zitten larven: klein, maar voedzaam.' },
   { id: 'hyena', text: 'Hyena\'s deinzen terug als je stenen naar ze gooit.' },
@@ -168,11 +191,16 @@ export function placeItems(scene, A) {
   const add = (t) => { things.push(t); return t; };
 
   // losse keien bij de start en verderop
-  const stoneMat = lam(0x8a7c6c);
-  for (const [x, z] of [[5, -9], [-2, -3], [30, 25], [-45, -60], [-66, -70]]) {
-    const m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.16, 0), stoneMat);
-    m.scale.set(1.2, 0.8, 1); m.position.set(x, height(x, z) + 0.1, z); m.castShadow = true; scene.add(m);
-    add({ kind: 'pick', item: 'stone', x, z, mesh: m, label: 'Pak de kei' });
+  ROCKV = [A.models.namaqualand_boulder_02, A.models.namaqualand_boulder_05, A.models.namaqualand_rocks_01].map((m) => variantsOf(m)[0]);
+  const stones = [[5, -9, 'lava'], [-2, -3, 'quartz'], [8, -4, 'sand'], [30, 25, 'sand'], [-45, -60, 'lava'], [-66, -70, 'quartz'], [-38, -26, 'sand'], [22, -48, 'lava'], [62, 12, 'quartz'], [-20, 44, 'sand']];
+  // langs de rivier liggen rolstenen: van alles door elkaar
+  for (const [i, x] of [-130, -95, -60, -28, 12, 48, 85, 120].entries()) {
+    const z = [6, -6, 9, -9, 13, -13].map((d) => riverZ(x) + d).find((q) => height(x, q) > 0.15);
+    if (z !== undefined) stones.push([x, z, ['lava', 'sand', 'quartz', 'lava'][i % 4]]);
+  }
+  for (const [x, z, type] of stones) {
+    const m = stoneMesh(type, 0.32); m.position.set(x, height(x, z) - 0.02, z); m.rotation.y = x * 1.7; scene.add(m);
+    add({ kind: 'pick', item: 'stone', x, z, mesh: m, label: 'Pak de kei', rock: { type, hits: 0 } });
   }
 
   // bessenstruiken
@@ -219,7 +247,7 @@ export function placeItems(scene, A) {
 }
 
 // Een klein voorwerpje in je hand
-export function heldMesh(item) {
+export function heldMesh(item, rock) {
   if (!item) return null;
   const c = new THREE.Color(ITEMS[item].color);
   if (item === 'bone') {
@@ -234,7 +262,7 @@ export function heldMesh(item) {
     const fat = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), lam(new THREE.Color('#e8d0b8'))); fat.scale.set(1.3, 0.4, 0.6); fat.position.set(0.05, 0.035, 0.03);
     return new THREE.Group().add(m, fat);
   }
-  if (item === 'stone') return new THREE.Mesh(new THREE.DodecahedronGeometry(0.1, 0), lam(c));
+  if (item === 'stone') { const m = stoneMesh(rock && rock.type, 0.13); m.children.forEach((o) => { o.position.y = -m.userData.h / m.scale.x / 2; }); return m; }
   if (item === 'flake') { const m = new THREE.Mesh(new THREE.TetrahedronGeometry(0.09, 0), lam(c)); m.scale.set(1, 0.35, 1.4); return m; }
   if (item === 'egg') { const m = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), lam(c)); m.scale.set(1, 1.3, 1); return m; }
   if (item === 'honey') { const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.12), new THREE.MeshLambertMaterial({ color: c, emissive: 0x4a2c00, flatShading: true })); return m; }

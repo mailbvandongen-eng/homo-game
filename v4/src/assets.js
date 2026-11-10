@@ -11,6 +11,8 @@ const TEXTURES = [
   ['sparse_grass_diff', true], ['dry_ground_rocks_diff', true], ['grass_atlas', true],
 ];
 
+// online krijgt elk bestand de versie van de map assets mee, zodat een vervangen model ook echt opnieuw wordt opgehaald
+const Q = window.__VA && window.__VA[0] !== '_' ? '?v=' + window.__VA : '';
 export async function loadAssets(renderer, onProgress = () => {}) {
   const total = MODELS.length + TEXTURES.length + 2;
   let done = 0;
@@ -18,14 +20,14 @@ export async function loadAssets(renderer, onProgress = () => {}) {
   const tl = new THREE.TextureLoader(), gl = new GLTFLoader();
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
 
-  const tex = Promise.all(TEXTURES.map(([n, srgb]) => tl.loadAsync(`./assets/tex/${n}.webp`).then((t) => {
+  const tex = Promise.all(TEXTURES.map(([n, srgb]) => tl.loadAsync(`./assets/tex/${n}.webp${Q}`).then((t) => {
     t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = Math.min(8, maxAniso);
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
     return tick([n, t]);
   })));
   const anims = {};
-  const models = Promise.all(MODELS.map((n) => gl.loadAsync(`./assets/models/${n}.glb`).then((g) => { anims[n] = g.animations; return tick([n, g.scene]); })));
-  const hdr = new HDRLoader().loadAsync('./assets/mpumalanga_veld_1k.hdr').then((t) => {
+  const models = Promise.all(MODELS.map((n) => gl.loadAsync(`./assets/models/${n}.glb${Q}`).then((g) => { anims[n] = g.animations; return tick([n, g.scene]); })));
+  const hdr = new HDRLoader().loadAsync('./assets/mpumalanga_veld_1k.hdr' + Q).then((t) => {
     t.mapping = THREE.EquirectangularReflectionMapping;
     // omgevingslicht voor glanzende en ruwe materialen
     const pm = new THREE.PMREMGenerator(renderer);
@@ -34,7 +36,7 @@ export async function loadAssets(renderer, onProgress = () => {}) {
   });
 
   // bewegingen voor de hoofdpersoon (overgezet uit de Universal Animation Library)
-  const moves = fetch('./assets/anims/hominin.json').then((r) => r.json()).then((j) => tick(j.map((c) => THREE.AnimationClip.parse(c))));
+  const moves = fetch('./assets/anims/hominin.json' + Q).then((r) => r.json()).then((j) => tick(j.map((c) => THREE.AnimationClip.parse(c))));
   const [T, M, H, MV] = await Promise.all([tex, models, hdr, moves]);
   anims.hominin = MV;
   return { tex: Object.fromEntries(T), models: Object.fromEntries(M), anims, sky: H.sky, env: H.env };
