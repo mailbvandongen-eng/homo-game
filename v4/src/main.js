@@ -10,6 +10,7 @@ import { Sound } from './audio.js';
 import { loadAssets } from './assets.js';
 import { ICON, ITEM_ICON } from './icons.js';
 import { Encounters } from './encounters.js';
+import { Giant } from './giant.js';
 
 const $ = (id) => document.getElementById(id);
 const EDIBLE = new Set(['berry', 'redberry', 'leaf', 'meat', 'egg', 'honey']);
@@ -56,6 +57,7 @@ const zebras = new Zebras(scene, -42, -30, A);
 const sabres = new Sabres(scene, { x: -60, z: 10 }, zebras, A);   // hun leger ligt in het hoge gras
 const group = new Group(scene, A);
 const enc = new Encounters(scene, A);   // wat je onderweg tegenkomt
+const giant = new Giant(scene, A);      // de reuzenolifant die zijn ronde loopt
 
 function resize() {
   renderer.setSize(innerWidth, innerHeight);
@@ -119,6 +121,12 @@ function closeCard() { $('cardScreen').classList.remove('open'); }
 $('cardScreen').addEventListener('pointerdown', closeCard);
 function showCard(html) { $('card').innerHTML = html; $('cardScreen').classList.add('open'); }
 function lookAt(target) {
+  if (target.find && !state.finds.has(target.find)) {
+    state.finds.add(target.find); sound.discover();
+    const f = FINDS[target.find];
+    showCard(`<div class="eyebrow">Vondst</div><h2>${f.name}</h2><p>${f.text}</p><p class="know">Je vondst staat in je boekje.</p>`);
+    return;
+  }
   if (target.look) {
     const L = LOOKS[target.look];
     showCard(`<div class="eyebrow">Bekijken</div><h2>${L.name}</h2><p>${L.look}</p><p class="q">${L.hint}</p>`);
@@ -216,13 +224,26 @@ function cutKill() {
 function giveItem() { const it = GIVE.find((x) => state.hands.includes(x) && !(x === 'leaf' && !group.sick)) || GIVE.find((x) => state.hands.includes(x)); return it; }
 function give() {
   const it = giveItem(); if (!it) return;
-  const r = group.give(it, predGame); if (!r) return;
+  if (share(it)) { state.hands[state.hands.indexOf(it)] = null; renderHands(); }
+}
+// de groep krijgt iets: uit je hand, of omdat je het bij de boom hebt neergelegd
+function share(it) {
+  const r = group.give(it, predGame); if (!r) return false;
   toast(r.text, 6);
-  if (r.gain === null) return;
-  state.hands[state.hands.indexOf(it)] = null; renderHands();
+  if (r.gain === null) return false;
   state.group = THREE.MathUtils.clamp(state.group + r.gain, 0, 100);
   if (r.gain > 0) state.brought[it] = (state.brought[it] || 0) + 1;
   if (r.bad) sound.bad(); else { sound.eat(); setTimeout(() => sound.good(), 600); discover('share'); }
+  return true;
+}
+// eten dat bij de slaapboom op de grond ligt, pakt de groep zelf
+let layT = 0;
+function groupTakes(dt) {
+  layT -= dt; if (layT > 0) return;
+  layT = 1.5;
+  if (state.sleeping > 0 || state.lost) return;
+  const t = things.find((x) => x.kind === 'pick' && !x.gone && ['meat', 'honey', 'bone', 'egg', 'berry'].includes(x.item) && Math.hypot(x.x - HOME.x, x.z - HOME.z) < 12);
+  if (t && share(t.item)) removeThing(t);
 }
 // bij de groep gaan slapen: de nacht gaat voorbij
 function sleep() {
@@ -280,6 +301,8 @@ function newDay(how) {
   else if (sabres.kill && sabres.kill.meat > 0) hint = 'Tor wijst naar de gieren die in de verte cirkelen. Daar ligt vlees.';
   else if (dry >= 2) hint = 'De struiken rond de boom zijn verdord. Hoe verder je gaat, hoe meer er nog hangt. Het meeste vlees ligt waar de katten jagen.';
   else hint = 'Het wordt droger. De struik bij de boom is verdord. Verderop hangt nog fruit.';
+  const gh = giant.newDay(dry, rain, predGame);   // de reus heeft zijn eigen nieuws
+  if (gh && rain) hint += ' ' + gh; else if (gh && dry !== DRY_DAYS - 1) hint = gh;
   if (rain) { sound.home(); discover('rain'); } else if (dry >= 1) discover('drought');
   if (how === 'alone') { toast(`Dag ${state.day}. Je hebt de nacht alleen doorgebracht. ` + hint, 8); return; }
   let title, text;
@@ -421,7 +444,7 @@ function dropAt(it) {
   if (t) t.byPlayer = true;
 }
 function dropAtPos(it, x, z, thrown = false) {
-  if (!['stone', 'bone', 'flake', 'meat', 'egg', 'honey'].includes(it)) return null;
+  if (!['stone', 'bone', 'flake', 'meat', 'egg', 'honey', 'berry'].includes(it)) return null;
   const m = heldMesh(it); m.position.set(x, height(x, z) + 0.08, z); if (it === 'bone') m.rotation.set(0, 0, Math.PI / 2);
   m.traverse((o) => { o.castShadow = true; }); scene.add(m);
   const t = { kind: 'pick', item: it, x, z, mesh: m, noAuto: !thrown };
@@ -450,6 +473,7 @@ function bite(attacker, dmg, big) {
   } else if (big) {
     state.hands.forEach((it, i) => { if (it) { dropAt(it); state.hands[i] = null; } }); renderHands();
     if (attacker.kind === 'sabre') { toast('De sabeltandkat slaat je tegen de grond! Je laat alles vallen. Weg hier!', 5); discover('sabre'); }
+    else if (attacker.kind === 'giant') toast('De reus schept je op en smijt je door de lucht! Je laat alles vallen. Blijf uit zijn buurt!', 6);
     else toast('Het luipaard springt je vanuit het niets aan! Je laat alles vallen.', 5);
   } else toast('Au! De hyena bijt je in je been.', 3);
   return stolen;
@@ -497,7 +521,7 @@ function event(name, k) {
     toast(loot ? 'Kleine Ibo rent je tegemoet: hij heeft gezien dat je iets bij je hebt!' : 'Kleine Ibo rent je tegemoet. Je bent weer bij de groep.', 4);
   }
 }
-const predGame = { player, state, sound, toast, discover, bite, event, hyenas, night: 0, things, throws, group, leopard, sabres, carcass: CARCASS, drop: dropAtPos, removeThing, giveHand, hurt };
+const predGame = { player, state, sound, toast, discover, bite, event, hyenas, night: 0, things, throws, group, leopard, sabres, carcass: CARCASS, drop: dropAtPos, removeThing, giveHand, hurt, kemHelps, shield: false, quake: (v) => { shake = Math.max(shake, v); } };
 
 // ---------- wat kun je aantikken? ----------
 const LOOK_TARGETS = [{ look: 'carcass', x: CARCASS.x, z: CARCASS.z }, { look: 'tree', x: HOME.x, z: HOME.z }];
@@ -510,7 +534,7 @@ function targetPos(t) {
 function tapAt(sx, sy) {
   const cands = [...things.filter(available), ...LOOK_TARGETS, ...herd.members.map((m) => ({ look: 'gazelle', member: m })),
     ...hyenas.list.map((h) => ({ look: 'hyena', member: h })), { look: 'leopard', member: leopard },
-    ...zebras.alive.map((m) => ({ look: 'zebra', member: m })), ...sabres.list.map((m) => ({ look: 'sabre', member: m })), ...group.list.map((m) => ({ look: m.id, member: m })), ...enc.lookTargets()];
+    ...zebras.alive.map((m) => ({ look: 'zebra', member: m })), ...sabres.list.map((m) => ({ look: 'sabre', member: m })), ...group.list.map((m) => ({ look: m.id, member: m })), ...enc.lookTargets(), ...giant.lookTargets(player.pos)];
   let best = null, bd = 56;
   for (const c of cands) {
     const p = targetPos(c);
@@ -706,11 +730,11 @@ function actionContext() {
   const u = useTarget();
   if (u) return { mode: 'turn', icon: ICON.turn, ready: true, at: u, run: () => act('PickUp_Table', () => turnStone(u), 1.4) };
   if (H.includes('flake') && state.carcassMeat > 0 && Math.hypot(player.pos.x - CARCASS.x, player.pos.z - CARCASS.z) < 3) return { mode: 'cut', icon: ICON.cut, ready: true, run: () => act('Interact', cutMeat) };
-  const ec = enc.context(predGame);
+  const ec = enc.context(predGame) || giant.context(predGame);
   if (ec) return { mode: ec.mode, icon: ICON[ec.icon], ready: ec.ready, run: () => (ec.ready ? act('Interact', ec.run) : ec.run()) };
   // bij de groep: geven wat je bij je hebt, en 's nachts slapen
   const dHome = Math.hypot(player.pos.x - HOME.x, player.pos.z - HOME.z);
-  if (dHome < 9 && giveItem() && group.nearest(player.pos).d < 3) return { mode: 'give', icon: ICON.give, ready: true, run: () => act('Interact', give) };
+  if (dHome < 10 && giveItem()) return { mode: 'give', icon: ICON.give, ready: true, run: () => act('Interact', give) };
   const k = sabres.kill;
   if (k && k.meat > 0 && Math.hypot(player.pos.x - k.x, player.pos.z - k.z) < 3) return { mode: 'cutkill', icon: ICON.cut, ready: H.includes('flake'), run: () => (H.includes('flake') ? act('Interact', cutKill) : cutKill()) };
   if (dHome < 7 && predGame.night > 0.5) return { mode: 'sleep', icon: ICON.sleep, ready: true, run: sleep };
@@ -795,6 +819,8 @@ function update(dt) {
   sabres.update(dt, predGame);
   group.update(dt, predGame);
   enc.update(dt, predGame);
+  giant.update(dt, predGame, t);
+  groupTakes(dt);
   // bij de slaapboom durven de hyena's niet: de groep schreeuwt en gooit stenen
   for (const h of hyenas.list) {
     if (Math.hypot(h.x - HOME.x, h.z - HOME.z) < 11 && ['curious', 'windup', 'rush'].includes(h.state)) {
@@ -805,7 +831,7 @@ function update(dt) {
   // hoe spannend is het nu? Dat hoor je aan het geluid
   let dg = sabres.danger(player.pos);
   for (const h of hyenas.list) dg = Math.max(dg, h.state === 'windup' || h.state === 'rush' ? 0.8 : h.state === 'curious' ? 0.4 : 0);
-  dg = Math.max(dg, { stalk: 0.5, freeze: 0.65, pounce: 1 }[leopard.state] || 0, enc.danger());
+  dg = Math.max(dg, { stalk: 0.5, freeze: 0.65, pounce: 1 }[leopard.state] || 0, enc.danger(), giant.danger());
   if (state.collapsed > 0 || state.sleeping > 0) dg = 0;
   danger += (dg - danger) * (1 - Math.exp(-dt * (dg > danger ? 3 : 0.6)));
   herd.members.forEach((m, i) => senses.track(i, m.x, m.z, m.yaw));
@@ -845,7 +871,7 @@ function update(dt) {
   camPos.y = Math.max(camPos.y, height(camPos.x, camPos.z) + 1.2 - near * 0.5);
   // niet midden in een boomstam of rots gaan staan
   for (const b of blockers) {
-    if (b.top) continue;
+    if (b.top || b.beast) continue;
     const dx = camPos.x - b.x, dz = camPos.z - b.z, d = Math.hypot(dx, dz), min = b.r + 1.2;
     if (d < min && d > 0.001) { camPos.x = b.x + dx / d * min; camPos.z = b.z + dz / d * min; }
   }
@@ -969,7 +995,7 @@ frame();
 
 // voor testen
 window.__game = {
-  state, player, herd, hyenas, leopard, zebras, sabres, group, enc, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap, cutMeat, tapAt, pickUp, openRadial,
+  state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers,
   setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setZoom, zoom: () => camDist,
   lookFrom: (pos, look) => { camOverride = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },
   // als lookFrom, maar met hoogtes ten opzichte van de grond op de plek waar je naar kijkt

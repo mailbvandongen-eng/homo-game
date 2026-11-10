@@ -39,7 +39,7 @@ export class Hyenas {
       const d = Math.hypot(p.x - h.x, p.z - h.z) || 0.01;
       h.t -= dt;
       let tx = 0, tz = 0, spd = 0, run = false;
-      const interested = d < range && (nearHome < 30 || holdsBone || night > 0.5) && game.state.collapsed <= 0;
+      const interested = d < range && (nearHome < 30 || holdsBone || night > 0.5) && game.state.collapsed <= 0 && !game.shield;
       switch (h.state) {
         case 'rest': case 'roam':
           if (h.t < 0 || !h.goal) { if (h.t < 0) { h.state = h.state === 'rest' && R() < 0.6 ? 'roam' : 'rest'; h.t = 3 + R() * 6; } h.goal = { x: this.home.x + (R() - 0.5) * (20 + night * 50), z: this.home.z + (R() - 0.5) * (20 + night * 50) }; }
@@ -135,7 +135,7 @@ export class Leopard {
     const p = game.player.pos, night = game.night, d = Math.hypot(p.x - this.x, p.z - this.z) || 0.01;
     const homeD = Math.hypot(p.x - this.tree.x, p.z - this.tree.z);
     this.t -= dt; this.cool = Math.max(0, this.cool - dt);
-    const active = night > 0.25 && homeD < 50 && this.cool <= 0 && game.state.collapsed <= 0;
+    const active = night > 0.25 && homeD < 50 && this.cool <= 0 && game.state.collapsed <= 0 && !game.shield;
     let tx = 0, tz = 0, spd = 0, run = false, crouch = 0;
     // kijk je hem aan? (de camera wijst ongeveer zijn kant op en hij is dichtbij)
     const look = new THREE.Vector3(); cam.getWorldDirection(look);

@@ -47,7 +47,7 @@ export class Encounters {
       // een boom, het liefst voor je
       let best = null, bs = -1e9;
       for (const b of blockers) {
-        if (b.top) continue;
+        if (b.top || b.beast) continue;
         const d = dist(b, p); if (d < 25 || d > 75 || dist(b, HOME) < 45) continue;
         const front = ((b.x - p.x) * Math.sin(yaw) + (b.z - p.z) * Math.cos(yaw)) / d, s = front * 30 - d * 0.3;
         if (s > bs) { bs = s; best = b; }

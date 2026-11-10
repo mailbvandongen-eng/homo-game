@@ -167,5 +167,9 @@ export class Sound {
   squawk(v = 1) { if (!this.ctx) return; this.tone(1500, 0.16, 0.06 * v, 'sawtooth', -700); this.tone(1100, 0.22, 0.05 * v, 'square', -500, 0.17); }
   // mensachtigen schreeuwen
   shout(v = 1) { if (!this.ctx) return; this.tone(330, 0.3, 0.07 * v, 'sawtooth', 160); this.tone(420, 0.35, 0.06 * v, 'sawtooth', -120, 0.32); this.tone(300, 0.25, 0.05 * v, 'triangle', 200, 0.5); }
+  // de reus: een voetstap, een diep gerommel uit zijn buik, en zijn trompet
+  stomp(v = 1) { if (!this.ctx) return; this.burst(70, 0.3, 0.5 * v, 'lowpass', 0, 1.5); this.tone(48, 0.28, 0.14 * v, 'sine', -18); }
+  rumble(v = 1) { if (!this.ctx) return; this.tone(38, 2.4, 0.11 * v, 'sawtooth', 9); this.tone(57, 2.2, 0.06 * v, 'triangle', -6, 0.15); this.burst(60, 2.2, 0.2 * v, 'lowpass', 0, 2); }
+  trumpet(v = 1) { if (!this.ctx) return; this.tone(420, 0.25, 0.07 * v, 'sawtooth', 330); this.tone(760, 1.0, 0.09 * v, 'sawtooth', -230, 0.22); this.tone(1130, 0.9, 0.04 * v, 'square', -340, 0.24); this.burst(900, 1.1, 0.14 * v, 'bandpass', 0.2, 3); }
   sense(on) { if (this.ctx && on) this.tone(110, 0.6, 0.05, 'sine', 30); }
 }

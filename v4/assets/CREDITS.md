@@ -27,6 +27,7 @@ Bewerkt met gltf-transform (vereenvoudigd, texturen verkleind naar webp). De gra
 | models/gazelle.glb | [Gazella](https://sketchfab.com/3d-models/gazella-b2c70a0821ef4c6ca0c096e33bc97593) (gebaseerd op "Gazelle" van hendrikReyneke) | [kenchoo](https://sketchfab.com/kenchoo) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 | models/sabre.glb | [SABRE](https://sketchfab.com/3d-models/sabre-2610092060b24576a85e6cfaa558dd39) (sabeltandkat; tien van de animaties behouden) | [slang107123456789](https://sketchfab.com/slang107123456789), met dank aan rroobboo 999 | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 | models/zebra.glb | [Zebra - Rigged](https://sketchfab.com/3d-models/zebra-rigged-5d6ff2749afc438b9989f91ecb242574) (vijf animaties behouden, materiaal omgezet) | [NoaSeller](https://sketchfab.com/NoaSeller) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
+| models/elephant.glb | [African Elephant Bull - Rigged & Animated](https://sketchfab.com/3d-models/african-elephant-bull-rigged-animated-436483857ce84c77bd0f6c76fb3d4d2d) (gebruikt als reuzenolifant *Palaeoloxodon recki*: ruim twee keer vergroot) | Animal Animator, [animalanimator.com](https://animalanimator.com) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 
 Aanpassingen: vereenvoudigd en texturen verkleind (gltf-transform). Bij de mensaap is de tong weggelaten. Bij de hyena zijn de losse vachtkaartjes, het binnenste van de bek, de tanden en de tong weggelaten om hem licht genoeg te maken voor een telefoon.
 

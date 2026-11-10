@@ -89,10 +89,16 @@ export const DISCOVERIES = [
   { id: 'bees', text: 'Bijen steken overdag. In de schemering zijn ze loom: dan haal je de honing.' },
   { id: 'strangers', text: 'Vreemden zijn niet altijd vijanden. Wie iets geeft, krijgt iets terug.' },
   { id: 'sabre', text: 'Een sabeltandkat jaag je niet weg. Wacht tot hij verzadigd is.' },
+  { id: 'track', text: 'Grote afdrukken in het stof wijzen de weg naar wie ze maakte.' },
+  { id: 'giant', text: 'De reus waarschuwt eerst: oren wijd, kop omhoog. Wie dan niet wijkt, moet zorgen dat er een boom tussen staat.' },
+  { id: 'fruit', text: 'Waar de reus aan een boom heeft geschud, liggen vruchten op de grond.' },
+  { id: 'shield', text: 'Dicht bij de reus durven hyena\'s en luipaarden niet te komen.' },
+  { id: 'feast', text: 'Aan het eind van de droogte bezwijkt de oude reus bij het water. Zoveel vlees zag de groep nooit.' },
 ];
 
 // Verstopte vondsten: zoals archeologen ze nu vinden
 export const FINDS = {
+  molar: { name: 'Kies van een reuzenolifant', text: 'Een kies zo groot als je hoofd, met ribbels als een wasbord. Zulke kiezen van Palaeoloxodon recki liggen in Oost-Afrika tussen stenen werktuigen, bij botten met snijsporen. Wie het dier doodde weten we niet. Wie ervan at wel.' },
   hammer: { name: 'Hamersteen', text: 'Een ronde kei vol putjes en krasjes. Hiermee werden afslagen van andere stenen geslagen. Archeologen vinden zulke hamerstenen tussen de oudste werktuigen van Oost-Afrika, zoals in de Olduvaikloof.' },
 };
 
@@ -113,6 +119,10 @@ export const LOOKS = {
   snake: { name: 'Pofadder', look: 'Dik, traag en precies de kleur van droog gras. Hij vlucht niet: hij blijft liggen en vertrouwt op zijn schutkleur.', hint: 'Loop er met een boog omheen. Of jaag hem weg met een steen.' },
   bees: { name: 'Bijennest', look: 'Een nest wilde bijen aan een boomstam. Er druipt honing uit.', hint: 'Overdag verdedigen ze het fel. Maar bijen vliegen niet in het donker…' },
   stranger: { name: 'Vreemden', look: 'Ze lijken op jullie, maar je kent ze niet. Een andere groep, bij hun eigen water.', hint: 'Ze verjagen je met stenen. Tenzij je laat zien dat je niets kwaads wilt: leg eten neer en ga op afstand staan.' },
+  giant: { name: 'De reus', look: 'Een oude stier van de reuzenolifant: twee keer zo zwaar als de olifanten van nu, met bijna rechte slagtanden. Hij loopt elke dag dezelfde ronde, van boom naar boom en naar het water.', hint: 'Niemand jaagt op hem. Maar wie hem op afstand volgt, vindt wat hij laat vallen.' },
+  track: { name: 'Afdruk van de reus', look: 'Een ronde kuil in het stof, breder dan je onderarm lang is. Ernaast nog een, en nog een.', hint: 'Je zintuigen laten het spoor oplichten. Het leidt naar hem toe, of juist van hem weg.' },
+  giantdead: { name: 'De gevallen reus', look: 'De droogte was te lang voor zijn oude kiezen. Hij ligt op zijn zij, vlak bij het water dat hij net niet meer haalde.', hint: 'De huid is te dik voor tanden en nagels. Met een scherpe afslag ligt hier eten voor dagen.' },
+  molar: { name: 'Kies van de reus', look: 'Het enige wat de regen en de hyena\'s hebben laten liggen: een kies zo groot als je hoofd.', hint: 'Over twee miljoen jaar graaft iemand hem op.' },
   tree: { name: 'De slaapboom', look: 'Een oude acacia met een brede kroon. Hier slaapt je groep, al zolang je je kunt herinneren.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
   tor: { name: 'Tor', look: 'De oudste van de groep. Zijn haar is grijs en hij loopt moeilijk, maar hij weet waar het water blijft staan als het droog is.', hint: 'Hij kan zelf niet meer ver lopen om eten te zoeken.' },
   kem: { name: 'Kem', look: 'Jong en nieuwsgierig. Kem slaat graag stenen tegen elkaar en eet alles wat je meebrengt.', hint: 'Echt alles. Ook wat je zelf nog niet kent.' },
