@@ -452,18 +452,41 @@ function cutHide() {
 }
 // zo ziet een gedode prooi eruit: bloed op de grond, een open flank met ribben; zonder huid rood en kaal
 let killMesh = null;
+// een vlek met een grillige, zachte rand (bloed op de grond, de open flank)
+function blotTex(inner, outer, seed) {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d');
+  let r = seed; const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 9; i++) {
+    const a = rnd() * 6.28, d = i ? 10 + rnd() * 20 : 0, cx = 64 + Math.cos(a) * d, cy = 64 + Math.sin(a) * d, rad = i ? 16 + rnd() * 20 : 34;
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, rad); g.addColorStop(0, inner); g.addColorStop(0.55, outer); g.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const POOL_TEX = blotTex('rgba(52,7,5,0.9)', 'rgba(58,9,6,0.6)', 7), WOUND_TEX = blotTex('rgba(74,10,8,1)', 'rgba(96,16,12,0.95)', 23);
 function killLook(k) {
   if (killMesh) { scene.remove(killMesh); killMesh = null; }
   if (!k) return;
-  const g = new THREE.Group(), y = height(k.x, k.z), yaw = k.zebra ? k.zebra.yaw : 0;
-  const red = new THREE.MeshLambertMaterial({ color: 0x7a1410 }), bone = new THREE.MeshLambertMaterial({ color: 0xe6dcc4 });
-  const pool = new THREE.Mesh(new THREE.CircleGeometry(1, 18), new THREE.MeshBasicMaterial({ color: 0x3a0806, transparent: true, opacity: 0.75, depthWrite: false }));
-  pool.rotation.x = -Math.PI / 2; pool.scale.set(1.5, 1.05, 1); pool.position.y = 0.04; pool.renderOrder = 1; g.add(pool);
-  const wound = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 7), red); wound.scale.set(k.hide ? 1 : 1.9, 1.05, k.hide ? 1.25 : 1.5); wound.position.set(0, 0.36, 0); g.add(wound);
-  for (let i = 0; i < 4; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.022, 5, 10, Math.PI), bone); r.rotation.y = Math.PI / 2; r.position.set(-0.24 + i * 0.16, 0.38, 0); r.scale.set(1.3, 1.12, 1); g.add(r); }
-  // het dier ligt op zijn zij naast de plek waar het stond: leg de wond op het lijf zelf, met de ribben dwars op de rug
-  let cx = k.x, cz = k.z;
-  if (k.zebra) { k.zebra.g.updateMatrixWorld(true); const c = new THREE.Box3().setFromObject(k.zebra.g).getCenter(new THREE.Vector3()); cx = c.x; cz = c.z; }
+  const g = new THREE.Group(), yaw = k.zebra ? k.zebra.yaw : 0;
+  // het dier ligt op zijn zij naast de plek waar het stond: de wond hoort op de flank, niet erboven
+  let cx = k.x, cz = k.z, top = 0.34;
+  if (k.zebra) {
+    k.zebra.g.updateMatrixWorld(true); const box = new THREE.Box3().setFromObject(k.zebra.g), c = box.getCenter(new THREE.Vector3());
+    cx = c.x; cz = c.z; top = THREE.MathUtils.clamp(box.max.y - height(cx, cz), 0.2, 0.5);
+  }
+  // bloed: een donkere, grillige vlek die in de grond trekt, half onder het lijf
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: POOL_TEX, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  pool.rotation.x = -Math.PI / 2; pool.scale.set(1.9, 1.5, 1); pool.position.set(0.1, 0.02, 0.25); pool.renderOrder = -1; g.add(pool);
+  // de open flank: een platte, donkerrode plek die net boven de huid uitkomt; zonder huid ligt meer bloot
+  const open = k.hide ? 1 : 1.7;
+  const wound = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ map: WOUND_TEX, color: 0x8a8080, transparent: true, depthWrite: false }));
+  wound.scale.set(0.95 * open, 0.2, 0.75); wound.position.y = top - 0.03; wound.renderOrder = 2; g.add(wound);
+  // ribben: lage, vuilwitte bogen die net door het vlees steken
+  const bone = new THREE.MeshLambertMaterial({ color: 0xb9a78c });
+  for (let i = 0; i < 4; i++) {
+    const r = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.012, 5, 10, Math.PI), bone);
+    r.rotation.y = Math.PI / 2 + (i - 1.5) * 0.07; r.position.set((-0.2 + i * 0.13) * open, top - 0.045, 0); r.scale.set(1, 0.38, 1); g.add(r);
+  }
   g.position.set(cx, height(cx, cz), cz); g.rotation.y = yaw + Math.PI / 2; scene.add(g); killMesh = g;
 }
 // iets aan de groep geven: het beste wat je in je handen hebt
@@ -1468,7 +1491,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, accept, complete, offerOf, missionInfo, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hintCur && hintCur.id, [...hintSeen]], actionContext,
+window.__game = { begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, killLook, accept, complete, offerOf, missionInfo, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hintCur && hintCur.id, [...hintSeen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, flick, setSneak, still: () => stillT, FLICK,
   setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setZoom, zoom: () => camDist,
   lookFrom: (pos, look) => { camOverride = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },
