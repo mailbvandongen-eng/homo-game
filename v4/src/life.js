@@ -29,7 +29,7 @@ export class Glints {
     scene.add(glint, halo);
     this.items.push({ t, glint, halo, phase: this.items.length * 1.7 });
   }
-  update(t, player, senses, known) {
+  update(t, player, senses, known, k = 1) {
     for (const g of this.items) {
       const th = g.t, gone = th.gone || (th.bush && th.bush.left <= 0);
       const d = Math.hypot(th.x - player.pos.x, th.z - player.pos.z);
@@ -46,8 +46,8 @@ export class Glints {
         const k = known.get(th.item);
         g.halo.material.color.set(k === 'good' ? 0x9cff8a : k === 'bad' ? 0xff6a5a : 0xfff0b0);
         g.halo.position.set(th.x, y, th.z);
-        g.halo.scale.setScalar((th.bush ? 2.4 : 1.4) * (1 + Math.sin(t * 3 + g.phase) * 0.12));
-        g.halo.material.opacity = 0.75;
+        g.halo.scale.setScalar((th.bush ? 1.7 : 1.0) * (1 + Math.sin(t * 3 + g.phase) * 0.12));
+        g.halo.material.opacity = 0.55 * k;
       }
     }
   }
@@ -204,10 +204,11 @@ export class Senses {
     this.prints.count = Math.min(this.n, this.max); this.prints.instanceMatrix.needsUpdate = true;
   }
 
-  update(dt, t, on, focus, source) {
+  update(dt, t, on, focus, source, k = 1) {
+    on = on || k > 0.02;
     this.prints.visible = this.wind.visible = this.scent.visible = on;
     if (!on) return;
-    this.prints.material.opacity = 0.6 + Math.sin(t * 3) * 0.15;
+    this.prints.material.opacity = (0.42 + Math.sin(t * 3) * 0.1) * k; this.wind.material.opacity = 0.45 * k; this.scent.material.opacity = 0.32 * k;
     const a = this.wind.geometry.attributes.position, p = a.array;
     for (let i = 0; i < a.count; i++) {
       let x = p[i * 3] + WIND.x * dt * 6, z = p[i * 3 + 2] + WIND.z * dt * 6;

@@ -1013,7 +1013,7 @@ function hintTick(dt) {
 }
 // ---------- bij de groep gaat het vanzelf ----------
 // Kom je met eten de kring in, dan nemen ze het van je over. Stenen en afslagen houd je zelf.
-let giveT = 0, stillT = 0;
+let giveT = 0, stillT = 0, senseK = 0, lastLook = [0, 0];
 function handOver() {
   return GIVE.find((x) => state.hands.includes(x) && !(x === 'leaf' && !group.sick) && !(x === 'redberry' && state.known.has('redberry')));
 }
@@ -1113,9 +1113,12 @@ function update(dt) {
     else dir.set(dx / d, 0, dz / d).multiplyScalar(d > 6 ? 0.9 : 0.6);
   } else dir.set(0, 0, 0);
   // sta je even stil, dan gaan je zintuigen vanzelf open; loop je weer, dan sluiten ze
-  const busy = mag > 0.05 || walkTo || player.once || !player.onGround || !state.started || state.collapsed > 0 || state.sleeping > 0;
+  // rondkijken telt ook als bezig: alleen wie echt stil is, merkt meer op
+  const looking = Math.abs(camYaw - lastLook[0]) + Math.abs(camPitch - lastLook[1]) > 1e-4; lastLook = [camYaw, camPitch];
+  senseK += ((state.sensing ? 1 : 0) - senseK) * Math.min(1, dt * (state.sensing ? 0.7 : 3));
+  const busy = mag > 0.05 || looking || aim || walkTo || player.once || !player.onGround || !state.started || state.collapsed > 0 || state.sleeping > 0;
   if (busy) { stillT = 0; if (!keys.has('KeyQ') && !window.__holdSense) setSense(false); }
-  else { stillT += dt; if (stillT > 2) setSense(true); }
+  else { stillT += dt; if (stillT > 3.5) setSense(true); }
 
   const sick = state.sick > 0;
   player.update(dt, dir, { speed: sick ? 0.6 : state.food < 15 ? 0.8 : 1, sick });
@@ -1152,7 +1155,7 @@ function update(dt) {
   vultures.update(dt, t);
 
   world.update(t, player.pos, dayP, state.sensing);
-  renderer.toneMappingExposure = (state.sensing ? 0.8 : 1.05) + night * 0.25;
+  renderer.toneMappingExposure = 1.05 - 0.12 * senseK + night * 0.25;
   const part = partOfDay(dayP);
   if (state.started && part !== lastPart && lastPart) {
     if (part === 'evening') toast('De zon zakt. De groep wacht bij de slaapboom. In de schemering gaan de roofdieren op jacht…', 6);
@@ -1163,11 +1166,11 @@ function update(dt) {
   lastPart = part;
 
   const tall = tallGrassAt(player.pos.x, player.pos.z);
-  glints.update(t, player, state.sensing, verdict);
+  glints.update(t, player, state.sensing, verdict, senseK);
   motes.update(dt, t, player.pos, night);
   birds.update(dt, t, player, sound);
   butterflies.update(t, night, player.pos);
-  senses.update(dt, t, state.sensing, player.pos, sabres.kill || CARCASS);
+  senses.update(dt, t, state.sensing, player.pos, sabres.kill || CARCASS, senseK);
   sound.tick(dt, { night, move: player.speed, tall, senses: state.sensing, danger });
   // voetstappen
   if (Math.floor(player.phase / Math.PI) !== stepPhase) { stepPhase = Math.floor(player.phase / Math.PI); if (player.speed > 0.5) sound.step(tall); }
