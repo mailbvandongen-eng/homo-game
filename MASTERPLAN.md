@@ -102,7 +102,7 @@ Elke stap is af en speelbaar voordat de volgende begint.
 | G | Soortcontrole: test die tijd en plaats van elke soort tegen het gebied legt | C | |
 | H | Tijdperk 2: *Homo erectus* — nieuw lichaam, vuistbijl, vuur, grotere groep | E, F | |
 | I | Tijdperken 3–4 | H | |
-| J | Tijdperken 5–7 (ander soort spel: plek blijft, groep groeit) — eerst ontwerpen | I | |
+| J | Tijdperken 5–7: een fundamenteel ander spel (zie §5) — eerst apart ontwerpen | I | |
 
 Later, los hiervan: proloog, controller, geluid bijstellen.
 
@@ -129,13 +129,26 @@ Dit werkt en wordt niet weggehaald; elke verbouwing wordt hieraan getoetst.
 
 ---
 
-## 5. Prioriteiten eerste fase
+## 5. Prioriteiten
 
-1. **Opslag** — zonder verdergaan heeft een lang spel geen zin. *(klaar)*
-2. **Tijdperken en gebieden als gegevens** — het fundament waar alles op komt. *(klaar)*
-3. **Savanne naar een gebiedsbestand** — bewijs dat de motor een gebied uit gegevens kan bouwen.
-4. **De overgang** — het moment "de groep trekt verder" echt maken.
-5. **Bij het water** — het eerstvolgende gebied volledig speelbaar.
-6. **Opsplitsen van `main.js`** — gaandeweg, steeds het deel dat we toch aanraken.
+De route, vastgesteld met Bob op 12 november 2026. Er wordt nooit aan een later tijdperk gebouwd zolang een eerder punt niet af en speelbaar is.
+
+| # | Ontwikkeling | Stand |
+|---|---|---|
+| 1 | Architectuur geschikt maken voor het volledige spel (stappen A, C, F, G) | A klaar; C is de volgende |
+| 2 | Het huidige *Homo habilis*-spel afmaken: savanne rond, overgang "de groep trekt verder" (stap D) | |
+| 3 | Watergebied volledig speelbaar (stap E) | ontwerp staat in §3 |
+| 4 | Opslaan en laden (stap B) | basis klaar; groeit mee met elk nieuw gebied |
+| 5 | *Homo erectus* en nieuwe technieken (stap H) | |
+| 6 | Neanderthalers en ijstijd | |
+| 7 | *Homo sapiens* en complexe jacht | |
+| 8 | Landbouw en nederzettingen | eerst ontwerpen |
+| 9 | Industriële en moderne tijd | eerst ontwerpen |
+
+### Landbouw en industrie zijn een ander spel
+
+Tot en met punt 7 speel je één mens die overleeft: zoeken, maken, jagen, bij de groep blijven. Vanaf de landbouw klopt dat niet meer. De vraag verschuift van *hoe kom ik de dag door* naar *hoe houden we dit met zijn allen in stand*: voorraad, oogst en misoogst, werk verdelen, bezit, ziekte, later loon, machine en stad. Dat wordt **geen opgeblazen versie van het verzamelspel** met meer voorwerpen en grotere tassen.
+
+Wat wel vaststaat: het blijft dezelfde wereld en dezelfde manier van kijken en aanraken, en je blijft een mens tussen mensen, geen hand uit de lucht. Hoe productie, organisatie en samenleving speelbaar worden, ontwerpen we apart voordat er iets van gebouwd wordt. De motor moet dat alleen niet in de weg zitten: daarom horen honger, dragen en missies in `systems/` en niet in de motor zelf, zodat een tijdperk andere systemen kan aanzetten.
 
 Bij elke stap: testen op telefoonformaat, regressietests draaien, pas dan uitrollen.
