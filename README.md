@@ -30,6 +30,9 @@ Wereld 3 (Homo heidelbergensis) is compleet: 3-1 De krijtkust (Boxgrove), 3-2 De
 
 Een proef met een heel andere opzet: een 3D-wereld met de camera hoog achter de hoofdpersoon (ergens tussen GTA 2 en GTA 5 in). Je loopt vrij rond, onderzoekt en overleeft, in plaats van naar een finish te rennen. Speel hem op `/homo-game/v4/`. Het spel in `v2/` en `v3/` is niet aangeraakt.
 
+- **Waar dit heen gaat** staat in [`MASTERPLAN.md`](MASTERPLAN.md): één doorlopend spel van *Homo habilis* tot de moderne mens, met per tijdperk wat vaststaat, wat aannemelijk is en wat een spelkeuze is
+- **Je spel wordt bewaard:** sluit je de pagina, dan ga je de volgende keer verder op dezelfde dag, met wat je in handen en tas had, wat je weet en welke missies klaar zijn. Je wordt wakker bij de slaapboom. Opnieuw beginnen kan via het menu (rondje met pijl)
+- **Tijdperken en gebieden zijn gegevens** (`v4/src/eras/`): de missies van de savanne staan in `habilis.js`, de zes volgende tijdperken staan klaar als lege plekken
 - Eén stuk Riftvallei met *Homo habilis*: rivier, acacia's, rotsen, hoog gras, een kudde impala's en gieren boven een karkas
 - **Onderzoeken door te tikken:** tik op iets in de wereld; er verschijnt een boogje met icoontjes: oog (bekijken), hand (pakken), mond (proeven, met een vraagteken zolang je het niet kent). Je hoofdpersoon loopt er zelf heen.
 - **Twee handen in plaats van een tas** (habilis had nog geen leer): je kunt twee dingen dragen. Tik op een hand om te bekijken, eten, neerleggen of een bot met de kei open te slaan. Later in het spel kan dragen meegroeien (bladbundel, leren tas, struisvogelei).

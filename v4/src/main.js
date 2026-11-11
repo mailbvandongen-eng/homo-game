@@ -5,6 +5,8 @@ import { ITEMS, ROCKS, DISCOVERIES, LOOKS, VERDICT, FINDS, placeItems, heldMesh 
 import { Hyenas, Leopard, Throws } from './predators.js';
 import { Zebras, Sabres } from './hunt.js';
 import { Group, HOME } from './group.js';
+import { ERAS, ERA } from './eras/index.js';
+import { Save } from './save.js';
 import { Glints, Motes, Birds, Butterflies, Senses } from './life.js';
 import { Sound } from './audio.js';
 import { loadAssets } from './assets.js';
@@ -95,25 +97,8 @@ function discover(id) {
 // Je kiest er zelf één, ziet de stappen, en als ze alle vier gelukt zijn trekt de groep verder.
 const has = (it) => state.hands.includes(it);
 const carries = (it) => has(it) || !!(state.bag && state.bag.some((e) => e && e.it === it));
-const MISSIONS = [
-  { id: 'flake', who: 'kem', ask: 'Kem rukt met zijn tanden aan een pees. Het lukt niet.', end: 'Kem voelt aan de scherpe rand en grijnst.', title: 'Maak een snijsteen', why: 'Met tanden en nagels krijg je geen huid open. Een scherpe rand wel.', done: () => !!state.knapped, steps: [
-    { t: 'Pak twee keien: in elke hand één', ok: () => state.hands[0] === 'stone' && state.hands[1] === 'stone' },
-    { t: 'Tik op een hand en sla de keien tegen elkaar tot er een scherf afspringt', ok: () => !!state.knapped }] },
-  { id: 'hyena', who: 'ibo', ask: 'Ibo wijst naar de vlakte en kruipt weg. De hyena\'s!', end: 'Ibo durft weer onder de boom vandaan.', title: 'Verjaag een hyena', why: 'Elke avond komen ze dichter bij de slaapboom.', done: () => state.found.has('hyena'), steps: [
-    { t: 'Pak een kei', ok: () => has('stone') },
-    { t: 'Wacht op de hyena\'s: ze komen in de schemering', ok: () => has('stone') && hyenas.list.some((h) => Math.hypot(h.x - player.pos.x, h.z - player.pos.z) < 30) },
-    { t: 'Houd de vuist vast, mik en laat los', ok: () => state.found.has('hyena') }] },
-  { id: 'bag', who: 'kem', ask: 'Kem heeft zijn armen vol. Alles valt.', end: 'Kem trekt aan het draagvel. Hij wil er ook een.', tag: 'hide', title: 'Maak een draagvel', why: 'Met twee handen draag je twee dingen. In een geknoopte huid past veel meer.', needs: 'flake', done: () => !!state.bag, steps: [
-    { t: 'Neem een snijsteen mee', ok: () => carries('flake') || carries('hide') },
-    { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', ok: () => carries('hide') || (carries('flake') && sabres.kill && Math.hypot(sabres.kill.x - player.pos.x, sabres.kill.z - player.pos.z) < 14) },
-    { t: 'Wacht tot de roofdieren weg zijn en snijd met de vuist: eerst vlees, dan de huid', ok: () => carries('hide') },
-    { t: 'Houd huid en snijsteen vast, tik op de huid en kies het draagvel', ok: () => !!state.bag }] },
-  { id: 'cloak', who: 'tor', shiver: true, ask: 'Tor zit ineengedoken. Hij rilt.', end: 'Tor voelt aan het vel om je schouders en knikt.', tag: 'hide', title: 'Een vel om je schouders', why: 'De nachten worden koud, en kou vreet energie.', needs: 'flake', done: () => state.cloak, steps: [
-    { t: 'Neem een snijsteen mee', ok: () => carries('flake') || carries('hide') },
-    { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', ok: () => carries('hide') || (carries('flake') && sabres.kill && Math.hypot(sabres.kill.x - player.pos.x, sabres.kill.z - player.pos.z) < 14) },
-    { t: 'Wacht tot de roofdieren weg zijn en snijd met de vuist: eerst vlees, dan de huid', ok: () => carries('hide') },
-    { t: 'Houd huid en snijsteen vast, tik op de huid en kies de omslag', ok: () => state.cloak }] },
-];
+const AREA = ERA.areas.find((x) => x.id === 'savanne');
+const MISSIONS = AREA.missions({ state, has, carries, player, hyenas, sabres });
 const NAMES = { tor: 'Tor', kem: 'Kem', ibo: 'Ibo' };
 for (const m of MISSIONS) m.steps.push({ t: 'Ga terug naar ' + NAMES[m.who], ok: () => false });
 // Niemand duwt je een keuzescherm onder je neus: wie iets nodig heeft roept en wenkt bij de slaapboom.
@@ -289,6 +274,10 @@ function wearHide(i) {
   if (state.cloak || state.hands[i] !== 'hide') return;
   state.hands[i] = null; state.cloak = true; renderHands(); sound.good(); discover('cloak');
   toast('Je slaat de huid om je schouders en knoopt de poten voor je borst. Warm. Zo houd je het vol in de kou.', 7);
+  putCloak();
+}
+function putCloak() {
+  if (cloakMesh) return;
   const c = document.createElement('canvas'); c.width = 64; c.height = 64; const x = c.getContext('2d');
   x.fillStyle = '#e4dac6'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#2a2420';
   for (let n = 0; n < 7; n++) { x.beginPath(); x.moveTo(n * 10 + 2, 0); x.quadraticCurveTo(n * 10 + 9, 32, n * 10 + 1, 64); x.lineTo(n * 10 + 5, 64); x.quadraticCurveTo(n * 10 + 13, 32, n * 10 + 6, 0); x.fill(); }
@@ -1290,7 +1279,7 @@ function update(dt) {
   predGame.night = night; predGame.danger = danger;
   hyenas.update(dt, predGame);
   leopard.update(dt, predGame, camera);
-  throws.update(dt); knapTick(dt); turnTick(dt); hintTick(dt); questTick(dt); trackTargets(dt); aimTick(dt);
+  throws.update(dt); knapTick(dt); turnTick(dt); hintTick(dt); questTick(dt); saveTick(dt); trackTargets(dt); aimTick(dt);
   zebras.update(dt, predGame);
   sabres.update(dt, predGame);
   group.update(dt, predGame);
@@ -1471,7 +1460,52 @@ function frame() {
 function begin() {
   if (state.started) return;
   loading.remove(); state.started = true;
+  restore(Save.read());
 }
+// ---------- bewaren en verdergaan ----------
+// Bewaard wordt wat je bent en weet, niet waar elk bot ligt: je wordt wakker bij de slaapboom en de wereld is weer vol.
+function snapshot() {
+  return {
+    era: ERA.id, area: AREA.id, day: state.day, rainDay: state.rainDay, dayP: +dayP.toFixed(3),
+    food: Math.round(state.food), health: Math.round(state.health), group: Math.round(state.group),
+    hands: state.hands, rock: state.rock, bag: state.bag, cloak: state.cloak, knapped: !!state.knapped,
+    known: [...state.known], found: [...state.found], finds: [...state.finds], rockKnown: [...state.rockKnown], given: [...state.given],
+    missions: [...mission.done], mission: mission.cur ? mission.cur.id : null, over: mission.over,
+  };
+}
+function restore(d) {
+  if (!d || d.era !== ERA.id || d.area !== AREA.id) return false;
+  const ok = (it) => it === null || !!ITEMS[it], num = (v, def) => (Number.isFinite(v) ? v : def);
+  state.day = Math.max(1, num(d.day, 1)); state.rainDay = num(d.rainDay, 0); dayP = THREE.MathUtils.clamp(num(d.dayP, 0.12), 0, 0.6);   // nooit midden in de nacht wakker worden
+  state.food = Math.max(25, num(d.food, 55)); state.health = Math.max(40, num(d.health, 100)); state.group = Math.max(20, num(d.group, 50));
+  if (Array.isArray(d.hands) && d.hands.length === 2 && d.hands.every(ok)) { state.hands = d.hands; state.rock = Array.isArray(d.rock) && d.rock.length === 2 ? d.rock : [null, null]; }
+  if (Array.isArray(d.bag) && d.bag.length === 5 && d.bag.every((e) => e === null || (e && ITEMS[e.it]))) state.bag = d.bag;
+  state.cloak = !!d.cloak; state.knapped = !!d.knapped;
+  for (const k of ['known', 'found', 'finds', 'rockKnown', 'given']) if (Array.isArray(d[k])) state[k] = new Set(d[k]);
+  mission.done = new Set((d.missions || []).filter((id) => MISSIONS.some((m) => m.id === id)));
+  const cur = MISSIONS.find((m) => m.id === d.mission && !mission.done.has(m.id));
+  if (cur) { mission.cur = cur; mission.giver = group.list.find((g) => g.id === cur.who); mission.startT = 9; }
+  mission.over = !!d.over;
+  player.pos.set(HOME.x + 2, 0, HOME.z + 4); player.vel.set(0, 0, 0);
+  season(); renderHands(); renderBag(); if (state.cloak) putCloak();
+  $('journalCount').textContent = state.found.size;
+  playT = 30; moved = 9;   // geen beginaanwijzingen meer
+  return true;
+}
+let saveT = 0;
+function saveTick(dt) {
+  saveT += dt;
+  if (saveT > 6 && state.started && state.collapsed <= 0 && !state.lost && !window.__nosave) { saveT = 0; Save.write(snapshot()); }
+}
+addEventListener('pagehide', () => { if (state.started && !window.__nosave) Save.write(snapshot()); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && state.started && !window.__nosave) Save.write(snapshot()); });
+function restart() {
+  showCard(`<div class="eyebrow">Opnieuw beginnen</div><h2>Alles vergeten?</h2><p>Je begint dan weer op de eerste dag, zonder wat je geleerd en gemaakt hebt.</p>
+    <div class="row"><button class="btn" id="noRestart">Nee, verder spelen</button><button class="btn ghost" id="yesRestart">Ja, opnieuw</button></div>`);
+  $('noRestart').onclick = closeCard;
+  $('yesRestart').onclick = () => { window.__nosave = 1; Save.clear(); location.reload(); };
+}
+$('restartBtn').innerHTML = ICON.restart; $('restartBtn').onclick = restart;
 function firstTouch() {
   removeEventListener('pointerdown', firstTouch, true); removeEventListener('keydown', firstTouch, true);
   window.__played = true; sound.start();
@@ -1491,7 +1525,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, killLook, accept, complete, offerOf, missionInfo, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hintCur && hintCur.id, [...hintSeen]], actionContext,
+window.__game = { begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hintCur && hintCur.id, [...hintSeen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, flick, setSneak, still: () => stillT, FLICK,
   setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setZoom, zoom: () => camDist,
   lookFrom: (pos, look) => { camOverride = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },
