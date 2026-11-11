@@ -117,6 +117,8 @@ export const DISCOVERIES = [
   { id: 'egg', text: 'In een nest liggen eieren: vet en krachtig. Maar de moeder verdedigt ze.' },
   { id: 'honey', text: 'Honing is het zoetste eten dat er is.' },
   { id: 'hide', text: 'Met een scherpe afslag snijd je ook de huid van een dier. Daar lig je \'s nachts warm op.' },
+  { id: 'bag', text: 'Een huid met een reep vel erdoor wordt een draagvel: zo neem je meer mee dan je handen kunnen houden.' },
+  { id: 'cloak', text: 'Een huid om je schouders houdt je warm. Kou vreet energie.' },
   { id: 'bees', text: 'Bijen steken overdag. In de schemering zijn ze loom: dan haal je de honing.' },
   { id: 'strangers', text: 'Vreemden zijn niet altijd vijanden. Wie iets geeft, krijgt iets terug.' },
   { id: 'sabre', text: 'Een sabeltandkat jaag je niet weg. Wacht tot hij verzadigd is.' },

@@ -132,7 +132,7 @@ export class Sabres {
         v.state = 'dead'; v.slow = 1; v.speed = 0;
         v.g.rotation.set(0, v.yaw, Math.PI / 2); v.g.position.y = height(v.x, v.z) + 0.28;
         v.rig.freeze('Idle01', 0.1);
-        this.kill = { x: v.x, z: v.z, zebra: v, meat: 4, hide: 1, age: 0, open: false, hyenaT: 45, eatT: 0 };
+        this.kill = { x: v.x, z: v.z, zebra: v, meat: 4, hide: 2, age: 0, open: false, hyenaT: 45, eatT: 0 };
         this.phase = 'feed'; this.feedT = 75;
         for (const c of this.list) c.state = 'feed';
         game.sound.bray(); game.event('kill', this.kill);

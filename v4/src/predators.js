@@ -39,10 +39,10 @@ export class Hyenas {
 
   update(dt, game) {
     const p = game.player.pos, night = game.night;
-    const range = 14 + night * 22 + (game.state.hands.includes('meat') ? 16 : 0);
+    const range = 14 + night * 22 + (game.carries('meat') ? 16 : 0);
     const nearHome = Math.hypot(p.x - this.home.x, p.z - this.home.z);
     // vlees ruiken ze van ver: wie buit draagt, wordt gevolgd
-    const holdsMeat = game.state.hands.includes('meat');
+    const holdsMeat = game.carries('meat');   // ook in je draagvel ruikt vlees
     const holdsBone = holdsMeat || game.state.hands.includes('bone');
     for (const h of this.list) {
       const d = Math.hypot(p.x - h.x, p.z - h.z) || 0.01;

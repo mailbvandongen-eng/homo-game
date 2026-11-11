@@ -19,6 +19,8 @@ export const ICON = {
   // gooien: een arm met een boog
   throw: svg('<circle cx="38" cy="10" r="5"/><path d="M8 40c4-16 14-26 26-28" stroke-dasharray="4 5"/><path d="M6 44l8-10 6 4"/>'),
   // afslag slaan: twee stenen met een vonk ertussen
+  bag: svg('<path d="M13 20c-5 8-6 20 11 20s16-12 11-20z"/><path d="M14 20c4-3 16-3 20 0"/><path d="M18 18c-2-9 14-9 12 0"/><path d="M20 27v0M28 27v0M24 31v0"/>'),
+  cloak: svg('<path d="M17 10c3 3 11 3 14 0l7 7-3 22H13l-3-22z"/><path d="M20 16l4 4 4-4M24 20v6"/>'),
   knap: svg('<path d="M6 30l5-9 9-2 4 7-5 7-9 0z"/><path d="M42 18l-5 9-9 2-4-7 5-7 9 0z"/><path d="M24 20l2-6M28 24l6-2M22 26l-4 4"/>'),
   // snijden: een scherpe afslag
   cut: svg('<path d="M8 36L30 8l10 6-24 26z"/><path d="M12 40c8 2 18 2 28-2"/>'),

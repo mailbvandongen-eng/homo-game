@@ -73,7 +73,7 @@ addEventListener('resize', resize); resize();
 const state = {
   food: 55, health: 100, sick: 0, hands: [null, null], rock: [null, null], rockKnown: new Set(), known: new Set(), found: new Set(),
   started: false, collapsed: 0, sensing: false, finds: new Set(), carcassMeat: 1,
-  group: 50, day: 1, sleeping: 0, slept: false, brought: {}, given: new Set(), starve: 0, rainDay: 0, lost: false,
+  group: 50, day: 1, sleeping: 0, slept: false, brought: {}, given: new Set(), bag: null, cloak: false, starve: 0, rainDay: 0, lost: false,
 };
 const verdict = { get: (it) => (state.known.has(it) ? VERDICT[it] : null) };
 
@@ -94,23 +94,25 @@ function discover(id) {
 // Eten zoeken en delen moet altijd; dat is geen missie. Een missie heeft een doel: iets maken of iets kunnen.
 // Je kiest er zelf één, ziet de stappen, en als ze alle vier gelukt zijn trekt de groep verder.
 const has = (it) => state.hands.includes(it);
+const carries = (it) => has(it) || !!(state.bag && state.bag.some((e) => e && e.it === it));
 const MISSIONS = [
   { id: 'flake', title: 'Maak een snijsteen', why: 'Met tanden en nagels krijg je geen huid open. Een scherpe rand wel.', done: () => !!state.knapped, steps: [
     { t: 'Pak twee keien: in elke hand één', ok: () => state.hands[0] === 'stone' && state.hands[1] === 'stone' },
     { t: 'Tik op een hand en sla de keien tegen elkaar tot er een scherf afspringt', ok: () => !!state.knapped }] },
-  { id: 'marrow', title: 'Kraak een bot', why: 'In botten zit merg: vet waar je sterk van wordt.', done: () => state.found.has('marrow'), steps: [
-    { t: 'Zoek een bot: waar gieren cirkelen ligt een karkas', ok: () => has('bone') },
-    { t: 'Neem in je andere hand een kei', ok: () => has('bone') && has('stone') },
-    { t: 'Tik op het bot in je hand en sla het open', ok: () => state.found.has('marrow') }] },
   { id: 'hyena', title: 'Verjaag een hyena', why: 'Elke avond komen ze dichter bij de slaapboom.', done: () => state.found.has('hyena'), steps: [
     { t: 'Pak een kei', ok: () => has('stone') },
     { t: 'Wacht op de hyena\'s: ze komen in de schemering', ok: () => has('stone') && hyenas.list.some((h) => Math.hypot(h.x - player.pos.x, h.z - player.pos.z) < 30) },
     { t: 'Houd de vuist vast, mik en laat los', ok: () => state.found.has('hyena') }] },
-  { id: 'hide', title: 'Een slaapvel voor Ibo', why: 'De nachten worden koud en Ibo rilt.', needs: 'flake', done: () => state.given.has('hide'), steps: [
-    { t: 'Neem een snijsteen mee', ok: () => has('flake') || has('hide') },
-    { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', ok: () => has('hide') || (has('flake') && sabres.kill && Math.hypot(sabres.kill.x - player.pos.x, sabres.kill.z - player.pos.z) < 14) },
-    { t: 'Wacht tot de roofdieren weg zijn en snijd met de vuist: eerst vlees, dan de huid', ok: () => has('hide') },
-    { t: 'Breng de huid naar de slaapboom', ok: () => state.given.has('hide') }] },
+  { id: 'bag', tag: 'hide', title: 'Maak een draagvel', why: 'Met twee handen draag je twee dingen. In een geknoopte huid past veel meer.', needs: 'flake', done: () => !!state.bag, steps: [
+    { t: 'Neem een snijsteen mee', ok: () => carries('flake') || carries('hide') },
+    { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', ok: () => carries('hide') || (carries('flake') && sabres.kill && Math.hypot(sabres.kill.x - player.pos.x, sabres.kill.z - player.pos.z) < 14) },
+    { t: 'Wacht tot de roofdieren weg zijn en snijd met de vuist: eerst vlees, dan de huid', ok: () => carries('hide') },
+    { t: 'Houd huid en snijsteen vast, tik op de huid en kies het draagvel', ok: () => !!state.bag }] },
+  { id: 'cloak', tag: 'hide', title: 'Een vel om je schouders', why: 'De nachten worden koud, en kou vreet energie.', needs: 'flake', done: () => state.cloak, steps: [
+    { t: 'Neem een snijsteen mee', ok: () => carries('flake') || carries('hide') },
+    { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', ok: () => carries('hide') || (carries('flake') && sabres.kill && Math.hypot(sabres.kill.x - player.pos.x, sabres.kill.z - player.pos.z) < 14) },
+    { t: 'Wacht tot de roofdieren weg zijn en snijd met de vuist: eerst vlees, dan de huid', ok: () => carries('hide') },
+    { t: 'Houd huid en snijsteen vast, tik op de huid en kies de omslag', ok: () => state.cloak }] },
 ];
 const mission = { cur: null, done: new Set(), told: false, ask: 0, over: false };
 const stepOf = (m) => { let n = 0; while (n < m.steps.length - 1 && m.steps[n].ok()) n++; return n; };
@@ -150,7 +152,7 @@ function questTick(dt) {
       if (mission.done.size < MISSIONS.length) missionCard('Gelukt! Wat nu?');
       else {
         mission.over = true; $('questN').textContent = '✓ De groep trekt verder'; $('questT').textContent = '';
-        showCard(`<div class="eyebrow">De savanne</div><h2>De groep trekt verder</h2><p>Je kunt nu wat de groep hier nodig had: een scherpe rand slaan, merg uit een bot halen, een hyena op afstand houden en een huid snijden.</p>
+        showCard(`<div class="eyebrow">De savanne</div><h2>De groep trekt verder</h2><p>Je kunt nu wat de groep hier nodig had: een scherpe rand slaan, een hyena op afstand houden, meer dragen dan je handen aankunnen en jezelf warm houden.</p>
           <p>De struiken raken leeg en het gras verdort. Tor wijst naar het noorden, waar het water blijft staan. Daar wacht iets nieuws.</p><p class="fine">Het volgende gebied is nog in de maak. Je kunt hier vrij blijven rondlopen.</p>`);
         return;
       }
@@ -164,7 +166,7 @@ function questTick(dt) {
   if (n !== mission.shown) { if (mission.shown >= 0) sound.good(); mission.shown = n; const el = $('quest'); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
 }
 // terloopse opmerkingen leiden af; ze komen alleen nog als ze bij je missie horen
-function murmur(text, sec, tag) { if (tag && mission.cur && mission.cur.id === tag) toast(text, sec); }
+function murmur(text, sec, tag) { if (tag && mission.cur && mission.cur.tag === tag) toast(text, sec); }
 
 // ---------- knoppen met icoontjes ----------
 $('doBtn').innerHTML = ICON.strike;
@@ -201,7 +203,57 @@ function handsFull() {
   toast('Je handen zijn vol. Leg eerst iets neer: tik op een hand.');
   for (const i of [0, 1]) { const h = $('hand' + i); h.classList.remove('shake'); void h.offsetWidth; h.classList.add('shake'); }
 }
-for (const i of [0, 1]) $('hand' + i).onclick = () => { if (state.hands[i]) { did.hand = true; openRadial({ hand: i }); } };
+for (const i of [0, 1]) $('hand' + i).onclick = () => { if (bagOpen) stow(i); else if (state.hands[i]) { did.hand = true; openRadial({ hand: i }); } };
+
+// ---------- draagvel en omslag ----------
+// Een huid met gaatjes langs de rand, dichtgeknoopt met een reep vel: vijf dingen erin, en je handen vrij.
+// De tas is geen venster: het vel vouwt open boven je handen en het spel loopt gewoon door.
+let bagOpen = false;
+const BAG_SPOTS = [[22, 30], [50, 20], [77, 32], [34, 66], [66, 68]];
+function renderBag() {
+  $('bagBtn').style.display = state.bag ? '' : 'none';
+  if (!state.bag) return;
+  $('bagBtn').classList.toggle('open', bagOpen); $('bag').classList.toggle('open', bagOpen);
+  $('bagBtn').innerHTML = `<span class="it">${ICON.bag}</span><em>${state.bag.filter(Boolean).length || ''}</em>`;
+  $('bagSpots').innerHTML = state.bag.map((e, k) => `<button data-k="${k}" class="${e ? '' : 'none'}" style="left:${BAG_SPOTS[k][0]}%;top:${BAG_SPOTS[k][1]}%;transform:translate(-50%,-50%) rotate(${(k * 37) % 24 - 12}deg);${e && e.rock ? 'filter:' + ROCKS[e.rock.type].css : ''}">${e ? ITEM_ICON[e.it] : ''}</button>`).join('');
+  $('bagSpots').querySelectorAll('button').forEach((b) => { b.onclick = () => unstow(+b.dataset.k); });
+}
+function stow(i) {
+  const it = state.hands[i]; if (!it) return;
+  const k = state.bag.indexOf(null);
+  if (k < 0) { const el = $('bag'); el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); return; }
+  state.bag[k] = { it, rock: state.rock[i] }; state.hands[i] = null; renderHands(); renderBag();
+}
+function unstow(k) {
+  const e = state.bag[k]; if (!e) return;
+  let h = freeHand(), back = null;
+  if (h < 0) { h = 1; back = { it: state.hands[1], rock: state.rock[1] }; state.hands[1] = null; renderHands(); }   // handen vol: wisselen met je rechterhand
+  state.bag[k] = back; nextRock = e.rock || null; state.hands[h] = e.it; renderHands(); renderBag();
+}
+function makeBag(i) {
+  if (state.bag || state.hands[i] !== 'hide') return;
+  state.hands[i] = null; state.bag = [null, null, null, null, null]; renderHands(); renderBag(); sound.good(); discover('bag');
+  toast('Je prikt gaatjes langs de rand en rijgt er een reep vel doorheen. Een draagvel! Tik op het vel naast je handen.', 7);
+}
+let cloakMesh = null;
+function wearHide(i) {
+  if (state.cloak || state.hands[i] !== 'hide') return;
+  state.hands[i] = null; state.cloak = true; renderHands(); sound.good(); discover('cloak');
+  toast('Je slaat de huid om je schouders en knoopt de poten voor je borst. Warm. Zo houd je het vol in de kou.', 7);
+  const c = document.createElement('canvas'); c.width = 64; c.height = 64; const x = c.getContext('2d');
+  x.fillStyle = '#e4dac6'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#2a2420';
+  for (let n = 0; n < 7; n++) { x.beginPath(); x.moveTo(n * 10 + 2, 0); x.quadraticCurveTo(n * 10 + 9, 32, n * 10 + 1, 64); x.lineTo(n * 10 + 5, 64); x.quadraticCurveTo(n * 10 + 13, 32, n * 10 + 6, 0); x.fill(); }
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  cloakMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.21, 0.4, 12, 1, true, Math.PI - 2.2, 4.4), new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }));
+  cloakMesh.castShadow = true; scene.add(cloakMesh);
+}
+const cloakAt = new THREE.Vector3();
+function cloakTick() {
+  if (!cloakMesh || !player.rig) return;
+  player.rig.bone('spine_02').getWorldPosition(cloakAt);
+  cloakMesh.position.copy(cloakAt); cloakMesh.position.y += 0.13; cloakMesh.rotation.set(player.sneaking ? 0.5 : 0.08, player.yaw, 0, 'YXZ');
+}
+$('bagBtn').onclick = () => { bagOpen = !bagOpen; closeRadial(); renderBag(); };
 
 // ---------- bekijken ----------
 function closeCard() { $('cardScreen').classList.remove('open'); }
@@ -344,7 +396,7 @@ function cutHide() {
   if (!state.hands.includes('flake')) { toast('Met je handen krijg je de taaie huid niet los. Je hebt iets scherps nodig.', 5); return; }
   const h = freeHand();
   if (h < 0) { handsFull(); return; }
-  k.hide = 0; state.hands[h] = 'hide'; renderHands(); sound.eat(); killLook(k);
+  k.hide -= 1; state.hands[h] = 'hide'; renderHands(); sound.eat(); killLook(k);
   toast('Je snijdt langs de buik en de poten en trekt een groot stuk huid los. Zwaar, stug en warm.', 5);
   discover('cut'); discover('hide');
 }
@@ -548,6 +600,8 @@ function openRadial(target) {
     if (EDIBLE.has(it)) opts.push({ icon: ICON.mouth, q: !state.known.has(it), fn: () => { state.hands[i] = null; renderHands(); eat(it); } });
     if ((it === 'bone' && other === 'stone') || (it === 'stone' && other === 'bone')) opts.push({ icon: ICON.crack, fn: () => act('Interact', crack) });
     if (it === 'stone' && other === 'stone') opts.push({ icon: ICON.knap, fn: () => act('Interact', () => knap(i)) });
+    if (it === 'hide' && other === 'flake' && !state.bag) opts.push({ icon: ICON.bag, fn: () => act('Interact', () => makeBag(i)) });
+    if (it === 'hide' && other === 'flake' && !state.cloak) opts.push({ icon: ICON.cloak, fn: () => act('Interact', () => wearHide(i)) });
     opts.push({ icon: ICON.drop, fn: () => { state.hands[i] = null; renderHands(); dropAt(it); } });
   } else if (target.kind === 'turn') {
     opts.push({ icon: ICON.eye, fn: () => lookAt(target) });
@@ -756,7 +810,7 @@ function event(name, k) {
     murmur(loot ? 'Kleine Ibo rent je tegemoet: hij heeft gezien dat je iets bij je hebt!' : 'Kleine Ibo rent je tegemoet. Je bent weer bij de groep.', 4);
   }
 }
-const predGame = { player, state, sound, toast, murmur, discover, bite, event, hyenas, night: 0, things, throws, group, leopard, sabres, carcass: CARCASS, drop: dropAtPos, removeThing, giveHand, hurt, kemHelps, shield: false, quake: (v) => { shake = Math.max(shake, v); } };
+const predGame = { player, state, sound, toast, murmur, carries, discover, bite, event, hyenas, night: 0, things, throws, group, leopard, sabres, carcass: CARCASS, drop: dropAtPos, removeThing, giveHand, hurt, kemHelps, shield: false, quake: (v) => { shake = Math.max(shake, v); } };
 
 // ---------- wat kun je aantikken? ----------
 const LOOK_TARGETS = [{ look: 'carcass', x: CARCASS.x, z: CARCASS.z }, { look: 'tree', x: HOME.x, z: HOME.z }];
@@ -1153,7 +1207,7 @@ function update(dt) {
   else { stillT += dt; if (stillT > 3.5) setSense(true); }
 
   const sick = state.sick > 0;
-  player.update(dt, dir, { speed: sick ? 0.6 : state.food < 15 ? 0.8 : 1, sick });
+  player.update(dt, dir, { speed: sick ? 0.6 : state.food < 15 ? 0.8 : 1, sick }); cloakTick();
   // de dag
   if (state.started) dayP = (dayP + dt / DAY_LEN) % 1;
   if (state.sleeping > 0) { state.sleeping -= dt; if (state.sleeping <= 0) wake(); }
@@ -1256,7 +1310,7 @@ function update(dt) {
     } else state.starve = 0;
   }
   if (state.started && state.collapsed <= 0 && state.sleeping <= 0) {
-    state.food = Math.max(0, state.food - dt * 0.18);
+    state.food = Math.max(0, state.food - dt * 0.18 * (predGame.night > 0.6 && !state.cloak ? 1.5 : 1));   // kou vreet energie
     if (sick) { state.sick -= dt; state.health -= dt * 0.9; if (state.sick <= 0) toast('De pijn is vanzelf gezakt. Dat duurde lang…'); }
     else if (state.food < 12) state.health -= dt * 0.5;
     else if (state.food > 40) state.health = Math.min(100, state.health + dt * 0.6);
@@ -1358,7 +1412,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { begin, bestTarget, mission, MISSIONS, missionCard, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hintCur && hintCur.id, [...hintSeen]], actionContext,
+window.__game = { begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, missionCard, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hintCur && hintCur.id, [...hintSeen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, flick, setSneak, still: () => stillT, FLICK,
   setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setZoom, zoom: () => camDist,
   lookFrom: (pos, look) => { camOverride = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },
