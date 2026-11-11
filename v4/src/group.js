@@ -77,12 +77,12 @@ export class Group {
       switch (m.state) {
         case 'idle':
           if (sleepy || m.sick > 0) { m.state = 'toSpot'; break; }
-          if (d < 6) face = p;
-          if (m.t < 0 && m.busy <= 0 && d > 3) { const a = Math.random() * 6.28, r = 2.5 + Math.random() * 4; m.goal = { x: HOME.x + Math.cos(a) * r, z: HOME.z + Math.sin(a) * r }; m.state = 'wander'; m.t = 9; }
+          if (d < 6 || (m.calling && d < 30)) face = p;
+          if (m.t < 0 && m.busy <= 0 && d > 3 && !m.calling) { const a = Math.random() * 6.28, r = 2.5 + Math.random() * 4; m.goal = { x: HOME.x + Math.cos(a) * r, z: HOME.z + Math.sin(a) * r }; m.state = 'wander'; m.t = 9; }
           break;
         case 'wander': {
           const gd = dist(m, m.goal);
-          if (gd < 0.5 || m.t < 0 || sleepy) { m.state = 'idle'; m.t = 4 + Math.random() * 9; m.fuss = Math.random() < 0.4; } else { tx = (m.goal.x - m.x) / gd; tz = (m.goal.z - m.z) / gd; spd = 1.1 * m.k; }
+          if (gd < 0.5 || m.t < 0 || sleepy || m.calling) { m.state = 'idle'; m.t = 4 + Math.random() * 9; m.fuss = Math.random() < 0.4; } else { tx = (m.goal.x - m.x) / gd; tz = (m.goal.z - m.z) / gd; spd = 1.1 * m.k; }
           break;
         }
         case 'greet':
@@ -108,12 +108,14 @@ export class Group {
       else if (face) m.yaw = turn(m.yaw, Math.atan2(face.x - m.x, face.z - m.z), dt * 3);
       m.x += Math.sin(m.yaw) * m.speed * dt; m.z += Math.cos(m.yaw) * m.speed * dt;
       m.g.position.set(m.x, height(m.x, m.z), m.z); m.g.rotation.y = m.yaw;
+      m.g.rotation.z = m.calling === 'shiver' && m.speed < 0.2 ? Math.sin(performance.now() * 0.046) * 0.018 : 0;
       const R = m.rig;
       if (m.state === 'rest' && sleepy) R.freeze('Death01', 0.97);
       else if (m.state === 'rest') R.play('Crouch_Idle_Loop', { fade: 0.5 });
       else if (m.speed > 2) R.play('Jog_Fwd_Loop', { fade: 0.25, speed: m.speed / (3 * m.k) });
       else if (m.speed > 0.2) R.play('Walk_Loop', { fade: 0.3, speed: m.speed / (1.25 * m.k) });
       else if (m.busy > 0) R.play('Interact', { fade: 0.25 });
+      else if (m.calling === 'shiver') R.play('Crouch_Idle_Loop', { fade: 0.6 });   // ineengedoken van de kou
       else if (game.state.group < 15) R.play('Crouch_Idle_Loop', { fade: 0.6 });   // hongerig en slap
       else R.play(m.fuss ? 'Interact' : 'Idle_Loop', { fade: 0.5, speed: m.fuss ? 0.5 : 1 });
       R.update(dt);

@@ -45,13 +45,13 @@ export class Sound {
   }
 
   // korte toon met een omhullende
-  tone(freq, dur, vol, type = 'sine', slide = 0, when = 0) {
+  tone(freq, dur, vol, type = 'sine', slide = 0, when = 0, dest = this.out) {
     const c = this.ctx, t = c.currentTime + when;
     const o = c.createOscillator(), g = c.createGain();
     o.type = type; o.frequency.setValueAtTime(freq, t);
     if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), t + dur);
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + Math.min(0.02, dur / 3)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(this.out); o.start(t); o.stop(t + dur + 0.05);
+    o.connect(g).connect(dest); o.start(t); o.stop(t + dur + 0.05);
   }
   // korte ruisstoot
   burst(freq, dur, vol, type = 'bandpass', when = 0, q = 1) {
@@ -174,5 +174,15 @@ export class Sound {
   // je eigen lijf en je groep laten van zich horen
   belly() { if (!this.ctx) return; this.tone(74, 0.45, 0.1, 'sawtooth', -22); this.tone(52, 0.7, 0.09, 'sawtooth', 26, 0.4); this.burst(160, 0.5, 0.08, 'lowpass', 0.3, 2); }
   cry(v = 1) { if (!this.ctx) return; for (let i = 0; i < 3; i++) { this.tone(640, 0.45, 0.035 * v, 'triangle', -190, i * 0.6); this.tone(960, 0.4, 0.015 * v, 'sine', -280, i * 0.6); } }
+  // iemand van de groep roept je, uit de richting waar die staat (pan: -1 links .. 1 rechts)
+  call(pan = 0, child = false, v = 1) {
+    if (!this.ctx) return;
+    let d = this.out;
+    if (this.ctx.createStereoPanner) { d = this.ctx.createStereoPanner(); d.pan.value = Math.max(-1, Math.min(1, pan)); d.connect(this.out); }
+    if (child) { this.tone(720, 0.2, 0.07 * v, 'triangle', 260, 0, d); this.tone(900, 0.2, 0.07 * v, 'triangle', 220, 0.26, d); this.tone(760, 0.34, 0.06 * v, 'triangle', -230, 0.52, d); }
+    else { this.tone(250, 0.34, 0.1 * v, 'sawtooth', 170, 0, d); this.tone(420, 0.5, 0.09 * v, 'sawtooth', -140, 0.34, d); this.tone(500, 0.3, 0.03 * v, 'sine', -120, 0.36, d); }
+  }
+  // een missie begint: twee doffe slagen op een holle stam en een open klank
+  mission() { if (!this.ctx) return; this.burst(110, 0.3, 0.5, 'lowpass', 0, 2); this.burst(110, 0.3, 0.4, 'lowpass', 0.22, 2); this.tone(196, 1.4, 0.07, 'triangle', 0, 0.44); this.tone(293.7, 1.4, 0.05, 'triangle', 0, 0.44); }
   sense(on) { if (this.ctx && on) this.tone(110, 0.6, 0.05, 'sine', 30); }
 }
