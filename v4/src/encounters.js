@@ -112,7 +112,7 @@ export class Encounters {
       }
       if (e.kind === 'strangers' && !e.friendly && dist(p, e) < 34 && dist(p, e) > 18) {
         e.kemSaw = true; k.busy = 3;
-        game.toast('Kem trekt aan je arm en wijst: daar zitten vreemden bij het water.', 5);
+        game.murmur('Kem trekt aan je arm en wijst: daar zitten vreemden bij het water.', 5);
       }
     }
   }
@@ -133,7 +133,7 @@ export class Encounters {
       if (e.meat <= 0) { e.gone += dt; if (e.gone > 45) e.done = true; }
       return;
     }
-    if (!e.seen && d < 32) { e.seen = true; game.toast('Daar loopt een gazelle helemaal alleen. Ze trekt met haar achterpoot…', 5); }
+    if (!e.seen && d < 32) { e.seen = true; game.murmur('Daar loopt een gazelle helemaal alleen. Ze trekt met haar achterpoot…', 5); }
     const scared = d < (game.player.sneaking ? 7 : 16) && !game.player.hiddenFrom(m.x, m.z);
     let spd = 0;
     if (scared) {

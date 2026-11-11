@@ -103,7 +103,7 @@ export class Giant {
       const a = this.yaw + 2.2 + i * 0.9, t = game.drop('berry', this.x + Math.sin(a) * 3.2, this.z + Math.cos(a) * 3.2, true);
       if (t) this.fruit.push(t);
     }
-    if (dist(this, game.player.pos) < 40) { game.toast('De reus heeft de boom leeggeschud. Waar hij stond, liggen vruchten in het stof.', 5); game.discover('fruit'); }
+    if (dist(this, game.player.pos) < 40) { game.murmur('De reus heeft de boom leeggeschud. Waar hij stond, liggen vruchten in het stof.', 5); game.discover('fruit'); }
   }
 
   // ---------- elke stap ----------
@@ -114,14 +114,14 @@ export class Giant {
     if (this.checkT < 0) {
       this.checkT = 0.5;
       if (!game.state.found.has('track') && this.spots.some((s) => s && dist(s, p) < 2.5)) {
-        game.toast('Een afdruk zo groot als een nest, en nog een, en nog een. De randen zijn scherp: dit spoor is vers.', 6); game.discover('track');
+        game.murmur('Een afdruk zo groot als een nest, en nog een, en nog een. De randen zijn scherp: dit spoor is vers.', 6); game.discover('track');
       }
     }
     if (this.dead) return this.updateDead(dt, game, t, d);
     const awake = game.state.collapsed <= 0 && game.state.sleeping <= 0;
     const sneak = game.player.sneaking, hid = game.player.hiddenFrom(this.x, this.z), near = hid ? 4 : sneak ? 8 : 20, close = hid ? 3 : sneak ? 4.5 : 11;
     this.calm = Math.max(0, this.calm - dt);
-    if (d < 48 && !this.seen) { this.seen = true; game.toast('Daar staat hij. Een stier zo hoog als een boom, met slagtanden langer dan jij. De grond trilt als hij loopt.', 7); game.sound.rumble(1); }
+    if (d < 48 && !this.seen) { this.seen = true; game.murmur('Daar staat hij. Een stier zo hoog als een boom, met slagtanden langer dan jij. De grond trilt als hij loopt.', 7); game.sound.rumble(1); }
     // bij de reus durven de hyena's niet te komen
     game.shield = d < 34;
     for (const h of game.hyenas.list) {
@@ -129,7 +129,7 @@ export class Giant {
     }
     if (game.shield && game.hyenas.list.some((h) => dist(h, p) < 45 && h.state !== 'rest')) {
       this.shieldT += dt;
-      if (this.shieldT > 8 && !game.state.found.has('shield')) { game.toast('De hyena\'s blijven op afstand. Zo dicht bij de reus durven ze niet te komen.', 6); game.discover('shield'); }
+      if (this.shieldT > 8 && !game.state.found.has('shield')) { game.murmur('De hyena\'s blijven op afstand. Zo dicht bij de reus durven ze niet te komen.', 6); game.discover('shield'); }
     }
     let anim = null;
     switch (this.state) {

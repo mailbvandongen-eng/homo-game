@@ -85,48 +85,86 @@ function discover(id) {
   if (state.found.has(id)) return;
   state.found.add(id);
   const d = DISCOVERIES.find((x) => x.id === id);
-  setTimeout(() => { toast('Ontdekt: ' + d.text, 5); sound.discover(); }, 1400);
+  setTimeout(() => sound.discover(), 1400);
   $('journalCount').textContent = state.found.size;
-  if (state.found.size === DISCOVERIES.length) setTimeout(() => toast('Je hebt alles in dit proefstuk ontdekt. Zo begon het: kijken, proberen en onthouden.', 8), 7500);
+  if (state.found.size === DISCOVERIES.length) setTimeout(() => murmur('Je hebt alles in dit proefstuk ontdekt. Zo begon het: kijken, proberen en onthouden.', 8), 7500);
 }
 
-// ---------- opdrachten ----------
-// Rondlopen is vrij, maar verder kom je door te doen wat de groep nodig heeft. Eén opdracht tegelijk; elke opdracht leert één ding.
-// Wat je al gedaan hebt telt meteen. Zijn ze allemaal klaar, dan kan de groep verder trekken.
-const QUESTS = [
-  { id: 'eat', title: 'Breng eten naar de slaapboom', intro: 'Ibo huilt van de honger. Zoek iets eetbaars en breng het naar de slaapboom.', done: () => state.given.size > 0 },
-  { id: 'sleep', title: 'Slaap bij de groep', intro: 'Alleen in het donker overleef je niet. Zorg dat je bij de slaapboom bent als de zon ondergaat.', done: () => state.found.has('sleep') },
-  { id: 'marrow', title: 'Kraak een bot open', intro: 'Tor tikt met een kei op een oud bot en kijkt je aan. Wat zou erin zitten?', done: () => state.found.has('marrow') },
-  { id: 'flake', title: 'Maak iets scherps', intro: 'Met je tanden krijg je geen huid open. Kem slaat twee keien tegen elkaar. Probeer het ook.', done: () => state.found.has('flake') },
-  { id: 'meat', title: 'Breng vlees naar de groep', intro: 'Bessen vullen niet genoeg. Waar gieren cirkelen ligt vlees. Snijd het los en breng het thuis.', done: () => state.given.has('meat') },
-  { id: 'hyena', title: 'Verjaag een hyena', intro: 'De hyena\'s komen elke nacht dichterbij. Laat zien dat je raak kunt gooien.', done: () => state.found.has('hyena') },
-  { id: 'honey', title: 'Breng honing naar de groep', intro: 'Tor wijst naar een holle boom waar het zoemt. Maar hoe kom je erbij zonder gestoken te worden?', done: () => state.given.has('honey') },
-  { id: 'hide', title: 'Breng een huid naar de slaapboom', intro: 'De nachten worden kouder en Ibo rilt. Een dier heeft meer dan alleen vlees.', done: () => state.given.has('hide') },
+// ---------- missies ----------
+// Eten zoeken en delen moet altijd; dat is geen missie. Een missie heeft een doel: iets maken of iets kunnen.
+// Je kiest er zelf één, ziet de stappen, en als ze alle vier gelukt zijn trekt de groep verder.
+const has = (it) => state.hands.includes(it);
+const MISSIONS = [
+  { id: 'flake', title: 'Maak een snijsteen', why: 'Met tanden en nagels krijg je geen huid open. Een scherpe rand wel.', done: () => !!state.knapped, steps: [
+    { t: 'Pak twee keien: in elke hand één', ok: () => state.hands[0] === 'stone' && state.hands[1] === 'stone' },
+    { t: 'Tik op een hand en sla de keien tegen elkaar tot er een scherf afspringt', ok: () => !!state.knapped }] },
+  { id: 'marrow', title: 'Kraak een bot', why: 'In botten zit merg: vet waar je sterk van wordt.', done: () => state.found.has('marrow'), steps: [
+    { t: 'Zoek een bot: waar gieren cirkelen ligt een karkas', ok: () => has('bone') },
+    { t: 'Neem in je andere hand een kei', ok: () => has('bone') && has('stone') },
+    { t: 'Tik op het bot in je hand en sla het open', ok: () => state.found.has('marrow') }] },
+  { id: 'hyena', title: 'Verjaag een hyena', why: 'Elke avond komen ze dichter bij de slaapboom.', done: () => state.found.has('hyena'), steps: [
+    { t: 'Pak een kei', ok: () => has('stone') },
+    { t: 'Wacht op de hyena\'s: ze komen in de schemering', ok: () => has('stone') && hyenas.list.some((h) => Math.hypot(h.x - player.pos.x, h.z - player.pos.z) < 30) },
+    { t: 'Houd de vuist vast, mik en laat los', ok: () => state.found.has('hyena') }] },
+  { id: 'hide', title: 'Een slaapvel voor Ibo', why: 'De nachten worden koud en Ibo rilt.', needs: 'flake', done: () => state.given.has('hide'), steps: [
+    { t: 'Neem een snijsteen mee', ok: () => has('flake') || has('hide') },
+    { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', ok: () => has('hide') || (has('flake') && sabres.kill && Math.hypot(sabres.kill.x - player.pos.x, sabres.kill.z - player.pos.z) < 14) },
+    { t: 'Wacht tot de roofdieren weg zijn en snijd met de vuist: eerst vlees, dan de huid', ok: () => has('hide') },
+    { t: 'Breng de huid naar de slaapboom', ok: () => state.given.has('hide') }] },
 ];
-const quest = { i: 0, wait: 3, said: true, over: false };
+const mission = { cur: null, done: new Set(), told: false, ask: 0, over: false };
+const stepOf = (m) => { let n = 0; while (n < m.steps.length - 1 && m.steps[n].ok()) n++; return n; };
+function missionCard(head) {
+  const left = MISSIONS.filter((m) => !mission.done.has(m.id));
+  const tiles = MISSIONS.map((m) => {
+    const done = mission.done.has(m.id), locked = !done && m.needs && !mission.done.has(m.needs), now = mission.cur === m;
+    const need = locked ? MISSIONS.find((x) => x.id === m.needs).title.toLowerCase() : '';
+    return `<div class="mis${done ? ' done' : ''}${locked ? ' locked' : ''}${now ? ' now' : ''}" data-m="${done || locked ? '' : m.id}"><b>${done ? '✓ ' : ''}${m.title}</b><span>${locked ? 'Eerst: ' + need + '.' : m.why}</span>
+      ${done || locked ? '' : '<ol>' + m.steps.map((x) => `<li>${x.t}</li>`).join('') + '</ol>'}${now ? '<i>Hier ben je mee bezig</i>' : ''}</div>`;
+  }).join('');
+  showCard(`<div class="mishead"><div><div class="eyebrow">${head || 'Missies'}</div><h2>${mission.cur ? 'Jouw missies' : 'Kies een missie'}</h2></div><button class="btn ghost" id="misClose">${mission.cur ? 'Verder spelen' : 'Later kiezen'}</button></div>
+    <p>Eten zoeken en delen moet elke dag. Missies brengen de groep verder: nog ${left.length} te gaan, dan trekt ze naar het water.</p>
+    <div class="missions">${tiles}</div>`);
+  $('card').classList.add('wide'); $('card').onpointerdown = (e) => e.stopPropagation();
+  $('misClose').onclick = closeCard;
+  $('card').querySelectorAll('.mis').forEach((el) => { el.onclick = () => { const m = MISSIONS.find((x) => x.id === el.dataset.m); if (!m) return; mission.cur = m; mission.shown = -1; closeCard(); sound.good(); toast('Missie: ' + m.title + '. ' + m.why, 6); }; });
+}
+$('quest').addEventListener('pointerdown', (e) => e.stopPropagation());
+$('quest').addEventListener('click', () => { if (mission.told && !mission.over) missionCard(); });
 function questTick(dt) {
-  if (!state.started || quest.over) return;
-  const q = QUESTS[quest.i];
-  if (!q) {
-    quest.wait -= dt; if (quest.wait > 0 || state.sleeping > 0 || state.collapsed > 0) return;
-    quest.over = true; $('questN').textContent = '✓'; $('questT').textContent = 'De groep is klaar om verder te trekken'; sound.discover();
-    showCard(`<div class="eyebrow">De savanne</div><h2>De groep trekt verder</h2><p>Je hebt geleerd wat hier te leren viel: eten vinden en delen, botten kraken, een scherpe rand slaan, vlees en huid snijden, gooien, wachten op het goede moment.</p>
-      <p>De struiken raken leeg en het gras verdort. Tor wijst naar het noorden, waar het water blijft staan. Daar wacht iets nieuws.</p><p class="fine">Het volgende gebied is nog in de maak. Je kunt hier vrij blijven rondlopen.</p>`);
-    return;
-  }
-  if (quest.wait > 0) { quest.wait -= dt; return; }
-  if (!quest.said) {
-    quest.said = true; toast(q.intro, 7);
+  if (!state.started || mission.over) return;
+  if (window.__sure) return;   // de testbot speelt zonder kaarten
+  const calm = danger < 0.3 && state.sleeping <= 0 && state.collapsed <= 0 && !aim && !$('cardScreen').classList.contains('open');
+  // wat gelukt is telt, ook als je er niet voor gekozen had
+  for (const m of MISSIONS) if (!mission.done.has(m.id) && m.done()) {
+    mission.done.add(m.id); sound.discover(); toast('Missie volbracht: ' + m.title.toLowerCase() + '!', 6);
+    if (mission.cur === m || !mission.cur) { mission.cur = null; mission.ask = 6; }
     const el = $('quest'); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
   }
-  $('quest').classList.add('on'); $('questN').textContent = `${quest.i + 1}/${QUESTS.length}`; $('questT').textContent = q.title;
-  if (q.done()) {
-    // wat daarna ook al klaar is, slaan we stil over
-    let n = quest.i + 1; while (QUESTS[n] && QUESTS[n].done()) n++;
-    quest.i = n; quest.wait = 7; quest.said = false; sound.good();
-    $('questN').textContent = '✓'; setTimeout(() => toast('Gelukt: ' + q.title.toLowerCase() + '.', 4), 2600);
+  if (mission.ask > 0) mission.ask -= dt;
+  if (!mission.told) { if (moved > 5 && playT > 8 && calm) { mission.told = true; missionCard('De groep heeft je nodig'); } }
+  else if (mission.ask > 0 && mission.ask - dt <= 0 || mission.ask <= 0 && mission.pending) {
+    if (!calm) mission.pending = true;
+    else {
+      mission.pending = false;
+      if (mission.done.size < MISSIONS.length) missionCard('Gelukt! Wat nu?');
+      else {
+        mission.over = true; $('questN').textContent = '✓ De groep trekt verder'; $('questT').textContent = '';
+        showCard(`<div class="eyebrow">De savanne</div><h2>De groep trekt verder</h2><p>Je kunt nu wat de groep hier nodig had: een scherpe rand slaan, merg uit een bot halen, een hyena op afstand houden en een huid snijden.</p>
+          <p>De struiken raken leeg en het gras verdort. Tor wijst naar het noorden, waar het water blijft staan. Daar wacht iets nieuws.</p><p class="fine">Het volgende gebied is nog in de maak. Je kunt hier vrij blijven rondlopen.</p>`);
+        return;
+      }
+    }
   }
+  $('quest').classList.toggle('on', mission.told);
+  const m = mission.cur;
+  if (!m) { $('questN').textContent = 'Kies een missie ›'; $('questT').textContent = ''; return; }
+  const n = stepOf(m);
+  $('questN').textContent = m.title; $('questT').textContent = `${n + 1}/${m.steps.length}  ${m.steps[n].t}`;
+  if (n !== mission.shown) { if (mission.shown >= 0) sound.good(); mission.shown = n; const el = $('quest'); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
 }
+// terloopse opmerkingen leiden af; ze komen alleen nog als ze bij je missie horen
+function murmur(text, sec, tag) { if (tag && mission.cur && mission.cur.id === tag) toast(text, sec); }
 
 // ---------- knoppen met icoontjes ----------
 $('doBtn').innerHTML = ICON.strike;
@@ -168,7 +206,7 @@ for (const i of [0, 1]) $('hand' + i).onclick = () => { if (state.hands[i]) { di
 // ---------- bekijken ----------
 function closeCard() { $('cardScreen').classList.remove('open'); }
 $('cardScreen').addEventListener('pointerdown', closeCard);
-function showCard(html) { $('card').innerHTML = html; $('cardScreen').classList.add('open'); }
+function showCard(html) { $('card').classList.remove('wide'); $('card').onpointerdown = null; $('card').innerHTML = html; $('cardScreen').classList.add('open'); }
 function lookAt(target) {
   if (target.find && !state.finds.has(target.find)) {
     state.finds.add(target.find); sound.discover();
@@ -192,8 +230,7 @@ function lookAt(target) {
     <p class="${known ? 'know' : 'q'}">${known ? def.known : def.unknown}</p>`);
 }
 $('journalBtn').onclick = () => {
-  showCard(`<div class="eyebrow">Wat de groep nodig heeft</div><h2>Opdrachten</h2><ul>${QUESTS.map((q, i) => i < quest.i ? `<li class="done">${q.title}</li>` : i === quest.i ? `<li class="now">${q.title}</li>` : '<li class="no">…</li>').join('')}</ul>
-    <div class="eyebrow" style="margin-top:14px">Wat je weet</div><h2>Ontdekkingen</h2><ul>${DISCOVERIES.map((d) => state.found.has(d.id) ? `<li>${d.text}</li>` : '<li class="no">… nog niet ontdekt</li>').join('')}</ul>
+  showCard(`<div class="eyebrow">Wat je weet</div><h2>Ontdekkingen</h2><ul>${DISCOVERIES.map((d) => state.found.has(d.id) ? `<li>${d.text}</li>` : '<li class="no">… nog niet ontdekt</li>').join('')}</ul>
     <h3>Vondsten</h3><ul>${Object.entries(FINDS).map(([k, f]) => state.finds.has(k) ? `<li><b>${f.name}</b>: ${f.text}</li>` : '<li class="no">… ergens verstopt</li>').join('')}</ul>
     <p class="fine" style="margin-top:12px">${$('credits').innerHTML}</p>`);
 };
@@ -267,7 +304,7 @@ function knap(i) {
   }
   sound.knap();
   if (r.hits < R.hits) { toast(r.hits === 1 ? 'Tik! Een splinter, te klein om vast te houden. Nog eens.' : 'Tak! Er loopt een barst langs de rand. Bijna…', 3); again(); return; }
-  state.hands[i] = 'flake'; renderHands(); state.rockKnown.add(r.type);
+  state.hands[i] = 'flake'; renderHands(); state.rockKnown.add(r.type); state.knapped = true;
   toast(state.found.has('flake') ? 'Tik! Weer een scherpe afslag.' : 'Tik! Er springt een scherpe afslag van de steen af.');
   state.known.add('flake'); discover('flake');
 }
@@ -441,7 +478,7 @@ function kemHelps(t, k) {
   else return;
   m.busy = 2;
   const what = m.carry === 'meat' ? 'snijdt ook een lap vlees los' : 'plukt ook een handvol';
-  setTimeout(() => toast(`Kem ${what}. Hij draagt het naar de boom.`, 4), 1800);
+  setTimeout(() => murmur(`Kem ${what}. Hij draagt het naar de boom.`, 4), 1800);
 }
 // een platte steen omdraaien: hij kantelt over zijn rand en valt ondersteboven naast zijn kuil
 const turning = [];
@@ -693,21 +730,21 @@ function quickThrow(m) { if (aimStart('tap', m)) aimRelease(); }
 function event(name, k) {
   if (name === 'kemgift') {
     state.group = Math.min(100, state.group + (k === 'meat' ? 30 : 8)); state.brought[k] = (state.brought[k] || 0) + 1;
-    toast(k === 'meat' ? 'Kem legt zijn lap vlees bij de boom. Ibo zit er al naast.' : 'Kem deelt zijn bessen uit bij de boom.', 4); sound.good();
+    murmur(k === 'meat' ? 'Kem legt zijn lap vlees bij de boom. Ibo zit er al naast.' : 'Kem deelt zijn bessen uit bij de boom.', 4); sound.good();
     return;
   }
   const far = k ? Math.hypot(k.x - player.pos.x, k.z - player.pos.z) : 0;
-  if (name === 'hunt') { sound.sting(); toast(far < 60 ? 'De zebra\'s stuiven uit elkaar. Iets jaagt op ze!' : 'In de verte stuiven zebra\'s weg in een stofwolk. Iets jaagt daar…', 5); }
+  if (name === 'hunt') { sound.sting(); murmur(far < 60 ? 'De zebra\'s stuiven uit elkaar. Iets jaagt op ze!' : 'In de verte stuiven zebra\'s weg in een stofwolk. Iets jaagt daar…', 5, 'hide'); }
   if (name === 'kill') {
     vultures.center.set(k.x, height(k.x, k.z), k.z); LOOK_TARGETS.push({ look: 'kill', x: k.x, z: k.z, kill: k }); killLook(k);
-    setTimeout(() => toast('De gieren draaien al boven een nieuwe plek. Daar ligt vers vlees. Maar van wie is het nu nog?', 6), 9000);
+    setTimeout(() => murmur('De gieren draaien al boven een nieuwe plek. Daar ligt vers vlees. Maar van wie is het nu nog?', 6, 'hide'), 9000);
   }
   if (name === 'open') {
     for (const [dx, dz] of [[1.6, 0.9], [-1.2, 1.5]]) dropAtPos('bone', k.x + dx, k.z + dz, true);
-    if (far < 90) toast('De sabeltandkatten zijn verzadigd en sjokken weg. Nu is het vlees van wie het eerst komt.', 6);
+    if (far < 90) murmur('De sabeltandkatten zijn verzadigd en sjokken weg. Nu is het vlees van wie het eerst komt.', 6, 'hide');
   }
-  if (name === 'hyenas') { hyenas.home = k; sound.whoop(); if (far < 70) toast('Gegiechel in de verte: de hyena\'s hebben het vlees geroken.', 5); }
-  if (name === 'gone' && far < 40) toast('De hyena\'s hebben het laatste vlees verslonden.', 4);
+  if (name === 'hyenas') { hyenas.home = k; sound.whoop(); if (far < 70) murmur('Gegiechel in de verte: de hyena\'s hebben het vlees geroken.', 5, 'hide'); }
+  if (name === 'gone' && far < 40) murmur('De hyena\'s hebben het laatste vlees verslonden.', 4, 'hide');
   if (name === 'cleared') {
     hyenas.home = CARCASS; vultures.center.set(CARCASS.x, height(CARCASS.x, CARCASS.z), CARCASS.z);
     const i = LOOK_TARGETS.findIndex((t) => t.look === 'kill'); if (i >= 0) LOOK_TARGETS.splice(i, 1);
@@ -716,10 +753,10 @@ function event(name, k) {
   if (name === 'home') {
     sound.home();
     const loot = state.hands.some((h) => GIVE.includes(h) && h !== 'leaf');
-    toast(loot ? 'Kleine Ibo rent je tegemoet: hij heeft gezien dat je iets bij je hebt!' : 'Kleine Ibo rent je tegemoet. Je bent weer bij de groep.', 4);
+    murmur(loot ? 'Kleine Ibo rent je tegemoet: hij heeft gezien dat je iets bij je hebt!' : 'Kleine Ibo rent je tegemoet. Je bent weer bij de groep.', 4);
   }
 }
-const predGame = { player, state, sound, toast, discover, bite, event, hyenas, night: 0, things, throws, group, leopard, sabres, carcass: CARCASS, drop: dropAtPos, removeThing, giveHand, hurt, kemHelps, shield: false, quake: (v) => { shake = Math.max(shake, v); } };
+const predGame = { player, state, sound, toast, murmur, discover, bite, event, hyenas, night: 0, things, throws, group, leopard, sabres, carcass: CARCASS, drop: dropAtPos, removeThing, giveHand, hurt, kemHelps, shield: false, quake: (v) => { shake = Math.max(shake, v); } };
 
 // ---------- wat kun je aantikken? ----------
 const LOOK_TARGETS = [{ look: 'carcass', x: CARCASS.x, z: CARCASS.z }, { look: 'tree', x: HOME.x, z: HOME.z }];
@@ -981,16 +1018,11 @@ const did = {}; let homeShown = false, moved = 0, playT = 0, hintCur = null, hin
 const hintLast = new THREE.Vector3();
 const nearTurn = (r) => things.some((t) => t.kind === 'turn' && !t.gone && Math.hypot(t.x - player.pos.x, t.z - player.pos.z) < r);
 const HINTS = [
-  { id: 'move', when: () => true, done: () => moved > 5, text: coarse ? 'Schuif met je linkerduim om te lopen. Veeg rechts om rond te kijken.' : 'Loop met WASD of de pijltjes. Sleep om rond te kijken.' },
-  { id: 'tap', when: () => moved > 5, done: () => did.tap, text: (coarse ? 'Tik' : 'Klik') + ' op iets om te zien wat het is.' },
+  { id: 'move', when: () => playT < 40, done: () => moved > 5, text: coarse ? 'Schuif met je linkerduim om te lopen. Veeg rechts om rond te kijken.' : 'Loop met WASD of de pijltjes. Sleep om rond te kijken.' },
   { id: 'cut', now: true, when: () => !!carcassNear() && state.hands.includes('flake'), done: () => state.hands.includes('meat') || state.hands.includes('hide'), text: coarse ? 'De vuist: snijd met je afslag.' : 'E: snijd met je afslag.' },
   { id: 'honey', now: true, when: () => !!hiveNear(3.6), done: () => state.hands.includes('honey'), text: coarse ? 'De vuist: graai naar de honing.' : 'E: graai naar de honing.' },
   { id: 'turn', now: true, when: () => nearTurn(5), done: () => did.turn, text: (coarse ? 'Dubbeltik' : 'Dubbelklik') + ' op de platte steen om hem om te draaien.' },
-  { id: 'sneak', now: true, when: () => hyenas.list.some((h) => Math.hypot(h.x - player.pos.x, h.z - player.pos.z) < 35), done: () => player.sneaking, text: coarse ? 'Veeg rechts kort omlaag om te bukken. Gebukt zien ze je minder snel.' : 'C om te bukken. Gebukt zien ze je minder snel.' },
-  { id: 'home', now: true, when: () => homeShown, done: () => !homeShown, text: 'De pijl wijst naar de slaapboom.' },
-  { id: 'hand', when: () => state.hands.some(Boolean), done: () => did.hand, text: (coarse ? 'Tik' : 'Klik') + ' op je hand om te zien wat je ermee kunt.' },
-  { id: 'throw', when: () => state.hands.includes('stone') && hintSeen.has('hand'), done: () => did.throw, text: coarse ? 'Houd de vuist vast om te mikken: schuif om te richten, laat los om te gooien.' : 'Houd E vast om te mikken, scrol voor de afstand, laat los om te gooien.' },
-  { id: 'sense', when: () => playT > 45, done: () => state.sensing, text: 'Sta even stil: dan hoor, ruik en voel je meer.' },
+  { id: 'throw', now: true, when: () => state.hands.includes('stone') && hyenas.list.some((h) => Math.hypot(h.x - player.pos.x, h.z - player.pos.z) < 30), done: () => did.throw, text: coarse ? 'Houd de vuist vast om te mikken: schuif om te richten, laat los om te gooien.' : 'Houd E vast om te mikken, scrol voor de afstand, laat los om te gooien.' },
 ];
 function hintTick(dt) {
   if (!state.started || state.sleeping > 0 || state.collapsed > 0) return;
@@ -1142,7 +1174,7 @@ function update(dt) {
   for (const h of hyenas.list) {
     if (Math.hypot(h.x - HOME.x, h.z - HOME.z) < 11 && ['curious', 'windup', 'rush'].includes(h.state)) {
       h.state = 'retreat'; h.t = 6; sound.yelp();
-      if (!chased) { chased = true; toast('De groep schreeuwt en gooit stenen: de hyena\'s durven niet dichterbij.', 5); }
+      if (!chased) { chased = true; murmur('De groep schreeuwt en gooit stenen: de hyena\'s durven niet dichterbij.', 5); }
     }
   }
   // hoe spannend is het nu? Dat hoor je aan het geluid
@@ -1244,7 +1276,7 @@ function update(dt) {
   // een pijltje naar de slaapboom als je ver weg bent
   const hdx = HOME.x - player.pos.x, hdz = HOME.z - player.pos.z, hd = Math.hypot(hdx, hdz);
   bodySignals(dt, sick, hd);
-  if (player.sneaking && !coverTold && player.nearCover) { coverTold = true; toast('Gebukt achter een rots of struik ben je onzichtbaar voor wie aan de andere kant staat.', 6); }
+  if (player.sneaking && !coverTold && player.nearCover) { coverTold = true; murmur('Gebukt achter een rots of struik ben je onzichtbaar voor wie aan de andere kant staat.', 6); }
   // moet je naar huis (avond, nacht, of eten voor de groep in je handen), dan wijst een pijl aan de schermrand de weg
   const homeward = ['evening', 'night'].includes(partOfDay(dayP)) || !!handOver() || state.sensing;
   homeShown = state.started && hd > 22 && homeward && state.sleeping <= 0 && state.collapsed <= 0;
@@ -1282,10 +1314,6 @@ function update(dt) {
   // zachte tips als je even niets ontdekt
   if (state.started) {
     playTime += dt; const pt = playTime;
-    if (hintStage === 0 && pt > 45 && state.found.size === 0) { hintStage = 1; toast('Je maag knort. Er groeien struiken met bessen in de buurt. Tik erop.', 5); }
-    if (hintStage <= 1 && pt > 100 && !state.found.has('vultures') && !sabres.kill) { hintStage = 2; toast('Kijk eens om je heen: in de verte cirkelen gieren. Wat zou daar liggen?', 6); }
-    if (hintStage <= 2 && pt > 160) { hintStage = 3; toast('Sta eens een paar tellen stil. Je zintuigen gaan open: wat valt je op?', 6); }
-    if (hintStage <= 3 && pt > 240 && !state.found.has('sneak')) { hintStage = 4; toast('Gazellen zijn schichtig. Kun je dichtbij komen zonder dat ze je zien of ruiken?', 6); }
   }
 
   if (toastTimer > 0) { toastTimer -= dt; if (toastTimer <= 0) $('toast').classList.remove('on'); }
@@ -1310,7 +1338,6 @@ function frame() {
 function begin() {
   if (state.started) return;
   loading.remove(); state.started = true;
-  toast('Je groep heeft honger, en jij ook. Zoek eten en breng het voor het donker naar de slaapboom.', 7);
 }
 function firstTouch() {
   removeEventListener('pointerdown', firstTouch, true); removeEventListener('keydown', firstTouch, true);
@@ -1331,7 +1358,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { begin, bestTarget, quest, QUESTS, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hintCur && hintCur.id, [...hintSeen]], actionContext,
+window.__game = { begin, bestTarget, mission, MISSIONS, missionCard, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hintCur && hintCur.id, [...hintSeen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, flick, setSneak, still: () => stillT, FLICK,
   setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setZoom, zoom: () => camDist,
   lookFrom: (pos, look) => { camOverride = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },

@@ -69,7 +69,7 @@ export class Group {
     for (const m of this.list) {
       const d = dist(m, p) || 0.01, sx = HOME.x + m.spot[0], sz = HOME.z + m.spot[1];
       m.t -= dt; m.busy = Math.max(0, m.busy - dt);
-      if (m.sick > 0) { m.sick -= dt; if (m.sick <= 0) game.toast(`${m.name} is weer opgeknapt. Maar het duurde lang…`, 5); }
+      if (m.sick > 0) { m.sick -= dt; if (m.sick <= 0) game.murmur(`${m.name} is weer opgeknapt. Maar het duurde lang…`, 5); }
       let tx = 0, tz = 0, spd = 0, face = null;
       const sleepy = night > 0.6;
       if (m.carry && dist(m, HOME) < 11) { game.event('kemgift', m.carry); m.carry = null; }
@@ -89,8 +89,8 @@ export class Group {
           if (d < 2.4 || m.t < 0) { m.state = 'idle'; m.t = 6; } else { tx = (p.x - m.x) / d; tz = (p.z - m.z) / d; spd = 3.4 * m.k; }
           break;
         case 'follow':
-          if (night > 0.45 || m.sick > 0) { m.state = 'toSpot'; if (dist(m, HOME) > 20) game.toast('Het wordt donker. Kem loopt terug naar de slaapboom.', 4); break; }
-          if (game.danger > 0.55 && dist(m, HOME) > 15) { m.state = 'toSpot'; game.toast('Kem schrikt en rent terug naar de slaapboom!', 4); break; }
+          if (night > 0.45 || m.sick > 0) { m.state = 'toSpot'; if (dist(m, HOME) > 20) game.murmur('Het wordt donker. Kem loopt terug naar de slaapboom.', 4); break; }
+          if (game.danger > 0.55 && dist(m, HOME) > 15) { m.state = 'toSpot'; game.murmur('Kem schrikt en rent terug naar de slaapboom!', 4); break; }
           if (m.busy > 0) { face = p; break; }   // hij staat stil: hij heeft iets gezien
           if (d > 2.6) { tx = (p.x - m.x) / d; tz = (p.z - m.z) / d; spd = Math.min(6.4, 1 + (d - 2.6) * 1.6); } else face = p;
           break;
