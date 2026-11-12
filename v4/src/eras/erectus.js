@@ -1,0 +1,32 @@
+// Tijdperk 2: Homo erectus, Acheuléen. Oost-Afrika, ruwweg 1,5 miljoen jaar geleden.
+// Een andere groep, honderdduizenden jaren na die van Tor: langer, met lange benen, en met twee nieuwe dingen:
+// de vuistbijl (rondom bewerkt, niet zomaar een scherf) en vuur. Dat vuur maak je niet: je vindt het en houdt het in leven.
+// 'zeker' geeft per onderdeel aan hoe stevig het staat: vast (vondsten), aannemelijk (afgeleid) of gok (spelkeuze).
+import { berg } from '../areas/berg.js';
+
+export const erectus = {
+  id: 'erectus', ma: [1.9, 0.11], region: 'Oost-Afrika', species: 'Homo erectus', tradition: 'Acheuléen',
+  when: 'vanaf ca. 1,9 miljoen jaar geleden; vuistbijlen vanaf ca. 1,76 miljoen', where: 'Oost-Afrika, later Eurazië',
+  playable: true,
+  body: { height: 1.6, speed: 1.15 },      // langer en met langere benen: een loper (habilis: 1,35 m)
+  tech: ['axe', 'fire'],                   // wat in dit tijdperk te ontdekken valt
+  // De groep. De eerste drie hebben een vaste rol in het spel: tor = de oudste, kem = de helper die meeloopt, ibo = het kind.
+  group: [
+    { id: 'tor', name: 'Oru', k: 0.99, spot: [2.8, -1.6], grey: true },
+    { id: 'kem', name: 'Dak', k: 0.95, spot: [-2.4, 2.2], tint: 0xe8d2c0 },
+    { id: 'ibo', name: 'Mio', k: 0.6, spot: [1.0, -3.0], child: true, tint: 0xfff0e0 },
+    { id: 'sen', name: 'Sen', k: 0.9, spot: [-3.0, -1.4], tint: 0xf0dcc8, look: 'Sen kent elke struik en elke knol in de wijde omtrek. Ze kijkt lang in de vlammen.', hint: 'Zij is degene die vlees boven het vuur houdt.' },
+    { id: 'bala', name: 'Bala', k: 0.86, spot: [3.4, 2.0], tint: 0xdcc4b0, look: 'Bala is de sterkste loper van de groep. Ze ziet een gier eerder dan wie ook.', hint: 'Met meer mensen zie je meer, draag je meer en schrik je meer af.' },
+  ],
+  // Teksten uit de motor die nog de oude groep noemen, krijgen hier hun nieuwe naam.
+  words: [['Kleine Ibo', 'Kleine Mio'], ['Tor', 'Oru'], ['Kem', 'Dak'], ['Ibo', 'Mio'], ['de slaapboom', 'het kamp'], ['De slaapboom', 'Het kamp']],
+  zeker: {
+    vast: ['vuistbijlen: keien die rondom en aan twee kanten bewerkt zijn (Acheuléen, vanaf ca. 1,76 miljoen jaar, Kokiselei bij het Turkanameer)',
+      'een lang lichaam met lange benen en korte armen (de jongen van Nariokotome, ca. 1,6 miljoen jaar)',
+      'snijsporen en gekraakte botten van grote dieren', 'sabeltandkatten, hyena\'s en de reuzenolifant in hetzelfde landschap'],
+    aannemelijk: ['vuur meenemen van een natuurlijke brand en brandend houden: verkleurde aarde en verhitte stenen bij Koobi Fora en Chesowanja (ca. 1,5 miljoen jaar) wijzen erop, onomstreden is vuurgebruik pas vanaf ca. 1 miljoen jaar (Wonderwerkgrot)',
+      'weinig lichaamshaar en zweten: lang kunnen lopen in de hitte', 'op de grond slapen in plaats van in bomen', 'grotere groepen dan bij Homo habilis', 'hout hakken en bewerken met een vuistbijl (slijtsporen van hout op vuistbijlen)'],
+    gok: ['vlees braden in deze tijd (de kookhypothese)', 'een vaste stookplaats met een kring van stenen', 'vuur dat roofdieren op afstand houdt', 'namen en vaste rollen in de groep'],
+  },
+  areas: [berg],
+};

@@ -1,12 +1,13 @@
-import { AREA } from './eras/index.js';
+import { ERA, AREA } from './eras/index.js';
 import * as THREE from '../lib/three.module.js';
 import { height } from './world.js';
 import { turn } from './actors.js';
 import { Rig } from './rig.js';
+import { BODY } from './hominin.js';
 
 // De slaapboom: hier wacht je groep. Overdag scharrelen ze rond de stam, 's nachts slapen ze er.
 export const HOME = AREA.home;   // de slaapboom van dit gebied
-const WHO = [
+const WHO = ERA.group || [
   { id: 'tor', name: 'Tor', k: 0.99, spot: [2.6, 1.2], grey: true },
   { id: 'kem', name: 'Kem', k: 0.92, spot: [-2.2, 2.4], tint: 0xe8d2c0 },
   { id: 'ibo', name: 'Ibo', k: 0.6, spot: [0.9, -2.8], child: true, tint: 0xfff0e0 },
@@ -18,7 +19,7 @@ export class Group {
     this.list = []; this.away = false; this.t = 0;
     for (const w of WHO) {
       // hetzelfde model als de hoofdpersoon, maar kleiner of grijzer
-      const rig = new Rig(A, 'hominin', { scale: 1.35 / 162 * w.k });
+      const rig = new Rig(A, 'hominin', { scale: BODY.height / 162 * w.k });
       rig.model.traverse((o) => {
         if (!o.isMesh) return;
         const hair = /beard|hair|transparency/i.test(o.material.name);
@@ -42,6 +43,7 @@ export class Group {
   give(it, game) {
     const s = game.state, sick = this.sick, kem = this.list[1];
     for (const m of this.list) m.busy = 2.5;
+    if (it === 'roast') return { gain: 45, text: 'Gebraden vlees! Het is zo zacht dat zelfs Tor en Kleine Ibo het kunnen kauwen. Niemand zegt iets: iedereen eet.' };
     if (it === 'meat') return { gain: 30, text: 'Vlees! Iedereen komt erbij zitten. Kleine Ibo krijgt het eerste stuk.' };
     if (it === 'honey') return { gain: 40, text: 'Honing! Tor lacht zijn laatste tanden bloot. Iedereen likt zijn vingers af, Ibo het langst.' };
     if (it === 'hide') return { gain: 25, text: 'Tor spreidt de huid uit onder de boom en klopt erop. Vannacht ligt Ibo zacht en warm.' };

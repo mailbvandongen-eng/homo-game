@@ -236,7 +236,7 @@ export class Giant {
     if (d < 30 && !this.found) { this.found = true; game.toast('De reus ligt op zijn zij in het stof. Zoveel vlees… en nog niemand die het heeft opengemaakt.', 7); }
   }
   cut(game) {
-    if (!game.state.hands.includes('flake')) { game.toast('De huid is dikker dan je duim. Zonder scherpe afslag kom je er niet doorheen.', 5); return; }
+    if (!(game.state.hands.includes('flake') || game.state.hands.includes('axe'))) { game.toast('De huid is dikker dan je duim. Zonder scherpe afslag kom je er niet doorheen.', 5); return; }
     if (!game.giveHand('meat')) return;
     this.meat--; this.cuts++; game.sound.eat(); game.discover('cut'); game.discover('feast');
     game.toast(this.meat > 0 ? 'Je snijdt een lap vlees uit de flank. Er zit nog voor dagen aan.' : 'Je snijdt het laatste goede vlees los. De rest is voor de gieren.', 4);

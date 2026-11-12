@@ -5,7 +5,7 @@
 const near = (p, x, z, r) => Math.hypot(p.pos.x - x, p.pos.z - z) < r;
 const POOLS = [[18, 58, 6], [-34, 42, 5.5], [52, 56, 6]];
 export const water = {
-  id: 'water', name: 'Bij het water', terrain: 'lake', ma: 1.8, region: 'Oost-Afrika', playable: true,
+  id: 'water', name: 'Bij het water', terrain: 'lake', ma: 1.8, region: 'Oost-Afrika', playable: true, next: 'berg',
   intro: 'Het meer zakt. Wat achterblijft, is van wie het vindt.',
   home: { x: -6, z: 14 },
   start: [-4, 18],
@@ -40,8 +40,9 @@ export const water = {
   outro: {
     title: 'De regens blijven uit',
     text: ['Je kunt nu wat de groep hier nodig had: eten uit de grond wrikken, een vis grijpen in een poel en door het water waden zonder gegrepen te worden.',
-      'Het meer zakt verder. Aan de overkant van de vlakte stijgt rook op uit een berg. Wie daar ooit heen trekt, is groter en loopt verder dan jij.'],
-    fine: 'Hier houdt het verhaal van Homo habilis op. Homo erectus is nog in de maak. Je kunt hier vrij blijven rondlopen.',
+      'Het meer zakt verder. Aan de overkant van de vlakte stijgt rook op uit een berg.',
+      'Regens komen en gaan. Kinderen worden oud, en hun kinderen ook. Wie eindelijk onder die berg aankomt, is langer dan jij, loopt verder dan jij, en kent jouw naam niet meer. Maar hij slaat nog altijd stenen tegen elkaar.'],
+    go: 'Verder in de tijd',
   },
   // g: de spelcontext (state, has, carries, player, group, night)
   missions: (g) => {

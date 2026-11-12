@@ -103,11 +103,13 @@ Elke stap is af en speelbaar voordat de volgende begint.
 | E | **Gebied 2: bij het water** (nog *Homo habilis*), volledig speelbaar | D | **klaar**, wacht op proefspelen |
 | F | `main.js` opsplitsen in `engine/` en `systems/` | C (gaandeweg) | **eerste ronde klaar**: schermlaag, missies, seizoen, aanwijzingen, lijf en opslag staan los. Elk systeem is `initX(G)` en krijgt één gedeeld object `G` uit `main.js`. Volgt gaandeweg: invoer en camera naar `engine/`, handen en tas, gooien, gevaar naar `systems/` |
 | G | Soortcontrole: `node tools/check-eras.mjs` legt tijd en plaats van elke soort (`species.js`) tegen het gebied | C | **klaar** |
-| H | Tijdperk 2: *Homo erectus* — nieuw lichaam, vuistbijl, vuur, grotere groep | E, F | |
+| H | Tijdperk 2: *Homo erectus* — nieuw lichaam, vuistbijl, vuur, grotere groep | E, F | **eerste gebied klaar** (`eras/erectus.js`, `areas/berg.js`, `fire.js`), wacht op proefspelen. Volgt: lange tochten en een tweede gebied (uit Afrika) |
 | I | Tijdperken 3–4 | H | |
 | J | Tijdperken 5–7: een fundamenteel ander spel (zie §5) — eerst apart ontwerpen | I | |
 
 Later, los hiervan: proloog, controller, geluid bijstellen.
+
+**Tijdperk 2, onder de rokende berg** (gebouwd, `eras/erectus.js` + `areas/berg.js` + `fire.js`): na het watergebied springt het spel honderdduizenden jaren vooruit (*Verder in de tijd*). Een andere groep van vijf (Oru, Dak, Mio, Sen, Bala), een langer lichaam (1,60 m) dat sneller loopt; wat je weet gaat mee, wat je droeg niet. Vier missies, elk rond één nieuwe vaardigheid: een **vuistbijl** slaan (twee keien, zes klappen rondom; snijdt als een afslag en hakt bovendien takken van dode bomen), **vuur halen** (een tak in de smeulende stam houden waar de bliksem insloeg, en de brandende tak naar de kring van stenen dragen voordat hij op is; in het water dooft hij, in de tas kan hij niet, hyena's deinzen ervoor terug), het vuur **de nacht door houden** (elke tak is brandtijd; overdag houdt de groep het zelf aan, 's nachts niet; uit = as die nog even gloeit, daarna opnieuw halen) en **vlees braden** (vult meer dan rauw en is voor de groep meer waard). Een brandend vuur geeft licht, houdt de kou weg en houdt hyena's op ruime afstand van het kamp. Vuur maken kan niemand: dat is de historische keuze (zie `zeker` in `eras/erectus.js`: vuur bewaren is *aannemelijk*, braden en de stenen kring zijn *gok*).
 
 **Gebied 2, bij het water** (gebouwd, `areas/water.js` + `shore.js`): een meeroever in de droge tijd. Het land is kaal, struiken staan alleen nog ver weg. Nieuw voedsel: knollen onder de harde korst (alleen los te wrikken met een graafstok: een tak waar je met een afslag een punt aan schraapt) en meervallen in de poelen die het zakkende meer achterlaat (wie rechtop door de poel plonst, jaagt ze weg; gebukt kun je ze grijpen). Nieuw gevaar: krokodillen die als een boomstam drijven en toeslaan zodra je bij hen in het water staat; een kei laat ze wegzakken. Het meer is te diep om over te steken, behalve over één ondiepe drempel tussen het riet naar een zandbank. Missies: *Maak een graafstok*, *Grijp een meerval* en het noodgeval *Bitterblad voor Tor*: het blad groeit alleen nog op de zandbank, wees terug voor het donker. De zon is de klok, er verschijnt geen teller en er sterft niemand; wie te laat is, kost de groep een nacht en probeert het de volgende dag opnieuw.
 
@@ -144,7 +146,7 @@ De route, vastgesteld met Bob op 12 november 2026. Er wordt nooit aan een later 
 | 2 | Het huidige *Homo habilis*-spel afmaken: savanne rond, overgang "de groep trekt verder" (stap D) | **klaar** |
 | 3 | Watergebied volledig speelbaar (stap E) | **klaar**, wacht op proefspelen door Bob |
 | 4 | Opslaan en laden (stap B) | basis klaar; groeit mee met elk nieuw gebied |
-| 5 | *Homo erectus* en nieuwe technieken (stap H) | |
+| 5 | *Homo erectus* en nieuwe technieken (stap H) | eerste gebied **klaar**: vuistbijl, vuur halen en bewaren, braden; wacht op proefspelen door Bob |
 | 6 | Neanderthalers en ijstijd | |
 | 7 | *Homo sapiens* en complexe jacht | |
 | 8 | Landbouw en nederzettingen | eerst ontwerpen |

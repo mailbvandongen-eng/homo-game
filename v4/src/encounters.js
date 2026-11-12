@@ -161,10 +161,10 @@ export class Encounters {
     e.dead = true; e.t = 0; const m = e.m;
     m.speed = 0; m.g.rotation.set(0, m.yaw, 1.45); m.g.position.y = height(m.x, m.z) + 0.22;
     game.sound.thud(); game.discover('wounded');
-    game.toast(game.state.hands.includes('flake') ? 'De gazelle valt. Vlees! Snijd het los voordat iemand anders het ruikt.' : 'De gazelle valt. Vlees! Maar zonder scherpe afslag krijg je de huid niet open.', 6);
+    game.toast((game.state.hands.includes('flake') || game.state.hands.includes('axe')) ? 'De gazelle valt. Vlees! Snijd het los voordat iemand anders het ruikt.' : 'De gazelle valt. Vlees! Maar zonder scherpe afslag krijg je de huid niet open.', 6);
   }
   cutPrey(e, game) {
-    if (!game.state.hands.includes('flake')) { game.toast('Met je handen krijg je de taaie huid niet open. Je hebt iets scherps nodig.', 5); return; }
+    if (!(game.state.hands.includes('flake') || game.state.hands.includes('axe'))) { game.toast('Met je handen krijg je de taaie huid niet open. Je hebt iets scherps nodig.', 5); return; }
     if (!game.giveHand('meat')) return;
     e.meat--; game.sound.eat(); game.discover('cut');
     game.toast(e.meat > 0 ? 'Je snijdt een lap vlees los. Er zit nog meer aan.' : 'Je snijdt de laatste lap vlees los.', 4);

@@ -1,6 +1,9 @@
 import * as THREE from '../lib/three.module.js';
 import { height, blockers, cover, WALK, riverDist, tallGrassAt, mergeStatic, deep } from './world.js';
-import { AREA } from './eras/index.js';
+import { ERA, AREA } from './eras/index.js';
+
+// Het lichaam van dit tijdperk: lengte in meters en hoe hard je loopt (Homo habilis: klein; Homo erectus: lang, een loper)
+export const BODY = { height: 1.35, speed: 1, ...ERA.body };
 import { Rig } from './rig.js';
 
 // ---------- materialen ----------
@@ -158,15 +161,15 @@ export class Hominin {
   // Het echte model: een neanderthaler (gb.prof.69, CC BY 4.0) met bewegingen uit de Universal Animation Library
   // (Quaternius, CC0), overgezet op zijn skelet. Kleiner gemaakt tot zo'n 1,35 m, zoals een vroege mens.
   initHuman(scene, A) {
-    const S = 1.35 / 162;   // het model is in centimeters en 1,62 m lang
+    const S = BODY.height / 162, K = BODY.height / 1.35;   // het model is in centimeters en 1,62 m lang
     this.S = S;
     this.rig = new Rig(A, 'hominin', { scale: S });
     const act = (n) => { const a = this.rig.action(n); a.play(); a.setEffectiveWeight(0); a.timeScale = 0; return a; };
     // bewegingen die samen gemengd worden, met hun eigen snelheid (m/s) bij deze lengte
     this.loco = {
       idle: { a: act('Idle_Loop') }, cidle: { a: act('Crouch_Idle_Loop') }, air: { a: act('Jump_Loop') },
-      walk: { a: act('Walk_Loop'), v: 1.25 }, jog: { a: act('Jog_Fwd_Loop'), v: 3.0 }, sprint: { a: act('Sprint_Loop'), v: 5.2 },
-      cwalk: { a: act('Crouch_Fwd_Loop'), v: 1.0 },
+      walk: { a: act('Walk_Loop'), v: 1.25 * K }, jog: { a: act('Jog_Fwd_Loop'), v: 3.0 * K }, sprint: { a: act('Sprint_Loop'), v: 5.2 * K },
+      cwalk: { a: act('Crouch_Fwd_Loop'), v: 1.0 * K },
     };
     for (const k in this.loco) this.loco[k].w = k === 'idle' ? 1 : 0;
     this.locoPhase = 0; this.once = null;
@@ -217,7 +220,7 @@ export class Hominin {
     let want = this.sneaking ? 1.6 * mag : mag < 0.7 ? 2.6 * mag / 0.7 : 2.6 + (mag - 0.7) / 0.3 * 2.8;
     if (this.once) want *= this.once.slow;   // tijdens slaan loop je bijna niet
     if (this.toss) want *= 0.3;              // en tijdens mikken en gooien ook niet
-    const max = want * mods.speed * (riverDist(this.pos.x, this.pos.z) < 6 || height(this.pos.x, this.pos.z) < -0.45 ? 0.45 : 1);
+    const max = want * mods.speed * BODY.speed * (riverDist(this.pos.x, this.pos.z) < 6 || height(this.pos.x, this.pos.z) < -0.45 ? 0.45 : 1);
     const target = mag > 0.001 ? dir.clone().normalize().multiplyScalar(max) : dir.clone().set(0, 0, 0);
     this.vel.lerp(target, 1 - Math.exp(-dt * (this.onGround ? 6 : 1.5)));
     const px = this.pos.x, pz = this.pos.z;

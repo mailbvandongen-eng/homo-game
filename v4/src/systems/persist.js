@@ -16,6 +16,7 @@ export function initPersist(G) {
       food: Math.round(state.food), health: Math.round(state.health), group: Math.round(state.group),
       hands: state.hands, rock: state.rock, bag: state.bag, cloak: state.cloak, knapped: !!state.knapped,
       known: [...state.known], found: [...state.found], finds: [...state.finds], rockKnown: [...state.rockKnown], given: [...state.given],
+      fire: G.fire ? G.fire.snapshot() : undefined,
       missions: [...mission.done], mission: mission.cur ? mission.cur.id : null, over: mission.over, past: state.past,
     };
   }
@@ -34,6 +35,7 @@ export function initPersist(G) {
     if (Array.isArray(d.past)) state.past = d.past.filter((x) => typeof x === 'string');
     if (d.arrived) title(ERA.species, AREA.name, AREA.intro || '', 6);   // net aangekomen in een nieuw gebied
     mission.over = !!d.over;
+    if (G.fire) G.fire.restore(d.fire);
     player.pos.set(HOME.x + 2, 0, HOME.z + 4); player.vel.set(0, 0, 0);
     season(); renderHands(); renderBag(); if (state.cloak) putCloak();
     $('journalCount').textContent = state.found.size;

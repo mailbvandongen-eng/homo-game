@@ -41,6 +41,12 @@ export const ICON = {
   sleep: svg('<path d="M34 8a17 17 0 1 0 6 26A14 14 0 0 1 34 8z"/><path d="M8 10h6l-6 7h6M18 4h4l-4 5h4"/>'),
   // graven: een stok die schuin de grond in gaat
   dig: svg('<path d="M34 6L18 34"/><path d="M18 34l-2 6 5-3"/><path d="M6 38c5-4 9-4 12 0s8 4 12 0 8-4 12 0"/>'),
+  // vuur: een vlam
+  fire: svg('<path d="M24 4c2 8 12 12 12 24a12 12 0 0 1-24 0c0-6 3-9 6-13 0 5 2 7 4 7 3-4 2-12 2-18z"/><path d="M24 40c-3 0-5-2-5-5s3-5 5-9c2 4 5 6 5 9s-2 5-5 5z"/>'),
+  // vuistbijl slaan: een druppelvormige steen met slagen eromheen
+  axe: svg('<path d="M24 4c9 9 13 19 11 29-1 6-6 10-11 10s-10-4-11-10C11 23 15 13 24 4z"/><path d="M24 12l-5 9 4 5-3 8M24 12l4 8-2 6 4 7"/>'),
+  // hakken: een vuistbijl die in een tak slaat
+  chop: svg('<path d="M4 40L40 30" stroke-width="5"/><path d="M26 6c7 4 10 10 9 17l-7 5c-6-3-9-9-8-16z"/><path d="M14 28l-4-5M20 26l-1-6"/>'),
   restart: svg('<path d="M38 24a14 14 0 1 1-4.5-10.3"/><path d="M35 6v9h-9"/>'),
   menu: svg('<circle cx="10" cy="24" r="2.5"/><circle cx="24" cy="24" r="2.5"/><circle cx="38" cy="24" r="2.5"/>'),
   close: svg('<path d="M14 14l20 20M34 14L14 34"/>'),
@@ -61,5 +67,8 @@ export const ITEM_ICON = {
   stick: '<svg viewBox="0 0 48 48"><path d="M8 40L34 12" stroke="#3a2a1c" stroke-width="8" stroke-linecap="round"/><path d="M8 40L34 12" stroke="#a07c50" stroke-width="4.5" stroke-linecap="round"/><path d="M30 10l12-6-5 12z" fill="#e8d4a8" stroke="#3a2a1c" stroke-width="2.2" stroke-linejoin="round"/></svg>',
   tuber: '<svg viewBox="0 0 48 48"><path d="M10 30c-3-9 5-17 15-16s16 8 13 16-11 11-18 9-8-4-10-9z" fill="#b89468" stroke="#3a2a1c" stroke-width="2.5"/><path d="M24 14c0-5 2-8 5-9M21 14c-2-4-5-6-8-6" stroke="#5e8a32" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M18 26l3 2M28 24l3 3M24 32l2 1" stroke="#7a5c3e" stroke-width="2" stroke-linecap="round"/></svg>',
   fish: '<svg viewBox="0 0 48 48"><path d="M4 24c8-10 20-11 30-4l10-7-3 11 3 11-10-7c-10 7-22 6-30-4z" fill="#5a5a52" stroke="#1e1e1a" stroke-width="2.5" stroke-linejoin="round"/><circle cx="12" cy="22" r="1.8" fill="#e8e4d0"/><path d="M6 26c-2 3-3 5-3 8M9 27c-1 3-1 5 0 8" stroke="#1e1e1a" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>',
+  axe: '<svg viewBox="0 0 48 48"><path d="M24 4c9 9 13 19 11 29-1 6-6 10-11 10s-10-4-11-10C11 23 15 13 24 4z" fill="#7a7a86" stroke="#26262c" stroke-width="2.5" stroke-linejoin="round"/><path d="M24 9l-5 11 4 5-4 9M24 9l5 10-3 7 5 8" stroke="#b4b4c0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  torch: '<svg viewBox="0 0 48 48"><path d="M10 42L28 22" stroke="#2a1c12" stroke-width="8" stroke-linecap="round"/><path d="M10 42L28 22" stroke="#6a4a30" stroke-width="4.5" stroke-linecap="round"/><path d="M32 4c1 6 9 8 8 17a9 9 0 0 1-17 2c-1-5 2-7 3-10 1 3 2 4 4 4 2-4 1-9 2-13z" fill="#f08a1c" stroke="#7a2a08" stroke-width="2.2" stroke-linejoin="round"/><path d="M31 27c-3 0-4-2-4-4s2-4 4-7c2 3 4 5 4 7s-1 4-4 4z" fill="#ffe07a"/></svg>',
+  roast: '<svg viewBox="0 0 48 48"><path d="M8 28c-2-10 6-18 16-18s18 6 16 16-10 14-20 12S9 34 8 28z" fill="#8a5430" stroke="#2a160c" stroke-width="2.5"/><path d="M14 26c2-6 8-9 14-8M18 32c4 1 9 0 13-3" stroke="#3a2010" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M20 8c-2-2 2-3 0-5M28 8c-2-2 2-3 0-5" stroke="#c8c0b0" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
   honey: '<svg viewBox="0 0 48 48"><path d="M8 14l12-6 20 6v18l-12 8-20-8z" fill="#e8a020" stroke="#4a2c08" stroke-width="2.5" stroke-linejoin="round"/><g fill="#8a5408"><circle cx="16" cy="20" r="3"/><circle cx="25" cy="18" r="3"/><circle cx="34" cy="21" r="3"/><circle cx="20" cy="28" r="3"/><circle cx="30" cy="29" r="3"/></g><path d="M34 34c0 4 1 6 3 8 2-2 3-4 3-8" fill="#f8c040" stroke="#4a2c08" stroke-width="2"/></svg>',
 };

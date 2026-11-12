@@ -1,5 +1,5 @@
 import * as THREE from '../../lib/three.module.js';
-import { ERA, AREA } from '../eras/index.js';
+import { ERAS, ERA, AREA } from '../eras/index.js';
 import { HOME } from '../group.js';
 import { Save } from '../save.js';
 import { $, toast, title, showCard, closeCard } from '../engine/ui.js';
@@ -11,9 +11,11 @@ export function initMissions(G) {
   // Je kiest er zelf één, ziet de stappen, en als ze alle vier gelukt zijn trekt de groep verder.
   const has = (it) => state.hands.includes(it);
   const carries = (it) => has(it) || !!(state.bag && state.bag.some((e) => e && e.it === it));
-  const MISSIONS = AREA.missions({ state, has, carries, player, hyenas, sabres, group, night: () => G.predGame.night, dayP: () => G.dayP });
-  const NEXT = ERA.areas.find((a) => a.id === AREA.next && a.playable) || null;   // waar de groep hierna heen trekt
-  const NAMES = { tor: 'Tor', kem: 'Kem', ibo: 'Ibo' };
+  const MISSIONS = AREA.missions({ state, has, carries, player, hyenas, sabres, group, night: () => G.predGame.night, dayP: () => G.dayP, fire: () => G.fire });
+  // waar het hierna heen gaat: een volgend gebied, of een volgend tijdperk
+  const NEXT_ERA = ERAS.find((e) => e.playable && e.areas.some((a) => a.id === AREA.next && a.playable)) || ERA;
+  const NEXT = NEXT_ERA.areas.find((a) => a.id === AREA.next && a.playable) || null;
+  const NAMES = Object.fromEntries(group.list.map((g) => [g.id, g.name]));
   for (const m of MISSIONS) m.steps.push({ t: 'Ga terug naar ' + NAMES[m.who], ok: () => false });
   // Niemand duwt je een keuzescherm onder je neus: wie iets nodig heeft roept en wenkt bij de slaapboom.
   // Aantikken is aannemen. Daarna terug naar diegene, en het is volbracht.
@@ -67,7 +69,7 @@ export function initMissions(G) {
   function endCard() {
     const o = AREA.outro;
     showCard(`<div class="eyebrow">${AREA.name}</div><h2>${o.title}</h2>${o.text.map((p) => `<p>${p}</p>`).join('')}` + (NEXT
-      ? '<div class="row"><button class="btn" id="goNext">Trek mee</button><button class="btn ghost" id="stayHere">Nog even blijven</button></div>'
+      ? '<div class="row"><button class="btn" id="goNext">' + (o.go || 'Trek mee') + '</button><button class="btn ghost" id="stayHere">Nog even blijven</button></div>'
       : `<p class="fine">${o.fine}</p>`));
     if (!NEXT) return;
     $('card').onpointerdown = (e) => e.stopPropagation();
@@ -77,7 +79,9 @@ export function initMissions(G) {
   function travel() {
     if (!NEXT) return;
     window.__nosave = 1; closeCard(); $('fade').style.opacity = 1;
-    Save.write({ ...G.snapshot(), area: NEXT.id, missions: [], mission: null, over: false, past: [...state.past, ...mission.done], rainDay: state.day - 1, dayP: 0.1, arrived: true });
+    // een nieuw tijdperk: een andere groep, honderdduizenden jaren later. Wat je weet gaat mee, wat je droeg niet.
+    const leap = NEXT_ERA === ERA ? {} : { era: NEXT_ERA.id, hands: [null, null], rock: [null, null], bag: state.bag ? state.bag.map(() => null) : state.bag, day: 1, food: 70, health: 100, group: 55 };
+    Save.write({ ...G.snapshot(), ...leap, area: NEXT.id, missions: [], mission: null, over: false, past: [...state.past, ...mission.done], rainDay: leap.era ? 0 : state.day - 1, dayP: 0.1, arrived: true });
     setTimeout(() => location.replace(location.pathname), 900);
   }
   function markTick(g, want, dt) {

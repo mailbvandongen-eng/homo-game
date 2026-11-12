@@ -113,9 +113,27 @@ export const ITEMS = {
     unknown: 'Glibberig. Zou je dit kunnen eten?',
     known: 'Vet, zacht vlees zonder taaie huid. Een vis in een ondiepe poel kan nergens heen.',
   },
+  axe: {
+    name: 'Vuistbijl', color: '#6e6e78',
+    look: 'Een kei zo groot als je hand, rondom en aan twee kanten bewerkt: een punt aan de voorkant, een ronde greep achter.',
+    unknown: 'Zwaar en scherp. Wat kun je hiermee dat met een afslag niet kan?',
+    known: 'Snijdt als een afslag en hakt bovendien: takken van een dode boom, pezen, dikke huid. Vuistbijlen werden ruim een miljoen jaar lang zo gemaakt.',
+  },
+  torch: {
+    name: 'Brandende tak', color: '#e8862a',
+    look: 'Een tak met een vlam aan het eind. De hitte slaat in je gezicht.',
+    unknown: 'Hij wordt korter. Lang heb je niet.',
+    known: 'Zo draag je vuur mee. Dieren deinzen ervoor terug. Maar hij brandt op: breng hem naar de kring van stenen.',
+  },
+  roast: {
+    name: 'Gebraden vlees', color: '#7a4a2c',
+    look: 'Vlees dat boven het vuur heeft gehangen: bruin, met een korst, en het ruikt zoals niets anders.',
+    unknown: 'Het is warm. Zou het anders smaken?',
+    known: 'Zacht, je kauwt er zo doorheen, en het vult veel meer dan rauw.',
+  },
 };
 
-// Ontdekkingen: dit is wat je in het proefstuk kunt leren
+// Ontdekkingen: wat je kunt leren. 'era' = pas vanaf dat tijdperk te ontdekken (en te zien in het boekje)
 export const DISCOVERIES = [
   { id: 'berry', text: 'Paarse bessen zijn zoet en goed om te eten.' },
   { id: 'redberry', text: 'Van rode bessen word je ziek.' },
@@ -155,6 +173,15 @@ export const DISCOVERIES = [
   { id: 'fish', text: 'In ondiepe poelen zitten meervallen gevangen. Wie plonst, jaagt ze weg; wie sluipt, grijpt er een.' },
   { id: 'croc', text: 'Wat op een drijvende boomstam lijkt, kan een krokodil zijn. Een steen jaagt hem onder water.' },
   { id: 'feast', text: 'Aan het eind van de droogte bezwijkt de oude reus bij het water. Zoveel vlees zag de groep nooit.' },
+  { id: 'axe', era: 'erectus', text: 'Sla je een harde kei rondom af, kant na kant, dan krijg je een vuistbijl: scherp aan twee zijden, met een punt.' },
+  { id: 'chop', era: 'erectus', text: 'Met een vuistbijl hak je takken van een dode boom. Met een afslag lukt dat niet.' },
+  { id: 'torch', era: 'erectus', text: 'Vuur kun je niet maken. Maar waar de bliksem insloeg smeult het nog dagen: een tak vat er vlam.' },
+  { id: 'scare', era: 'erectus', text: 'Voor een brandende tak deinzen zelfs hyena\'s terug.' },
+  { id: 'hearth', era: 'erectus', text: 'In een kring van stenen bij het kamp blijft vuur op zijn plaats. Daar is het warm en licht, en durven roofdieren niet dichtbij.' },
+  { id: 'feed', era: 'erectus', text: 'Een vuur eet hout. Wie het voedt, houdt het; wie het vergeet, moet het opnieuw halen.' },
+  { id: 'ember', era: 'erectus', text: 'Onder de as blijft het gloeien. Leg er op tijd een tak op en het vuur komt terug.' },
+  { id: 'keep', era: 'erectus', text: 'Met genoeg hout brandt het vuur de hele nacht. Wie erbij slaapt, wordt uitgerust wakker.' },
+  { id: 'roast', era: 'erectus', text: 'Vlees dat boven het vuur heeft gehangen is zacht en vult veel meer dan rauw.' },
 ];
 
 // Verstopte vondsten: zoals archeologen ze nu vinden
@@ -187,6 +214,11 @@ export const LOOKS = {
   croc: { name: 'Krokodil', look: 'Twee ogen en een rij bulten, roerloos in het water. De rest zie je niet: hij is langer dan drie mensen.', hint: 'Hij wacht op wie komt drinken. Gooi een steen, of kies een andere plek.' },
   catfish: { name: 'Meerval', look: 'Een donkere schim net onder het oppervlak. Hij hapt lucht en woelt in de modder.', hint: 'De poel is ondiep en hij kan er niet uit. Maar hij voelt elke plons.' },
   tuberplant: { name: 'Plant met brede bladeren', look: 'Een laag plantje met dikke, brede bladeren. De grond eromheen is gebarsten, alsof er iets onder opzwelt.', hint: 'Met je vingers kom je niet door de harde korst.' },
+  firesource: { name: 'Smeulende stam', look: 'Hier sloeg de bliksem in. Het gras is zwart tot ver in het rond, en in de omgevallen stam gloeit het nog: rood in het donker, grijs van as overdag.', hint: 'Je kunt het niet oppakken. Maar wat erin ligt, vat vlam.' },
+  hearth: { name: 'Kring van stenen', look: 'Een kring van vuistgrote stenen op kale grond, een paar passen van de slaapplek. De aarde erbinnen is zwart en hard gebakken.', hint: 'Hier heeft eerder vuur gebrand. Nu is de as koud.' },
+  hearthlit: { name: 'Het vuur', look: 'Vlammen in de kring van stenen. De groep zit eromheen, dichter bij elkaar dan anders.', hint: 'Het eet hout. Leg er takken op voor het klein wordt.' },
+  hearthember: { name: 'Gloeiende as', look: 'De vlammen zijn weg. Maar blaas je in de as, dan licht het rood op.', hint: 'Snel een tak erop, voor het koud is.' },
+  deadwood: { name: 'Dode boom', look: 'Een omgevallen acacia, grijs en kurkdroog. De takken zijn zo dik als je pols.', hint: 'Met je handen breek je er niets af. Dit hout is taai.' },
   tree: { name: 'De slaapboom', look: 'Een oude acacia met een brede kroon. Hier slaapt je groep, al zolang je je kunt herinneren.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
   tor: { name: 'Tor', look: 'De oudste van de groep. Zijn haar is grijs en hij loopt moeilijk, maar hij weet waar het water blijft staan als het droog is.', hint: 'Hij kan zelf niet meer ver lopen om eten te zoeken.' },
   kem: { name: 'Kem', look: 'Jong en nieuwsgierig. Kem slaat graag stenen tegen elkaar en eet alles wat je meebrengt.', hint: 'Echt alles. Ook wat je zelf nog niet kent.' },
@@ -194,7 +226,7 @@ export const LOOKS = {
 };
 
 // Wat je ervan weet, als kleur bij de zintuigen: goed, slecht of nog onbekend
-export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good', meat: 'good', egg: 'good', honey: 'good', hide: 'good', branch: 'good', stick: 'good', tuber: 'good', fish: 'good' };
+export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good', meat: 'good', egg: 'good', honey: 'good', hide: 'good', branch: 'good', stick: 'good', tuber: 'good', fish: 'good', axe: 'good', torch: 'good', roast: 'good' };
 
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 
@@ -328,6 +360,25 @@ export function heldMesh(item, rock) {
     return new THREE.Group().add(g);
   }
   if (item === 'tuber') { const m = new THREE.Mesh(new THREE.SphereGeometry(0.08, 7, 5), lam(c)); m.scale.set(0.8, 0.75, 1.5); return m; }
+  if (item === 'axe') {
+    // een vuistbijl: druppelvormig, plat, met een punt
+    const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.1, 1), lam(c)); m.scale.set(0.75, 0.32, 1.35);
+    const p = m.geometry.attributes.position; for (let i = 0; i < p.count; i++) if (p.getZ(i) < 0) { p.setX(i, p.getX(i) * 1.35); p.setZ(i, p.getZ(i) * 0.7); }
+    m.geometry.computeVertexNormals(); return m;
+  }
+  if (item === 'torch') {
+    const g = new THREE.Group(), s = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.022, 0.62, 6), lam(new THREE.Color('#4a3424'))); g.add(s);
+    const coal = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff5a14 })); coal.position.y = 0.31; g.add(coal);
+    const fl = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.2, 6), new THREE.MeshBasicMaterial({ color: 0xffb030, transparent: true, opacity: 0.9, depthWrite: false })); fl.position.y = 0.42; fl.name = 'flame'; g.add(fl);
+    const core = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.12, 6), new THREE.MeshBasicMaterial({ color: 0xfff0a0 })); core.position.y = 0.39; core.name = 'flame'; g.add(core);
+    g.position.y = 0.12;
+    return new THREE.Group().add(g);
+  }
+  if (item === 'roast') {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.1, 7, 5), lam(c)); m.scale.set(1.2, 0.5, 0.8);
+    const crust = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), lam(new THREE.Color('#3a2414'))); crust.scale.set(1.3, 0.4, 0.6); crust.position.set(0.04, 0.035, 0.02);
+    return new THREE.Group().add(m, crust);
+  }
   if (item === 'fish') {
     const g = new THREE.Group(), body = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), lam(c)); body.scale.set(0.8, 0.7, 2.6); g.add(body);
     const tail = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 4), lam(c)); tail.rotation.x = -Math.PI / 2; tail.scale.x = 0.25; tail.position.z = -0.22; g.add(tail);
