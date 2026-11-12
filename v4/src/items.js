@@ -12,6 +12,7 @@ export const ROCKS = {
   sand: { name: 'Korrelige kei', tint: 0xe0a860, css: 'sepia(1) saturate(1.6)', crumble: 2, look: 'Een geelbruine, ruwe kei. Wrijf je erover, dan blijven er korrels aan je vingers hangen.', good: 'Te zacht: hij valt in gruis. Goed om mee te gooien, niet om afslagen van te slaan.' },
 };
 let ROCKV = null;
+let AXEV = null;   // gescande vuistbijl van lava uit de Olduvaikloof (MicroPasts, CC BY)
 const rockMats = {};
 // een kei van een bepaalde soort: een gescande rots in het klein, gekleurd naar zijn soort
 export function stoneMesh(type = 'lava', size = 0.14) {
@@ -173,15 +174,15 @@ export const DISCOVERIES = [
   { id: 'fish', text: 'In ondiepe poelen zitten meervallen gevangen. Wie plonst, jaagt ze weg; wie sluipt, grijpt er een.' },
   { id: 'croc', text: 'Wat op een drijvende boomstam lijkt, kan een krokodil zijn. Een steen jaagt hem onder water.' },
   { id: 'feast', text: 'Aan het eind van de droogte bezwijkt de oude reus bij het water. Zoveel vlees zag de groep nooit.' },
-  { id: 'axe', era: 'erectus', text: 'Sla je een harde kei rondom af, kant na kant, dan krijg je een vuistbijl: scherp aan twee zijden, met een punt.' },
-  { id: 'chop', era: 'erectus', text: 'Met een vuistbijl hak je takken van een dode boom. Met een afslag lukt dat niet.' },
-  { id: 'torch', era: 'erectus', text: 'Vuur kun je niet maken. Maar waar de bliksem insloeg smeult het nog dagen: een tak vat er vlam.' },
-  { id: 'scare', era: 'erectus', text: 'Voor een brandende tak deinzen zelfs hyena\'s terug.' },
-  { id: 'hearth', era: 'erectus', text: 'In een kring van stenen bij het kamp blijft vuur op zijn plaats. Daar is het warm en licht, en durven roofdieren niet dichtbij.' },
-  { id: 'feed', era: 'erectus', text: 'Een vuur eet hout. Wie het voedt, houdt het; wie het vergeet, moet het opnieuw halen.' },
-  { id: 'ember', era: 'erectus', text: 'Onder de as blijft het gloeien. Leg er op tijd een tak op en het vuur komt terug.' },
+  { id: 'axe', era: 'erectus', text: 'Sla een kei aan alle kanten af. Dan krijg je een vuistbijl: een punt en twee scherpe kanten.' },
+  { id: 'chop', era: 'erectus', text: 'Met een vuistbijl hak je takken van een dode boom. Met een scherf lukt dat niet.' },
+  { id: 'torch', era: 'erectus', text: 'Vuur kun je nog niet maken. Maar waar de bliksem insloeg, gloeit het dagenlang. Daar steek je een tak aan.' },
+  { id: 'scare', era: 'erectus', text: 'Voor een brandende tak zijn zelfs hyena\'s bang.' },
+  { id: 'hearth', era: 'erectus', text: 'Tussen de stenen blijft het vuur op zijn plek. Het geeft warmte en licht, en roofdieren blijven weg.' },
+  { id: 'feed', era: 'erectus', text: 'Vuur heeft hout nodig. Vergeet je het, dan gaat het uit en moet je het opnieuw halen.' },
+  { id: 'ember', era: 'erectus', text: 'Onder de as gloeit het nog lang. Leg er op tijd een tak op, dan komt het vuur terug.' },
   { id: 'keep', era: 'erectus', text: 'Met genoeg hout brandt het vuur de hele nacht. Wie erbij slaapt, wordt uitgerust wakker.' },
-  { id: 'roast', era: 'erectus', text: 'Vlees dat boven het vuur heeft gehangen is zacht en vult veel meer dan rauw.' },
+  { id: 'roast', era: 'erectus', text: 'Vlees van het vuur is zacht en lekker. Je hebt er langer genoeg aan dan aan rauw vlees.' },
 ];
 
 // Verstopte vondsten: zoals archeologen ze nu vinden
@@ -214,7 +215,7 @@ export const LOOKS = {
   croc: { name: 'Krokodil', look: 'Twee ogen en een rij bulten, roerloos in het water. De rest zie je niet: hij is langer dan drie mensen.', hint: 'Hij wacht op wie komt drinken. Gooi een steen, of kies een andere plek.' },
   catfish: { name: 'Meerval', look: 'Een donkere schim net onder het oppervlak. Hij hapt lucht en woelt in de modder.', hint: 'De poel is ondiep en hij kan er niet uit. Maar hij voelt elke plons.' },
   tuberplant: { name: 'Plant met brede bladeren', look: 'Een laag plantje met dikke, brede bladeren. De grond eromheen is gebarsten, alsof er iets onder opzwelt.', hint: 'Met je vingers kom je niet door de harde korst.' },
-  firesource: { name: 'Smeulende stam', look: 'Hier sloeg de bliksem in. Het gras is zwart tot ver in het rond, en in de omgevallen stam gloeit het nog: rood in het donker, grijs van as overdag.', hint: 'Je kunt het niet oppakken. Maar wat erin ligt, vat vlam.' },
+  firesource: { name: 'Smeulende stam', look: 'Hier sloeg de bliksem in. Het gras is zwart en in de omgevallen stam gloeit het nog.', hint: 'Je kunt de gloed niet oppakken. Maar een tak vat er vlam.' },
   hearth: { name: 'Kring van stenen', look: 'Een kring van vuistgrote stenen op kale grond, een paar passen van de slaapplek. De aarde erbinnen is zwart en hard gebakken.', hint: 'Hier heeft eerder vuur gebrand. Nu is de as koud.' },
   hearthlit: { name: 'Het vuur', look: 'Vlammen in de kring van stenen. De groep zit eromheen, dichter bij elkaar dan anders.', hint: 'Het eet hout. Leg er takken op voor het klein wordt.' },
   hearthember: { name: 'Gloeiende as', look: 'De vlammen zijn weg. Maar blaas je in de as, dan licht het rood op.', hint: 'Snel een tak erop, voor het koud is.' },
@@ -264,6 +265,7 @@ export function placeItems(scene, A, area) {
   const add = (t) => { things.push(t); return t; };
 
   // losse keien bij de start en verderop
+  if (A.models.handaxe) AXEV = axeGeo(variantsOf(A.models.handaxe)[0]);
   ROCKV = [A.models.namaqualand_boulder_02, A.models.namaqualand_boulder_05, A.models.namaqualand_rocks_01].map((m) => variantsOf(m)[0]);
   const stones = area.stones.map((s) => [...s]);
   // langs de rivier liggen rolstenen: van alles door elkaar
@@ -325,6 +327,14 @@ export function placeItems(scene, A, area) {
   return things;
 }
 
+// De gescande vuistbijl op maat: 24 cm lang, de punt naar voren (z), plat in je hand (y)
+function axeGeo(v) {
+  const d = ['x', 'y', 'z'].sort((a, b) => v.size[b] - v.size[a]), [long, mid, thin] = d, e = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
+  const col = { [long]: e.z, [thin]: e.y, [mid]: e.x }, m = new THREE.Matrix4().makeBasis(new THREE.Vector3(...col.x), new THREE.Vector3(...col.y), new THREE.Vector3(...col.z));
+  if (m.determinant() < 0) m.multiply(new THREE.Matrix4().makeScale(-1, 1, 1));
+  const geo = v.parts[0].geo.clone().applyMatrix4(m); geo.center(); geo.scale(...Array(3).fill(0.24 / v.size[long]));
+  return { geo, mat: v.parts[0].mat };
+}
 // Een klein voorwerpje in je hand
 export function heldMesh(item, rock) {
   if (!item) return null;
@@ -360,6 +370,7 @@ export function heldMesh(item, rock) {
     return new THREE.Group().add(g);
   }
   if (item === 'tuber') { const m = new THREE.Mesh(new THREE.SphereGeometry(0.08, 7, 5), lam(c)); m.scale.set(0.8, 0.75, 1.5); return m; }
+  if (item === 'axe' && AXEV) { const m = new THREE.Mesh(AXEV.geo, AXEV.mat); m.castShadow = true; return m; }
   if (item === 'axe') {
     // een vuistbijl: druppelvormig, plat, met een punt
     const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.1, 1), lam(c)); m.scale.set(0.75, 0.32, 1.35);
@@ -368,9 +379,7 @@ export function heldMesh(item, rock) {
   }
   if (item === 'torch') {
     const g = new THREE.Group(), s = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.022, 0.62, 6), lam(new THREE.Color('#4a3424'))); g.add(s);
-    const coal = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff5a14 })); coal.position.y = 0.31; g.add(coal);
-    const fl = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.2, 6), new THREE.MeshBasicMaterial({ color: 0xffb030, transparent: true, opacity: 0.9, depthWrite: false })); fl.position.y = 0.42; fl.name = 'flame'; g.add(fl);
-    const core = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.12, 6), new THREE.MeshBasicMaterial({ color: 0xfff0a0 })); core.position.y = 0.39; core.name = 'flame'; g.add(core);
+    const coal = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff5a14 })); coal.position.y = 0.31; coal.name = 'coal'; g.add(coal);
     g.position.y = 0.12;
     return new THREE.Group().add(g);
   }

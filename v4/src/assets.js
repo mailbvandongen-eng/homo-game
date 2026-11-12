@@ -13,8 +13,10 @@ const TEXTURES = [
 
 // online krijgt elk bestand de versie van de map assets mee, zodat een vervangen model ook echt opnieuw wordt opgehaald
 const Q = window.__VA && window.__VA[0] !== '_' ? '?v=' + window.__VA : '';
-export async function loadAssets(renderer, onProgress = () => {}) {
-  const total = MODELS.length + TEXTURES.length + 2;
+// extra: modellen die alleen dit gebied nodig heeft
+export async function loadAssets(renderer, onProgress = () => {}, extra = []) {
+  const names = [...MODELS, ...extra];
+  const total = names.length + TEXTURES.length + 2;
   let done = 0;
   const tick = (x) => { onProgress(++done / total); return x; };
   const tl = new THREE.TextureLoader(), gl = new GLTFLoader();
@@ -26,7 +28,7 @@ export async function loadAssets(renderer, onProgress = () => {}) {
     return tick([n, t]);
   })));
   const anims = {};
-  const models = Promise.all(MODELS.map((n) => gl.loadAsync(`./assets/models/${n}.glb${Q}`).then((g) => { anims[n] = g.animations; return tick([n, g.scene]); })));
+  const models = Promise.all(names.map((n) => gl.loadAsync(`./assets/models/${n}.glb${Q}`).then((g) => { anims[n] = g.animations; return tick([n, g.scene]); })));
   const hdr = new HDRLoader().loadAsync('./assets/mpumalanga_veld_1k.hdr' + Q).then((t) => {
     t.mapping = THREE.EquirectangularReflectionMapping;
     // omgevingslicht voor glanzende en ruwe materialen

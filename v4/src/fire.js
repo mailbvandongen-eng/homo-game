@@ -1,6 +1,7 @@
 import * as THREE from '../lib/three.module.js';
 import { height, blockers } from './world.js';
 import { ICON } from './icons.js';
+import { variantsOf } from './assets.js';
 
 // Vuur. Je kunt het niet maken: je vindt het waar de bliksem insloeg, draagt het op een tak naar het kamp
 // en houdt het daar in leven met hout. Dit bestand kent drie plekken:
@@ -20,7 +21,31 @@ function softTex(inner, outer) {
   x.fillStyle = g; x.fillRect(0, 0, 64, 64);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
-const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
+
+// Een heel geladen model als één voorwerp, met de voet op (0, 0, 0). Bij foot staat het midden van de stam op nul
+// (en niet het midden van de kroon), zodat een boom niet naast zijn plek staat.
+function whole(root, foot) {
+  root.updateMatrixWorld(true);
+  const parts = [], box = new THREE.Box3();
+  root.traverse((o) => { if (!o.isMesh) return; const geo = o.geometry.clone(); geo.applyMatrix4(o.matrixWorld); geo.computeBoundingBox(); box.union(geo.boundingBox); parts.push({ geo, mat: o.material }); });
+  const c = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
+  if (foot) {
+    const big = parts.reduce((m, q) => (q.geo.attributes.position.count > m.geo.attributes.position.count ? q : m)), pos = big.geo.attributes.position;
+    let n = 0, x = 0, z = 0;
+    for (let i = 0; i < pos.count; i++) if (pos.getY(i) < box.min.y + size.y * 0.05) { x += pos.getX(i); z += pos.getZ(i); n++; }
+    if (n) { c.x = x / n; c.z = z / n; }
+  }
+  parts.forEach((q) => q.geo.translate(-c.x, -box.min.y, -c.z));
+  return { parts, size };
+}
+// Een voorwerp van zo'n model, k keer zo groot; mat maakt van elk materiaal een ander (bijvoorbeeld verkoold)
+function make(v, k, mat) {
+  const g = new THREE.Group();
+  for (const q of v.parts) { const m = new THREE.Mesh(q.geo, mat ? mat(q.mat) : q.mat); m.castShadow = true; m.receiveShadow = true; g.add(m); }
+  g.scale.setScalar(k); return g;
+}
+const tinted = (hex) => { const seen = new Map(); return (m) => { if (!seen.has(m)) { const c = m.clone(); c.color.setHex(hex); c.roughness = 1; seen.set(m, c); } return seen.get(m); }; };
+const glowSprite = (inner, outer) => new THREE.Sprite(new THREE.SpriteMaterial({ map: softTex(inner, outer), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
 
 // Een rookpluim: wolkjes die opstijgen, groter en ijler worden en weer onderaan beginnen
 class Smoke {
@@ -45,95 +70,161 @@ class Smoke {
   }
 }
 
-// Vlammen: een paar kegels die flakkeren, met een gloed eromheen
-function flames(size) {
-  const g = new THREE.Group(), list = [];
-  for (const [col, r, h, o] of [[0xff6a14, 0.26, 0.75, 0.85], [0xffa628, 0.18, 0.6, 0.9], [0xffe890, 0.1, 0.4, 1]]) {
-    for (let i = 0; i < (o === 1 ? 1 : 2); i++) {
-      const m = new THREE.Mesh(new THREE.ConeGeometry(r * size, h * size, 6), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: o, depthWrite: false, fog: false }));
-      m.position.set((i - 0.5) * 0.16 * size * (o === 1 ? 0 : 1), h * size / 2, (i - 0.5) * 0.1 * size); m.userData = { h: h * size / 2, w: Math.random() * 6.28 };
-      g.add(m); list.push(m);
-    }
+// Vlammen: een paar tongen die flakkeren en zwaaien, daarboven gloeiende flarden die opstijgen en doven, vonken en een gloed.
+const HOT = new THREE.Color(1, 0.7, 0.2), RED = new THREE.Color(1, 0.22, 0.03);
+// één vlamtong: druppelvormig, van rood aan de rand naar geelwit in de kern
+function tongueTex() {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 128; const x = c.getContext('2d');
+  x.globalCompositeOperation = 'lighter';
+  // zachte bollen op elkaar gestapeld: breed en geelwit onderin, smal en rood naar de punt
+  for (let i = 0; i < 26; i++) {
+    const a = i / 25, y = 104 - a * 92, r = 4 + 20 * Math.pow(1 - a, 0.8) * Math.min(1, 0.45 + a * 3);
+    const g = x.createRadialGradient(32, y, 0, 32, y, r), k = 0.3 * (1 - a * 0.75);
+    g.addColorStop(0, `rgba(255,${Math.round(225 - a * 150)},${Math.round(130 - a * 125)},${k})`);
+    g.addColorStop(0.55, `rgba(255,${Math.round(140 - a * 95)},${Math.round(30 - a * 26)},${k * 0.6})`);
+    g.addColorStop(1, 'rgba(255,40,0,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 64, 128);
   }
-  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: softTex('rgba(255,170,70,0.75)', 'rgba(255,120,30,0)'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
-  glow.scale.setScalar(2.4 * size); glow.position.y = 0.35 * size; g.add(glow);
-  g.userData = { list, glow };
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function flames(size) {
+  const g = new THREE.Group(), tongues = [], list = [], sparks = [];
+  const tex = flames.tex || (flames.tex = softTex('rgba(255,255,255,1)', 'rgba(255,255,255,0)')), ttex = flames.ttex || (flames.ttex = tongueTex());
+  for (let i = 0; i < 7; i++) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: ttex, transparent: true, depthWrite: false, fog: false, toneMapped: false }));
+    s.center.set(0.5, 0.12); const a = i * 2.4, r = i ? (0.1 + (i % 2) * 0.09) * size : 0; s.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+    g.add(s); tongues.push({ s, w: i * 1.9, h: i ? 0.62 + (i % 3) * 0.12 : 1 });
+  }
+  for (let i = 0; i < 7; i++) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, toneMapped: false, blending: THREE.AdditiveBlending }));
+    g.add(s); list.push({ s, ph: i / 7, w: i * 2.4, sp: 0.7 + (i % 4) * 0.1 });
+  }
+  for (let i = 0; i < 6; i++) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: 0xffb050, transparent: true, depthWrite: false, fog: false, toneMapped: false, blending: THREE.AdditiveBlending }));
+    g.add(s); sparks.push({ s, ph: i / 6, w: i * 1.7 });
+  }
+  const glow = glowSprite('rgba(255,170,70,0.75)', 'rgba(255,120,30,0)');
+  glow.position.y = 0.4 * size; g.add(glow);
+  g.userData = { tongues, list, sparks, glow, size };
   return g;
 }
 function flicker(g, t, k) {
   g.visible = k > 0.02;
   if (!g.visible) return;
-  for (const m of g.userData.list) {
-    const f = 0.8 + Math.sin(t * 11 + m.userData.w) * 0.14 + Math.sin(t * 23 + m.userData.w * 2) * 0.08;
-    m.scale.set(0.6 + k * 0.4, k * f, 0.6 + k * 0.4); m.position.y = m.userData.h * k * f; m.rotation.y = t * 2 + m.userData.w;
+  const { tongues, list, sparks, glow, size } = g.userData, big = 0.5 + 0.5 * k;
+  for (const q of tongues) {
+    const f = 0.82 + Math.sin(t * 9 + q.w) * 0.12 + Math.sin(t * 21 + q.w * 2.3) * 0.08;
+    q.s.scale.set(size * big * 0.62 * q.h * (1.1 - f * 0.15), size * k * 1.25 * q.h * f, 1);
+    q.s.material.rotation = Math.sin(t * 4.3 + q.w) * 0.1 + Math.sin(t * 11 + q.w * 3) * 0.05;
   }
-  g.userData.glow.material.opacity = 0.35 + k * 0.5 + Math.sin(t * 9) * 0.06;
+  for (const q of list) {
+    const a = (t * q.sp + q.ph) % 1, r = (1 - a) * 0.14 * size * big;
+    q.s.position.set(Math.sin(q.w + t * 3.1) * r, size * k * (0.45 + a * 0.95), Math.cos(q.w * 1.7 + t * 2.3) * r);
+    const w = size * big * (0.08 + 0.2 * (1 - a));
+    q.s.scale.set(w, w * 1.8, 1);
+    q.s.material.color.copy(HOT).lerp(RED, Math.min(1, a * 1.25));
+    q.s.material.opacity = Math.min(1, a * 9) * Math.pow(1 - a, 1.3) * 0.5;
+  }
+  for (const q of sparks) {
+    const a = (t * 0.42 + q.ph) % 1;
+    q.s.position.set(Math.sin(q.w + t * 1.9 + a * 5) * 0.32 * size, size * k * (0.5 + a * 2.6), Math.cos(q.w * 2 + t * 1.3 + a * 4) * 0.32 * size);
+    q.s.scale.setScalar(0.06 * size); q.s.material.opacity = (1 - a) * 0.9;
+  }
+  glow.scale.setScalar(size * (1.5 + k * 1.1) * (1 + Math.sin(t * 9) * 0.05)); glow.material.opacity = 0.12 + k * 0.2 + Math.sin(t * 13) * 0.03;
 }
 
 export class Fire {
-  constructor(scene, cfg, dayLen) {
+  constructor(scene, cfg, dayLen, A) {
     this.dayLen = dayLen; this.fuel = 0; this.ember = 0; this.torchT = 0; this.lastP = null; this.told = {}; this.t = 0; this.wasLit = false;
     this.source = cfg.source; this.S = { x: cfg.source[0], z: cfg.source[1] }; this.H = { x: cfg.hearth[0], z: cfg.hearth[1] };
     const sy = height(this.S.x, this.S.z), hy = height(this.H.x, this.H.z);
 
-    // de smeulende stam: zwartgeblakerde grond, een omgevallen verkoolde boom, gloed en een hoge rookpluim
-    const burnt = new THREE.Mesh(new THREE.CircleGeometry(8, 20), new THREE.MeshLambertMaterial({ map: softTex('rgba(40,34,30,0.95)', 'rgba(40,34,30,0)'), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+    const logV = variantsOf(A.models.dead_tree_trunk)[0], twigV = variantsOf(A.models.dry_branches_medium_01);
+    const treeV = A.models.oldtree ? whole(A.models.oldtree, true) : null;
+    const rockV = ['namaqualand_rocks_01', 'namaqualand_boulder_05', 'namaqualand_boulder_02'].flatMap((n) => variantsOf(A.models[n]));
+    const char = tinted(0x3a322c);
+
+    // de plek van de inslag: zwartgeblakerde grond, een verkoolde boom die nog overeind staat, en ervoor de afgebroken stam die smeult
+    const burnt = new THREE.Mesh(new THREE.CircleGeometry(10, 24), new THREE.MeshLambertMaterial({ map: softTex('rgba(34,29,26,0.95)', 'rgba(34,29,26,0)'), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
     burnt.rotation.x = -Math.PI / 2; burnt.position.set(this.S.x, sy + 0.06, this.S.z); scene.add(burnt);
-    const char = lam(0x16120f), src = new THREE.Group();
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.42, 4.6, 7), char); trunk.rotation.z = Math.PI / 2 - 0.08; trunk.position.y = 0.36; src.add(trunk);
-    const stump = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.5, 1.1, 7), char); stump.position.set(-2.9, 0.5, 0.3); src.add(stump);
-    for (const [x, r, l] of [[1.4, 0.9, 1.6], [0.2, -0.8, 1.3], [1.9, -0.5, 1.1]]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.11, l, 5), char); b.position.set(x, 0.75, r * 0.4); b.rotation.set(r, 0, 0.5); src.add(b); }
-    const glowMat = new THREE.MeshBasicMaterial({ color: 0xff4a10, fog: false });
-    for (const x of [-0.9, 0.1, 0.9]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 4), glowMat); e.scale.set(1.6, 0.5, 1); e.position.set(x, 0.62, 0.12); src.add(e); }
-    this.srcFlame = flames(1.1); this.srcFlame.position.set(0.1, 0.6, 0.1); src.add(this.srcFlame);
-    src.position.set(this.S.x, sy, this.S.z); src.rotation.y = 0.7; src.traverse((o) => { if (o.isMesh && o.material === char) o.castShadow = true; }); scene.add(src);
+    const src = new THREE.Group(), long = Math.max(logV.size.x, logV.size.z), alongX = logV.size.x >= logV.size.z, lk = 4.6 / long;
+    const log = make(logV, lk, char); log.position.y = -0.12 * logV.size.y * lk; src.add(log);
+    const top = logV.size.y * lk * 0.82;
+    this.embers = [];
+    for (const [d, w] of [[-1.5, 0.7], [-0.6, 1.0], [0.3, 0.8], [1.2, 1.1], [1.9, 0.6]]) {
+      const e = glowSprite('rgba(255,96,20,0.95)', 'rgba(255,60,0,0)'); e.position.set(alongX ? d : 0.05, top * (0.75 + w * 0.2), alongX ? 0.05 : d); src.add(e); this.embers.push({ e, w });
+    }
+    this.srcFlame = flames(0.95); this.srcFlame.position.set(alongX ? 0.2 : 0, top * 0.9, alongX ? 0 : 0.2); src.add(this.srcFlame);
+    twigV.forEach((v, i) => { const t = make(v, 1.1, char); t.position.set(Math.cos(i * 2.3) * 2.6, 0, Math.sin(i * 2.3) * 2.2); t.rotation.y = i * 1.9; src.add(t); });
+    src.position.set(this.S.x, sy, this.S.z); src.rotation.y = 0.7; scene.add(src);
     blockers.push({ x: this.S.x, z: this.S.z, r: 0.9 });
+    if (treeV) {
+      const tx = this.S.x - 3.4, tz = this.S.z - 2.2, t = make(treeV, 7.5 / treeV.size.y, char);
+      t.position.set(tx, height(tx, tz) - 0.15, tz); t.rotation.y = 2.1; scene.add(t); blockers.push({ x: tx, z: tz, r: 0.45 });
+    }
     this.srcSmoke = new Smoke(scene, this.S.x, sy + 0.8, this.S.z, { n: 26, rise: 2.6, top: 55, size: 9, color: 0x4a4642, drift: 0.3, dense: 0.8 });
     this.srcLight = new THREE.PointLight(0xff6a20, 0, 14, 2); this.srcLight.position.set(this.S.x, sy + 1.2, this.S.z); scene.add(this.srcLight);
 
-    // de kring van stenen bij het kamp
-    const ring = new THREE.Group(), stone = lam(0x8a8078);
-    for (let i = 0; i < 9; i++) { const a = i / 9 * 6.28, s = new THREE.Mesh(new THREE.DodecahedronGeometry(0.16 + (i % 3) * 0.02, 0), stone); s.position.set(Math.cos(a) * 0.72, 0.07, Math.sin(a) * 0.72); s.rotation.set(i, i * 2, 0); s.castShadow = true; ring.add(s); }
-    const ash = new THREE.Mesh(new THREE.CircleGeometry(0.66, 14), new THREE.MeshLambertMaterial({ color: 0x2a2623, polygonOffset: true, polygonOffsetFactor: -2 })); ash.rotation.x = -Math.PI / 2; ash.position.y = 0.03; ring.add(ash);
+    // de vuurplaats bij het kamp: een kring van keien om een bed van as
+    const ring = new THREE.Group();
+    for (let i = 0; i < 11; i++) {
+      const v = rockV[(i * 5 + 1) % rockV.length], a = i / 11 * 6.283 + (i % 2) * 0.08, w = 0.3 + (i * 7 % 4) * 0.035;
+      let k = w / Math.max(v.size.x, v.size.z); if (v.size.y * k > 0.34) k = 0.34 / v.size.y;
+      const st = make(v, k); st.position.set(Math.cos(a) * 0.82, -0.3 * v.size.y * k, Math.sin(a) * 0.82); st.rotation.y = i * 2.1; ring.add(st);
+    }
+    const ash = new THREE.Mesh(new THREE.CircleGeometry(1.25, 20), new THREE.MeshLambertMaterial({ map: softTex('rgba(30,27,25,0.96)', 'rgba(30,27,25,0)'), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+    ash.rotation.x = -Math.PI / 2; ash.position.y = 0.04; ring.add(ash);
     this.logs = new THREE.Group();
-    for (let i = 0; i < 4; i++) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, 0.85, 5), lam(0x2c2018)); l.rotation.set(Math.PI / 2 - 0.35, i * 1.57 + 0.4, 0); l.position.y = 0.16; this.logs.add(l); }
+    const wood = tinted(0x7a6654);
+    for (let i = 0; i < 4; i++) { const v = twigV[i % twigV.length], l = make(v, 1.0 / Math.max(v.size.x, v.size.z), wood); l.rotation.y = i * 1.2 + 0.3; l.position.set(Math.cos(i * 1.6) * 0.1, 0.04 + i * 0.03, Math.sin(i * 1.6) * 0.1); this.logs.add(l); }
     ring.add(this.logs);
-    this.coals = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 5), new THREE.MeshBasicMaterial({ color: 0xff4a10, fog: false })); this.coals.scale.y = 0.25; this.coals.position.y = 0.08; ring.add(this.coals);
-    this.flame = flames(1.25); this.flame.position.y = 0.1; ring.add(this.flame);
+    this.coals = new THREE.Mesh(new THREE.CircleGeometry(0.62, 16), new THREE.MeshBasicMaterial({ map: softTex('rgba(255,255,255,1)', 'rgba(255,255,255,0)'), color: 0xff4a10, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    this.coals.rotation.x = -Math.PI / 2; this.coals.position.y = 0.16; ring.add(this.coals);
+    this.flame = flames(1.3); this.flame.position.y = 0.12; ring.add(this.flame);
     ring.position.set(this.H.x, hy, this.H.z); scene.add(ring);
-    blockers.push({ x: this.H.x, z: this.H.z, r: 0.75, top: hy + 0.3 });
+    blockers.push({ x: this.H.x, z: this.H.z, r: 0.85, top: hy + 0.3 });
     this.smoke = new Smoke(scene, this.H.x, hy + 1, this.H.z, { n: 8, rise: 1.6, top: 12, size: 2.6, color: 0x9a948c });
     this.light = new THREE.PointLight(0xff8a3a, 0, 30, 1.6); this.light.position.set(this.H.x, hy + 1.1, this.H.z); scene.add(this.light);
     this.torchLight = new THREE.PointLight(0xff9a48, 0, 20, 1.6); scene.add(this.torchLight);
+    this.torchFlame = flames(0.3); this.torchFlame.visible = false; scene.add(this.torchFlame);
 
-    // dode bomen: omgevallen, grijs en droog
+    // dode bomen: kaal, grijs en droog. Hier hak je hout.
     this.wood = [];
-    const grey = lam(0x8c8478);
-    for (const [x, z] of cfg.wood) {
-      const g = new THREE.Group(), y = height(x, z);
-      const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.34, 4.2, 7), grey); tr.rotation.z = Math.PI / 2 - 0.1; tr.position.y = 0.32; g.add(tr);
-      for (const [bx, r, l] of [[1.3, 0.8, 1.9], [0.5, -0.9, 1.6], [1.8, -0.3, 1.4], [-0.4, 0.5, 1.2], [1.0, 0.1, 2.1]]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.08, l, 5), grey); b.position.set(bx, 0.3 + l * 0.36, r * 0.5); b.rotation.set(r * 0.8, 0, 0.35 - r * 0.3); g.add(b); }
-      g.position.set(x, y, z); g.rotation.y = x * 0.37; g.traverse((o) => { if (o.isMesh) o.castShadow = true; }); scene.add(g);
-      blockers.push({ x, z, r: 0.7 });
+    cfg.wood.forEach(([x, z], i) => {
+      if (treeV) { const t = make(treeV, (5.6 + (i % 3) * 0.9) / treeV.size.y); t.position.set(x, height(x, z) - 0.15, z); t.rotation.y = x * 0.37; scene.add(t); }
+      blockers.push({ x, z, r: 0.5 });
       this.wood.push({ x, z, cool: 0 });
-    }
+    });
 
-    // de berg aan de horizon: een vulkaan met een rookpluim. Te ver om heen te lopen; hij hoort bij het landschap.
-    if (cfg.volcano) {
-      const [vx, vz] = cfg.volcano;
-      // onderaan lost hij op in de nevel, naar boven wordt hij donker; de kraterrand is grillig
-      this.volMat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false });
-      const geo = new THREE.CylinderGeometry(20, 240, 220, 16, 5, true), pos = geo.attributes.position, col = [];
-      for (let i = 0; i < pos.count; i++) {
-        const k = (pos.getY(i) + 110) / 220, a = Math.atan2(pos.getZ(i), pos.getX(i));
-        if (k > 0.99) pos.setY(i, pos.getY(i) + Math.sin(a * 3) * 7 + Math.sin(a * 7) * 3);
-        else if (k > 0.1) { const w = 1 + Math.sin(a * 5 + k * 4) * 0.07; pos.setX(i, pos.getX(i) * w); pos.setZ(i, pos.getZ(i) * w); }
-        const c = 1 - 0.55 * Math.pow(k, 0.7) + Math.sin(a * 9) * 0.03 * k; col.push(c, c * 0.95, c * 0.92);
+    // de berg aan de horizon: een vulkaan uit de Grote Slenk (hoogtekaart en satellietfoto van de Ol Doinyo Lengai), met een rookpluim.
+    // Te ver om heen te lopen; hij hoort bij het landschap. Onderaan lost hij op in de nevel.
+    if (cfg.volcano && A.models.lengai) {
+      const [vx, vz] = cfg.volcano, V = whole(A.models.lengai), peak = new THREE.Vector3(0, -1e9, 0), v = new THREE.Vector3();
+      for (const q of V.parts) { const pos = q.geo.attributes.position; for (let i = 0; i < pos.count; i++) if (pos.getY(i) > peak.y) peak.fromBufferAttribute(pos, i); }
+      const kx = 0.115, ky = kx * 1.45, H = V.size.y * ky;
+      this.volU = { map: { value: null }, fogCol: { value: new THREE.Color(0xffffff) }, H: { value: H }, sun: { value: new THREE.Vector3(0.55, 0.55, 0.35).normalize() } };
+      const grp = new THREE.Group();
+      for (const q of V.parts) {
+        q.geo.translate(-peak.x, 0, -peak.z); q.geo.scale(kx, ky, kx); q.geo.computeVertexNormals();
+        const mat = new THREE.ShaderMaterial({
+          uniforms: { ...this.volU, map: { value: q.mat.map } },
+          vertexShader: 'varying vec2 vUv; varying float vH; varying vec3 vN; void main() { vUv = uv; vH = position.y; vN = normal; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+          fragmentShader: `uniform sampler2D map; uniform vec3 fogCol; uniform float H; uniform vec3 sun; varying vec2 vUv; varying float vH; varying vec3 vN;
+            void main() {
+              vec3 c = texture2D(map, vUv).rgb * (0.5 + 0.75 * max(dot(normalize(vN), sun), 0.0)) * min(1.0, dot(fogCol, vec3(0.3, 0.6, 0.1)) * 1.5);
+              float k = smoothstep(0.03, 0.6, vH / H);
+              gl_FragColor = vec4(mix(fogCol, c, 0.25 + k * 0.55), smoothstep(0.1, 0.42, vH / H));
+              #include <tonemapping_fragment>
+              #include <colorspace_fragment>
+            }`,
+          transparent: true,
+        });
+        mat.uniforms.fogCol = this.volU.fogCol;
+        grp.add(new THREE.Mesh(q.geo, mat));
       }
-      geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-      const cone = new THREE.Mesh(geo, this.volMat); cone.position.set(vx, 90, vz); scene.add(cone);
-      this.volSmoke = new Smoke(scene, vx, 198, vz, { n: 10, rise: 3.5, top: 140, size: 90, color: 0x6a645e, drift: 0.5 });
-      for (const p of this.volSmoke.puffs) p.s.material.fog = false;
+      grp.position.set(vx, -14, vz); scene.add(grp);
+      this.volSmoke = new Smoke(scene, vx, H - 22, vz, { n: 10, rise: 3.5, top: 140, size: 80, color: 0x6a645e, drift: 0.5 });
+      for (const q of this.volSmoke.puffs) q.s.material.fog = false;
     }
     this.scene = scene;
   }
@@ -179,9 +270,9 @@ export class Fire {
   // een tak in de gloed houden
   kindle(game) {
     const s = game.state, i = s.hands.indexOf('branch') >= 0 ? s.hands.indexOf('branch') : s.hands.indexOf('stick');
-    if (i < 0) { game.toast('Je steekt je hand uit… Heet! Zo krijg je het niet mee.', 4); game.sound.bad(); return; }
+    if (i < 0) { game.toast('Au, heet! Met je hand kun je geen vuur pakken.', 4); game.sound.bad(); return; }
     s.hands[i] = 'torch'; this.torchT = TORCH; this.told.low = false; game.renderHands(); game.sound.whoosh();
-    game.toast(s.found.has('torch') ? 'De tak vat vlam. Lopen!' : 'Je houdt de tak in de gloed. Hij rookt, knettert… en dan brandt hij! Nu snel terug, voor hij op is.', 6);
+    game.toast(s.found.has('torch') ? 'De tak vat vlam. Lopen!' : 'De tak rookt… en dan brandt hij! Snel terug naar het kamp, voor hij op is.', 6);
     s.known.add('torch'); game.discover('torch');
   }
   // met de brandende tak het vuur in de kring aansteken
@@ -190,7 +281,7 @@ export class Fire {
     s.hands[i] = null; game.renderHands(); game.sound.whoosh();
     const first = !s.found.has('hearth');
     this.fuel = Math.min(MAX, this.fuel + 200); this.ember = 0;
-    game.toast(first ? 'Je legt de brandende tak in de kring van stenen. De vlammen grijpen om zich heen. Vuur! Iedereen komt kijken.' : 'Het vuur brandt weer in de kring van stenen.', 7);
+    game.toast(first ? 'Je legt de brandende tak tussen de stenen. Vuur! Iedereen komt kijken.' : 'Het vuur brandt weer.', 7);
     if (first) s.group = Math.min(100, s.group + 20);
     setTimeout(() => game.sound.good(), 700);
     game.discover('hearth');
@@ -199,20 +290,20 @@ export class Fire {
   feed(game) {
     const s = game.state, i = s.hands.indexOf('branch') >= 0 ? s.hands.indexOf('branch') : s.hands.indexOf('stick');
     if (i < 0) return;
-    if (this.state === 'cold') { game.toast('Je legt de tak op de koude as. Er gebeurt niets. Vuur komt niet vanzelf.', 5); return; }
-    if (this.fuel >= MAX - 20) { game.toast('Er ligt genoeg op. Meer hout verstikt het vuur.', 4); return; }
+    if (this.state === 'cold') { game.toast('De as is koud. Er gebeurt niets. Je moet eerst vuur halen.', 5); return; }
+    if (this.fuel >= MAX - 20) { game.toast('Er ligt genoeg hout op.', 4); return; }
     const revive = this.fuel <= 0;
     s.hands[i] = null; game.renderHands(); game.sound.crack();
     this.fuel = Math.min(MAX, this.fuel + BRANCH); this.ember = 0; this.told.small = false;
-    if (revive) { game.toast('Je legt de tak op de gloeiende as en blaast. Rook… en dan een vlam. Het vuur is terug!', 6); game.discover('ember'); }
-    else game.toast(this.fuel > 500 ? 'De vlammen slaan hoog op. Dit brandt de hele nacht.' : 'Het hout knettert. Het vuur brandt weer feller.', 4);
+    if (revive) { game.toast('Je legt de tak op de as en blaast. Rook… een vlam! Het vuur is terug.', 6); game.discover('ember'); }
+    else game.toast(this.fuel > 500 ? 'De vlammen zijn hoog. Dit brandt de hele nacht.' : 'Het hout knettert. Het vuur wordt groter.', 4);
     game.discover('feed');
   }
   // vlees boven het vuur
   roast(game) {
     const s = game.state, i = s.hands.indexOf('meat'); if (i < 0 || !this.lit) return;
     s.hands[i] = 'roast'; game.renderHands(); game.sound.hiss(0.6);
-    game.toast(s.found.has('roast') ? 'Het vlees sist en kleurt bruin.' : 'Je houdt het vlees boven de vlammen. Het sist, het vet druipt, en het ruikt… Iedereen kijkt op.', 6);
+    game.toast(s.found.has('roast') ? 'Het vlees sist en kleurt bruin.' : 'Het vlees sist boven het vuur. Wat ruikt dat lekker! Iedereen kijkt op.', 6);
     s.known.add('roast'); game.discover('roast');
   }
   // een tak van een dode boom hakken
@@ -220,13 +311,13 @@ export class Fire {
     const s = game.state;
     if (!s.hands.includes('axe')) {
       game.sound.bad();
-      game.toast(s.hands.includes('flake') ? 'Je zaagt met de afslag over de tak. Hij is te klein: je komt er niet doorheen.' : 'Je hangt met je hele gewicht aan een tak. Hij buigt, maar breekt niet. Dit hout is te taai voor je handen.', 5);
+      game.toast(s.hands.includes('flake') ? 'Je snijdt met de scherf in de tak. Het lukt niet: de scherf is te klein.' : 'Je trekt hard aan een tak. Hij buigt, maar breekt niet. Je hebt iets zwaars en scherps nodig.', 5);
       return;
     }
     if (w.cool > 0) return;
     w.cool = 0.8; game.sound.crack(); setTimeout(() => game.sound.thud(), 250);
     if (!game.giveHand('branch')) return;
-    game.toast(s.found.has('chop') ? 'Tak!' : 'Drie klappen met de vuistbijl en de tak is los. Droog hout: dat brandt goed.', 4);
+    game.toast(s.found.has('chop') ? 'Tak!' : 'Drie klappen en de tak is los. Droog hout brandt goed.', 4);
     s.known.add('axe'); game.discover('chop');
   }
 
@@ -238,11 +329,11 @@ export class Fire {
     const s = game.state;
     if (this.lit) {
       s.health = Math.min(100, s.health + 10); s.group = Math.min(100, s.group + 6);
-      setTimeout(() => { game.toast('Het vuur brandt nog. Niemand heeft het koud gehad, en geen dier kwam dichtbij.', 6); game.discover('keep'); }, 4200);
+      setTimeout(() => { game.toast('Het vuur brandt nog. Niemand had het koud, en geen dier kwam dichtbij.', 6); game.discover('keep'); }, 4200);
     } else {
       s.group = Math.max(0, s.group - 8);
       const ember = this.ember > 0;
-      setTimeout(() => { game.sound.bad(); game.toast(ember ? 'Het vuur is uit. Maar onder de as gloeit het nog: snel een tak erop!' : 'Het vuur is vannacht uitgegaan. De as is koud. Het moet opnieuw gehaald worden.', 7); }, 4200);
+      setTimeout(() => { game.sound.bad(); game.toast(ember ? 'Het vuur is uit. Maar de as gloeit nog. Leg er snel een tak op!' : 'Het vuur is vannacht uitgegaan. De as is koud. Je moet nieuw vuur halen.', 7); }, 4200);
     }
   }
   // de tijd die verstreken is (ook als je sliep) vreet aan het hout
@@ -263,8 +354,8 @@ export class Fire {
         const wet = this.torchT > 0;
         for (const i of [0, 1]) if (game.state.hands[i] === 'torch') game.state.hands[i] = null;
         game.renderHands(); game.sound.hiss(0.5);
-        game.toast(wet ? 'Het water slaat over de vlam. Sssst. Uit.' : 'De tak is opgebrand tot aan je vingers. Je laat hem vallen. Het vuur is weg.', 6);
-      } else if (this.torchT < 45 && !this.told.low) { this.told.low = true; game.toast('De vlam kruipt naar je hand. Schiet op!', 4); }
+        game.toast(wet ? 'Het water slaat over de vlam. Sssst. Uit.' : 'De tak is op. Je laat hem vallen. Het vuur is weg.', 6);
+      } else if (this.torchT < 45 && !this.told.low) { this.told.low = true; game.toast('De vlam komt bij je hand. Schiet op!', 4); }
     }
   }
 
@@ -282,24 +373,29 @@ export class Fire {
     flicker(this.flame, t, this.level);
     this.coals.visible = this.fuel > 0 || this.ember > 0; this.logs.visible = this.coals.visible;
     this.coals.material.color.setHex(this.fuel > 0 ? 0xff5a14 : 0xb02a08);
+    this.coals.material.opacity = 0.75 + Math.sin(t * 2.3) * 0.2;
     const fl = 0.85 + Math.sin(t * 9) * 0.08 + Math.sin(t * 21) * 0.07;
     this.light.intensity = (this.level * 26 + (this.fuel <= 0 && this.ember > 0 ? 1.5 : 0)) * fl * (0.35 + 0.65 * game.night);
     this.smoke.k = this.fuel > 0 ? 0.8 : this.ember > 0 ? 0.35 : 0; this.smoke.update(dt, t);
     if (this.fuel > 0 && this.fuel < 110 && game.night > 0.3 && !this.told.small && dist(p, this.H) < 30) { this.told.small = true; game.toast('Het vuur wordt klein. Er moet hout op.', 5); }
     // de smeulende stam
     flicker(this.srcFlame, t, 0.55 + Math.sin(t * 0.7) * 0.2);
+    for (const { e, w } of this.embers) { const g = 0.55 + 0.45 * Math.sin(t * (0.9 + w) + w * 9); e.scale.setScalar(0.5 + w * 0.35 + g * 0.15); e.material.opacity = 0.45 + g * 0.5; }
     this.srcLight.intensity = 9 * fl * (0.3 + 0.7 * game.night);
     this.srcSmoke.update(dt, t);
-    if (this.volSmoke) { this.volSmoke.update(dt, t); if (this.scene.fog) this.volMat.color.copy(this.scene.fog.color); }
+    if (this.volSmoke) { this.volSmoke.update(dt, t); if (this.scene.fog) this.volU.fogCol.value.copy(this.scene.fog.color); }
     // de brandende tak: licht om je heen, en hyena's die terugdeinzen
     const torch = s.hands.includes('torch');
     this.torchLight.intensity = torch ? 14 * fl * (0.3 + 0.7 * game.night) : 0;
+    this.torchFlame.visible = false;
     if (torch) {
       this.torchLight.position.set(p.x, p.y + 1.7, p.z);
+      const hand = s.hands[0] === 'torch' ? game.player.heldL : game.player.held, coal = hand && hand.getObjectByName('coal');
+      if (coal) { coal.getWorldPosition(this.torchFlame.position); flicker(this.torchFlame, t, 0.9 + Math.sin(t * 5) * 0.1); }
       for (const h of game.hyenas.list) {
         if (dist(h, p) < 10 && ['curious', 'windup', 'rush'].includes(h.state)) {
           h.state = 'retreat'; h.t = 6; game.sound.yelp();
-          if (!s.found.has('scare')) { game.toast('De hyena ziet de vlam en deinst terug!', 4); game.discover('scare'); }
+          if (!s.found.has('scare')) { game.toast('De hyena ziet de vlam en schrikt terug!', 4); game.discover('scare'); }
         }
       }
     }

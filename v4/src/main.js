@@ -39,7 +39,7 @@ document.body.prepend(renderer.domElement);
 
 // eerst de gescande natuur laden; daarna begint het spel vanzelf
 const loading = document.getElementById('loading');
-const A = await loadAssets(renderer, (f) => { loading.textContent = `Laden… ${Math.round(f * 100)}%`; });
+const A = await loadAssets(renderer, (f) => { loading.textContent = `Laden… ${Math.round(f * 100)}%`; }, AREA.models);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 700);
@@ -66,7 +66,7 @@ const group = new Group(scene, A);
 const enc = new Encounters(scene, A);   // wat je onderweg tegenkomt
 const giant = new Giant(scene, A, AREA.giant);      // de reuzenolifant die zijn ronde loopt
 const shore = AREA.shore ? new Shore(scene) : null;   // de oever: krokodillen, meervallen, knollen
-const fire = AREA.fire ? new Fire(scene, AREA.fire, DAY_LEN) : null;   // vuur: vinden, dragen, brandend houden
+const fire = AREA.fire ? new Fire(scene, AREA.fire, DAY_LEN, A) : null;   // vuur: vinden, dragen, brandend houden
 // wat er in dit tijdperk te ontdekken valt, en of je iets scherps in je hand hebt (een afslag of een vuistbijl)
 const ERA_IX = ERAS.indexOf(ERA), DISC = DISCOVERIES.filter((d) => !d.era || ERAS.findIndex((e) => e.id === d.era) <= ERA_IX);
 const sharp = () => state.hands.includes('flake') || state.hands.includes('axe');
@@ -327,7 +327,7 @@ function knap(i) {
 }
 // Een vuistbijl: niet één scherf eraf slaan, maar de kei zelf rondom bewerken tot hij een punt en twee snijkanten heeft.
 // Dat kost veel meer klappen, en alleen een harde kei houdt het uit.
-const AXE_SAY = ['Tak! Een grote scherf springt eraf. Draai de kei en sla opnieuw.', 'Tik! Nu de andere kant. De rand wordt dunner.', 'Tak! Er komt een punt aan.', 'Tik, tik. Kleine scherfjes: de rand wordt recht en scherp.', 'Nog één kant…'];
+const AXE_SAY = ['Tak! Er springt een stuk af. Draai de kei en sla weer.', 'Nu de andere kant. De rand wordt dunner.', 'Er komt een punt aan.', 'Kleine tikjes nu. De rand wordt scherp.', 'Nog één keer…'];
 function knapAxe(i) {
   if (state.hands[i] === 'stone' && !state.rock[i]) renderHands();
   const r = state.rock[i];
@@ -344,7 +344,7 @@ function knapAxe(i) {
   sound.knap();
   if (r.shape < 6) { toast(AXE_SAY[r.shape - 1], 3); again(); return; }
   state.hands[i] = 'axe'; state.rock[i] = null; renderHands(); state.rockKnown.add(r.type); state.knapped = true;
-  toast(state.found.has('axe') ? 'Weer een vuistbijl: zwaar, scherp en rondom bewerkt.' : 'Je draait hem om in je hand. Een punt, twee scherpe kanten, en hij ligt zwaar in je vuist. Dit is geen scherf meer: dit is een vuistbijl!', 7);
+  toast(state.found.has('axe') ? 'Weer een vuistbijl. Zwaar en scherp.' : 'Klaar! Een punt, twee scherpe kanten, en hij past precies in je hand. Je hebt een vuistbijl.', 7);
   state.known.add('axe'); discover('axe');
 }
 // doorslaan zolang je stil blijft staan met beide keien in je handen
