@@ -45,7 +45,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 700);
 const world = buildWorld(scene, A);
 const player = new Hominin(scene, A);
-const herd = new Herd(scene, AREA.herd.at[0], AREA.herd.at[1], AREA.herd.n, A);
+const herd = new Herd(scene, AREA.herd.at[0], AREA.herd.at[1], AREA.herd.n, A, { persist: !!AREA.herd.persist });
 const CARCASS = AREA.carcass;
 const vultures = new Vultures(scene, CARCASS.x, CARCASS.z, A);
 carcass(scene, CARCASS.x, CARCASS.z);
@@ -105,7 +105,7 @@ function discover(id) {
 // ---------- wat de onderdelen van elkaar mogen weten ----------
 // Systemen (systems/) krijgen dit ene object mee. Wat pas verderop in dit bestand ontstaat, wordt op het moment van gebruik opgehaald.
 const G = {
-  state, player, scene, things, hyenas, sabres, group, giant, shore, fire, sound, closeRadial, renderHands, renderBag, putCloak, freeHand, discover, carcassNear, hiveNear,
+  state, player, scene, things, hyenas, sabres, group, giant, shore, fire, herd, sound, closeRadial, renderHands, renderBag, putCloak, freeHand, discover, carcassNear, hiveNear,
   get predGame() { return predGame; }, get dayP() { return dayP; }, set dayP(v) { dayP = v; }, get danger() { return danger; }, get aim() { return aim; },
   get camYaw() { return camYaw; }, set camTurn(v) { camTurn = v; }, get clock() { return clock; }, stopWalk() { walkTo = null; },
 };
@@ -322,8 +322,9 @@ function knap(i) {
   sound.knap();
   if (r.hits < R.hits) { toast(r.hits === 1 ? 'Tik! Een splinter, te klein om vast te houden. Nog eens.' : 'Tak! Er loopt een barst langs de rand. Bijna…', 3); again(); return; }
   state.hands[i] = 'flake'; renderHands(); state.rockKnown.add(r.type); state.knapped = true;
-  toast(state.found.has('flake') ? 'Tik! Weer een scherpe afslag.' : 'Tik! Er springt een scherpe afslag van de steen af.');
-  state.known.add('flake'); discover('flake');
+  if (r.type === 'obsidian' && !state.found.has('glass')) toast('Tik! Een scherf zo dun dat je erdoorheen kijkt. De rand snijdt al als je hem aanraakt.', 7);
+  else toast(state.found.has('flake') ? 'Tik! Weer een scherpe afslag.' : 'Tik! Er springt een scherpe afslag van de steen af.');
+  state.known.add('flake'); discover('flake'); if (r.type === 'obsidian') discover('glass');
 }
 // Een vuistbijl: niet één scherf eraf slaan, maar de kei zelf rondom bewerken tot hij een punt en twee snijkanten heeft.
 // Dat kost veel meer klappen, en alleen een harde kei houdt het uit.
@@ -342,9 +343,11 @@ function knapAxe(i) {
     return;
   }
   sound.knap();
-  if (r.shape < 6) { toast(AXE_SAY[r.shape - 1], 3); again(); return; }
+  const need = R.axe || 6;
+  if (r.shape < need) { toast(AXE_SAY[r.shape - 1 + 6 - need], 3); again(); return; }
   state.hands[i] = 'axe'; state.rock[i] = null; renderHands(); state.rockKnown.add(r.type); state.knapped = true;
-  toast(state.found.has('axe') ? 'Weer een vuistbijl. Zwaar en scherp.' : 'Klaar! Een punt, twee scherpe kanten, en hij past precies in je hand. Je hebt een vuistbijl.', 7);
+  if (r.type === 'obsidian') discover('glass');
+  toast(r.type === 'obsidian' ? 'Een vuistbijl van zwart glas. De randen glimmen. Zo scherp was er nog geen.' : state.found.has('axe') ? 'Weer een vuistbijl. Zwaar en scherp.' : 'Klaar! Een punt, twee scherpe kanten, en hij past precies in je hand. Je hebt een vuistbijl.', 7);
   state.known.add('axe'); discover('axe');
 }
 // doorslaan zolang je stil blijft staan met beide keien in je handen
@@ -569,12 +572,13 @@ function openRadial(target) {
     opts.push({ icon: ICON.turn, fn: () => goAndDo(target, () => act('PickUp_Table', () => turnStone(target), 1.4)) });
   } else if (target.look) {
     opts.push({ icon: ICON.eye, fn: () => lookAt(target) });
-    if (['hyena', 'leopard', 'sabre', 'zebra', 'wounded', 'bird', 'snake', 'stranger', 'croc'].includes(target.look) && hasStone) opts.push({ icon: ICON.throw, fn: () => quickThrow(target.member) });
+    if (['hyena', 'leopard', 'sabre', 'zebra', 'wounded', 'bird', 'snake', 'stranger', 'croc', 'gazelle'].includes(target.look) && hasStone) opts.push({ icon: ICON.throw, fn: () => quickThrow(target.member) });
     // snijden: zonder afslag merk je vanzelf dat het niet gaat
     const flake = sharp(), cut = (fn) => () => (sharp() ? act('Interact', fn) : fn());
     if (target.look === 'carcass' && flake) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cut(cutMeat)) });
     if (target.look === 'kill' && sabres.kill && sabres.kill.meat > 0) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cut(cutKill)) });
     if (target.look === 'kill' && sabres.kill && sabres.kill.hide) opts.push({ icon: ICON.hide, fn: () => goAndDo(target, cut(cutHide)) });
+    if (target.look === 'herdkill' && herd.kill.meat > 0) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cut(cutHerd), 2.2) });
     if (target.look === 'prey' && target.enc.meat > 0) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cut(() => enc.cutPrey(target.enc, predGame)), 2.4) });
     if (target.look === 'giantdead' && giant.meat > 0) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cut(() => giant.cut(predGame)), 3.2) });
     if (target.look === 'catfish') opts.push({ icon: ICON.hand, fn: () => goAndDo(target, () => act('Interact', () => shore.grab(target, predGame)), 1.6) });
@@ -780,6 +784,8 @@ const predGame = { player, state, sound, toast, murmur, carries, discover, bite,
 
 // ---------- wat kun je aantikken? ----------
 const LOOK_TARGETS = [{ look: 'carcass', x: CARCASS.x, z: CARCASS.z }, { look: 'tree', x: HOME.x, z: HOME.z }];
+if (AREA.outcrop) LOOK_TARGETS.push({ look: 'outcrop', x: AREA.outcrop.at[0], z: AREA.outcrop.at[1], high: height(...AREA.outcrop.at) + 1.6 });
+Object.assign(LOOKS, AREA.looks);
 function targetPos(t) {
   if (t.member && t.member.g) return { x: t.member.x, y: t.member.g.position.y + 0.8, z: t.member.z };
   if (t.member) return { x: t.member.x, y: height(t.member.x, t.member.z) + 1, z: t.member.z };
@@ -797,7 +803,7 @@ function tapAt(sx, sy) {
     if (Math.hypot(p.x - player.pos.x, p.z - player.pos.z) > (c.look ? 90 : 35)) continue;
     v3.set(p.x, p.y, p.z).project(camera); if (v3.z > 1) continue;
     const d = Math.hypot((v3.x + 1) / 2 * innerWidth - sx, (1 - v3.y) / 2 * innerHeight - sy);
-    if (d < bd || (d < 150 && !best && ['kill', 'prey', 'giantdead', 'carcass'].includes(c.look) && Math.hypot(p.x - player.pos.x, p.z - player.pos.z) < 5)) { bd = Math.min(bd, d); best = c; }
+    if (d < bd || (d < 150 && !best && ['kill', 'prey', 'giantdead', 'carcass', 'herdkill'].includes(c.look) && Math.hypot(p.x - player.pos.x, p.z - player.pos.z) < 5)) { bd = Math.min(bd, d); best = c; }
   }
   // dubbeltik op een platte steen: meteen omdraaien
   const now = performance.now();
@@ -985,11 +991,33 @@ function hitTarget(t, how = 'throw') {
   else if (t.kind === 'leopard') leopard.hit(predGame);
   else if (t.kind === 'sabre') sabres.hit(t.m, predGame);
   else if (t.kind === 'zebra') { if (zebras.alarm <= 0) { zebras.scare(player.pos, 8); sound.flee(); sound.bray(); toast('Raak! De zebra\'s galopperen weg. Zo vang je er nooit een.'); } }
-  else if (herd.fleeing <= 0) { herd.fleeing = 7; sound.flee(); toast('Raak! Maar de gazellen zijn veel sneller dan jij.'); }
+  else if (t.m === herd.spent) strikeSpent(t.m, how);
+  else if (herd.fleeing <= 0) { herd.fleeing = 7; sound.flee(); toast(herd.persist ? 'Raak! De gazellen stuiven weg. Erachteraan!' : 'Raak! Maar de gazellen zijn veel sneller dan jij.'); }
+}
+// de gazelle die je moe hebt gelopen: één harde klap
+function strikeSpent(m, how) {
+  if (how === 'fist') { toast('Met je vuist lukt het niet. Je hebt een kei of je vuistbijl nodig.', 5); return; }
+  if (!herd.strike(m)) return;
+  const k = herd.kill;
+  LOOK_TARGETS.push({ look: 'herdkill', x: k.x, z: k.z }); vultures.center.set(k.x, height(k.x, k.z), k.z);
+  sound.sting(); setTimeout(() => sound.good(), 900);
+  toast('Eén klap en het is voorbij. Je hebt een gazelle gevangen, alleen met je benen en je adem.', 8);
+  state.group = Math.min(100, state.group + 10);
+  discover('run');
+}
+// vlees van de gazelle snijden
+function cutHerd() {
+  const k = herd.kill; if (!k || k.meat <= 0) return;
+  if (!sharp()) { toast('Met je handen krijg je de taaie huid niet open. Je hebt iets scherps nodig.', 5); return; }
+  const h = freeHand();
+  if (h < 0) { handsFull(); return; }
+  k.meat--; state.hands[h] = 'meat'; renderHands(); sound.eat();
+  toast(k.meat > 0 ? 'Je snijdt een lap vlees los. Er zit nog meer aan.' : 'Je snijdt de laatste lap vlees los.', 5);
+  discover('cut'); discover('runcut');
 }
 // slaan: met een steen of bot in je hand een harde klap, anders met je vuist
 function strike() {
-  const armed = state.hands.some((h) => h === 'stone' || h === 'bone' || h === 'stick');
+  const armed = state.hands.some((h) => h === 'stone' || h === 'bone' || h === 'stick' || h === 'axe');
   player.playOnce(armed ? 'Sword_Attack' : 'Punch_Cross', { speed: armed ? 1.5 : 1.3, at: armed ? 0.42 : 0.4, slow: 0.25, onAt: () => {
     sound.whoosh();
     const t = bestTarget(2.6);
@@ -1006,6 +1034,7 @@ function carcassNear() {
   const P = player.pos, near = (t, r) => Math.hypot(t.x - P.x, t.z - P.z) < r, cut = (fn) => () => (sharp() ? act('Interact', fn) : fn());
   const k = sabres.kill;
   if (k && near(k, 3.2) && (k.meat > 0 || k.hide)) return { run: cut(k.meat > 0 ? cutKill : cutHide) };
+  if (herd.kill && herd.kill.meat > 0 && near(herd.kill, 3)) return { run: cut(cutHerd) };
   const prey = enc.lookTargets().find((t) => t.look === 'prey' && t.enc.meat > 0 && near(t, 3));
   if (prey) return { run: cut(() => enc.cutPrey(prey.enc, predGame)) };
   const gd = giant.lookTargets(player).find((t) => t.look === 'giantdead' && giant.meat > 0 && near(t, 5));
@@ -1085,7 +1114,18 @@ const ui = {
   flee(smelled) {
     sound.flee();
     if (smelled) { toast('Ze hebben je geroken! De wind waaide van jou naar hen toe.', 5); discover('wind'); }
-    else toast('De gazellen zien je en vluchten!');
+    else if (!herd.persist || herd.heat < 0.2) toast('De gazellen zien je en vluchten!');
+  },
+  // is het heet genoeg om een dier moe te lopen? Alleen als de zon hoog staat
+  hot: () => dayP > 0.25 && dayP < 0.62,
+  tired(k) {
+    if (k < 0) toast('Het is nu koel. Zo worden de gazellen niet moe. Kom terug als de zon hoog staat.', 6);
+    else if (k === 0) toast('Ze rennen minder ver dan net. Hun flanken gaan snel op en neer. Erachteraan!', 5);
+    else toast('Eén gazelle blijft achter. Haar tong hangt uit haar bek. Niet stoppen nu!', 5);
+  },
+  spent(down) {
+    if (down) { sound.good(); toast('Ze staat stil. Haar poten trillen. Ze kan niet meer. Sla toe, voor ze weer op adem is!', 7); discover('spent'); }
+    else toast('De gazelle is op adem gekomen en rent weg. Je was er bijna.', 5);
   },
 };
 
@@ -1243,7 +1283,7 @@ function update(dt) {
     } else state.starve = 0;
   }
   if (state.started && state.collapsed <= 0 && state.sleeping <= 0) {
-    state.food = Math.max(0, state.food - dt * 0.18 * (predGame.night > 0.6 && !state.cloak && !(fire && fire.warm(player.pos)) ? 1.5 : 1));   // kou vreet energie
+    state.food = Math.max(0, state.food - dt * 0.18 * (predGame.night > 0.6 && !state.cloak && !(fire && fire.warm(player.pos)) ? AREA.cold || 1.5 : 1));   // kou vreet energie
     if (sick) { state.sick -= dt; state.health -= dt * 0.9; if (state.sick <= 0) toast('De pijn is vanzelf gezakt. Dat duurde lang…'); }
     else if (state.food < 12) state.health -= dt * 0.5;
     else if (state.food > 40) state.health = Math.min(100, state.health + dt * 0.6);
@@ -1348,7 +1388,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { eat, shore, fire, knapAxe, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
+window.__game = { eat, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, flick, setSneak, still: () => stillT, FLICK,
   setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setZoom, zoom: () => camDist,
   lookFrom: (pos, look) => { camOverride = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },

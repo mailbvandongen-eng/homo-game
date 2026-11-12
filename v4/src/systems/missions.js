@@ -11,7 +11,7 @@ export function initMissions(G) {
   // Je kiest er zelf één, ziet de stappen, en als ze alle vier gelukt zijn trekt de groep verder.
   const has = (it) => state.hands.includes(it);
   const carries = (it) => has(it) || !!(state.bag && state.bag.some((e) => e && e.it === it));
-  const MISSIONS = AREA.missions({ state, has, carries, player, hyenas, sabres, group, night: () => G.predGame.night, dayP: () => G.dayP, fire: () => G.fire });
+  const MISSIONS = AREA.missions({ state, has, carries, player, hyenas, sabres, group, night: () => G.predGame.night, dayP: () => G.dayP, fire: () => G.fire, herd: () => G.herd });
   // waar het hierna heen gaat: een volgend gebied, of een volgend tijdperk
   const NEXT_ERA = ERAS.find((e) => e.playable && e.areas.some((a) => a.id === AREA.next && a.playable)) || ERA;
   const NEXT = NEXT_ERA.areas.find((a) => a.id === AREA.next && a.playable) || null;
@@ -81,7 +81,7 @@ export function initMissions(G) {
     window.__nosave = 1; closeCard(); $('fade').style.opacity = 1;
     // een nieuw tijdperk: een andere groep, honderdduizenden jaren later. Wat je weet gaat mee, wat je droeg niet.
     const leap = NEXT_ERA === ERA ? {} : { era: NEXT_ERA.id, hands: [null, null], rock: [null, null], bag: state.bag ? state.bag.map(() => null) : state.bag, day: 1, food: 70, health: 100, group: 55 };
-    Save.write({ ...G.snapshot(), ...leap, area: NEXT.id, missions: [], mission: null, over: false, past: [...state.past, ...mission.done], rainDay: leap.era ? 0 : state.day - 1, dayP: 0.1, arrived: true });
+    Save.write({ ...G.snapshot(), ...leap, fire: undefined, area: NEXT.id, missions: [], mission: null, over: false, past: [...state.past, ...mission.done], rainDay: leap.era ? 0 : state.day - 1, dayP: 0.1, arrived: true });
     setTimeout(() => location.replace(location.pathname), 900);
   }
   function markTick(g, want, dt) {

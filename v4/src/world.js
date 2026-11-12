@@ -35,6 +35,8 @@ export function rng(seed) {
 
 // ---------- vorm van het land ----------
 export const LAKE = AREA.terrain === 'lake';
+// hoe het land eruitziet kan per gebied verschillen (grondkleur, groen, nevel)
+const LK = AREA.look || {}, FOG = LK.fog || [45, 230], MIST = LK.mist ? [new THREE.Color(LK.mist[0]), LK.mist[1]] : null;
 const START = AREA.start || [2, -6], HILL = AREA.hill || [-40, -30], POOLS = AREA.pools || [], ISLE = AREA.island || null;
 // rift: het midden van de rivier. lake: de waterlijn; alles ten noorden daarvan is meer.
 export function riverZ(x) { return LAKE ? 62 + 9 * Math.sin(x * 0.02) + 4 * Math.sin(x * 0.055 + 1) : 38 * Math.sin(x * 0.011) + 14 * Math.sin(x * 0.027 + 1.3) + 55; }
@@ -145,7 +147,7 @@ export function buildWorld(scene, A) {
       }`,
   });
   scene.add(new THREE.Mesh(skyGeo, skyMat));
-  scene.fog = new THREE.Fog(0xe9cf9c, 45, 230);
+  scene.fog = new THREE.Fog(0xe9cf9c, FOG[0], FOG[1]);
   scene.environment = A.env;   // licht en weerspiegeling uit de luchtfoto
 
   // ---------- licht: lage middagzon ----------
@@ -193,9 +195,9 @@ export function buildWorld(scene, A) {
       vec3 dry = mix(texture2D(tDry, u1 * 0.8).rgb, texture2D(tDry, u2).rgb, 0.4);
       vec3 grn = texture2D(tGreen, u1 * 0.9).rgb;
       vec3 g = mix(bare, dry, smoothstep(0.0, 1.0, vMix.x + (big - 0.5) * 0.6));
-      g = mix(g, grn, vMix.y * 0.85);
+      g = mix(g, grn, min(1.0, vMix.y * 0.85 + ${(LK.green || 0).toFixed(2)}));
       // Oost-Afrikaanse grond is warmer en roder dan deze foto's
-      diffuseColor.rgb *= g * vec3(1.12, 0.93, 0.74);`);
+      diffuseColor.rgb *= g * vec3(${(LK.ground || [1.12, 0.93, 0.74]).map((v) => v.toFixed(2)).join(', ')});`);
   };
   const ground = new THREE.Mesh(geo, gmat);
   ground.receiveShadow = true;
@@ -313,7 +315,7 @@ export function buildWorld(scene, A) {
         // het gescande gras is groen; de savanne is droog en goudgeel
         .replace('#include <map_fragment>', `#include <map_fragment>
           float lum = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
-          diffuseColor.rgb = mix(diffuseColor.rgb * 1.4, lum * vec3(2.9, 2.35, 1.2), ${dry.toFixed(2)});`);
+          diffuseColor.rgb = mix(diffuseColor.rgb * 1.4, lum * vec3(2.9, 2.35, 1.2), ${(dry * (dry > 0.5 ? LK.dry || 1 : 1)).toFixed(2)});`);
     };
     return m;
   }
@@ -340,7 +342,7 @@ export function buildWorld(scene, A) {
   scatter(grassMat(0.25, 0.8), 16000, [3, 4, 5, 6, 7], () => {
     const x = (R() - 0.5) * 2 * (WALK + 10), z = (R() - 0.5) * 2 * (WALK + 10);
     if (riverDist(x, z) < 6) return null;
-    if (fbm(x * 0.05, z * 0.05, 2) < 0.4) return null;
+    if (fbm(x * 0.05, z * 0.05, 2) < (LK.lush || 0.4)) return null;
     return [x, z, 0.5 + R() * 0.5];
   });
   // hoog gras om je in te verstoppen: hoge pollen met pluimen
@@ -372,9 +374,10 @@ export function buildWorld(scene, A) {
       skyMat.uniforms.skyTint.value.setRGB(1, 1, 1).lerp(k.sun, 0.25);
       scene.environmentIntensity = (0.15 + 0.85 * dayK) * (senses ? 0.5 : 1);
       fogBase.copy(k.fog);
+      if (MIST) fogBase.lerp(MIST[0], MIST[1] * (0.35 + 0.65 * dayK));
       if (senses) fogBase.lerp(SENSE_FOG, 0.6);
       scene.fog.color.copy(fogBase);
-      scene.fog.far = senses ? 120 : 230;
+      scene.fog.far = senses ? 120 : FOG[1];
       sun.color.copy(k.sun); sun.intensity = k.sunI * (senses ? 0.45 : 1);
       hemi.color.copy(k.hemiSky); hemi.groundColor.copy(k.hemiGround); hemi.intensity = k.hemiI * (senses ? 0.6 : 1);
       // de zon komt op in het oosten (+x) en gaat onder in het westen; 's nachts schijnt de maan

@@ -33,9 +33,15 @@ export function legParts(color, upLen, loLen, thick) {
 }
 
 export class Herd {
-  constructor(scene, cx, cz, n, A) {
+  // persist: deze kudde kun je moe lopen. Een antilope raakt haar warmte alleen kwijt door stil te staan en te hijgen;
+  // wie haar in de middaghitte steeds weer opjaagt, krijgt haar op den duur tot stilstand.
+  constructor(scene, cx, cz, n, A, { persist = false } = {}) {
     const R = rng(21);
     this.members = [];
+    this.persist = persist; this.heat = 0;   // 0..1: hoe verhit de kudde is
+    this.spent = null;        // de gazelle die niet meer kan
+    this.kill = null;         // waar een gedode gazelle ligt, en hoeveel vlees eraan zit
+    this.told = {};
     this.alarm = 0;           // 0..1: hoe onrustig de kudde is
     this.fleeing = 0;         // seconden dat de kudde nog vlucht
     this.home = new THREE.Vector2(cx, cz);
@@ -80,7 +86,7 @@ export class Herd {
     }
     // onrust is besmettelijk: als één schrikt, kijkt de rest op
     if (maxAware > 1 && this.fleeing <= 0) {
-      this.fleeing = 7;
+      this.fleeing = 7 - 3 * this.heat;
       // hebben ze je geroken, of gezien?
       const first = this.members.reduce((a, b) => (b.aware > a.aware ? b : a));
       const seen = Math.hypot(p.x - first.x, p.z - first.z) < 34 * notice;
@@ -88,6 +94,7 @@ export class Herd {
     }
     this.alarm = Math.min(1, maxAware);
 
+    if (this.persist) this.heatTick(dt, player, ui);
     if (this.fleeing > 0) {
       this.fleeing -= dt;
       if (this.fleeing <= 0) {
@@ -100,9 +107,19 @@ export class Herd {
     for (const m of this.members) {
       const dx = p.x - m.x, dz = p.z - m.z, dist = Math.hypot(dx, dz) || 1;
       let tx = 0, tz = 0, spd = 0, look = 0;
-      if (this.fleeing > 0) {
-        // weg van de mens, met de kudde mee
-        tx = -dx / dist; tz = -dz / dist; spd = 9.5 * Math.min(1, this.fleeing / 2 + 0.3);
+      if (m.down > 0) {
+        // op: ze staat te trillen op haar poten en zakt door de knieën
+        m.down -= dt; m.speed = 0; m.aware = 0; look = 0.2;
+        if (m.down <= 0) { this.spent = null; this.heat = 0.55; ui.spent(false); }
+      } else if (this.fleeing > 0) {
+        // weg van de mens, met de kudde mee; bij de rand van het dal buigen ze af naar het open veld
+        tx = -dx / dist; tz = -dz / dist;
+        const edge = THREE.MathUtils.smoothstep(Math.max(Math.abs(m.x), Math.abs(m.z)), WALK - 60, WALK - 15), wet = THREE.MathUtils.smoothstep(22 - riverDist(m.x, m.z), 0, 14);
+        if (edge > 0) { const d = Math.hypot(m.x, m.z) || 1; tx -= m.x / d * edge * 2.2; tz -= m.z / d * edge * 2.2; }
+        if (wet > 0) tz += awayZ(m.x, m.z) * wet * 2;
+        const tl = Math.hypot(tx, tz) || 1; tx /= tl; tz /= tl;
+        // hoe heter, hoe trager; wie achterblijft is het eerst op
+        spd = 9.5 * Math.min(1, this.fleeing / 2 + 0.3) * (1 - 0.5 * this.heat * (m === this.weak ? 1.25 : 1));
         m.graze = 0;
       } else if (m.aware > 0.45) {
         // alert: kop omhoog, kijken naar wat daar beweegt
@@ -136,8 +153,41 @@ export class Herd {
     }
   }
 
+  // Warmte: rennen maakt heet, stilstaan koelt af. In de koelte van de ochtend en de avond loopt het nooit hoog op.
+  heatTick(dt, player, ui) {
+    if (this.spent) return;
+    const hot = ui.hot(), was = this.heat;
+    if (this.fleeing > 0) {
+      this.heat = Math.min(1, this.heat + dt * (hot ? 0.046 : 0.014));
+      if (!hot && !this.told.cool) { this.told.cool = true; ui.tired(-1); }
+    } else this.heat = Math.max(0, this.heat - dt * (hot ? 0.004 : 0.03));
+    if (!this.weak) this.weak = this.members[this.members.length - 1];
+    if (was < 0.35 && this.heat >= 0.35) ui.tired(0);
+    if (was < 0.7 && this.heat >= 0.7) ui.tired(1);
+    if (this.heat >= 1 && this.fleeing > 0) {
+      // de zwakste blijft staan; de rest rent door
+      const m = this.weak; m.down = 45; this.spent = m; ui.spent(true);
+    }
+  }
+  // een klap op de gazelle die niet meer kan
+  strike(m) {
+    if (m !== this.spent || m.dead) return false;
+    m.dead = true; m.down = 0; this.spent = null; this.weak = null; this.heat = 0.3;
+    this.members.splice(this.members.indexOf(m), 1); this.dead = m;
+    this.kill = { x: m.x, z: m.z, meat: 4 };
+    m.g.rotation.set(0, m.yaw, Math.PI / 2 * 0.94); m.g.position.y = height(m.x, m.z) + 0.16;
+    return true;
+  }
+
   pose(m, dt) {
     const y = height(m.x, m.z);
+    if (m.down > 0) {
+      // door de voorpoten gezakt, flanken die op en neer gaan
+      m.sink = Math.min(1, (m.sink || 0) + dt * 1.2);
+      m.g.position.set(m.x, y - 0.2 * m.sink, m.z); m.g.rotation.set(0.16 * m.sink, m.yaw, Math.sin(m.phase += dt * 14) * 0.025);
+      m.rig.update(dt); return;
+    }
+    m.sink = 0;
     m.phase += dt * (m.speed > 4 ? 10 : 5.5) * (m.speed > 0.2 ? 1 : 0);
     const gallop = m.speed > 4, eating = m.speed < 0.2 && m.look < 0.3;
     m.g.position.set(m.x, y + (gallop ? Math.abs(Math.sin(m.phase)) * 0.22 : 0), m.z);

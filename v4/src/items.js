@@ -1,14 +1,15 @@
 import * as THREE from '../lib/three.module.js';
-import { height, riverZ } from './world.js';
+import { height, riverZ, blockers } from './world.js';
 import { variantsOf } from './assets.js';
 
 let SHRUBS = [];   // gescande struiken (Poly Haven, CC0)
 
-// Drie soorten keien. Niet elke steen breekt goed: daar kom je al doende achter.
+// Vier soorten steen. Niet elke steen breekt goed: daar kom je al doende achter.
 // hits = klappen tot er een bruikbare afslag af springt; crumble = klappen tot hij in gruis valt.
 export const ROCKS = {
   lava: { name: 'Donkere kei', tint: 0x80808c, css: 'brightness(.6)', hits: 3, look: 'Een donkere, gladde kei, zwaar voor zijn grootte. Tik je ertegen, dan klinkt hij helder.', good: 'Breekt scherp: hier sla je goede afslagen van.' },
   quartz: { name: 'Bleke kei', tint: 0xffffff, glow: 0x4a4640, css: 'brightness(1.3)', hits: 4, look: 'Een bleke, keiharde kei. Er glinstert iets in als je hem draait.', good: 'Taai en hard. Het kost meer klappen, maar de rand is scherp.' },
+  obsidian: { name: 'Zwarte glassteen', tint: 0x23232b, gloss: 0.12, css: 'brightness(.22) contrast(1.5)', hits: 2, axe: 4, look: 'Zwart en glad als water in de nacht. Waar een stuk af is, glimt de breuk. De rand is dun en doorschijnend.', good: 'De beste steen die er is. Twee klappen en je hebt een scherf, scherper dan welke kei ook.' },
   sand: { name: 'Korrelige kei', tint: 0xe0a860, css: 'sepia(1) saturate(1.6)', crumble: 2, look: 'Een geelbruine, ruwe kei. Wrijf je erover, dan blijven er korrels aan je vingers hangen.', good: 'Te zacht: hij valt in gruis. Goed om mee te gooien, niet om afslagen van te slaan.' },
 };
 let ROCKV = null;
@@ -21,7 +22,7 @@ export function stoneMesh(type = 'lava', size = 0.14) {
   const v = ROCKV[Object.keys(ROCKS).indexOf(type) % ROCKV.length], g = new THREE.Group();
   const k = size / Math.max(v.size.x, v.size.y, v.size.z);
   v.parts.forEach((p, i) => {
-    const key = type + i, mat = rockMats[key] || (rockMats[key] = Object.assign(p.mat.clone(), { color: new THREE.Color(ROCKS[type].tint), emissive: new THREE.Color(ROCKS[type].glow || 0) }));
+    const key = type + i, mat = rockMats[key] || (rockMats[key] = Object.assign(p.mat.clone(), { color: new THREE.Color(ROCKS[type].tint), emissive: new THREE.Color(ROCKS[type].glow || 0) }, ROCKS[type].gloss ? { roughness: ROCKS[type].gloss, roughnessMap: null, map: null, envMapIntensity: 1.4 } : {}));
     const m = new THREE.Mesh(p.geo, mat); m.castShadow = true; g.add(m);
   });
   g.scale.setScalar(k); g.userData.h = v.size.y * k;
@@ -183,6 +184,9 @@ export const DISCOVERIES = [
   { id: 'ember', era: 'erectus', text: 'Onder de as gloeit het nog lang. Leg er op tijd een tak op, dan komt het vuur terug.' },
   { id: 'keep', era: 'erectus', text: 'Met genoeg hout brandt het vuur de hele nacht. Wie erbij slaapt, wordt uitgerust wakker.' },
   { id: 'roast', era: 'erectus', text: 'Vlees van het vuur is zacht en lekker. Je hebt er langer genoeg aan dan aan rauw vlees.' },
+  { id: 'ring', era: 'erectus', text: 'Een kring van keien maak je zelf, waar je ook bent. Zo wordt elke plek een kamp.' },
+  { id: 'glass', era: 'erectus', text: 'Zwarte glassteen breekt scherper dan elke kei. Hij ligt maar op één plek. Wie hem wil, moet ver lopen en hem meedragen.' },
+  { id: 'run', era: 'erectus', text: 'In de hitte van de middag moet een gazelle steeds stilstaan om te hijgen. Jij zweet en loopt door. Geef haar geen rust, dan kan ze niet meer.' },
 ];
 
 // Verstopte vondsten: zoals archeologen ze nu vinden
@@ -219,6 +223,10 @@ export const LOOKS = {
   hearth: { name: 'Kring van stenen', look: 'Een kring van vuistgrote stenen op kale grond, een paar passen van de slaapplek. De aarde erbinnen is zwart en hard gebakken.', hint: 'Hier heeft eerder vuur gebrand. Nu is de as koud.' },
   hearthlit: { name: 'Het vuur', look: 'Vlammen in de kring van stenen. De groep zit eromheen, dichter bij elkaar dan anders.', hint: 'Het eet hout. Leg er takken op voor het klein wordt.' },
   hearthember: { name: 'Gloeiende as', look: 'De vlammen zijn weg. Maar blaas je in de as, dan licht het rood op.', hint: 'Snel een tak erop, voor het koud is.' },
+  firecarried: { name: 'Het meegedragen vuur', look: 'Een dik stuk hout dat van binnen gloeit. Oru heeft het de hele tocht gedragen, in een nest van as en bladeren.', hint: 'Zolang iemand erop past, gaat het niet uit. Een tak vat er vlam.' },
+  hearthspot: { name: 'Kale plek', look: 'Een stuk grond bij de slaapplek, platgetrapt en schoongeveegd. Hier moet het vuur komen.', hint: 'Op kale grond waait een vuur uit. Tussen keien blijft het liggen.' },
+  outcrop: { name: 'De zwarte rotsen', look: 'Zwarte, glimmende rotsen, als gestold water. Eromheen liggen losse brokken met randen zo dun dat het licht erdoor valt.', hint: 'Dit is glas uit een berg die vuur spuwde. Geen steen breekt scherper.' },
+  herdkill: { name: 'De gazelle', look: 'Ze ligt stil in het gras. Jij hebt haar moe gelopen, zonder klauwen en zonder tanden.', hint: 'Met iets scherps snijd je het vlees los.' },
   deadwood: { name: 'Dode boom', look: 'Een omgevallen acacia, grijs en kurkdroog. De takken zijn zo dik als je pols.', hint: 'Met je handen breek je er niets af. Dit hout is taai.' },
   tree: { name: 'De slaapboom', look: 'Een oude acacia met een brede kroon. Hier slaapt je groep, al zolang je je kunt herinneren.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
   tor: { name: 'Tor', look: 'De oudste van de groep. Zijn haar is grijs en hij loopt moeilijk, maar hij weet waar het water blijft staan als het droog is.', hint: 'Hij kan zelf niet meer ver lopen om eten te zoeken.' },
@@ -230,6 +238,26 @@ export const LOOKS = {
 export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good', meat: 'good', egg: 'good', honey: 'good', hide: 'good', branch: 'good', stick: 'good', tuber: 'good', fish: 'good', axe: 'good', torch: 'good', roast: 'good' };
 
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
+// Een tak: krom en knoestig, met bast. burn = zwartgeblakerd aan de top.
+const WOOD = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 });
+function twig(burn) {
+  const pts = [[0, -0.31, 0], [0.012, -0.12, 0.006], [-0.008, 0.06, -0.01], [0.014, 0.2, 0.004], [0.004, 0.31, 0]].map((q) => new THREE.Vector3(...q));
+  const curve = new THREE.CatmullRomCurve3(pts), N = 14, RS = 8, geo = new THREE.TubeGeometry(curve, N, 1, RS, false), pos = geo.attributes.position;
+  const col = new Float32Array(pos.count * 3), bark = new THREE.Color('#553a26'), burnt = new THREE.Color('#1c1512'), c = new THREE.Color(), q = new THREE.Vector3();
+  for (let i = 0; i <= N; i++) {
+    const a = i / N, P = curve.getPointAt(a), r = 0.024 - a * 0.008 + Math.sin(a * 19) * 0.0022 + (i === 5 ? 0.004 : 0);
+    for (let j = 0; j <= RS; j++) {
+      const n = i * (RS + 1) + j; q.fromBufferAttribute(pos, n).sub(P).multiplyScalar(r).add(P); pos.setXYZ(n, q.x, q.y, q.z);
+      c.copy(bark).multiplyScalar(0.85 + ((j * 5 + i * 3) % 4) * 0.07); if (burn) c.lerp(burnt, THREE.MathUtils.smoothstep(a, 0.6, 0.86));
+      col.set([c.r, c.g, c.b], n * 3);
+    }
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.computeVertexNormals();
+  const g = new THREE.Group(), s = new THREE.Mesh(geo, WOOD); s.castShadow = true; g.add(s);
+  // een afgebroken zijtakje
+  const stub = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.009, 0.07, 6), new THREE.MeshStandardMaterial({ color: 0x664830, roughness: 0.95 })); stub.position.set(0.02, -0.02, 0); stub.rotation.z = -0.9; g.add(stub);
+  return g;
+}
 
 // Een struik met bessen die je kunt plukken
 function bush(scene, x, z, berryColor, leafColor = 0xffffff, n = 3) {
@@ -271,7 +299,20 @@ export function placeItems(scene, A, area) {
   // langs de rivier liggen rolstenen: van alles door elkaar
   for (const [i, x] of area.riverStones.entries()) {
     const z = [6, -6, 9, -9, 13, -13].map((d) => riverZ(x) + d).find((q) => height(x, q) > 0.15);
-    if (z !== undefined) stones.push([x, z, ['lava', 'sand', 'quartz', 'lava'][i % 4]]);
+    const kinds = area.riverRock || ['lava', 'sand', 'quartz', 'lava'];
+    if (z !== undefined) stones.push([x, z, kinds[i % kinds.length]]);
+  }
+  // een rotspartij van bijzondere steen, met losse brokken eromheen
+  if (area.outcrop) {
+    const [ox, oz] = area.outcrop.at, type = area.outcrop.type, R = ROCKS[type], mats = new Map();
+    const dark = (m) => { if (!mats.has(m)) mats.set(m, Object.assign(m.clone(), { color: new THREE.Color(R.tint).multiplyScalar(1.5), map: null, roughnessMap: null, roughness: 0.22, envMapIntensity: 1.3 })); return mats.get(m); };
+    [[0, 0, 4.2], [3.6, 1.4, 2.8], [-3.2, 2.2, 3.2], [1.2, -3.4, 2.4], [-2.4, -2.6, 1.8], [5.4, -2.2, 1.6], [-5.6, -0.6, 1.4], [2.6, 4.6, 1.5]].forEach(([dx, dz, w], i) => {
+      const v = ROCKV[i % ROCKV.length], k = w / Math.max(v.size.x, v.size.z), g = new THREE.Group(), x = ox + dx, z = oz + dz;
+      for (const q of v.parts) { const m = new THREE.Mesh(q.geo, dark(q.mat)); m.castShadow = true; m.receiveShadow = true; g.add(m); }
+      g.scale.set(k, k * 1.25, k); g.position.set(x, height(x, z) - v.size.y * k * 0.2, z); g.rotation.y = i * 2.3; scene.add(g);
+      blockers.push({ x, z, r: w * 0.42 });
+    });
+    for (let i = 0; i < area.outcrop.n; i++) { const a = i * 2.4 + 0.6, d = 6.5 + (i % 3) * 1.6; stones.push([ox + Math.cos(a) * d, oz + Math.sin(a) * d, type]); }
   }
   for (const [x, z, type] of stones) {
     const m = stoneMesh(type, 0.32); m.position.set(x, height(x, z) - 0.02, z); m.rotation.y = x * 1.7; scene.add(m);
@@ -363,9 +404,9 @@ export function heldMesh(item, rock) {
   if (item === 'honey') { const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.12), new THREE.MeshLambertMaterial({ color: c, emissive: 0x4a2c00, flatShading: true })); return m; }
   if (item === 'branch' || item === 'stick') {
     // een tak; de graafstok heeft een lichte, schuine punt
-    const g = new THREE.Group(), s = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.022, 0.62, 6), lam(new THREE.Color('#7a5c3e'))); g.add(s);
-    if (item === 'stick') { const tip = new THREE.Mesh(new THREE.ConeGeometry(0.017, 0.12, 6), lam(new THREE.Color('#d8c098'))); tip.position.y = 0.37; g.add(tip); }
-    else { const twig = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, 0.16, 5), lam(new THREE.Color('#7a5c3e'))); twig.position.set(0.04, 0.2, 0); twig.rotation.z = -0.7; g.add(twig); }
+    const g = new THREE.Group().add(twig(false));
+    if (item === 'stick') { const tip = new THREE.Mesh(new THREE.ConeGeometry(0.016, 0.12, 8), new THREE.MeshStandardMaterial({ color: 0xd8c098, roughness: 0.9 })); tip.position.set(0.004, 0.365, 0); g.add(tip); }
+    else { const side = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.011, 0.16, 6), new THREE.MeshStandardMaterial({ color: 0x74563a, roughness: 0.95 })); side.position.set(0.05, 0.2, 0); side.rotation.z = -0.7; g.add(side); }
     g.position.y = 0.12;
     return new THREE.Group().add(g);
   }
@@ -378,8 +419,9 @@ export function heldMesh(item, rock) {
     m.geometry.computeVertexNormals(); return m;
   }
   if (item === 'torch') {
-    const g = new THREE.Group(), s = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.022, 0.62, 6), lam(new THREE.Color('#4a3424'))); g.add(s);
-    const coal = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff5a14 })); coal.position.y = 0.31; coal.name = 'coal'; g.add(coal);
+    // een brandende tak: zwartgeblakerd waar hij brandt, met een gloeiende punt
+    const g = new THREE.Group().add(twig(true));
+    const coal = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff6a1c })); coal.position.set(0.004, 0.3, 0); coal.scale.set(1, 1.5, 1); coal.name = 'coal'; g.add(coal);
     g.position.y = 0.12;
     return new THREE.Group().add(g);
   }

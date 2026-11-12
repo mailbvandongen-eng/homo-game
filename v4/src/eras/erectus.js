@@ -3,6 +3,7 @@
 // de vuistbijl (rondom bewerkt, niet zomaar een scherf) en vuur. Dat vuur maak je niet: je vindt het en houdt het in leven.
 // 'zeker' geeft per onderdeel aan hoe stevig het staat: vast (vondsten), aannemelijk (afgeleid) of gok (spelkeuze).
 import { berg } from '../areas/berg.js';
+import { hoog } from '../areas/hoog.js';
 
 export const erectus = {
   id: 'erectus', ma: [1.9, 0.11], region: 'Oost-Afrika', species: 'Homo erectus', tradition: 'Acheuléen',
@@ -23,10 +24,12 @@ export const erectus = {
   zeker: {
     vast: ['vuistbijlen: keien die rondom en aan twee kanten bewerkt zijn (Acheuléen, vanaf ca. 1,76 miljoen jaar, Kokiselei bij het Turkanameer)',
       'een lang lichaam met lange benen en korte armen (de jongen van Nariokotome, ca. 1,6 miljoen jaar)',
-      'snijsporen en gekraakte botten van grote dieren', 'sabeltandkatten, hyena\'s en de reuzenolifant in hetzelfde landschap'],
+      'snijsporen en gekraakte botten van grote dieren',
+      'goede steen ver meedragen: obsidiaan van Balchit in de werktuigen van Melka Kunture, kilometers verderop (Ethiopisch hoogland, vanaf ca. 1,5 miljoen jaar)', 'sabeltandkatten, hyena\'s en de reuzenolifant in hetzelfde landschap'],
     aannemelijk: ['vuur meenemen van een natuurlijke brand en brandend houden: verkleurde aarde en verhitte stenen bij Koobi Fora en Chesowanja (ca. 1,5 miljoen jaar) wijzen erop, onomstreden is vuurgebruik pas vanaf ca. 1 miljoen jaar (Wonderwerkgrot)',
-      'weinig lichaamshaar en zweten: lang kunnen lopen in de hitte', 'op de grond slapen in plaats van in bomen', 'grotere groepen dan bij Homo habilis', 'hout hakken en bewerken met een vuistbijl (slijtsporen van hout op vuistbijlen)'],
-    gok: ['vlees braden in deze tijd (de kookhypothese)', 'een vaste stookplaats met een kring van stenen', 'vuur dat roofdieren op afstand houdt', 'namen en vaste rollen in de groep'],
+      'weinig lichaamshaar en zweten: lang kunnen lopen in de hitte', 'op de grond slapen in plaats van in bomen', 'grotere groepen dan bij Homo habilis', 'hout hakken en bewerken met een vuistbijl (slijtsporen van hout op vuistbijlen)',
+      'een dier moe lopen in de middaghitte (uithoudingsjacht): het past bij het lange, zwetende lichaam, maar vondsten die het bewijzen zijn er niet'],
+    gok: ['vlees braden in deze tijd (de kookhypothese)', 'een vaste stookplaats met een kring van stenen', 'gloeiend hout dagenlang meedragen naar een nieuw kamp', 'vuur dat roofdieren op afstand houdt', 'namen en vaste rollen in de groep'],
   },
-  areas: [berg],
+  areas: [berg, hoog],
 };

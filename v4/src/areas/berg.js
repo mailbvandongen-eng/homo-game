@@ -36,9 +36,11 @@ export const berg = {
   outro: {
     title: 'Het vuur gaat mee',
     text: ['Je kunt nu wat deze groep groot maakt: een kei rondom bewerken tot een vuistbijl, vuur halen waar het smeult en het brandend houden, nacht na nacht.',
-      'Wie vuur heeft, kan verder. Naar koudere streken, waar de nachten lang zijn. Groepen als deze trekken Afrika uit, tot in Azië en Europa.'],
-    fine: 'Hier houdt het verhaal van Homo erectus voorlopig op. De neanderthalers zijn nog in de maak. Je kunt hier vrij blijven rondlopen.',
+      'Wie vuur heeft, kan verder. Naar hoger land, waar de nachten koud zijn. Oru pakt een dik stuk gloeiend hout in as en bladeren. Het vuur gaat mee.'],
+    fine: 'Hier houdt het verhaal van Homo erectus voorlopig op. Je kunt hier vrij blijven rondlopen.',
+    go: 'Trek mee, de bergen in',
   },
+  next: 'hoog',
   // g: de spelcontext (state, has, carries, player, group, fire)
   missions: (g) => {
     const F = () => g.fire(), near = (p, r) => Math.hypot(p[0] - g.player.pos.x, p[1] - g.player.pos.z) < r;

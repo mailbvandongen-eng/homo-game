@@ -8,6 +8,7 @@ import { variantsOf } from './assets.js';
 // - de smeulende stam (source): daar vat een tak vlam
 // - de kring van stenen bij het kamp (hearth): daar brandt het vuur, zolang er hout op ligt
 // - dode bomen (wood): daar hak je takken af met een vuistbijl
+// In een nieuw kamp is het anders: daar ligt het meegedragen, gloeiende hout (carried) en moet je de kring zelf leggen (build).
 // Tijden zijn in seconden speeltijd.
 const BRANCH = 240;   // zo lang brandt één tak in het vuur
 const MAX = 960;      // meer hout past er niet op
@@ -138,6 +139,8 @@ export class Fire {
     this.dayLen = dayLen; this.fuel = 0; this.ember = 0; this.torchT = 0; this.lastP = null; this.told = {}; this.t = 0; this.wasLit = false;
     this.source = cfg.source; this.S = { x: cfg.source[0], z: cfg.source[1] }; this.H = { x: cfg.hearth[0], z: cfg.hearth[1] };
     const sy = height(this.S.x, this.S.z), hy = height(this.H.x, this.H.z);
+    this.carried = !!cfg.carried; this.need = cfg.build || 0; this.ring = 0;
+    const sm = this.carried ? 0.34 : 1;   // het meegedragen hout is maar een klein stuk
 
     const logV = variantsOf(A.models.dead_tree_trunk)[0], twigV = variantsOf(A.models.dry_branches_medium_01);
     const treeV = A.models.oldtree ? whole(A.models.oldtree, true) : null;
@@ -145,35 +148,42 @@ export class Fire {
     const char = tinted(0x3a322c);
 
     // de plek van de inslag: zwartgeblakerde grond, een verkoolde boom die nog overeind staat, en ervoor de afgebroken stam die smeult
-    const burnt = new THREE.Mesh(new THREE.CircleGeometry(10, 24), new THREE.MeshLambertMaterial({ map: softTex('rgba(34,29,26,0.95)', 'rgba(34,29,26,0)'), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+    const burnt = new THREE.Mesh(new THREE.CircleGeometry(10 * (this.carried ? 0.16 : 1), 24), new THREE.MeshLambertMaterial({ map: softTex('rgba(34,29,26,0.95)', 'rgba(34,29,26,0)'), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
     burnt.rotation.x = -Math.PI / 2; burnt.position.set(this.S.x, sy + 0.06, this.S.z); scene.add(burnt);
-    const src = new THREE.Group(), long = Math.max(logV.size.x, logV.size.z), alongX = logV.size.x >= logV.size.z, lk = 4.6 / long;
+    const src = new THREE.Group(), long = Math.max(logV.size.x, logV.size.z), alongX = logV.size.x >= logV.size.z, lk = 4.6 * sm / long;
     const log = make(logV, lk, char); log.position.y = -0.12 * logV.size.y * lk; src.add(log);
     const top = logV.size.y * lk * 0.82;
     this.embers = [];
     for (const [d, w] of [[-1.5, 0.7], [-0.6, 1.0], [0.3, 0.8], [1.2, 1.1], [1.9, 0.6]]) {
-      const e = glowSprite('rgba(255,96,20,0.95)', 'rgba(255,60,0,0)'); e.position.set(alongX ? d : 0.05, top * (0.75 + w * 0.2), alongX ? 0.05 : d); src.add(e); this.embers.push({ e, w });
+      const e = glowSprite('rgba(255,96,20,0.95)', 'rgba(255,60,0,0)'); e.position.set(alongX ? d * sm : 0.05, top * (0.75 + w * 0.2), alongX ? 0.05 : d * sm); e.userData.k = this.carried ? 0.5 : 1; src.add(e); this.embers.push({ e, w });
     }
-    this.srcFlame = flames(0.95); this.srcFlame.position.set(alongX ? 0.2 : 0, top * 0.9, alongX ? 0 : 0.2); src.add(this.srcFlame);
-    twigV.forEach((v, i) => { const t = make(v, 1.1, char); t.position.set(Math.cos(i * 2.3) * 2.6, 0, Math.sin(i * 2.3) * 2.2); t.rotation.y = i * 1.9; src.add(t); });
+    this.srcFlame = flames(this.carried ? 0.3 : 0.95); this.srcFlame.position.set(alongX ? 0.2 : 0, top * 0.9, alongX ? 0 : 0.2); src.add(this.srcFlame);
+    if (!this.carried) twigV.forEach((v, i) => { const t = make(v, 1.1, char); t.position.set(Math.cos(i * 2.3) * 2.6, 0, Math.sin(i * 2.3) * 2.2); t.rotation.y = i * 1.9; src.add(t); });
     src.position.set(this.S.x, sy, this.S.z); src.rotation.y = 0.7; scene.add(src);
-    blockers.push({ x: this.S.x, z: this.S.z, r: 0.9 });
-    if (treeV) {
+    blockers.push({ x: this.S.x, z: this.S.z, r: this.carried ? 0.4 : 0.9 });
+    if (treeV && !this.carried) {
       const tx = this.S.x - 3.4, tz = this.S.z - 2.2, t = make(treeV, 7.5 / treeV.size.y, char);
       t.position.set(tx, height(tx, tz) - 0.15, tz); t.rotation.y = 2.1; scene.add(t); blockers.push({ x: tx, z: tz, r: 0.45 });
     }
-    this.srcSmoke = new Smoke(scene, this.S.x, sy + 0.8, this.S.z, { n: 26, rise: 2.6, top: 55, size: 9, color: 0x4a4642, drift: 0.3, dense: 0.8 });
-    this.srcLight = new THREE.PointLight(0xff6a20, 0, 14, 2); this.srcLight.position.set(this.S.x, sy + 1.2, this.S.z); scene.add(this.srcLight);
+    this.srcSmoke = new Smoke(scene, this.S.x, sy + 0.8 * sm, this.S.z, this.carried ? { n: 7, rise: 1.1, top: 6, size: 1.3, color: 0x8a847c, dense: 0.4 } : { n: 26, rise: 2.6, top: 55, size: 9, color: 0x4a4642, drift: 0.3, dense: 0.8 });
+    this.srcLight = new THREE.PointLight(0xff6a20, 0, 14, 2); this.srcLight.position.set(this.S.x, sy + 1.2 * (this.carried ? 0.5 : 1), this.S.z); scene.add(this.srcLight);
 
     // de vuurplaats bij het kamp: een kring van keien om een bed van as
     const ring = new THREE.Group();
+    this.ringStones = [];
     for (let i = 0; i < 11; i++) {
       const v = rockV[(i * 5 + 1) % rockV.length], a = i / 11 * 6.283 + (i % 2) * 0.08, w = 0.3 + (i * 7 % 4) * 0.035;
       let k = w / Math.max(v.size.x, v.size.z); if (v.size.y * k > 0.34) k = 0.34 / v.size.y;
-      const st = make(v, k); st.position.set(Math.cos(a) * 0.82, -0.3 * v.size.y * k, Math.sin(a) * 0.82); st.rotation.y = i * 2.1; ring.add(st);
+      const st = make(v, k); st.position.set(Math.cos(a) * 0.82, -0.3 * v.size.y * k, Math.sin(a) * 0.82); st.rotation.y = i * 2.1; ring.add(st); this.ringStones.push(st);
     }
     const ash = new THREE.Mesh(new THREE.CircleGeometry(1.25, 20), new THREE.MeshLambertMaterial({ map: softTex('rgba(30,27,25,0.96)', 'rgba(30,27,25,0)'), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
-    ash.rotation.x = -Math.PI / 2; ash.position.y = 0.04; ring.add(ash);
+    ash.rotation.x = -Math.PI / 2; ash.position.y = 0.04; ring.add(ash); this.ash = ash;
+    if (this.need) {
+      // nog geen kring: alleen een kale plek, platgetrapt en schoongeveegd
+      const bare = new THREE.Mesh(new THREE.CircleGeometry(1.5, 20), new THREE.MeshLambertMaterial({ map: softTex('rgba(150,120,88,0.9)', 'rgba(150,120,88,0)'), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+      bare.rotation.x = -Math.PI / 2; bare.position.y = 0.03; ring.add(bare);
+    }
+    this.showRing();
     this.logs = new THREE.Group();
     const wood = tinted(0x7a6654);
     for (let i = 0; i < 4; i++) { const v = twigV[i % twigV.length], l = make(v, 1.0 / Math.max(v.size.x, v.size.z), wood); l.rotation.y = i * 1.2 + 0.3; l.position.set(Math.cos(i * 1.6) * 0.1, 0.04 + i * 0.03, Math.sin(i * 1.6) * 0.1); this.logs.add(l); }
@@ -199,6 +209,7 @@ export class Fire {
     // de berg aan de horizon: een vulkaan uit de Grote Slenk (hoogtekaart en satellietfoto van de Ol Doinyo Lengai), met een rookpluim.
     // Te ver om heen te lopen; hij hoort bij het landschap. Onderaan lost hij op in de nevel.
     if (cfg.volcano && A.models.lengai) {
+      const quiet = !!cfg.quiet;   // een berg die slaapt: geen rook
       const [vx, vz] = cfg.volcano, V = whole(A.models.lengai), peak = new THREE.Vector3(0, -1e9, 0), v = new THREE.Vector3();
       for (const q of V.parts) { const pos = q.geo.attributes.position; for (let i = 0; i < pos.count; i++) if (pos.getY(i) > peak.y) peak.fromBufferAttribute(pos, i); }
       const kx = 0.115, ky = kx * 1.45, H = V.size.y * ky;
@@ -223,18 +234,26 @@ export class Fire {
         grp.add(new THREE.Mesh(q.geo, mat));
       }
       grp.position.set(vx, -14, vz); scene.add(grp);
-      this.volSmoke = new Smoke(scene, vx, H - 22, vz, { n: 10, rise: 3.5, top: 140, size: 80, color: 0x6a645e, drift: 0.5 });
+      this.volSmoke = new Smoke(scene, vx, H - 22, vz, { n: quiet ? 0 : 10, rise: 3.5, top: 140, size: 80, color: 0x6a645e, drift: 0.5 });
       for (const q of this.volSmoke.puffs) q.s.material.fog = false;
     }
     this.scene = scene;
   }
 
   get lit() { return this.fuel > 0; }
+  // ligt de kring er? (in een kamp waar hij er al lag: altijd)
+  get built() { return this.ring >= this.need; }
+  showRing() {
+    const n = this.need ? Math.round(this.ringStones.length * Math.min(1, this.ring / this.need)) : this.ringStones.length;
+    // de stenen komen er om en om bij, zodat het van begin af aan een kring is
+    this.ringStones.forEach((st, i) => { st.visible = (i * 7) % this.ringStones.length < n; });
+    this.ash.visible = this.built;
+  }
   get state() { return this.fuel > 0 ? 'lit' : this.ember > 0 ? 'ember' : 'cold'; }
   // warm genoeg om de kou van de nacht niet te voelen
   warm(p) { return this.lit && dist(p, this.H) < 14; }
   lookTargets() {
-    return [{ look: 'firesource', x: this.S.x, z: this.S.z, fire: 'source' }, { look: this.fuel > 0 ? 'hearthlit' : this.ember > 0 ? 'hearthember' : 'hearth', x: this.H.x, z: this.H.z, fire: 'hearth' },
+    return [{ look: this.carried ? 'firecarried' : 'firesource', x: this.S.x, z: this.S.z, fire: 'source' }, { look: !this.built ? 'hearthspot' : this.fuel > 0 ? 'hearthlit' : this.ember > 0 ? 'hearthember' : 'hearth', x: this.H.x, z: this.H.z, fire: 'hearth' },
       ...this.wood.map((w) => ({ look: 'deadwood', x: w.x, z: w.z, fire: 'wood', wood: w }))];
   }
   // Wat kun je hier nu doen met wat je in je handen hebt? Geeft het icoon terug, of null.
@@ -242,6 +261,7 @@ export class Fire {
     const H = s.hands, has = (it) => H.includes(it);
     if (t.fire === 'source') return has('branch') || has('stick') ? ICON.fire : null;
     if (t.fire === 'wood') return has('axe') ? ICON.chop : ICON.hand;
+    if (!this.built) return has('stone') ? ICON.drop : has('torch') ? ICON.fire : null;
     if (has('torch')) return ICON.fire;
     if (this.lit && has('meat')) return ICON.fire;
     if (has('branch') || has('stick')) return ICON.fire;
@@ -251,6 +271,7 @@ export class Fire {
     if (t.fire === 'source') return this.kindle(game);
     if (t.fire === 'wood') return this.chop(t.wood, game);
     const H = game.state.hands;
+    if (!this.built) return this.layStone(game);
     if (H.includes('torch')) return this.lightHearth(game);
     if (this.lit && H.includes('meat')) return this.roast(game);
     return this.feed(game);
@@ -261,30 +282,42 @@ export class Fire {
     const run = (t, speed = 1.6) => () => game.player.playOnce('Interact', { speed, at: 0.5, onAt: () => this.use(t, game) });
     const T = this.lookTargets();
     if (dist(p, this.S) < 3.6 && this.canUse(T[0], s)) return { mode: 'fire', icon: ICON.fire, run: run(T[0]) };
+    if (dist(p, this.H) < 3 && !this.built) return H.includes('stone') ? { mode: 'build', icon: ICON.drop, run: run(T[1]) } : null;
     if (dist(p, this.H) < 3 && this.canUse(T[1], s) && !(this.state === 'cold' && !H.includes('torch'))) return { mode: 'fire', icon: ICON.fire, run: run(T[1]) };
     const w = H.includes('axe') && T.find((x) => x.wood && dist(p, x) < 3);
     if (w) return { mode: 'chop', icon: ICON.chop, run: run(w, 1.3) };
     return null;
   }
 
+  // een kei op de kale plek leggen: zes keien en de kring is rond
+  layStone(game) {
+    const s = game.state, i = s.hands.indexOf('stone');
+    if (i < 0) { game.toast(s.hands.includes('torch') ? 'Op de kale grond waait het vuur zo uit. Leg eerst een kring van keien.' : 'Een kale plek. Hier moet het vuur komen. Maar eerst een kring van keien.', 5); return; }
+    s.hands[i] = null; game.renderHands(); game.sound.thud();
+    this.ring++; this.showRing();
+    const left = this.need - this.ring;
+    if (left > 0) { game.toast(this.ring === 1 ? 'Je legt de kei neer. Dat is één. De kring is nog lang niet rond.' : `Weer een kei. Nog ${left}.`, 4); return; }
+    game.toast('De kring is rond. Nu kan het vuur erin.', 6); setTimeout(() => game.sound.good(), 600);
+    game.discover('ring');
+  }
   // een tak in de gloed houden
   kindle(game) {
     const s = game.state, i = s.hands.indexOf('branch') >= 0 ? s.hands.indexOf('branch') : s.hands.indexOf('stick');
     if (i < 0) { game.toast('Au, heet! Met je hand kun je geen vuur pakken.', 4); game.sound.bad(); return; }
     s.hands[i] = 'torch'; this.torchT = TORCH; this.told.low = false; game.renderHands(); game.sound.whoosh();
-    game.toast(s.found.has('torch') ? 'De tak vat vlam. Lopen!' : 'De tak rookt… en dan brandt hij! Snel terug naar het kamp, voor hij op is.', 6);
+    game.toast(this.carried ? 'De tak vat vlam.' : s.found.has('torch') ? 'De tak vat vlam. Lopen!' : 'De tak rookt… en dan brandt hij! Snel terug naar het kamp, voor hij op is.', 6);
     s.known.add('torch'); game.discover('torch');
   }
   // met de brandende tak het vuur in de kring aansteken
   lightHearth(game) {
     const s = game.state, i = s.hands.indexOf('torch'); if (i < 0) return;
     s.hands[i] = null; game.renderHands(); game.sound.whoosh();
-    const first = !s.found.has('hearth');
+    const first = !s.found.has(this.need ? 'camp' : 'hearth');
     this.fuel = Math.min(MAX, this.fuel + 200); this.ember = 0;
     game.toast(first ? 'Je legt de brandende tak tussen de stenen. Vuur! Iedereen komt kijken.' : 'Het vuur brandt weer.', 7);
     if (first) s.group = Math.min(100, s.group + 20);
     setTimeout(() => game.sound.good(), 700);
-    game.discover('hearth');
+    game.discover('hearth'); if (this.need) game.discover('camp');
   }
   // hout op het vuur
   feed(game) {
@@ -359,8 +392,13 @@ export class Fire {
     }
   }
 
-  snapshot() { return { fuel: Math.round(this.fuel), ember: Math.round(this.ember) }; }
-  restore(d) { this.torchT = 90; if (!d) return; this.fuel = Math.max(0, Math.min(MAX, +d.fuel || 0)); this.ember = Math.max(0, Math.min(EMBER, +d.ember || 0)); this.lastP = null; }
+  snapshot() { return { fuel: Math.round(this.fuel), ember: Math.round(this.ember), ring: this.ring }; }
+  restore(d) {
+    this.torchT = 90; if (!d) return;
+    this.ring = Math.max(0, Math.min(this.need, Math.round(+d.ring || 0))); this.showRing();
+    if (!this.built) return;
+    this.fuel = Math.max(0, Math.min(MAX, +d.fuel || 0)); this.ember = Math.max(0, Math.min(EMBER, +d.ember || 0)); this.lastP = null;
+  }
 
   update(dt, game, dayP) {
     this.t += dt; const t = this.t, s = game.state, p = game.player.pos;
@@ -379,9 +417,9 @@ export class Fire {
     this.smoke.k = this.fuel > 0 ? 0.8 : this.ember > 0 ? 0.35 : 0; this.smoke.update(dt, t);
     if (this.fuel > 0 && this.fuel < 110 && game.night > 0.3 && !this.told.small && dist(p, this.H) < 30) { this.told.small = true; game.toast('Het vuur wordt klein. Er moet hout op.', 5); }
     // de smeulende stam
-    flicker(this.srcFlame, t, 0.55 + Math.sin(t * 0.7) * 0.2);
-    for (const { e, w } of this.embers) { const g = 0.55 + 0.45 * Math.sin(t * (0.9 + w) + w * 9); e.scale.setScalar(0.5 + w * 0.35 + g * 0.15); e.material.opacity = 0.45 + g * 0.5; }
-    this.srcLight.intensity = 9 * fl * (0.3 + 0.7 * game.night);
+    flicker(this.srcFlame, t, this.carried ? 0.3 + Math.sin(t * 0.7) * 0.15 : 0.55 + Math.sin(t * 0.7) * 0.2);
+    for (const { e, w } of this.embers) { const g = 0.55 + 0.45 * Math.sin(t * (0.9 + w) + w * 9); e.scale.setScalar((0.5 + w * 0.35 + g * 0.15) * e.userData.k); e.material.opacity = 0.45 + g * 0.5; }
+    this.srcLight.intensity = (this.carried ? 3 : 9) * fl * (0.3 + 0.7 * game.night);
     this.srcSmoke.update(dt, t);
     if (this.volSmoke) { this.volSmoke.update(dt, t); if (this.scene.fog) this.volU.fogCol.value.copy(this.scene.fog.color); }
     // de brandende tak: licht om je heen, en hyena's die terugdeinzen
