@@ -14,8 +14,13 @@ import { ICON, ITEM_ICON } from './icons.js';
 import { Encounters } from './encounters.js';
 import { Giant } from './giant.js';
 import { Shore } from './shore.js';
+import { $, toast, title, showCard, closeCard, uiTick } from './engine/ui.js';
+import { initMissions } from './systems/missions.js';
+import { initSeason } from './systems/season.js';
+import { initHints } from './systems/hints.js';
+import { initBody } from './systems/body.js';
+import { initPersist } from './systems/persist.js';
 
-const $ = (id) => document.getElementById(id);
 const EDIBLE = new Set(['berry', 'redberry', 'leaf', 'meat', 'egg', 'honey', 'tuber', 'fish']);
 const GIVE = ['meat', 'honey', 'fish', 'hide', 'bone', 'egg', 'tuber', 'berry', 'leaf', 'redberry'];   // wat je aan de groep kunt geven, het beste eerst
 const DAY_LEN = 14 * 60;   // één dag en nacht duurt 14 minuten
@@ -82,8 +87,6 @@ const state = {
 const verdict = { get: (it) => (state.known.has(it) ? VERDICT[it] : null) };
 
 // ---------- meldingen ----------
-let toastTimer = 0;
-function toast(text, sec = 4) { $('toast').textContent = text; $('toast').classList.add('on'); toastTimer = sec; }
 
 function discover(id) {
   if (state.found.has(id)) return;
@@ -94,144 +97,18 @@ function discover(id) {
   if (state.found.size === DISCOVERIES.length) setTimeout(() => murmur('Je hebt alles in dit proefstuk ontdekt. Zo begon het: kijken, proberen en onthouden.', 8), 7500);
 }
 
-// ---------- missies ----------
-// Eten zoeken en delen moet altijd; dat is geen missie. Een missie heeft een doel: iets maken of iets kunnen.
-// Je kiest er zelf één, ziet de stappen, en als ze alle vier gelukt zijn trekt de groep verder.
-const has = (it) => state.hands.includes(it);
-const carries = (it) => has(it) || !!(state.bag && state.bag.some((e) => e && e.it === it));
-const MISSIONS = AREA.missions({ state, has, carries, player, hyenas, sabres, group, night: () => predGame.night, dayP: () => dayP });
-const NEXT = ERA.areas.find((a) => a.id === AREA.next && a.playable) || null;   // waar de groep hierna heen trekt
-const NAMES = { tor: 'Tor', kem: 'Kem', ibo: 'Ibo' };
-for (const m of MISSIONS) m.steps.push({ t: 'Ga terug naar ' + NAMES[m.who], ok: () => false });
-// Niemand duwt je een keuzescherm onder je neus: wie iets nodig heeft roept en wenkt bij de slaapboom.
-// Aantikken is aannemen. Daarna terug naar diegene, en het is volbracht.
-const mission = { cur: null, giver: null, done: new Set(), over: false, callT: 12, calls: 0, startT: 0, endT: 0, shown: -1, late: false };
-const stepOf = (m) => { let n = 0; while (n < m.steps.length - 1 && m.steps[n].ok()) n++; return n; };
-const offerOf = (g) => (mission.cur || mission.over || g.sick > 0 ? null : MISSIONS.find((m) => m.who === g.id && !mission.done.has(m.id) && (!m.needs || mission.done.has(m.needs)) && (!m.when || m.when())) || null);
-let titleT = 0;
-function title(eyebrow, text, sub, sec = 3.4) {
-  $('titleE').textContent = eyebrow; $('titleH').textContent = text; $('titleS').textContent = sub || '';
-  const el = $('title'); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); titleT = sec;
-}
-let camTurn = null;
-function accept(g) {
-  const m = offerOf(g); if (!m) return;
-  closeRadial(); mission.cur = m; mission.giver = g; mission.startT = 0; mission.shown = -1; g.busy = 3;
-  camTurn = { x: g.x, z: g.z, t: 1.8 }; mission.late = false;
-  if (m.onStart) m.onStart();
-  sound.mission(); title('Missie', m.title, m.ask);
-}
-function complete(m) {
-  mission.done.add(m.id); mission.cur = null; mission.callT = 45; mission.calls = 0;
-  if (mission.giver) mission.giver.busy = 3;
-  state.group = Math.min(100, state.group + 10);
-  sound.discover(); title('Missie volbracht', m.title, m.end, 4.5);
-  if (mission.done.size === MISSIONS.length) mission.endT = 7;
-}
-function missionInfo() {
-  const m = mission.cur; if (!m) return;
-  const n = stepOf(m);
-  showCard(`<div class="eyebrow">Missie van ${NAMES[m.who]}</div><h2>${m.title}</h2><p>${m.why}</p>
-    <ol class="steps">${m.steps.map((x, i) => `<li class="${i < n ? 'ok' : i === n ? 'now' : ''}">${x.t}</li>`).join('')}</ol>
-    <div class="row"><button class="btn" id="misGo">Verder spelen</button><button class="btn ghost" id="misDrop">Laat maar</button></div>`);
-  $('card').onpointerdown = (e) => e.stopPropagation();
-  $('misGo').onclick = closeCard;
-  $('misDrop').onclick = () => { mission.cur = null; mission.callT = 60; mission.calls = 0; closeCard(); };
-}
-$('quest').addEventListener('pointerdown', (e) => e.stopPropagation());
-$('quest').addEventListener('click', missionInfo);
-// het teken boven het hoofd van wie je roept: een warm lichtje, pas zichtbaar als je in de buurt bent
-const callTex = (() => {
-  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
-  const g = x.createRadialGradient(32, 32, 2, 32, 32, 30); g.addColorStop(0, '#fff3c8'); g.addColorStop(0.25, '#f0a030'); g.addColorStop(0.5, '#f0a03066'); g.addColorStop(1, '#f0a03000');
-  x.fillStyle = g; x.fillRect(0, 0, 64, 64);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
-})();
-for (const g of group.list) {
-  g.mark = new THREE.Sprite(new THREE.SpriteMaterial({ map: callTex, transparent: true, depthWrite: false, opacity: 0 }));
-  g.mark.scale.setScalar(0.42); g.mark.visible = false; scene.add(g.mark);
-}
-function callOut(g) {
-  const dx = g.x - player.pos.x, dz = g.z - player.pos.z, d = Math.hypot(dx, dz) || 1;
-  const pan = (dx * -Math.cos(camYaw) + dz * Math.sin(camYaw)) / d;
-  sound.call(pan * Math.min(1, d / 4), !!g.child, THREE.MathUtils.clamp(1.25 - d / 45, 0.3, 1));
-  g.busy = Math.max(g.busy, 1.6);
-}
-// Alles is hier gedaan: de groep trekt verder. Meegaan = bewaren met het nieuwe gebied en de wereld opnieuw opbouwen.
-function endCard() {
-  const o = AREA.outro;
-  showCard(`<div class="eyebrow">${AREA.name}</div><h2>${o.title}</h2>${o.text.map((p) => `<p>${p}</p>`).join('')}` + (NEXT
-    ? '<div class="row"><button class="btn" id="goNext">Trek mee</button><button class="btn ghost" id="stayHere">Nog even blijven</button></div>'
-    : `<p class="fine">${o.fine}</p>`));
-  if (!NEXT) return;
-  $('card').onpointerdown = (e) => e.stopPropagation();
-  $('stayHere').onclick = () => { closeCard(); toast('Tor wacht bij de slaapboom. Tik hem aan als je mee wilt.', 6); };
-  $('goNext').onclick = travel;
-}
-function travel() {
-  if (!NEXT) return;
-  window.__nosave = 1; closeCard(); $('fade').style.opacity = 1;
-  Save.write({ ...snapshot(), area: NEXT.id, missions: [], mission: null, over: false, past: [...state.past, ...mission.done], rainDay: state.day - 1, dayP: 0.1, arrived: true });
-  setTimeout(() => location.replace(location.pathname), 900);
-}
-function markTick(g, want, dt) {
-  g.mark.material.opacity += (want - g.mark.material.opacity) * Math.min(1, dt * 3);
-  g.mark.visible = g.mark.material.opacity > 0.02;
-  if (g.mark.visible) { g.mark.position.set(g.x, g.g.position.y + (g.calling === 'shiver' ? 1.05 : 1.62) * g.k + 0.18 + Math.sin(playT * 2.4) * 0.04, g.z); g.mark.scale.setScalar(0.42 + Math.sin(playT * 2.4) * 0.03); }
-}
-function questTick(dt) {
-  if (titleT > 0) { titleT -= dt; if (titleT <= 0) $('title').classList.remove('on'); }
-  $('hint').style.visibility = titleT > 0 ? 'hidden' : '';
-  if (!state.started) return;
-  if (mission.over) {
-    // wie nog even bleef: Tor wenkt tot je meegaat
-    const tor = group.list.find((g) => g.id === 'tor'), go = NEXT && predGame.night < 0.6;
-    tor.calling = go ? 'wave' : null;
-    const d = Math.hypot(tor.x - player.pos.x, tor.z - player.pos.z); markTick(tor, go && d < 34 ? Math.min(1, (34 - d) / 8) : 0, dt);
-    return;
-  }
-  const calm = danger < 0.3 && state.sleeping <= 0 && state.collapsed <= 0 && !aim && !$('cardScreen').classList.contains('open');
-  const night = predGame.night > 0.6, dHome = Math.hypot(player.pos.x - HOME.x, player.pos.z - HOME.z);
-  if (mission.endT > 0) {
-    mission.endT -= dt;
-    if (mission.endT <= 0 && !calm) mission.endT = 1;
-    else if (mission.endT <= 0) {
-      mission.over = true; $('quest').classList.remove('on'); for (const g of group.list) { g.calling = null; g.mark.visible = false; }
-      endCard();
-      return;
-    }
-  }
-  const m = mission.cur, sure = !!window.__sure;   // de testbot speelt zonder roepende groep
-  // wie roept er, en wie wacht op je
-  const asking = [];
-  for (const g of group.list) {
-    const o = !sure && !night && mission.endT <= 0 && playT > 6 ? offerOf(g) : null;
-    const back = m && mission.giver === g && m.done();
-    g.calling = o ? (o.shiver ? 'shiver' : 'wave') : null;
-    if (o) asking.push(g);
-    const d = Math.hypot(g.x - player.pos.x, g.z - player.pos.z);
-    markTick(g, (o || back) && d < 34 ? Math.min(1, (34 - d) / 8) : 0, dt);
-  }
-  if (!m) {
-    $('quest').classList.remove('on');
-    mission.callT -= dt;
-    if (mission.callT <= 0 && asking.length && calm && dHome < 48) {
-      mission.calls++; mission.callT = mission.calls % 3 ? 7 : 80;
-      callOut(asking[Math.floor(mission.calls / 3) % asking.length]);
-    } else if (mission.callT <= 0) mission.callT = 2;
-    return;
-  }
-  mission.startT += dt;
-  // een missie met haast: de zon is de klok. Te laat kost de groep een nacht, en morgen ga je weer.
-  if (m.late) { const l = m.late(); if (l && !mission.late) { state.group = Math.max(0, state.group - 10); sound.bad(); toast(m.lateText, 7); } mission.late = l; }
-  if (!sure && m.done() && calm && mission.startT > 5 && (m.here || Math.hypot(mission.giver.x - player.pos.x, mission.giver.z - player.pos.z) < 3.4)) { $('quest').classList.remove('on'); complete(m); return; }
-  $('quest').classList.add('on');
-  const n = stepOf(m);
-  $('questN').textContent = m.title; $('questT').textContent = `${n + 1}/${m.steps.length}  ${m.steps[n].t}`;
-  if (n !== mission.shown) { if (mission.shown >= 0) sound.good(); mission.shown = n; const el = $('quest'); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
-}
-// terloopse opmerkingen leiden af; ze komen alleen nog als ze bij je missie horen
-function murmur(text, sec, tag) { if (tag && mission.cur && mission.cur.tag === tag) toast(text, sec); }
+// ---------- wat de onderdelen van elkaar mogen weten ----------
+// Systemen (systems/) krijgen dit ene object mee. Wat pas verderop in dit bestand ontstaat, wordt op het moment van gebruik opgehaald.
+const G = {
+  state, player, scene, things, hyenas, sabres, group, giant, shore, sound, closeRadial, renderHands, renderBag, putCloak, freeHand, discover, carcassNear, hiveNear,
+  get predGame() { return predGame; }, get dayP() { return dayP; }, set dayP(v) { dayP = v; }, get danger() { return danger; }, get aim() { return aim; },
+  get camYaw() { return camYaw; }, set camTurn(v) { camTurn = v; }, get clock() { return clock; }, stopWalk() { walkTo = null; },
+};
+let camTurn = null, homeShown = false;
+const hints = G.hints = initHints(G), { did, hintTick } = hints;
+const { has, carries, MISSIONS, NEXT, NAMES, mission, offerOf, accept, complete, missionInfo, endCard, travel, questTick, murmur } = G.missions = initMissions(G);
+const { season, newDay, groupLeaves } = initSeason(G);   // het droge seizoen en de nieuwe dag
+G.season = season;
 
 // ---------- knoppen met icoontjes ----------
 $('doBtn').innerHTML = ICON.strike;
@@ -325,9 +202,6 @@ function cloakTick() {
 $('bagBtn').onclick = () => { bagOpen = !bagOpen; closeRadial(); renderBag(); };
 
 // ---------- bekijken ----------
-function closeCard() { $('cardScreen').classList.remove('open'); }
-$('cardScreen').addEventListener('pointerdown', closeCard);
-function showCard(html) { $('card').classList.remove('wide'); $('card').onpointerdown = null; $('card').innerHTML = html; $('cardScreen').classList.add('open'); }
 function lookAt(target) {
   if (target.find && !state.finds.has(target.find)) {
     state.finds.add(target.find); sound.discover();
@@ -572,67 +446,6 @@ function wake() {
   discover('sleep');
 }
 
-// ---------- het droge seizoen ----------
-// Elke dag droogt het land verder uit, vanaf de slaapboom gezien: je moet steeds verder weg voor eten.
-// Na een paar droge dagen komt de regen en groeit alles weer.
-const DRY_DAYS = 5, DRY_COLOR = new THREE.Color(0x8a6a3a);
-function setBush(t, n, dry) {
-  const b = t.bush; b.left = n; b.dry = dry;
-  if (b.berries) b.berries.count = Math.ceil(14 * n / b.max);
-  if (t.item === 'leaf') b.g.scale.y = 0.6 + 0.8 * n / b.max;
-  for (const m of b.mats) m.color.copy(b.green).lerp(DRY_COLOR, dry * 0.8);
-}
-function season() {
-  const dry = state.day - 1 - state.rainDay, rain = dry >= DRY_DAYS, R = dry * 16;
-  if (rain) state.rainDay = state.day - 1;
-  for (const t of things) {
-    if (!t.bush) continue;
-    const d = Math.hypot(t.x - HOME.x, t.z - HOME.z);
-    if (rain || t.item === 'leaf') setBush(t, t.bush.max, 0);   // bij het water blijft het groen
-    else if (d < R) setBush(t, 0, 1);
-    else if (d < R + 15) setBush(t, Math.ceil(t.bush.max / 2), 0.5);
-    else setBush(t, t.bush.max, 0);
-  }
-  return rain;
-}
-// Een nieuwe dag: de struiken groeien bij (of verdorren), en je hoort hoe de groep erbij zit.
-function newDay(how) {
-  state.day++;
-  const rain = season(), g = state.group, dry = state.day - 1 - state.rainDay;
-  const b = state.brought; state.brought = {};
-  const list = Object.keys(b).map((it) => `${b[it]}× ${ITEMS[it].name.toLowerCase()}`).join(', ');
-  let hint;
-  if (rain) hint = 'Overal lopen de struiken weer uit. Geniet ervan: de droogte komt terug.';
-  else if (dry === DRY_DAYS - 1) hint = 'Tor ruikt aan de wind en wijst naar zware wolken in de verte. Nog één dag volhouden.';
-  else if (sabres.kill && sabres.kill.meat > 0) hint = 'Tor wijst naar de gieren die in de verte cirkelen. Daar ligt vlees.';
-  else if (dry >= 2) hint = 'De struiken rond de boom zijn verdord. Hoe verder je gaat, hoe meer er nog hangt. Het meeste vlees ligt waar de katten jagen.';
-  else hint = 'Het wordt droger. De struik bij de boom is verdord. Verderop hangt nog fruit.';
-  if (shore) shore.newDay();
-  const gh = giant.newDay(dry, rain, predGame);   // de reus heeft zijn eigen nieuws
-  if (gh && rain) hint += ' ' + gh; else if (gh && dry !== DRY_DAYS - 1) hint = gh;
-  if (rain) { sound.home(); discover('rain'); } else if (dry >= 1) discover('drought');
-  if (how === 'alone') { toast(`Dag ${state.day}. Je hebt de nacht alleen doorgebracht. ` + hint, 8); return; }
-  let title, text;
-  if (how === 'lost') {
-    title = 'Je hebt ze teruggevonden';
-    text = 'De groep kon niet langer wachten en trok weg, op zoek naar eten. Dagenlang volgde je hun spoor, alleen. Nu zijn ze terug bij de slaapboom: mager, maar blij je te zien.';
-  } else if (g >= 60) {
-    title = 'De groep is sterk';
-    const h = freeHand();
-    if (h >= 0) { state.hands[h] = 'flake'; renderHands(); state.known.add('flake'); }
-    text = 'Iedereen heeft goed gegeten.' + (h >= 0 ? ' Tor heeft een scherpe afslag voor je geslagen.' : '');
-    if (g >= 70 && group.startFollow()) text += ' Kem loopt vandaag met je mee: wat jij plukt of snijdt, neemt hij ook mee naar de boom.';
-  } else if (g >= 25) { title = 'De magen knorren'; text = 'Iedereen is er nog, maar er is weinig over. Tor heeft geen kracht om stenen te slaan.'; }
-  else { title = 'De groep is zwak'; text = 'Kleine Ibo huilt van de honger. Als er vandaag niets komt, trekt de groep verder zonder jou.'; }
-  if (rain) title = 'De regen is gekomen';
-  const got = how === 'lost' ? '' : `<p>${list ? 'Gisteren bracht je: ' + list + '.' : 'Gisteren bracht je niets naar de boom.'}</p>`;
-  showCard(`<div class="eyebrow">Dag ${state.day}</div><h2>${title}</h2><p>${text}</p>${got}<p class="know">${hint}</p>`);
-}
-// de groep heeft te lang niets gehad en trekt verder
-function groupLeaves() {
-  state.lost = true; state.starve = 0; state.sleeping = 4; walkTo = null; $('fade').style.opacity = 1; sound.bad();
-  toast('De groep kan niet langer wachten. Ze trekken weg, op zoek naar eten…', 3.8);
-}
 // loopt Kem met je mee, dan plukt of snijdt hij ook een deel
 function kemHelps(t, k) {
   const m = group.helper(player.pos); if (!m) return;
@@ -1186,39 +999,6 @@ function actionContext() {
   // al het andere (snijden, kraken, omdraaien) doe je door het ding zelf aan te tikken
   return { mode: 'strike', icon: ICON.strike, run: strike };
 }
-// ---------- aanwijzingen ----------
-// Geen handleiding vooraf: één aanwijzing tegelijk, op het moment dat je hem nodig hebt, en elk maar één keer (ook bij een volgend spel).
-const coarse = matchMedia('(pointer: coarse)').matches;
-const hintSeen = new Set(JSON.parse(localStorage.getItem('homo4-hints') || '[]'));
-const did = {}; let homeShown = false, moved = 0, playT = 0, hintCur = null, hintT = 0, hintGap = 1.5;
-const hintLast = new THREE.Vector3();
-const nearTurn = (r) => things.some((t) => t.kind === 'turn' && !t.gone && Math.hypot(t.x - player.pos.x, t.z - player.pos.z) < r);
-const HINTS = [
-  { id: 'move', when: () => playT < 40, done: () => moved > 5, text: coarse ? 'Schuif met je linkerduim om te lopen. Veeg rechts om rond te kijken.' : 'Loop met WASD of de pijltjes. Sleep om rond te kijken.' },
-  { id: 'cut', now: true, when: () => !!carcassNear() && state.hands.includes('flake'), done: () => state.hands.includes('meat') || state.hands.includes('hide'), text: coarse ? 'De vuist: snijd met je afslag.' : 'E: snijd met je afslag.' },
-  { id: 'honey', now: true, when: () => !!hiveNear(3.6), done: () => state.hands.includes('honey'), text: coarse ? 'De vuist: graai naar de honing.' : 'E: graai naar de honing.' },
-  { id: 'turn', now: true, when: () => nearTurn(5), done: () => did.turn, text: (coarse ? 'Dubbeltik' : 'Dubbelklik') + ' op de platte steen om hem om te draaien.' },
-  { id: 'throw', now: true, when: () => state.hands.includes('stone') && hyenas.list.some((h) => Math.hypot(h.x - player.pos.x, h.z - player.pos.z) < 30), done: () => did.throw, text: coarse ? 'Houd de vuist vast om te mikken: schuif om te richten, laat los om te gooien.' : 'Houd E vast om te mikken, scrol voor de afstand, laat los om te gooien.' },
-];
-function hintTick(dt) {
-  if (!state.started || state.sleeping > 0 || state.collapsed > 0) return;
-  playT += dt; moved += Math.min(2, Math.hypot(player.pos.x - hintLast.x, player.pos.z - hintLast.z)); hintLast.copy(player.pos);
-  const close = (h) => { hintSeen.add(h.id); try { localStorage.setItem('homo4-hints', JSON.stringify([...hintSeen])); } catch (e) { /* privémodus */ } };
-  // iets wat nu speelt (een nest, een platte steen, een hyena) gaat voor op een algemene aanwijzing; die komt later terug
-  const urgent = hintCur && !hintCur.now && HINTS.find((h) => h.now && !hintSeen.has(h.id) && h.when() && !h.done());
-  if (urgent) { hintCur = urgent; hintT = 0; $('hint').textContent = urgent.text; }
-  if (hintCur) {
-    hintT += dt;
-    if (hintCur.done() || hintT > 14) { close(hintCur); hintCur = null; hintGap = 2.5; $('hint').classList.remove('on'); }
-    return;
-  }
-  hintGap -= dt; if (hintGap > 0) return;
-  for (const h of HINTS) {
-    if (hintSeen.has(h.id) || !h.when()) continue;
-    if (h.done()) { close(h); continue; }   // al vanzelf gedaan: dan hoeft het niet meer gezegd
-    hintCur = h; hintT = 0; $('hint').textContent = h.text; $('hint').classList.add('on'); break;
-  }
-}
 // ---------- bij de groep gaat het vanzelf ----------
 // Kom je met eten de kring in, dan nemen ze het van je over. Stenen en afslagen houd je zelf.
 let giveT = 0, stillT = 0, senseK = 0, lastLook = [0, 0];
@@ -1236,26 +1016,7 @@ function atHome(dt) {
   // 's nachts stil bij de anderen staan: je kruipt erbij en slaapt
   if (dHome < 9 && predGame.night > 0.5 && stillT > 4 && giveT <= 0) sleep();
 }
-// ---------- wat je lijf en je groep je laten merken ----------
-const statShow = { food: 0, health: 0, group: 0 }, statPrev = { food: 55, health: 100, group: 50 };
-let bellyT = 8, cryT = 5, hungerTold = false;
-function bodySignals(dt, sick, hd) {
-  // de streepjes zie je alleen als er iets verandert, als het slecht gaat, of als je stilstaat en voelt hoe het met je is
-  for (const [k, id, low] of [['food', 'statFood', 20], ['health', 'statHealth', 35], ['group', 'statGroup', 20]]) {
-    const v = state[k];
-    if (Math.abs(v - statPrev[k]) > 0.6) statShow[k] = 5;
-    statPrev[k] = v; statShow[k] -= dt;
-    $(id).classList.toggle('on', statShow[k] > 0 || v < low || state.sensing || (k === 'health' && sick));
-  }
-  $('homeRow').classList.toggle('on', state.sensing && hd > 22);
-  if (!state.started || state.sleeping > 0 || state.collapsed > 0) { $('weak').style.opacity = 0; return; }
-  if (state.food < 20) {
-    bellyT -= dt;
-    if (bellyT <= 0) { bellyT = 16 + Math.random() * 10; sound.belly(); if (!hungerTold) { hungerTold = true; toast('Je maag knort. Je moet zelf ook eten.', 4); } }
-  } else hungerTold = false;
-  $('weak').style.opacity = state.health < 35 ? (1 - state.health / 35) * (0.55 + 0.2 * Math.sin(clock.elapsedTime * 3)) + 0.15 : 0;
-  if (state.group < 20 && hd < 45 && !state.lost) { cryT -= dt; if (cryT <= 0) { cryT = 12 + Math.random() * 8; sound.cry(1 - hd / 60); } }
-}
+const bodySignals = initBody(G);
 let ctx = null, btnMode = '';
 // drukt je terwijl hij nog bezig is (bijv. bukken), dan volgt de actie zodra hij klaar is
 let pendingAction = 0;
@@ -1500,7 +1261,7 @@ function update(dt) {
     playTime += dt; const pt = playTime;
   }
 
-  if (toastTimer > 0) { toastTimer -= dt; if (toastTimer <= 0) $('toast').classList.remove('on'); }
+  uiTick(dt);
 }
 
 function collapse() {
@@ -1524,52 +1285,8 @@ function begin() {
   loading.remove(); state.started = true;
   restore(Save.read());
 }
-// ---------- bewaren en verdergaan ----------
-// Bewaard wordt wat je bent en weet, niet waar elk bot ligt: je wordt wakker bij de slaapboom en de wereld is weer vol.
-function snapshot() {
-  return {
-    era: ERA.id, area: AREA.id, day: state.day, rainDay: state.rainDay, dayP: +dayP.toFixed(3),
-    food: Math.round(state.food), health: Math.round(state.health), group: Math.round(state.group),
-    hands: state.hands, rock: state.rock, bag: state.bag, cloak: state.cloak, knapped: !!state.knapped,
-    known: [...state.known], found: [...state.found], finds: [...state.finds], rockKnown: [...state.rockKnown], given: [...state.given],
-    missions: [...mission.done], mission: mission.cur ? mission.cur.id : null, over: mission.over, past: state.past,
-  };
-}
-function restore(d) {
-  if (!d || d.era !== ERA.id || d.area !== AREA.id) return false;
-  const ok = (it) => it === null || !!ITEMS[it], num = (v, def) => (Number.isFinite(v) ? v : def);
-  state.day = Math.max(1, num(d.day, 1)); state.rainDay = num(d.rainDay, 0); dayP = THREE.MathUtils.clamp(num(d.dayP, 0.12), 0, 0.6);   // nooit midden in de nacht wakker worden
-  state.food = Math.max(25, num(d.food, 55)); state.health = Math.max(40, num(d.health, 100)); state.group = Math.max(20, num(d.group, 50));
-  if (Array.isArray(d.hands) && d.hands.length === 2 && d.hands.every(ok)) { state.hands = d.hands; state.rock = Array.isArray(d.rock) && d.rock.length === 2 ? d.rock : [null, null]; }
-  if (Array.isArray(d.bag) && d.bag.length === 5 && d.bag.every((e) => e === null || (e && ITEMS[e.it]))) state.bag = d.bag;
-  state.cloak = !!d.cloak; state.knapped = !!d.knapped;
-  for (const k of ['known', 'found', 'finds', 'rockKnown', 'given']) if (Array.isArray(d[k])) state[k] = new Set(d[k]);
-  mission.done = new Set((d.missions || []).filter((id) => MISSIONS.some((m) => m.id === id)));
-  const cur = MISSIONS.find((m) => m.id === d.mission && !mission.done.has(m.id));
-  if (cur) { mission.cur = cur; mission.giver = group.list.find((g) => g.id === cur.who); mission.startT = 9; if (cur.onStart) cur.onStart(); }
-  if (Array.isArray(d.past)) state.past = d.past.filter((x) => typeof x === 'string');
-  if (d.arrived) title(ERA.species, AREA.name, AREA.intro || '', 6);   // net aangekomen in een nieuw gebied
-  mission.over = !!d.over;
-  player.pos.set(HOME.x + 2, 0, HOME.z + 4); player.vel.set(0, 0, 0);
-  season(); renderHands(); renderBag(); if (state.cloak) putCloak();
-  $('journalCount').textContent = state.found.size;
-  playT = 30; moved = 9;   // geen beginaanwijzingen meer
-  return true;
-}
-let saveT = 0;
-function saveTick(dt) {
-  saveT += dt;
-  if (saveT > 6 && state.started && state.collapsed <= 0 && !state.lost && !window.__nosave) { saveT = 0; Save.write(snapshot()); }
-}
-addEventListener('pagehide', () => { if (state.started && !window.__nosave) Save.write(snapshot()); });
-document.addEventListener('visibilitychange', () => { if (document.hidden && state.started && !window.__nosave) Save.write(snapshot()); });
-function restart() {
-  showCard(`<div class="eyebrow">Opnieuw beginnen</div><h2>Alles vergeten?</h2><p>Je begint dan weer op de eerste dag, zonder wat je geleerd en gemaakt hebt.</p>
-    <div class="row"><button class="btn" id="noRestart">Nee, verder spelen</button><button class="btn ghost" id="yesRestart">Ja, opnieuw</button></div>`);
-  $('noRestart').onclick = closeCard;
-  $('yesRestart').onclick = () => { window.__nosave = 1; Save.clear(); location.reload(); };
-}
-$('restartBtn').innerHTML = ICON.restart; $('restartBtn').onclick = restart;
+const { snapshot, restore, saveTick } = initPersist(G);
+G.snapshot = snapshot;
 function firstTouch() {
   removeEventListener('pointerdown', firstTouch, true); removeEventListener('keydown', firstTouch, true);
   window.__played = true; sound.start();
@@ -1589,7 +1306,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { eat, shore, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hintCur && hintCur.id, [...hintSeen]], actionContext,
+window.__game = { eat, shore, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => camYaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, flick, setSneak, still: () => stillT, FLICK,
   setCam: (y, p, d) => { camYaw = y; camPitch = p; if (d) camDist = d; }, setZoom, zoom: () => camDist,
   lookFrom: (pos, look) => { camOverride = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },

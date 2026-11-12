@@ -12,7 +12,9 @@ Stand: november 2026. Het spel staat in `v4/` en draait op GitHub Pages.
 
 | Bestand | Regels | Wat het doet |
 |---|---|---|
-| `main.js` | ~1600 | Spelstaat, lus, invoer (aanraking, muis, toetsen), camera, handen en tas, steen slaan, gooien, missies, aanwijzingen, dag en nacht, seizoen, boekje, opslag |
+| `main.js` | ~1300 | Spelstaat, lus, invoer (aanraking, muis, toetsen), camera, handen en tas, steen slaan, gooien, dag en nacht, boekje |
+| `engine/ui.js` | 18 | **Nieuw:** de schermlaag: melding, grote titel, kaart. Weet niets van het spel |
+| `systems/` | 335 | **Nieuw:** `missions.js` (missies, roepen, verder trekken), `season.js` (droge seizoen, nieuwe dag), `hints.js` (aanwijzingen), `body.js` (wat je lijf laat merken), `persist.js` (bewaren en verdergaan) |
 | `world.js` | 461 | Terrein (rivier of meeroever met poelen en zandbank, naar het gebied), bomen, gras, licht, lucht |
 | `hominin.js`, `rig.js` | 465 | De speler: model, animaties, lopen, sluipen, klimmen, gooien |
 | `group.js` | 124 | De drie groepsgenoten (Tor, Kem, Ibo) bij de slaapboom |
@@ -29,7 +31,7 @@ Stand: november 2026. Het spel staat in `v4/` en draait op GitHub Pages.
 
 **Sterk.** De wereld, de besturing op een telefoon, de dieren met eigen gedrag, de zintuigen, het geluid en de rustige schermlaag werken en zijn getest (Playwright-tests in `/root/tools/pw/v4*.js`).
 
-**Zwak.** `main.js` is te groot en weet alles. Wereld en dieren zijn in code vastgelegd in plaats van in gegevens. Er zijn twee gebieden. Alles (26 MB) wordt in één keer geladen. Tot deze stap ging bij het sluiten van de pagina alles verloren.
+**Zwak.** `main.js` is nog te groot (invoer, camera, handen en tas, gooien en gevaar zitten er nog in). Wereld en dieren zijn in code vastgelegd in plaats van in gegevens. Er zijn twee gebieden. Alles (26 MB) wordt in één keer geladen. Tot deze stap ging bij het sluiten van de pagina alles verloren.
 
 ---
 
@@ -99,7 +101,7 @@ Elke stap is af en speelbaar voordat de volgende begint.
 | C | Gebied als gegevens: dieren, grondstoffen en planten van de savanne in `areas/savanne.js` (terrein en begroeiing volgen bij stap E) | A | **klaar** |
 | D | Overgang: de groep trekt verder (slotkaart → *Trek mee* → het nieuwe gebied wordt geladen; handen, tas, kennis en dag gaan mee) | B, C | **klaar** |
 | E | **Gebied 2: bij het water** (nog *Homo habilis*), volledig speelbaar | D | **klaar**, wacht op proefspelen |
-| F | `main.js` opsplitsen in `engine/` en `systems/` | C (gaandeweg) | |
+| F | `main.js` opsplitsen in `engine/` en `systems/` | C (gaandeweg) | **eerste ronde klaar**: schermlaag, missies, seizoen, aanwijzingen, lijf en opslag staan los. Elk systeem is `initX(G)` en krijgt één gedeeld object `G` uit `main.js`. Volgt gaandeweg: invoer en camera naar `engine/`, handen en tas, gooien, gevaar naar `systems/` |
 | G | Soortcontrole: `node tools/check-eras.mjs` legt tijd en plaats van elke soort (`species.js`) tegen het gebied | C | **klaar** |
 | H | Tijdperk 2: *Homo erectus* — nieuw lichaam, vuistbijl, vuur, grotere groep | E, F | |
 | I | Tijdperken 3–4 | H | |
@@ -138,7 +140,7 @@ De route, vastgesteld met Bob op 12 november 2026. Er wordt nooit aan een later 
 
 | # | Ontwikkeling | Stand |
 |---|---|---|
-| 1 | Architectuur geschikt maken voor het volledige spel (stappen A, C, F, G) | A, C en G klaar; F (`main.js` opsplitsen) is de volgende |
+| 1 | Architectuur geschikt maken voor het volledige spel (stappen A, C, F, G) | A, C en G klaar; F (`main.js` opsplitsen) eerste ronde klaar, de rest gaat gaandeweg mee |
 | 2 | Het huidige *Homo habilis*-spel afmaken: savanne rond, overgang "de groep trekt verder" (stap D) | **klaar** |
 | 3 | Watergebied volledig speelbaar (stap E) | **klaar**, wacht op proefspelen door Bob |
 | 4 | Opslaan en laden (stap B) | basis klaar; groeit mee met elk nieuw gebied |
