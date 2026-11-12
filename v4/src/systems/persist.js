@@ -3,7 +3,6 @@ import { ERA, AREA } from '../eras/index.js';
 import { ITEMS } from '../items.js';
 import { HOME } from '../group.js';
 import { Save } from '../save.js';
-import { ICON } from '../icons.js';
 import { $, title, showCard, closeCard } from '../engine/ui.js';
 
 // Bewaren en verdergaan.
@@ -38,7 +37,6 @@ export function initPersist(G) {
     if (G.fire) G.fire.restore(d.fire);
     player.pos.set(HOME.x + 2, 0, HOME.z + 4); player.vel.set(0, 0, 0);
     season(); renderHands(); renderBag(); if (state.cloak) putCloak();
-    $('journalCount').textContent = state.found.size;
     hints.playT = 30; hints.moved = 9;   // geen beginaanwijzingen meer
     return true;
   }
@@ -55,6 +53,6 @@ export function initPersist(G) {
     $('noRestart').onclick = closeCard;
     $('yesRestart').onclick = () => { window.__nosave = 1; Save.clear(); location.reload(); };
   }
-  $('restartBtn').innerHTML = ICON.restart; $('restartBtn').onclick = restart;
+  G.restart = restart;
   return { snapshot, restore, saveTick };
 }

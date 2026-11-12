@@ -11,7 +11,7 @@ export function initHints(G) {
   const hintLast = new THREE.Vector3();
   const nearTurn = (r) => things.some((t) => t.kind === 'turn' && !t.gone && Math.hypot(t.x - player.pos.x, t.z - player.pos.z) < r);
   const HINTS = [
-    { id: 'move', when: () => hints.playT < 40, done: () => hints.moved > 5, text: coarse ? 'Schuif met je linkerduim om te lopen. Veeg rechts om rond te kijken.' : 'Loop met WASD of de pijltjes. Sleep om rond te kijken.' },
+    { id: 'move', when: () => hints.playT < 40, done: () => hints.moved > 5, text: coarse ? 'Schuif met je linkerduim om te lopen. Sleep rechts om rond te kijken.' : 'Loop met WASD of de pijltjes. Sleep om rond te kijken.' },
     { id: 'cut', now: true, when: () => !!carcassNear() && (state.hands.includes('flake') || state.hands.includes('axe')), done: () => state.hands.includes('meat') || state.hands.includes('hide'), text: coarse ? 'Tik op Snijd.' : 'E: snijd met je afslag.' },
     { id: 'honey', now: true, when: () => !!hiveNear(3.6), done: () => state.hands.includes('honey'), text: coarse ? 'Tik op Pak.' : 'E: graai naar de honing.' },
     { id: 'turn', now: true, when: () => nearTurn(5), done: () => did.turn, text: (coarse ? 'Dubbeltik' : 'Dubbelklik') + ' op de platte steen om hem om te draaien.' },

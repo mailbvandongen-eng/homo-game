@@ -1,14 +1,16 @@
 // Geluid van de savanne, helemaal opgewekt in de browser (geen geluidsbestanden).
 // Wind, krekels, vogels, ritselend gras, voetstappen en korte geluidjes bij wat je doet.
+import { settings } from './engine/settings.js';
+
 export class Sound {
-  constructor() { this.ctx = null; this.muted = localStorage.getItem('homo4-mute') === '1'; }
+  constructor() { this.ctx = null; this.volume = settings.volume; }
 
   start() {
     if (this.ctx) return;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     const ctx = this.ctx = new AC();
-    this.master = ctx.createGain(); this.master.gain.value = this.muted ? 0 : 0.9;
+    this.master = ctx.createGain(); this.master.gain.value = this.volume;
     // bij de zintuigen klinkt de wereld gedempt
     this.muffle = ctx.createBiquadFilter(); this.muffle.type = 'lowpass'; this.muffle.frequency.value = 18000;
     this.muffle.connect(this.master); this.master.connect(ctx.destination);
@@ -39,9 +41,10 @@ export class Sound {
     return { f, g };
   }
 
-  setMuted(m) {
-    this.muted = m; localStorage.setItem('homo4-mute', m ? '1' : '0');
-    if (this.ctx) this.master.gain.setTargetAtTime(m ? 0 : 0.9, this.ctx.currentTime, 0.1);
+  // hoe hard alles klinkt (0 = stil, 1 = voluit); komt uit de instellingen
+  setVolume(v) {
+    this.volume = v;
+    if (this.ctx) this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.1);
   }
 
   // korte toon met een omhullende

@@ -27,7 +27,7 @@ Ontwikkelen gebeurt op de branch `ontwikkel`; alleen geteste fasen gaan naar `ma
 |---|---|---|
 | Prestaties | Bij de start van deze fase: **1,5 miljoen driehoeken per beeld** en ~390 tekenopdrachten. Oorzaak: niets werd buiten beeld weggelaten (alle bomen, gras en dieren altijd getekend, plus nog eens voor de schaduw). Nu 0,4–0,9 miljoen (zie 6). Nog te doen: verre bomen en dieren eenvoudiger tekenen (LOD), mens-model uit minder losse delen. | 1 (deels klaar), 4 |
 | `main.js` | 1400 regels: bediening, camera, handen, tas, gooien, eten en de spelronde in één bestand. Splitsen in `engine/` (invoer, camera) en `systems/` (handen, tas, eten) vóór de nieuwe bediening erin komt. | 2 |
-| Bediening | Joystick en kijkvlak werken, maar bukken/springen gaat met veegbewegingen (drempels zijn "een eerste gok"), geen zoom, geen instelbare gevoeligheid, geen instellingenscherm. | 2 |
+| Bediening | Joystick en kijkvlak werken, maar bukken/springen gaat met veegbewegingen (drempels zijn "een eerste gok"), zoom bestaat (knijpen, muiswiel) maar is nergens in te stellen, geen instelbare gevoeligheid, geen instellingenscherm. | 2 (klaar, zie 7) |
 | Knoppen | Woordknoppen zijn duidelijk maar kaal; geen eenheid met tas en missiekaart; geen contextmenu bij meer dan één mogelijke handeling. | 2 |
 | Tas | Werkt, maar handen wisselen, neerleggen en combineren zijn verspreid over losse knoppen. Draagvermogen groeit maar één keer (draagvel). | 2, 5 |
 | Botsingen | Alleen cirkels (`blockers`) op een hoogteveld. Betrouwbaar, maar je kunt nergens op of onderdoor. | 4 |
@@ -43,19 +43,18 @@ Ontwikkelen gebeurt op de branch `ontwikkel`; alleen geteste fasen gaan naar `ma
 | **Pofadder, impala, krokodil, meerval** | Cobra-model, gazelle-model en twee dieren uit losse vormen. | 3 |
 | **Dieren algemeen** | Eén model per soort: geen jong/volwassen, geen man/vrouw. Gedrag is per soort apart geschreven (`predators.js`, `hunt.js`, `giant.js`, `actors.js`) in plaats van één gedeelde basis (zien, horen, ruiken, vluchten, kudde). | 3 |
 | **Terrein** | Eén hoogteveld van 440 m met 200 × 200 vakken: glooiend, maar geen kloven, richels of overhangen. Gebieden verschillen vooral in kleur en inrichting. | 4 |
-| **Camera** | Vaste afstand en hoogte, geen zoom, geen botsing met rotsen of bomen. | 2 |
+| **Camera** | Zoom (knijpen, muiswiel) en botsing met grond en rotsen bestonden al, maar zaten verweven in `main.js`; gevoeligheid niet instelbaar. *(Eerdere versie van deze analyse zei ten onrechte "geen zoom, geen botsing".)* | 2 (klaar, zie 7) |
 
 ## 4. Wat ontbreekt
 
-- Instellingenscherm (gevoeligheid, geluid, kwaliteit).
-- Zoom en camerabotsing.
+- Instellingenscherm (gevoeligheid, geluid, kwaliteit). *(fase 2: gebouwd)*
 - Klimmen, kruipen, zwemmen, vallen, dragen-als-houding (nu: staan, lopen, rennen, bukken, springen, gooien, rapen).
 - Voeten op het terrein (IK) en overgangen tussen alle bewegingen.
 - Ruimtelijk geluid, voetstappen per ondergrond.
 - Weer als spelsysteem (regen en wind bestaan alleen als sfeer in het seizoen).
 - Draagmiddelen na het draagvel (net, mand, waterzak) en water dragen.
 - Combineren van voorwerpen als algemene handeling (nu per geval geschreven).
-- Kwaliteitstrappen voor trage telefoons.
+- Kwaliteitstrappen voor trage telefoons. *(fase 2: gebouwd)*
 - Kennisscherm in het spel (wat is vast, wat is onzeker).
 
 ## 5. Technische beperkingen (eerlijk)
@@ -96,3 +95,26 @@ Ontwikkelen gebeurt op de branch `ontwikkel`; alleen geteste fasen gaan naar `ma
 - **Kennisbasis met vier treden**: vastgesteld · sterk aannemelijk · onzeker · artistieke invulling
   (`eras/*.js`), en per dier hoe goed het model past: reconstructie · verwant · vervanger (`species.js`).
   `tools/check-eras.mjs` en de testmodus melden elke vervanger.
+
+## 7. Wat in fase 2 is gebouwd (interface en bediening)
+
+- **Eén knoppensysteem** (`.key` in `index.html`): alle knoppen zijn rechthoekige woordknoppen in dezelfde stijl.
+  Rechtsonder staan bij elkaar: `Buk`/`Sta op`, `Spring`, de grote actieknop, `Meer`, de twee handen en `Tas`.
+  Rechtsboven alleen `Menu`. De ronde icoonknoppen en het knopje met de drie puntjes zijn weg.
+- **Geen veegbewegingen meer.** Bukken en springen zijn knoppen. Slepen over het beeld is alleen nog rondkijken.
+- **Contextmenu `Meer`.** De grote knop doet het meest voor de hand liggende; kan er meer (een scherf slaan,
+  een bot kraken, hout op het vuur), dan verschijnt `Meer` met de andere keuzes als woorden.
+- **Handen en tas.** Tik op een hand voor wat je ermee kunt (bekijken, eten, maken, in de tas, neerleggen).
+  `Tas` is een woordknop met het aantal erin.
+- **Menu** (`systems/menu.js`): het spel staat stil. Verder spelen · Wat je weet · Instellingen · Opnieuw beginnen.
+- **Instellingen** (`engine/settings.js`, bewaard in `homo-settings`; in de testmodus apart): rondkijken
+  langzaam–snel, geluid uit–hard, beeld vanzelf/laag/gewoon/hoog, knoppen klein/gewoon/groot.
+  Op "vanzelf" zakt het beeld één trap als het spel vijf seconden onder 24 beelden per seconde blijft.
+- **Invoer en camera uit `main.js`** naar `engine/controls.js` (joystick met dood midden, kijken, knijpen/wiel,
+  cameraplaatsing met botsing).
+- **Controles** in de testmodus: groep "Bediening" (knoppen aanwezig, minstens 44 px, in beeld, niet over elkaar).
+- **Test** `/root/tools/pw/v4menu.js` (telefoonformaat, aanraking): 24 controles.
+
+Nog niet gedaan in fase 2: handen, tas en eten staan nog in `main.js` (1320 regels). Dat verhuist in fase 5,
+samen met de nieuwe draagmiddelen, zodat het maar één keer verbouwd wordt. Hoe de knoppen onder echte duimen
+aanvoelen is alleen op een echte telefoon te beoordelen.

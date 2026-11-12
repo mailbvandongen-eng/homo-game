@@ -6,6 +6,7 @@ import { ITEMS, DISCOVERIES } from '../items.js';
 import { ITEM_ICON } from '../icons.js';
 import { MODELS, TEXTURES } from '../assets.js';
 import { MISSING } from '../rig.js';
+import { settings, qualityNow } from '../engine/settings.js';
 
 // Welke bewegingen het spel van elk model vraagt. Een model vervangen = deze lijst blijft de eis.
 export const CLIPS = {
@@ -177,6 +178,27 @@ function checkPerf(out, p) {
   add('ok', `${p.geo} vormen en ${p.tex} texturen in het geheugen`);
 }
 
+// Knoppen: bestaan ze, zijn ze groot genoeg voor een duim, staan ze in beeld en niet over elkaar heen?
+function checkControls(out) {
+  const add = (lvl, tekst) => out.push({ lvl, groep: 'Bediening', tekst });
+  const ids = ['menuBtn', 'doBtn', 'sneakBtn', 'jumpBtn', 'hand0', 'hand1'];
+  const miss = ids.filter((id) => !document.getElementById(id));
+  if (miss.length) { add('fout', 'knop ontbreekt: ' + miss.join(', ')); return; }
+  let bad = 0;
+  const box = ids.map((id) => [id, document.getElementById(id).getBoundingClientRect()]);
+  for (const [id, r] of box) {
+    if (r.width < 44 || r.height < 44) { bad++; add('fout', `${id} is te klein voor een duim (${Math.round(r.width)} × ${Math.round(r.height)})`); }
+    if (r.left < 0 || r.top < 0 || r.right > innerWidth + 1 || r.bottom > innerHeight + 1) { bad++; add('fout', `${id} valt buiten beeld`); }
+  }
+  for (let i = 0; i < box.length; i++) for (let j = i + 1; j < box.length; j++) {
+    const a = box[i][1], b = box[j][1];
+    if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1) { bad++; add('fout', `${box[i][0]} en ${box[j][0]} liggen over elkaar`); }
+  }
+  const S = settings;
+  if (!(S.look >= 0.4 && S.look <= 2) || !(S.volume >= 0 && S.volume <= 1) || !['auto', 'laag', 'gewoon', 'hoog'].includes(S.quality)) { bad++; add('fout', 'een instelling heeft een waarde die niet kan: ' + JSON.stringify(S)); }
+  if (!bad) add('ok', `${ids.length} knoppen in beeld, groot genoeg en los van elkaar; beeld: ${S.quality === 'auto' ? 'vanzelf (' + qualityNow() + ')' : S.quality}`);
+}
+
 export async function runChecks({ G, A, renderer, scenarios, scenarioError, errors, normalBefore }) {
   const out = [];
   const guard = async (groep, fn) => { try { await fn(); } catch (e) { out.push({ lvl: 'fout', groep, tekst: 'de controle zelf liep vast: ' + e.message }); } };
@@ -184,6 +206,7 @@ export async function runChecks({ G, A, renderer, scenarios, scenarioError, erro
   await guard('Bestanden', () => checkFiles(out));
   await guard('Modellen en bewegingen', () => checkLoaded(out, A, G.scene));
   await guard('Bewaren', () => checkSave(out, G, normalBefore));
+  await guard('Bediening', () => checkControls(out));
   await guard('Scenario\'s', () => {
     if (scenarioError) { out.push({ lvl: 'fout', groep: 'Scenario\'s', tekst: scenarioError }); return; }
     let bad = 0; const seen = new Set();

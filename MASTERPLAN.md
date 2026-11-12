@@ -103,10 +103,10 @@ De inventaris waarmee dit begon staat in [`ANALYSE.md`](ANALYSE.md).
 | Fase | Wat | Stand |
 |---|---|---|
 | 1 | **Analyse en fundament**: inventaris, back-up en branch, knelpunten, testmodus `?dev=1`, scenario's, automatische controles, kennisbasis met vier treden | **klaar** (prestatiedoel deels: zie ANALYSE §6) |
-| 2 | **Interface en bediening**: `main.js` verder splitsen (invoer, camera, handen, tas); joystick en camera met instelbare gevoeligheid en zoom; één knoppensysteem; contextmenu; nieuwe tas met handen; instellingenscherm | volgende |
-| 3 | **Mens en dieren**: eigen model per mensensoort; bewegingen met overgangen en voeten op de grond; de vervangende diermodellen (reuzenolifant, pofadder, impala, krokodil, meerval) vervangen; gedeelde basis voor diergedrag; jong/volwassen | |
+| 2 | **Interface en bediening**: invoer en camera uit `main.js` (`engine/controls.js`); joystick en camera met instelbare gevoeligheid en zoom; één knoppensysteem met woordknoppen (Buk, Spring, actie, Meer, handen, Tas); contextmenu; menu met pauze; instellingenscherm met beeldkwaliteit | **klaar** (handen/tas/eten uit `main.js` halen schuift naar fase 5; zie ANALYSE §7) |
+| 3 | **Mens en dieren**: eigen model per mensensoort; bewegingen met overgangen en voeten op de grond; de vervangende diermodellen (reuzenolifant, pofadder, impala, krokodil, meerval) vervangen; gedeelde basis voor diergedrag; jong/volwassen | volgende |
 | 4 | **Wereld**: reliëf, kloven en klimbare rotsen; botsingen; licht en weer; ruimtelijk geluid en voetstappen per ondergrond; LOD | |
-| 5 | **Gameplay**: missies verdiepen; draagmiddelen (net, mand, waterzak); overleven; kennisscherm in het spel | |
+| 5 | **Gameplay**: handen, tas en eten als eigen systeem (`systems/`); missies verdiepen; draagmiddelen (net, mand, waterzak); overleven; kennisscherm in het spel | |
 | 6 | **Kwaliteitscontrole**: elk gebied en scenario door de controles zonder "let op"; telefoonproef; licenties en bronnen nagelopen | |
 
 Regels die voor elke fase gelden:

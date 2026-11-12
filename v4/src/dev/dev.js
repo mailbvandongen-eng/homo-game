@@ -102,7 +102,6 @@ export async function initDev({ G, A, devFlags, renderer, height, makeCloak, dro
     if (c.cloak !== undefined) { state.cloak = !!c.cloak; if (c.cloak) makeCloak(); else dropCloak(); }
     if (c.found !== undefined) {
       state.found = new Set(c.found === 'all' ? DISCOVERIES.map((d) => d.id) : c.found);
-      document.getElementById('journalCount').textContent = state.found.size;
     }
     if (c.known !== undefined) state.known = new Set(c.known === 'all' ? Object.keys(ITEMS) : c.known);
     if (c.fire && G.fire) { if (c.fire.built) { G.fire.ring = G.fire.need; G.fire.showRing(); } G.fire.restore({ ring: G.fire.ring, ...c.fire }); }
