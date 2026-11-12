@@ -116,8 +116,7 @@ const { season, newDay, groupLeaves } = initSeason(G);   // het droge seizoen en
 G.season = season;
 
 // ---------- knoppen met icoontjes ----------
-$('doBtn').innerHTML = ICON.strike;
-$('swap').innerHTML = ICON.swap;
+$('doBtn').textContent = 'Sla';
 $('menuBtn').innerHTML = ICON.menu;
 // geluid en het boekje zitten samen achter één klein knopje, dat vanzelf weer dichtklapt
 let menuTimer = 0;
@@ -549,7 +548,7 @@ function goAndDo(t, fn, reach = 1.4) {
   walkTo = { x: t.x, z: t.z, fn, reach };
 }
 
-// ---------- het rondje met icoontjes ----------
+// ---------- de keuzes bij een ding: een rijtje korte woorden ----------
 let radial = null;
 function closeRadial() { radial = null; $('radial').innerHTML = ''; }
 function openRadial(target) {
@@ -557,44 +556,44 @@ function openRadial(target) {
   const hasStone = state.hands.includes('stone');
   if (target.hand !== undefined) {
     const i = target.hand, it = state.hands[i], other = state.hands[1 - i];
-    opts.push({ icon: ICON.eye, fn: () => lookAt({ item: it, rock: state.rock[i] }) });
-    if (EDIBLE.has(it)) opts.push({ icon: ICON.mouth, q: !state.known.has(it), fn: () => { state.hands[i] = null; renderHands(); eat(it); } });
-    if ((it === 'bone' && other === 'stone') || (it === 'stone' && other === 'bone')) opts.push({ icon: ICON.crack, fn: () => act('Interact', crack) });
-    if (it === 'stone' && other === 'stone') opts.push({ icon: ICON.knap, fn: () => act('Interact', () => knap(i)) });
-    if (it === 'stone' && other === 'stone' && ERA.tech && ERA.tech.includes('axe')) opts.push({ icon: ICON.axe, q: !state.known.has('axe'), fn: () => act('Interact', () => knapAxe(i)) });
+    opts.push({ t: 'Bekijk', icon: ICON.eye, fn: () => lookAt({ item: it, rock: state.rock[i] }) });
+    if (EDIBLE.has(it)) opts.push({ t: state.known.has(it) ? 'Eet' : 'Proef', icon: ICON.mouth, q: !state.known.has(it), fn: () => { state.hands[i] = null; renderHands(); eat(it); } });
+    if ((it === 'bone' && other === 'stone') || (it === 'stone' && other === 'bone')) opts.push({ t: 'Kraak het bot', icon: ICON.crack, fn: () => act('Interact', crack) });
+    if (it === 'stone' && other === 'stone') opts.push({ t: 'Sla een scherf', icon: ICON.knap, fn: () => act('Interact', () => knap(i)) });
+    if (it === 'stone' && other === 'stone' && ERA.tech && ERA.tech.includes('axe')) opts.push({ t: 'Maak een vuistbijl', icon: ICON.axe, q: !state.known.has('axe'), fn: () => act('Interact', () => knapAxe(i)) });
     const edge = other === 'flake' || other === 'axe';
-    if ((it === 'branch' && edge) || (it === 'flake' && other === 'branch')) opts.push({ icon: ICON.cut, fn: () => act('Interact', () => makeStick(it === 'branch' ? i : 1 - i)) });
-    if (it === 'hide' && edge && !state.bag) opts.push({ icon: ICON.bag, fn: () => act('Interact', () => makeBag(i)) });
-    if (it === 'hide' && edge && !state.cloak) opts.push({ icon: ICON.cloak, fn: () => act('Interact', () => wearHide(i)) });
-    opts.push({ icon: ICON.drop, fn: () => { state.hands[i] = null; renderHands(); dropAt(it); } });
+    if ((it === 'branch' && edge) || (it === 'flake' && other === 'branch')) opts.push({ t: 'Schraap een punt', icon: ICON.cut, fn: () => act('Interact', () => makeStick(it === 'branch' ? i : 1 - i)) });
+    if (it === 'hide' && edge && !state.bag) opts.push({ t: 'Maak een draagvel', icon: ICON.bag, fn: () => act('Interact', () => makeBag(i)) });
+    if (it === 'hide' && edge && !state.cloak) opts.push({ t: 'Sla om je schouders', icon: ICON.cloak, fn: () => act('Interact', () => wearHide(i)) });
+    opts.push({ t: 'Leg neer', icon: ICON.drop, fn: () => { state.hands[i] = null; renderHands(); dropAt(it); } });
   } else if (target.kind === 'turn') {
-    opts.push({ icon: ICON.eye, fn: () => lookAt(target) });
-    opts.push({ icon: ICON.turn, fn: () => goAndDo(target, () => act('PickUp_Table', () => turnStone(target), 1.4)) });
+    opts.push({ t: 'Bekijk', icon: ICON.eye, fn: () => lookAt(target) });
+    opts.push({ t: 'Draai om', icon: ICON.turn, fn: () => goAndDo(target, () => act('PickUp_Table', () => turnStone(target), 1.4)) });
   } else if (target.look) {
-    opts.push({ icon: ICON.eye, fn: () => lookAt(target) });
-    if (['hyena', 'leopard', 'sabre', 'zebra', 'wounded', 'bird', 'snake', 'stranger', 'croc', 'gazelle'].includes(target.look) && hasStone) opts.push({ icon: ICON.throw, fn: () => quickThrow(target.member) });
+    opts.push({ t: 'Bekijk', icon: ICON.eye, fn: () => lookAt(target) });
+    if (['hyena', 'leopard', 'sabre', 'zebra', 'wounded', 'bird', 'snake', 'stranger', 'croc', 'gazelle'].includes(target.look) && hasStone) opts.push({ t: 'Gooi', icon: ICON.throw, fn: () => quickThrow(target.member) });
     // snijden: zonder afslag merk je vanzelf dat het niet gaat
     const flake = sharp(), cut = (fn) => () => (sharp() ? act('Interact', fn) : fn());
-    if (target.look === 'carcass' && flake) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cut(cutMeat)) });
-    if (target.look === 'kill' && sabres.kill && sabres.kill.meat > 0) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cut(cutKill)) });
-    if (target.look === 'kill' && sabres.kill && sabres.kill.hide) opts.push({ icon: ICON.hide, fn: () => goAndDo(target, cut(cutHide)) });
-    if (target.look === 'herdkill' && herd.kill.meat > 0) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cut(cutHerd), 2.2) });
-    if (target.look === 'prey' && target.enc.meat > 0) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cut(() => enc.cutPrey(target.enc, predGame)), 2.4) });
-    if (target.look === 'giantdead' && giant.meat > 0) opts.push({ icon: ICON.cut, fn: () => goAndDo(target, cut(() => giant.cut(predGame)), 3.2) });
-    if (target.look === 'catfish') opts.push({ icon: ICON.hand, fn: () => goAndDo(target, () => act('Interact', () => shore.grab(target, predGame)), 1.6) });
-    if (target.look === 'tuberplant') opts.push({ icon: ICON.dig, fn: () => goAndDo(target, () => act('Interact', () => shore.dig(target, predGame)), 1.5) });
-    if (target.fire) { const ic = fire.canUse(target, state); if (ic) opts.push({ icon: ic, fn: () => goAndDo(target, () => act('Interact', () => fire.use(target, predGame), target.fire === 'wood' ? 1.3 : 1.6), 2.4) }); }
-    if (target.look === 'bees' && target.enc.honey > 0) opts.push({ icon: ICON.hand, fn: () => goAndDo(target, () => act('Interact', () => enc.takeHoney(target.enc, predGame)), 2.6) });
+    if (target.look === 'carcass' && flake) opts.push({ t: 'Snijd vlees', icon: ICON.cut, fn: () => goAndDo(target, cut(cutMeat)) });
+    if (target.look === 'kill' && sabres.kill && sabres.kill.meat > 0) opts.push({ t: 'Snijd vlees', icon: ICON.cut, fn: () => goAndDo(target, cut(cutKill)) });
+    if (target.look === 'kill' && sabres.kill && sabres.kill.hide) opts.push({ t: 'Haal het vel eraf', icon: ICON.cut, fn: () => goAndDo(target, cut(cutHide)) });
+    if (target.look === 'herdkill' && herd.kill.meat > 0) opts.push({ t: 'Snijd vlees', icon: ICON.cut, fn: () => goAndDo(target, cut(cutHerd), 2.2) });
+    if (target.look === 'prey' && target.enc.meat > 0) opts.push({ t: 'Snijd vlees', icon: ICON.cut, fn: () => goAndDo(target, cut(() => enc.cutPrey(target.enc, predGame)), 2.4) });
+    if (target.look === 'giantdead' && giant.meat > 0) opts.push({ t: 'Snijd vlees', icon: ICON.cut, fn: () => goAndDo(target, cut(() => giant.cut(predGame)), 3.2) });
+    if (target.look === 'catfish') opts.push({ t: 'Grijp', icon: ICON.hand, fn: () => goAndDo(target, () => act('Interact', () => shore.grab(target, predGame)), 1.6) });
+    if (target.look === 'tuberplant') opts.push({ t: 'Graaf', icon: ICON.dig, fn: () => goAndDo(target, () => act('Interact', () => shore.dig(target, predGame)), 1.5) });
+    if (target.fire) { const ic = fire.canUse(target, state); if (ic) opts.push({ t: fire.verb(target, state), icon: ic, fn: () => goAndDo(target, () => act('Interact', () => fire.use(target, predGame), target.fire === 'wood' ? 1.3 : 1.6), 2.4) }); }
+    if (target.look === 'bees' && target.enc.honey > 0) opts.push({ t: 'Pak honing', icon: ICON.hand, fn: () => goAndDo(target, () => act('Interact', () => enc.takeHoney(target.enc, predGame)), 2.6) });
   } else {
-    opts.push({ icon: ICON.eye, fn: () => lookAt(target) });
-    opts.push({ icon: ICON.hand, fn: () => goAndDo(target, () => grab(target)) });
-    if (EDIBLE.has(target.item)) opts.push({ icon: ICON.mouth, q: !state.known.has(target.item), fn: () => goAndDo(target, () => tasteFrom(target)) });
+    opts.push({ t: 'Bekijk', icon: ICON.eye, fn: () => lookAt(target) });
+    opts.push({ t: 'Pak', icon: ICON.hand, fn: () => goAndDo(target, () => grab(target)) });
+    if (EDIBLE.has(target.item)) opts.push({ t: state.known.has(target.item) ? 'Eet' : 'Proef', icon: ICON.mouth, q: !state.known.has(target.item), fn: () => goAndDo(target, () => tasteFrom(target)) });
   }
   radial = { target, buttons: [] };
   $('radial').innerHTML = '';
   for (const o of opts) {
     const b = document.createElement('button');
-    b.innerHTML = o.icon + (o.q ? '<i>?</i>' : '');
+    b.textContent = o.t; if (o.q) b.classList.add('new');
     b.addEventListener('pointerdown', (e) => e.stopPropagation());
     b.onclick = (e) => { e.stopPropagation(); closeRadial(); o.fn(); };
     $('radial').appendChild(b); radial.buttons.push(b);
@@ -612,14 +611,10 @@ function placeRadial() {
   if (!radial) return;
   const tg = radial.target, a = anchorOf(tg);
   if (!a || (tg.item && !available(tg)) || (tg.hand !== undefined && !state.hands[tg.hand])) { closeRadial(); return; }
-  const n = radial.buttons.length, r = 74;
-  radial.buttons.forEach((b, k) => {
-    // in een boogje boven het ding, met ruimte tussen de knoppen
-    const ang = -Math.PI / 2 + (k - (n - 1) / 2) * (68 / r);
-    let x = a.x + Math.cos(ang) * r, y = a.y + Math.sin(ang) * r - (a.up ? 30 : 0);
-    x = Math.max(34, Math.min(innerWidth - 34, x)); y = Math.max(34, Math.min(innerHeight - 34, y));
-    b.style.left = x + 'px'; b.style.top = y + 'px';
-  });
+  const n = radial.buttons.length, step = 40;
+  // een rijtje boven het ding, van boven naar beneden
+  const x = Math.max(86, Math.min(innerWidth - 86, a.x)), base = Math.max(24 + (n - 1) * step, Math.min(innerHeight - 24, a.y - 46 - (a.up ? 30 : 0)));
+  radial.buttons.forEach((b, k) => { b.style.left = x + 'px'; b.style.top = (base - (n - 1 - k) * step) + 'px'; });
 }
 
 // iets neerleggen: een kei of bot komt weer in de wereld te liggen; eten laat je gewoon vallen
@@ -940,7 +935,7 @@ function autoPickup() {
   const sw = $('swap');
   if (swapTarget && available(swapTarget)) {
     const a = anchorOf(swapTarget);
-    if (a) { sw.style.display = 'grid'; sw.style.left = a.x + 'px'; sw.style.top = (a.y - 40) + 'px'; } else sw.style.display = 'none';
+    if (a) { sw.style.display = 'block'; sw.style.left = a.x + 'px'; sw.style.top = (a.y - 40) + 'px'; } else sw.style.display = 'none';
   } else { sw.style.display = 'none'; swapTarget = null; }
 }
 $('swap').onclick = () => {
@@ -1091,12 +1086,13 @@ let ctx = null, btnMode = '';
 // drukt je terwijl hij nog bezig is (bijv. bukken), dan volgt de actie zodra hij klaar is
 let pendingAction = 0;
 function doAction() { if (player.once) { pendingAction = 1.2; return; } if (ctx) ctx.run(); }
+const DO_WORD = { strike: 'Sla', throw: 'Gooi', cut: 'Snijd', take: 'Pak', dig: 'Graaf', fire: 'Vuur', build: 'Leg neer', chop: 'Hak' };
 function updateAction() {
   ctx = actionContext();
-  const mode = ctx ? ctx.mode + (ctx.danger ? '!' : '') + (ctx.ready ? '+' : '') : '';
+  const mode = ctx ? ctx.mode + (ctx.word || '') + (ctx.danger ? '!' : '') + (ctx.ready ? '+' : '') : '';
   if (mode !== btnMode) {
     btnMode = mode;
-    $('doBtn').innerHTML = ctx ? ctx.icon : ICON.strike;
+    $('doBtn').textContent = ctx ? ctx.word || DO_WORD[ctx.mode] || 'Sla' : 'Sla';
     $('doBtn').classList.toggle('danger', !!(ctx && ctx.danger));
     $('doBtn').classList.toggle('ready', !!(ctx && ctx.ready));
   }

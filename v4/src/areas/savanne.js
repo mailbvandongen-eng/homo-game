@@ -41,16 +41,16 @@ export const savanne = {
   { id: 'hyena', who: 'ibo', ask: 'Ibo wijst naar de vlakte en kruipt weg. De hyena\'s!', end: 'Ibo durft weer onder de boom vandaan.', title: 'Verjaag een hyena', why: 'Elke avond komen ze dichter bij de slaapboom.', done: () => g.state.found.has('hyena'), steps: [
     { t: 'Pak een kei', ok: () => g.has('stone') },
     { t: 'Wacht op de hyena\'s: ze komen in de schemering', ok: () => g.has('stone') && g.hyenas.list.some((h) => Math.hypot(h.x - g.player.pos.x, h.z - g.player.pos.z) < 30) },
-    { t: 'Houd de vuist vast, mik en laat los', ok: () => g.state.found.has('hyena') }] },
+    { t: 'Houd Gooi vast, mik en laat los', ok: () => g.state.found.has('hyena') }] },
   { id: 'bag', who: 'kem', ask: 'Kem heeft zijn armen vol. Alles valt.', end: 'Kem trekt aan het draagvel. Hij wil er ook een.', tag: 'hide', title: 'Maak een draagvel', why: 'Met twee handen draag je twee dingen. In een geknoopte huid past veel meer.', needs: 'flake', done: () => !!g.state.bag, steps: [
     { t: 'Neem een snijsteen mee', ok: () => g.carries('flake') || g.carries('hide') },
     { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', ok: () => g.carries('hide') || (g.carries('flake') && g.sabres.kill && Math.hypot(g.sabres.kill.x - g.player.pos.x, g.sabres.kill.z - g.player.pos.z) < 14) },
-    { t: 'Wacht tot de roofdieren weg zijn en snijd met de vuist: eerst vlees, dan de huid', ok: () => g.carries('hide') },
+    { t: 'Wacht tot de roofdieren weg zijn en tik op Snijd: eerst vlees, dan de huid', ok: () => g.carries('hide') },
     { t: 'Houd huid en snijsteen vast, tik op de huid en kies het draagvel', ok: () => !!g.state.bag }] },
   { id: 'cloak', who: 'tor', shiver: true, ask: 'Tor zit ineengedoken. Hij rilt.', end: 'Tor voelt aan het vel om je schouders en knikt.', tag: 'hide', title: 'Een vel om je schouders', why: 'De nachten worden koud, en kou vreet energie.', needs: 'flake', done: () => g.state.cloak, steps: [
     { t: 'Neem een snijsteen mee', ok: () => g.carries('flake') || g.carries('hide') },
     { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', ok: () => g.carries('hide') || (g.carries('flake') && g.sabres.kill && Math.hypot(g.sabres.kill.x - g.player.pos.x, g.sabres.kill.z - g.player.pos.z) < 14) },
-    { t: 'Wacht tot de roofdieren weg zijn en snijd met de vuist: eerst vlees, dan de huid', ok: () => g.carries('hide') },
+    { t: 'Wacht tot de roofdieren weg zijn en tik op Snijd: eerst vlees, dan de huid', ok: () => g.carries('hide') },
     { t: 'Houd huid en snijsteen vast, tik op de huid en kies de omslag', ok: () => g.state.cloak }] },
 ],
 };

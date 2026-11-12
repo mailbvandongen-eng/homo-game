@@ -267,6 +267,16 @@ export class Fire {
     if (has('branch') || has('stick')) return ICON.fire;
     return null;
   }
+  // hetzelfde in één of twee woorden, voor op de knop
+  verb(t, s) {
+    const has = (it) => s.hands.includes(it);
+    if (t.fire === 'source') return 'Steek aan';
+    if (t.fire === 'wood') return has('axe') ? 'Hak' : 'Trek';
+    if (!this.built) return has('stone') ? 'Leg neer' : 'Steek aan';
+    if (has('torch')) return 'Steek aan';
+    if (this.lit && has('meat')) return 'Braad';
+    return 'Leg erop';
+  }
   use(t, game) {
     if (t.fire === 'source') return this.kindle(game);
     if (t.fire === 'wood') return this.chop(t.wood, game);
@@ -281,9 +291,9 @@ export class Fire {
     const p = game.player.pos, s = game.state, H = s.hands;
     const run = (t, speed = 1.6) => () => game.player.playOnce('Interact', { speed, at: 0.5, onAt: () => this.use(t, game) });
     const T = this.lookTargets();
-    if (dist(p, this.S) < 3.6 && this.canUse(T[0], s)) return { mode: 'fire', icon: ICON.fire, run: run(T[0]) };
+    if (dist(p, this.S) < 3.6 && this.canUse(T[0], s)) return { mode: 'fire', word: this.verb(T[0], s), icon: ICON.fire, run: run(T[0]) };
     if (dist(p, this.H) < 3 && !this.built) return H.includes('stone') ? { mode: 'build', icon: ICON.drop, run: run(T[1]) } : null;
-    if (dist(p, this.H) < 3 && this.canUse(T[1], s) && !(this.state === 'cold' && !H.includes('torch'))) return { mode: 'fire', icon: ICON.fire, run: run(T[1]) };
+    if (dist(p, this.H) < 3 && this.canUse(T[1], s) && !(this.state === 'cold' && !H.includes('torch'))) return { mode: 'fire', word: this.verb(T[1], s), icon: ICON.fire, run: run(T[1]) };
     const w = H.includes('axe') && T.find((x) => x.wood && dist(p, x) < 3);
     if (w) return { mode: 'chop', icon: ICON.chop, run: run(w, 1.3) };
     return null;
