@@ -77,7 +77,7 @@ Dit is een spelvolgorde, geen stamboom: soorten leefden deels naast elkaar en zi
 
 ### Zekerheid
 
-Bij elk tijdperk houden we bij wat **vaststaat** (vondsten), wat **aannemelijk** is (afgeleid) en wat een **spelkeuze** is. Voor het huidige tijdperk staat dat in `eras/habilis.js`:
+Bij elk tijdperk houden we vier treden bij: **vastgesteld** (vondsten), **sterk aannemelijk** (afgeleid uit vondsten), **onzeker** (onderzoekers zijn het oneens of bewijs ontbreekt) en **artistieke invulling** (onze keuze voor het spel). In de code: `zeker: { vast, aannemelijk, onzeker, artistiek }`. De tabel hieronder is de oude driedeling; de actuele lijst staat in de bestanden zelf. Per dier staat in `species.js` bovendien hoe goed het model past (`beeld`: reconstructie, verwant of vervanger). De volgorde van de tijdperken is een tijdlijn, geen rechte stamboom: soorten leefden naast elkaar en wie van wie afstamt is deels onzeker. Voor het huidige tijdperk staat dat in `eras/habilis.js`:
 
 | Vaststaat | Aannemelijk | Spelkeuze (speculatief) |
 |---|---|---|
@@ -87,6 +87,34 @@ Bij elk tijdperk houden we bij wat **vaststaat** (vondsten), wat **aannemelijk**
 | Sabeltandkatten, hyena's, zebra-achtigen en de reuzenolifant *Palaeoloxodon recki* in hetzelfde landschap | Honing, eieren, bessen, bladeren; slapen in bomen | Namen en vaste rollen in de groep |
 
 Kanttekeningen die we eerlijk meenemen: wie de Oldowan-werktuigen maakte is niet zeker (*Homo habilis* is de gangbare kandidaat; de oudste werktuigen zijn ouder dan de soort). Huiden vergaan, dus draagvel en omslag zijn niet te bewijzen; ze blijven in het spel omdat dragen de speler richting geeft, maar ze worden nergens als feit gebracht. Vuur komt pas bij *Homo erectus* en ook daar als iets wat je eerst alleen vindt en bewaart, niet maakt.
+
+---
+
+## 0. Herontwikkeling (vanaf 12 november 2026) — gaat vóór alles hieronder
+
+Het spel moet aanvoelen als een volwaardige game: realistisch landschap, anatomisch juiste mensen en dieren
+per soort, een bediening die op een telefoon vanzelf gaat, en een testmodus waarmee elk gebied en elke missie
+direct te openen is. **Er komen geen nieuwe tijdperken of gebieden bij tot deze basis staat** (Dmanisi en stap I wachten).
+
+Werkwijze: ontwikkelen op de branch `ontwikkel`; een fase gaat pas naar `main` (en online) als alle tests slagen
+en het spel speelbaar is. Back-up van vóór de herontwikkeling: tag `backup-voor-herontwikkeling-2026-11-12`.
+De inventaris waarmee dit begon staat in [`ANALYSE.md`](ANALYSE.md).
+
+| Fase | Wat | Stand |
+|---|---|---|
+| 1 | **Analyse en fundament**: inventaris, back-up en branch, knelpunten, testmodus `?dev=1`, scenario's, automatische controles, kennisbasis met vier treden | **klaar** (prestatiedoel deels: zie ANALYSE §6) |
+| 2 | **Interface en bediening**: `main.js` verder splitsen (invoer, camera, handen, tas); joystick en camera met instelbare gevoeligheid en zoom; één knoppensysteem; contextmenu; nieuwe tas met handen; instellingenscherm | volgende |
+| 3 | **Mens en dieren**: eigen model per mensensoort; bewegingen met overgangen en voeten op de grond; de vervangende diermodellen (reuzenolifant, pofadder, impala, krokodil, meerval) vervangen; gedeelde basis voor diergedrag; jong/volwassen | |
+| 4 | **Wereld**: reliëf, kloven en klimbare rotsen; botsingen; licht en weer; ruimtelijk geluid en voetstappen per ondergrond; LOD | |
+| 5 | **Gameplay**: missies verdiepen; draagmiddelen (net, mand, waterzak); overleven; kennisscherm in het spel | |
+| 6 | **Kwaliteitscontrole**: elk gebied en scenario door de controles zonder "let op"; telefoonproef; licenties en bronnen nagelopen | |
+
+Regels die voor elke fase gelden:
+- Het spel blijft na elke fase speelbaar; bestaande functies verdwijnen niet zonder vervanging.
+- Elke wijziging wordt in het draaiende spel bekeken, ook op telefoonformaat.
+- Een tijdelijke oplossing krijgt een label (in `species.js`: `beeld: 'vervanger'`) en staat in de controles tot ze vervangen is.
+- Bronnen en licenties van alle modellen, beelden en geluiden staan in `v4/assets/CREDITS.md`.
+- Nieuwe gebieden, missies en dieren worden vanzelf zichtbaar in de testmodus; een scenario erbij is een blokje in `v4/test_scenarios.json`.
 
 ---
 

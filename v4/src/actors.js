@@ -221,7 +221,7 @@ export class Vultures {
     this.birds = [];
     for (let i = 0; i < 4; i++) {
       const rig = new Rig(A, 'vulture', { scale: 1.1, facing: Math.PI }), g = rig.root;
-      rig.model.traverse((o) => { if (o.isMesh) o.receiveShadow = false; });
+      rig.model.traverse((o) => { if (o.isMesh) { o.receiveShadow = false; o.castShadow = false; } });   // ze cirkelen hoog: hun schaduw valt nergens in beeld
       rig.play('Armature', { speed: 0 });
       scene.add(g);
       this.birds.push({ g, rig, a: i / 4 * 6.28, r: 7 + i * 2.5, h: 18 + i * 3, sp: 0.25 + i * 0.04, flap: 3 + i * 3.1 });

@@ -97,6 +97,25 @@ Een proef met een heel andere opzet: een 3D-wereld met de camera hoog achter de 
 - Bomen, rotsen, struiken en delen van dieren zijn samengevoegd, zodat een telefoon minder hoeft te tekenen (zo'n 300 tekenopdrachten per beeld)
 - `v4/lib/three.module.js` is three.js r187 (MIT), gebundeld en verkleind
 
+### Testmodus (`?dev=1`)
+
+Open het spel met `?dev=1` achter het adres (bijvoorbeeld `…/homo-game/v4/?dev=1`). Bovenin staat dan een knop **TEST**.
+Zonder `?dev=1` bestaat de testmodus niet: gewone spelers zien en laden er niets van.
+
+- **Gebied en missie** — elk gebied en elke missie direct starten. De lijst komt uit de gebiedsbestanden; een nieuw gebied of een nieuwe missie staat er vanzelf bij.
+- **Instellingen** — plek, tijdstip (ook stilzetten), voeding, gezondheid, groep, wat je in je handen en tas hebt, wat je al kunt, vuur, roofdieren aan/uit, honger aan/uit. *Alles terugzetten* begint schoon.
+- **Scenario's** — vaste beginsituaties uit [`v4/test_scenarios.json`](v4/test_scenarios.json). Een scenario erbij is een blokje in dat bestand:
+  `{ "id": "berg-braden", "name": "…", "area": "berg", "mission": "roast", "time": "Schemer", "hands": ["meat", null], "fire": { "built": true, "fuel": 60 } }`
+- **Controles** — loopt alles na: gebieden en missies, of elk bestand er is, of elk model zijn bewegingen heeft, of bewaren werkt, of de scenario's kloppen, de kennisbasis, en de prestaties (driehoeken, tekenopdrachten, beelden per seconde). Rood = fout, geel = let op. *Kopieer verslag* zet alles op het klembord.
+
+Testen raakt je echte spel niet: de testmodus bewaart in een eigen vakje (`homo-save-dev`). De controles bewijzen dat elke keer.
+Een scenario met een onbekend voorwerp, gebied of missie start niet en zegt wat er mis is.
+
+Automatisch (zonder scherm): `node /root/tools/pw/v4dev.js` (testmodus zelf), `node /root/tools/pw/v4dev.js scen` (start elk scenario en draait de controles),
+`node /root/tools/pw/v4tris.js [gebied]` en `v4calls.js [gebied]` (waar de driehoeken en tekenopdrachten heen gaan).
+
+De stand van de herontwikkeling staat in [`MASTERPLAN.md`](MASTERPLAN.md) §0, de inventaris in [`ANALYSE.md`](ANALYSE.md).
+
 ## Pixelversie (v3): `v3/` — het hoofdspel
 
 `/homo-game/` stuurt door naar `v3/`. De allereerste versie staat nog in `legacy/`.

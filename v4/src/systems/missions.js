@@ -1,7 +1,7 @@
 import * as THREE from '../../lib/three.module.js';
 import { ERAS, ERA, AREA } from '../eras/index.js';
 import { HOME } from '../group.js';
-import { Save } from '../save.js';
+import { Save, DEV } from '../save.js';
 import { $, toast, title, showCard, closeCard } from '../engine/ui.js';
 
 // Missies: wie in de groep iets nodig heeft roept en wenkt; aantikken is aannemen. Alle missies klaar: de groep trekt verder.
@@ -82,7 +82,7 @@ export function initMissions(G) {
     // een nieuw tijdperk: een andere groep, honderdduizenden jaren later. Wat je weet gaat mee, wat je droeg niet.
     const leap = NEXT_ERA === ERA ? {} : { era: NEXT_ERA.id, hands: [null, null], rock: [null, null], bag: state.bag ? state.bag.map(() => null) : state.bag, day: 1, food: 70, health: 100, group: 55 };
     Save.write({ ...G.snapshot(), ...leap, fire: undefined, area: NEXT.id, missions: [], mission: null, over: false, past: [...state.past, ...mission.done], rainDay: leap.era ? 0 : state.day - 1, dayP: 0.1, arrived: true });
-    setTimeout(() => location.replace(location.pathname), 900);
+    setTimeout(() => location.replace(location.pathname + (DEV ? '?dev=1' : '')), 900);
   }
   function markTick(g, want, dt) {
     g.mark.material.opacity += (want - g.mark.material.opacity) * Math.min(1, dt * 3);

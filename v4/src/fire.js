@@ -48,26 +48,56 @@ function make(v, k, mat) {
 const tinted = (hex) => { const seen = new Map(); return (m) => { if (!seen.has(m)) { const c = m.clone(); c.color.setHex(hex); c.roughness = 1; seen.set(m, c); } return seen.get(m); }; };
 const glowSprite = (inner, outer) => new THREE.Sprite(new THREE.SpriteMaterial({ map: softTex(inner, outer), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
 
-// Een rookpluim: wolkjes die opstijgen, groter en ijler worden en weer onderaan beginnen
+// Een rookpluim: wolkjes die opstijgen, groter en ijler worden en weer onderaan beginnen.
+// Alle wolkjes van één pluim gaan in één keer naar de videokaart (vlakjes die naar de camera draaien).
 class Smoke {
-  constructor(scene, x, y, z, { n, rise, top, size, color, drift = 0.25, dense = 0.5 }) {
+  constructor(scene, x, y, z, { n, rise, top, size, color, drift = 0.25, dense = 0.5, fog = true }) {
     this.x = x; this.y = y; this.z = z; this.rise = rise; this.top = top; this.size = size; this.drift = drift; this.dense = dense; this.k = 1;
-    const tex = Smoke.tex || (Smoke.tex = softTex('rgba(255,255,255,0.9)', 'rgba(255,255,255,0)'));
     this.puffs = [];
-    for (let i = 0; i < n; i++) {
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color, transparent: true, depthWrite: false, opacity: 0 }));
-      scene.add(s); this.puffs.push({ s, a: i / n, w: Math.random() * 6.28 });
-    }
+    for (let i = 0; i < n; i++) this.puffs.push({ a: i / n, w: Math.random() * 6.28 });
+    if (!n) return;
+    const geo = new THREE.InstancedBufferGeometry().copy(new THREE.PlaneGeometry(1, 1));
+    geo.instanceCount = n;
+    this.aPuff = new THREE.InstancedBufferAttribute(new Float32Array(n * 4), 4).setUsage(THREE.DynamicDrawUsage);
+    this.aAlpha = new THREE.InstancedBufferAttribute(new Float32Array(n), 1).setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('aPuff', this.aPuff); geo.setAttribute('aAlpha', this.aAlpha);
+    const mat = new THREE.ShaderMaterial({
+      uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uColor: { value: new THREE.Color(color) } }]),
+      vertexShader: `attribute vec4 aPuff; attribute float aAlpha; varying vec2 vUv; varying float vA;
+        #include <fog_pars_vertex>
+        void main() {
+          vUv = uv; vA = aAlpha;
+          vec4 mvPosition = viewMatrix * vec4(aPuff.xyz, 1.0);
+          mvPosition.xy += position.xy * aPuff.w;
+          gl_Position = projectionMatrix * mvPosition;
+          #include <fog_vertex>
+        }`,
+      fragmentShader: `uniform vec3 uColor; varying vec2 vUv; varying float vA;
+        #include <fog_pars_fragment>
+        void main() {
+          float d = length(vUv - 0.5) * 2.0;
+          float a = 0.9 * (1.0 - smoothstep(0.0, 1.0, d)) * vA;
+          if (a < 0.004) discard;
+          gl_FragColor = vec4(uColor, a);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+          #include <fog_fragment>
+        }`,
+      transparent: true, depthWrite: false, fog,
+    });
+    this.mesh = new THREE.Mesh(geo, mat); this.mesh.frustumCulled = false; scene.add(this.mesh);
   }
   update(dt, t) {
-    for (const p of this.puffs) {
+    if (!this.mesh) return;
+    const P = this.aPuff.array, A = this.aAlpha.array; let any = false;
+    this.puffs.forEach((p, i) => {
       p.a = (p.a + dt * this.rise / this.top) % 1;
       const h = p.a * this.top, sway = h * this.drift;
-      p.s.position.set(this.x - sway + Math.sin(t * 0.4 + p.w) * (0.2 + h * 0.04), this.y + h, this.z + sway * 0.25 + Math.cos(t * 0.3 + p.w) * (0.2 + h * 0.04));
-      p.s.scale.setScalar(this.size * (0.35 + p.a * 1.4));
-      p.s.material.opacity = this.k * Math.min(1, p.a * 6) * (1 - p.a) * this.dense;
-      p.s.visible = p.s.material.opacity > 0.01;
-    }
+      P[i * 4] = this.x - sway + Math.sin(t * 0.4 + p.w) * (0.2 + h * 0.04); P[i * 4 + 1] = this.y + h; P[i * 4 + 2] = this.z + sway * 0.25 + Math.cos(t * 0.3 + p.w) * (0.2 + h * 0.04);
+      P[i * 4 + 3] = this.size * (0.35 + p.a * 1.4);
+      A[i] = this.k * Math.min(1, p.a * 6) * (1 - p.a) * this.dense; if (A[i] > 0.01) any = true;
+    });
+    this.aPuff.needsUpdate = true; this.aAlpha.needsUpdate = true; this.mesh.visible = any;
   }
 }
 
@@ -234,8 +264,7 @@ export class Fire {
         grp.add(new THREE.Mesh(q.geo, mat));
       }
       grp.position.set(vx, -14, vz); scene.add(grp);
-      this.volSmoke = new Smoke(scene, vx, H - 22, vz, { n: quiet ? 0 : 10, rise: 3.5, top: 140, size: 80, color: 0x6a645e, drift: 0.5 });
-      for (const q of this.volSmoke.puffs) q.s.material.fog = false;
+      this.volSmoke = new Smoke(scene, vx, H - 22, vz, { n: quiet ? 0 : 10, rise: 3.5, top: 140, size: 80, color: 0x6a645e, drift: 0.5, fog: false });
     }
     this.scene = scene;
   }

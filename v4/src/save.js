@@ -1,6 +1,8 @@
 // Voortgang bewaren in de browser. Eén plek, met een versienummer, zodat een oud bewaard spel
 // nooit een nieuwere versie laat vastlopen: wat niet past wordt overgeslagen.
-const KEY = 'homo-save', VERSION = 1;
+// Testmodus (?dev=1): een eigen bewaarplek, zodat testen het echte spel van een speler nooit overschrijft.
+export const DEV = typeof location !== 'undefined' && /[?&]dev=1\b/.test(location.search);
+const KEY = DEV ? 'homo-save-dev' : 'homo-save', VERSION = 1;
 export const Save = {
   read() {
     try {

@@ -5,8 +5,9 @@ import { GLTFLoader, HDRLoader } from '../lib/three-addons.js';
 // Alles wordt geladen voordat het spel begint; onProgress krijgt een getal van 0 tot 1.
 // dieren met botten en animaties (Sketchfab, CC BY 4.0, zie assets/CREDITS.md)
 const ANIMALS = ['hyena', 'leopard', 'gazelle', 'hominin', 'sabre', 'zebra', 'elephant', 'cobra', 'vulture'];
-const MODELS = [...ANIMALS, 'acacia', 'namaqualand_boulder_02', 'namaqualand_boulder_05', 'namaqualand_rocks_01', 'wild_rooibos_bush', 'shrub_03', 'dead_tree_trunk', 'dry_branches_medium_01'];
-const TEXTURES = [
+export const ANIMAL_MODELS = ANIMALS;
+export const MODELS = [...ANIMALS, 'acacia', 'namaqualand_boulder_02', 'namaqualand_boulder_05', 'namaqualand_rocks_01', 'wild_rooibos_bush', 'shrub_03', 'dead_tree_trunk', 'dry_branches_medium_01'];
+export const TEXTURES = [
   ['dry_ground_01_diff', true], ['dry_ground_01_nor', false], ['withered_grass_diff', true], ['withered_grass_nor', false],
   ['sparse_grass_diff', true], ['dry_ground_rocks_diff', true], ['grass_atlas', true],
 ];
@@ -22,14 +23,16 @@ export async function loadAssets(renderer, onProgress = () => {}, extra = []) {
   const tl = new THREE.TextureLoader(), gl = new GLTFLoader();
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
 
-  const tex = Promise.all(TEXTURES.map(([n, srgb]) => tl.loadAsync(`./assets/tex/${n}.webp${Q}`).then((t) => {
+  // Een bestand dat ontbreekt mag het laden niet stil laten hangen: de fout krijgt de naam van het bestand mee.
+  const named = (p, file) => p.catch(() => { throw new Error('Kan ' + file + ' niet laden'); });
+  const tex = Promise.all(TEXTURES.map(([n, srgb]) => named(tl.loadAsync(`./assets/tex/${n}.webp${Q}`), `assets/tex/${n}.webp`).then((t) => {
     t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = Math.min(8, maxAniso);
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
     return tick([n, t]);
   })));
   const anims = {};
-  const models = Promise.all(names.map((n) => gl.loadAsync(`./assets/models/${n}.glb${Q}`).then((g) => { anims[n] = g.animations; return tick([n, g.scene]); })));
-  const hdr = new HDRLoader().loadAsync('./assets/mpumalanga_veld_1k.hdr' + Q).then((t) => {
+  const models = Promise.all(names.map((n) => named(gl.loadAsync(`./assets/models/${n}.glb${Q}`), `assets/models/${n}.glb`).then((g) => { anims[n] = g.animations; return tick([n, g.scene]); })));
+  const hdr = named(new HDRLoader().loadAsync('./assets/mpumalanga_veld_1k.hdr' + Q), 'assets/mpumalanga_veld_1k.hdr').then((t) => {
     t.mapping = THREE.EquirectangularReflectionMapping;
     // omgevingslicht voor glanzende en ruwe materialen
     const pm = new THREE.PMREMGenerator(renderer);
@@ -38,7 +41,7 @@ export async function loadAssets(renderer, onProgress = () => {}, extra = []) {
   });
 
   // bewegingen voor de hoofdpersoon (overgezet uit de Universal Animation Library)
-  const moves = fetch('./assets/anims/hominin.json' + Q).then((r) => r.json()).then((j) => tick(j.map((c) => THREE.AnimationClip.parse(c))));
+  const moves = named(fetch('./assets/anims/hominin.json' + Q).then((r) => r.json()), 'assets/anims/hominin.json').then((j) => tick(j.map((c) => THREE.AnimationClip.parse(c))));
   const [T, M, H, MV] = await Promise.all([tex, models, hdr, moves]);
   anims.hominin = MV;
   return { tex: Object.fromEntries(T), models: Object.fromEntries(M), anims, sky: H.sky, env: H.env };

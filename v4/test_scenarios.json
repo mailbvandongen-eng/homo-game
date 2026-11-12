@@ -1,0 +1,22 @@
+{
+  "uitleg": "Testscenario's voor de testmodus (?dev=1). Elk blok zet het spel in een vaste beginstand. Velden: area (verplicht), mission, done, pos (naam van een plek uit het gebiedsbestand of [x, z]), time (0 = zonsopgang, 0.72 = begin van de nacht), timeStop, dry (dagen droogte), food, health, group, hands, rocks, bag (null = geen draagvel), cloak, found ('all' of een lijst), fire, predators, hunger. Wat je weglaat blijft op de standaardwaarde.",
+  "scenarios": [
+    { "id": "savanne-begin", "name": "Savanne: eerste dag", "area": "savanne", "note": "het spel zoals een nieuwe speler het ziet" },
+    { "id": "savanne-vuursteen", "name": "Savanne: twee keien in je handen", "area": "savanne", "mission": "flake", "hands": ["stone", "stone"], "rocks": ["lava", "quartz"], "predators": false, "note": "scherf slaan zonder gestoord te worden" },
+    { "id": "savanne-karkas", "name": "Savanne: met een scherf bij het karkas", "area": "savanne", "pos": "carcass", "hands": ["flake", null], "found": ["flake", "rock", "vultures"], "time": 0.3, "note": "snijden, hyena's komen op de geur af" },
+    { "id": "savanne-nacht", "name": "Savanne: nacht, bij het oude karkas", "area": "savanne", "pos": "carcass", "time": 0.86, "timeStop": true, "hands": ["stone", "stone"], "note": "zichtbaarheid en gevaar in het donker" },
+    { "id": "savanne-honger", "name": "Savanne: uitgehongerd en ziek", "area": "savanne", "food": 6, "health": 30, "group": 15, "dry": 4, "note": "waarschuwingen, zwakte, droogte op zijn ergst" },
+    { "id": "savanne-reus", "name": "Savanne: bij de reuzenolifant", "area": "savanne", "pos": "giant.route 1", "time": 0.25, "predators": false, "note": "afstand houden, waarschuwing en aanval van de reus" },
+    { "id": "savanne-draagvel", "name": "Savanne: vol draagvel", "area": "savanne", "hands": ["flake", "hide"], "bag": ["meat", "bone", "stone", "berry", "leaf"], "cloak": true, "found": "all", "note": "handen wisselen, tas in en uit, huid om" },
+    { "id": "water-oever", "name": "Het water: knollen graven aan de oever", "area": "water", "pos": "shore.tubers 3", "hands": ["stone", "stick"], "found": "all", "bag": [null, null, null, null, null], "note": "graafstok, knollen, krokodillen dichtbij" },
+    { "id": "water-vis", "name": "Het water: meerval grijpen", "area": "water", "mission": "fish", "pos": "pools 1", "predators": false, "time": 0.3, "timeStop": true, "note": "sluipen bij de poel" },
+    { "id": "berg-begin", "name": "Rokende berg: aankomst", "area": "berg", "note": "eerste dag van Homo erectus" },
+    { "id": "berg-vuistbijl", "name": "Rokende berg: vuistbijl maken", "area": "berg", "mission": "axe", "hands": ["stone", "stone"], "predators": false, "note": "kei rondom bewerken" },
+    { "id": "berg-vuur-halen", "name": "Rokende berg: met een tak bij de gloed", "area": "berg", "mission": "fire", "done": ["axe"], "pos": "fire.source", "hands": ["branch", "axe"], "found": ["axe"], "time": 0.3, "note": "tak aansteken en naar het kamp brengen" },
+    { "id": "berg-vuur-nacht", "name": "Rokende berg: het vuur brandt, de nacht valt", "area": "berg", "mission": "keep", "done": ["axe", "fire"], "found": ["axe", "hearth"], "fire": { "built": true, "fuel": 260 }, "hands": ["axe", "branch"], "time": 0.68, "note": "hout hakken, vuur aanhouden, slapen" },
+    { "id": "berg-braden", "name": "Rokende berg: vlees bij het vuur", "area": "berg", "mission": "roast", "done": ["axe", "fire", "keep"], "found": ["axe", "hearth", "keep"], "fire": { "built": true, "fuel": 500 }, "hands": ["meat", "axe"], "pos": "fire.hearth", "note": "braden" },
+    { "id": "hoog-begin", "name": "Hoge vlakte: aankomst met vuur", "area": "hoog", "note": "eerste dag op de hoge vlakte" },
+    { "id": "hoog-glas", "name": "Hoge vlakte: bij de zwarte glassteen", "area": "hoog", "mission": "glass", "done": ["camp"], "pos": "outcrop.at", "found": ["axe", "hearth", "keep", "roast"], "hands": [null, null], "bag": [null, null, null, null, null], "time": 0.2, "note": "obsidiaan halen en ver meedragen" },
+    { "id": "hoog-kou", "name": "Hoge vlakte: koude nacht zonder vuur", "area": "hoog", "time": 0.8, "food": 35, "found": ["axe"], "note": "kou vreet energie; kampplek nog niet gebouwd" }
+  ]
+}

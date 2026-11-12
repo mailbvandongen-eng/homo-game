@@ -212,6 +212,17 @@ export function buildWorld(scene, A) {
   const ok = (x, z, minRiver = 12) => riverDist(x, z) > minRiver && Math.max(Math.abs(x), Math.abs(z)) < WALK - 8 && Math.hypot(x - START[0], z - START[1] + 2) > 8 && !POOLS.some((p) => Math.hypot(x - p[0], z - p[1]) < p[2] * 1.6 + 2);
 
 
+  // Veel dezelfde dingen (bomen, keien, gras) tekenen we per vak van de kaart.
+  // Een vak dat buiten beeld ligt, of buiten het bereik van de schaduw, kost dan niets.
+  // De schaduw van de zon reikt maar een klein stuk om je heen: vakken die verder weg liggen doen daar niet aan mee.
+  const shadowCells = [];
+  const casts = (im) => { shadowCells.push(im); return im; };
+  function perCell(spots, CELL = 70) {
+    const cells = new Map();
+    for (const sp of spots) { const k = Math.floor(sp[0] / CELL) + ',' + Math.floor(sp[1] / CELL); if (!cells.has(k)) cells.set(k, []); cells.get(k).push(sp); }
+    return [...cells.values()];
+  }
+
   // ---------- acacia's ----------
   // een schermacacia als model (Sketchfab, zie assets/CREDITS.md), op elke plek herhaald met een eigen maat en draaiing
   const acaciaSpots = [];
@@ -239,9 +250,12 @@ export function buildWorld(scene, A) {
   A.models.acacia.traverse((o) => {
     if (!o.isMesh) return;
     const leaf = o.material.alphaTest > 0, geo = o.geometry.clone().applyMatrix4(o.matrixWorld);
-    const im = new THREE.InstancedMesh(geo, leaf ? leafMat(o.material.map, 0xd0e0a8) : o.material, acaciaSpots.length);
-    acaciaSpots.forEach(([x, z, k, ry], i) => { am.position.set(x, height(x, z) - 0.1, z); am.rotation.set(0, ry, 0); am.scale.setScalar(k); am.updateMatrix(); im.setMatrixAt(i, am.matrix); });
-    im.castShadow = true; im.receiveShadow = !leaf; im.computeBoundingSphere(); scene.add(im);
+    const mat = leaf ? leafMat(o.material.map, 0xd0e0a8) : o.material;
+    for (const cell of perCell(acaciaSpots)) {
+      const im = new THREE.InstancedMesh(geo, mat, cell.length);
+      cell.forEach(([x, z, k, ry], i) => { am.position.set(x, height(x, z) - 0.1, z); am.rotation.set(0, ry, 0); am.scale.setScalar(k); am.updateMatrix(); im.setMatrixAt(i, am.matrix); });
+      im.castShadow = true; im.receiveShadow = !leaf; im.computeBoundingSphere(); scene.add(casts(im));
+    }
   });
 
   // ---------- rotsen: gescande granieten keien uit Zuid-Afrika ----------
@@ -259,11 +273,11 @@ export function buildWorld(scene, A) {
   for (let i = 0; i < 6; i++) rock(START[0] - 5 + R() * 10, START[1] + 4 + R() * 6, 0.3 + R() * 0.5);   // keien bij de start
   const dm = new THREE.Object3D();
   function instance(v, spots, shadow = true) {
-    for (const part of v.parts) {
-      const im = new THREE.InstancedMesh(part.geo, part.mat, spots.length);
-      spots.forEach(([x, z, k, ry, sink = 0.1], i) => { dm.position.set(x, height(x, z) - sink * k * v.size.y, z); dm.rotation.set(0, ry, 0); dm.scale.setScalar(k); dm.updateMatrix(); im.setMatrixAt(i, dm.matrix); });
+    for (const part of v.parts) for (const cell of perCell(spots, 220)) {
+      const im = new THREE.InstancedMesh(part.geo, part.mat, cell.length);
+      cell.forEach(([x, z, k, ry, sink = 0.1], i) => { dm.position.set(x, height(x, z) - sink * k * v.size.y, z); dm.rotation.set(0, ry, 0); dm.scale.setScalar(k); dm.updateMatrix(); im.setMatrixAt(i, dm.matrix); });
       im.castShadow = shadow; im.receiveShadow = true; im.computeBoundingSphere();
-      scene.add(im);
+      scene.add(shadow ? casts(im) : im);
     }
   }
   rockVariants.forEach((v, i) => rockSpots[i].length && instance(v, rockSpots[i]));
@@ -321,22 +335,25 @@ export function buildWorld(scene, A) {
   }
   const dummy = new THREE.Object3D(), tint = new THREE.Color();
   function scatter(mat, count, tiles, place) {
-    const mesh = new THREE.InstancedMesh(cardGeo, mat, count);
-    const tileAttr = new Float32Array(count);
+    const all = [];
     let n = 0, tries = 0;
     while (n < count && tries++ < count * 6) {
       const p = place(); if (!p) continue;
       const [x, z, s] = p;
-      dummy.position.set(x, height(x, z) - 0.03, z); dummy.rotation.set(0, R() * 6.28, 0); dummy.scale.set(s, s, s); dummy.updateMatrix();
-      mesh.setMatrixAt(n, dummy.matrix);
-      tileAttr[n] = tiles[Math.floor(R() * tiles.length)];
-      tint.setRGB(1, 1, 1).offsetHSL((R() - 0.5) * 0.04, (R() - 0.5) * 0.1, (R() - 0.5) * 0.12);
-      mesh.setColorAt(n, tint); n++;
+      all.push([x, z, s, R() * 6.28, tiles[Math.floor(R() * tiles.length)], (R() - 0.5) * 0.04, (R() - 0.5) * 0.1, (R() - 0.5) * 0.12]); n++;
     }
-    mesh.geometry = cardGeo.clone(); mesh.geometry.setAttribute('aTile', new THREE.InstancedBufferAttribute(tileAttr, 1));
-    mesh.count = n; mesh.receiveShadow = true; mesh.frustumCulled = false;
-    scene.add(mesh);
-    return mesh;
+    for (const cell of perCell(all, 110)) {
+      const mesh = new THREE.InstancedMesh(cardGeo.clone(), mat, cell.length);
+      const tileAttr = new Float32Array(cell.length);
+      cell.forEach(([x, z, s, ry, tile, dh, ds, dl], i) => {
+        dummy.position.set(x, height(x, z) - 0.03, z); dummy.rotation.set(0, ry, 0); dummy.scale.set(s, s, s); dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix); tileAttr[i] = tile;
+        mesh.setColorAt(i, tint.setRGB(1, 1, 1).offsetHSL(dh, ds, dl));
+      });
+      mesh.geometry.setAttribute('aTile', new THREE.InstancedBufferAttribute(tileAttr, 1));
+      mesh.receiveShadow = true; mesh.computeBoundingSphere(); mesh.boundingSphere.radius += 1.5;   // het gras wuift
+      scene.add(mesh);
+    }
   }
   // kort gras: pollen, niet overal
   scatter(grassMat(0.25, 0.8), 16000, [3, 4, 5, 6, 7], () => {
@@ -364,6 +381,7 @@ export function buildWorld(scene, A) {
     // p: moment van de dag (0 = dageraad, 0,4 = middag, 0,75 = zonsondergang, 0,9 = nacht)
     update(t, focus, p, senses) {
       uniforms.uTime.value = t;
+      for (const im of shadowCells) { const c = im.boundingSphere.center; im.castShadow = Math.hypot(c.x - focus.x, c.z - focus.z) < im.boundingSphere.radius + 36; }
       const k = dayLook(p);
       skyMat.uniforms.top.value.copy(k.top); skyMat.uniforms.mid.value.copy(k.mid); skyMat.uniforms.low.value.copy(k.low);
       skyMat.uniforms.sunCol.value.copy(k.sun).multiplyScalar(Math.min(1, k.sunI / 2));

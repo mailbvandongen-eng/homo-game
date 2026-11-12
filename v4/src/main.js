@@ -1,4 +1,5 @@
 import * as THREE from '../lib/three.module.js';
+import { rigDetail } from './rig.js';
 import { buildWorld, height, tallGrassAt, blockers, cover } from './world.js';
 import { Hominin, Herd, Vultures, carcass } from './actors.js';
 import { ITEMS, ROCKS, DISCOVERIES, LOOKS, VERDICT, FINDS, placeItems, heldMesh } from './items.js';
@@ -6,7 +7,7 @@ import { Hyenas, Leopard, Throws } from './predators.js';
 import { Zebras, Sabres } from './hunt.js';
 import { Group, HOME } from './group.js';
 import { ERAS, ERA, AREA } from './eras/index.js';
-import { Save } from './save.js';
+import { Save, DEV } from './save.js';
 import { Glints, Motes, Birds, Butterflies, Senses } from './life.js';
 import { Sound } from './audio.js';
 import { loadAssets } from './assets.js';
@@ -39,7 +40,11 @@ document.body.prepend(renderer.domElement);
 
 // eerst de gescande natuur laden; daarna begint het spel vanzelf
 const loading = document.getElementById('loading');
-const A = await loadAssets(renderer, (f) => { loading.textContent = `Laden… ${Math.round(f * 100)}%`; }, AREA.models);
+const A = await loadAssets(renderer, (f) => { loading.textContent = `Laden… ${Math.round(f * 100)}%`; }, AREA.models).catch((e) => {
+  // nooit stil blijven hangen op 'Laden…': zeg wat er mis is
+  loading.textContent = e.message + '. Controleer je verbinding en laad de pagina opnieuw.'; loading.style.maxWidth = '80vw';
+  throw e;
+});
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 700);
@@ -1171,16 +1176,17 @@ function update(dt) {
   player.update(dt, dir, { speed: sick ? 0.6 : state.food < 15 ? 0.8 : 1, sick }); cloakTick();
   if (player.tooDeep) { player.tooDeep = false; if (!deepTold) { deepTold = true; toast('Hier wordt het te diep. Je kunt niet zwemmen.', 4); } }
   // de dag
-  if (state.started) dayP = (dayP + dt / DAY_LEN) % 1;
+  if (state.started && !devFlags.noTime) dayP = (dayP + dt / DAY_LEN) % 1;
   if (state.sleeping > 0) { state.sleeping -= dt; if (state.sleeping <= 0) wake(); }
   const night = nightAmount(dayP);
   herd.update(dt, player, ui);
   predGame.night = night; predGame.danger = danger;
-  hyenas.update(dt, predGame);
-  leopard.update(dt, predGame, camera);
+  const pred = !devFlags.noPred;
+  if (pred) hyenas.update(dt, predGame);
+  if (pred) leopard.update(dt, predGame, camera);
   throws.update(dt); knapTick(dt); turnTick(dt); hintTick(dt); questTick(dt); saveTick(dt); trackTargets(dt); aimTick(dt);
   zebras.update(dt, predGame);
-  sabres.update(dt, predGame);
+  if (pred) sabres.update(dt, predGame);
   group.update(dt, predGame);
   enc.update(dt, predGame);
   giant.update(dt, predGame, t);
@@ -1279,7 +1285,7 @@ function update(dt) {
     } else state.starve = 0;
   }
   if (state.started && state.collapsed <= 0 && state.sleeping <= 0) {
-    state.food = Math.max(0, state.food - dt * 0.18 * (predGame.night > 0.6 && !state.cloak && !(fire && fire.warm(player.pos)) ? AREA.cold || 1.5 : 1));   // kou vreet energie
+    if (!devFlags.noHunger) state.food = Math.max(0, state.food - dt * 0.18 * (predGame.night > 0.6 && !state.cloak && !(fire && fire.warm(player.pos)) ? AREA.cold || 1.5 : 1));   // kou vreet energie
     if (sick) { state.sick -= dt; state.health -= dt * 0.9; if (state.sick <= 0) toast('De pijn is vanzelf gezakt. Dat duurde lang…'); }
     else if (state.food < 12) state.health -= dt * 0.5;
     else if (state.food > 40) state.health = Math.min(100, state.health + dt * 0.6);
@@ -1348,12 +1354,15 @@ function collapse() {
   toast('Je bent te zwak en zakt in elkaar…', 4);
 }
 
+// de testmodus (?dev=1) kan dingen stilzetten; in het gewone spel staat alles hier uit
+const devFlags = { noPred: false, noTime: false, noHunger: false, onError: null };
 function frame() {
   requestAnimationFrame(frame);   // eerst: een fout in één beeld mag het spel niet stilzetten
   const dt = Math.min(clock.getDelta(), window.__dtCap || 1 / 20);   // __dtCap: alleen voor trage testbrowsers
   clock.elapsedTime += dt;
   if (innerWidth !== sizeW || innerHeight !== sizeH) resize();
-  try { update(dt); } catch (e) { console.error(e); }
+  try { update(dt); } catch (e) { console.error(e); if (devFlags.onError) devFlags.onError(e); }
+  rigDetail(camera.position);
   renderer.render(scene, camera);
 }
 
@@ -1362,6 +1371,8 @@ function begin() {
   if (state.started) return;
   loading.remove(); state.started = true;
   restore(Save.read());
+  // de testmodus wordt alleen opgehaald met ?dev=1; een gewone speler laadt er niets van
+  if (DEV) import('./dev/dev.js').then((m) => m.initDev({ G, A, devFlags, renderer, camera, height, setNextRock: (r) => { nextRock = r; }, makeCloak: putCloak, dropCloak: () => { if (cloakMesh) { scene.remove(cloakMesh); cloakMesh = null; } } }));
 }
 const { snapshot, restore, saveTick } = initPersist(G);
 G.snapshot = snapshot;

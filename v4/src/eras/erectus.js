@@ -1,7 +1,10 @@
 // Tijdperk 2: Homo erectus, Acheuléen. Oost-Afrika, ruwweg 1,5 miljoen jaar geleden.
 // Een andere groep, honderdduizenden jaren na die van Tor: langer, met lange benen, en met twee nieuwe dingen:
 // de vuistbijl (rondom bewerkt, niet zomaar een scherf) en vuur. Dat vuur maak je niet: je vindt het en houdt het in leven.
-// 'zeker' geeft per onderdeel aan hoe stevig het staat: vast (vondsten), aannemelijk (afgeleid) of gok (spelkeuze).
+// 'zeker' geeft per onderdeel aan hoe stevig het staat, in vier treden:
+//   vast = vastgesteld door vondsten · aannemelijk = sterk aannemelijk, afgeleid uit vondsten
+//   onzeker = onderzoekers zijn het oneens of bewijs ontbreekt · artistiek = onze eigen invulling voor het spel
+// 'beeld' zegt eerlijk hoe goed het model van de mens zelf past (zie ook species.js).
 import { berg } from '../areas/berg.js';
 import { hoog } from '../areas/hoog.js';
 
@@ -29,7 +32,9 @@ export const erectus = {
     aannemelijk: ['vuur meenemen van een natuurlijke brand en brandend houden: verkleurde aarde en verhitte stenen bij Koobi Fora en Chesowanja (ca. 1,5 miljoen jaar) wijzen erop, onomstreden is vuurgebruik pas vanaf ca. 1 miljoen jaar (Wonderwerkgrot)',
       'weinig lichaamshaar en zweten: lang kunnen lopen in de hitte', 'op de grond slapen in plaats van in bomen', 'grotere groepen dan bij Homo habilis', 'hout hakken en bewerken met een vuistbijl (slijtsporen van hout op vuistbijlen)',
       'een dier moe lopen in de middaghitte (uithoudingsjacht): het past bij het lange, zwetende lichaam, maar vondsten die het bewijzen zijn er niet'],
-    gok: ['vlees braden in deze tijd (de kookhypothese)', 'een vaste stookplaats met een kring van stenen', 'gloeiend hout dagenlang meedragen naar een nieuw kamp', 'vuur dat roofdieren op afstand houdt', 'namen en vaste rollen in de groep'],
+    onzeker: ['vlees braden in deze tijd (de kookhypothese)', 'gloeiend hout dagenlang meedragen naar een nieuw kamp', 'vuur dat roofdieren op afstand houdt'],
+    artistiek: ['een vaste stookplaats met een kring van stenen', 'namen en vaste rollen in de groep', 'huidskleur, beharing, gezicht en stem', 'de kleuren en strepen van uitgestorven dieren'],
   },
+  beeld: { past: 'vervanger', note: 'Het lichaam is nu een model van een neanderthaler. Homo erectus was slanker, met lange benen, een lage lange schedel en zware wenkbrauwbogen, maar zonder het brede lijf van de neanderthaler. Een eigen model volgt.' },
   areas: [berg, hoog],
 };
