@@ -2,6 +2,7 @@
 // en een overgang is een sprong in de tijd naar een andere groep, niet één mens die verandert.
 // Een nieuw tijdperk toevoegen = een bestand zoals habilis.js maken en het hier inhangen.
 import { habilis } from './habilis.js';
+import { Save } from '../save.js';
 
 export const ERAS = [
   habilis,
@@ -12,4 +13,8 @@ export const ERAS = [
   { id: 'industrial', species: 'Homo sapiens', tradition: 'Industriële revolutie', when: 'ca. 1760 – 1840', where: 'Noordwest-Europa', playable: false },
   { id: 'modern', species: 'Homo sapiens', tradition: 'Moderne en toekomstige mens', when: 'nu en later', where: 'overal', playable: false },
 ];
-export const ERA = habilis;   // het tijdperk dat nu gespeeld wordt
+// Waar je bent staat in het bewaarde spel. Een gebied wisselen = bewaren en de pagina opnieuw opbouwen,
+// zodat de wereld altijd uit één gebiedsbestand komt en er niets van het vorige blijft hangen.
+const saved = Save.read();
+export const ERA = ERAS.find((e) => e.playable && saved && e.id === saved.era) || habilis;
+export const AREA = ERA.areas.find((a) => a.playable && saved && a.id === saved.area) || ERA.areas[0];   // het tijdperk dat nu gespeeld wordt

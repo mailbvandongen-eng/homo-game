@@ -195,16 +195,16 @@ function bush(scene, x, z, berryColor, leafColor = 0xffffff, n = 3) {
   return { g, berries, left: n, max: n, mats, green: new THREE.Color(leafColor), dry: 0 };
 }
 
-export function placeItems(scene, A) {
+export function placeItems(scene, A, area) {
   SHRUBS = variantsOf(A.models.shrub_03);
   const things = [];
   const add = (t) => { things.push(t); return t; };
 
   // losse keien bij de start en verderop
   ROCKV = [A.models.namaqualand_boulder_02, A.models.namaqualand_boulder_05, A.models.namaqualand_rocks_01].map((m) => variantsOf(m)[0]);
-  const stones = [[5, -9, 'lava'], [-2, -3, 'quartz'], [8, -4, 'sand'], [30, 25, 'sand'], [-45, -60, 'lava'], [-66, -70, 'quartz'], [-38, -26, 'sand'], [22, -48, 'lava'], [62, 12, 'quartz'], [-20, 44, 'sand']];
+  const stones = area.stones.map((s) => [...s]);
   // langs de rivier liggen rolstenen: van alles door elkaar
-  for (const [i, x] of [-130, -95, -60, -28, 12, 48, 85, 120].entries()) {
+  for (const [i, x] of area.riverStones.entries()) {
     const z = [6, -6, 9, -9, 13, -13].map((d) => riverZ(x) + d).find((q) => height(x, q) > 0.15);
     if (z !== undefined) stones.push([x, z, ['lava', 'sand', 'quartz', 'lava'][i % 4]]);
   }
@@ -214,19 +214,19 @@ export function placeItems(scene, A) {
   }
 
   // bessenstruiken
-  for (const [x, z] of [[9, 1], [-25, 30], [55, -40]]) {
+  for (const [x, z] of area.redBerries) {
     const b = bush(scene, x, z, 0xd0302a, 0xd8e0b0);
     add({ kind: 'bush', item: 'redberry', x, z, bush: b, label: 'Pluk rode bessen' });
   }
   // dichtbij kleine struiken, ver weg (en voorbij het leger van de katten) de rijke
-  for (const [x, z, n] of [[-14, -22], [24, -32], [70, 15, 4], [-50, -40], [95, -60, 5], [-92, 2, 6]]) {
+  for (const [x, z, n] of area.berries) {
     const b = bush(scene, x, z, 0x3a1a5a, 0xe8f0c8, n || 3);
     if (n) b.g.scale.setScalar(1 + (n - 3) * 0.12);
     add({ kind: 'bush', item: 'berry', x, z, bush: b, label: 'Pluk paarse bessen' });
   }
 
   // bitterblad: groeit alleen bij het water
-  for (const x of [-6, 40, -55]) {
+  for (const x of area.leaves) {
     const z = riverZ(x) - 10;
     const b = bush(scene, x, z, null, 0x5a8a40, 4);
     b.g.scale.set(0.9, 1.3, 0.9);
@@ -235,7 +235,7 @@ export function placeItems(scene, A) {
 
   // botten bij het karkas
   const boneMat = lam(0xe8dcc0);
-  for (const [x, z] of [[-70.5, -77], [-68, -79.5]]) {
+  for (const [x, z] of area.bones) {
     const m = new THREE.Group();
     const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.6, 6), boneMat); shaft.rotation.z = Math.PI / 2; m.add(shaft);
     for (const s of [-1, 1]) { const k = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 4), boneMat); k.position.x = s * 0.32; m.add(k); }
@@ -246,7 +246,7 @@ export function placeItems(scene, A) {
 
   // platte stenen: eronder zitten larven, soms een schorpioen, en één keer de hamersteen
   const flatMat = lam(0x9c8e7c);
-  for (const [x, z, under] of [[-6, -12, 'grubs'], [16, -8, 'scorpion'], [-30, -20, 'grubs'], [-58, -66, 'grubs'], [-75, -64, 'hammer'], [28, 18, 'scorpion'], [62, -30, 'grubs']]) {
+  for (const [x, z, under] of area.flatStones) {
     const m = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.5, 0.14, 7), flatMat);
     m.position.set(x, height(x, z) + 0.04, z); m.rotation.set(0.05, x, 0.04); m.castShadow = true; m.receiveShadow = true;
     scene.add(m);

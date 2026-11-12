@@ -1,10 +1,11 @@
+import { AREA } from './eras/index.js';
 import * as THREE from '../lib/three.module.js';
 import { height } from './world.js';
 import { turn } from './actors.js';
 import { Rig } from './rig.js';
 
 // De slaapboom: hier wacht je groep. Overdag scharrelen ze rond de stam, 's nachts slapen ze er.
-export const HOME = { x: -8, z: -14 };
+export const HOME = AREA.home;   // de slaapboom van dit gebied
 const WHO = [
   { id: 'tor', name: 'Tor', k: 0.99, spot: [2.6, 1.2], grey: true },
   { id: 'kem', name: 'Kem', k: 0.92, spot: [-2.2, 2.4], tint: 0xe8d2c0 },

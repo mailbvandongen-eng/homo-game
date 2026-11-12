@@ -5,7 +5,7 @@ import { ITEMS, ROCKS, DISCOVERIES, LOOKS, VERDICT, FINDS, placeItems, heldMesh 
 import { Hyenas, Leopard, Throws } from './predators.js';
 import { Zebras, Sabres } from './hunt.js';
 import { Group, HOME } from './group.js';
-import { ERAS, ERA } from './eras/index.js';
+import { ERAS, ERA, AREA } from './eras/index.js';
 import { Save } from './save.js';
 import { Glints, Motes, Birds, Butterflies, Senses } from './life.js';
 import { Sound } from './audio.js';
@@ -38,26 +38,26 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 700);
 const world = buildWorld(scene, A);
 const player = new Hominin(scene, A);
-const herd = new Herd(scene, 42, -12, 9, A);
-const CARCASS = { x: -70, z: -78 };
+const herd = new Herd(scene, AREA.herd.at[0], AREA.herd.at[1], AREA.herd.n, A);
+const CARCASS = AREA.carcass;
 const vultures = new Vultures(scene, CARCASS.x, CARCASS.z, A);
 carcass(scene, CARCASS.x, CARCASS.z);
-const things = placeItems(scene, A);
+const things = placeItems(scene, A, AREA);
 const glints = new Glints(scene, things);
 const motes = new Motes(scene);
 const bushes = things.filter((t) => t.bush).map((t) => [t.x, t.z]);
-const birds = new Birds(scene, [[6, -14], [-20, 8], [30, -40], [60, 20], [-50, -50], [15, 35]]);
+const birds = new Birds(scene, AREA.birds);
 const butterflies = new Butterflies(scene, bushes);
 const senses = new Senses(scene);
 const sound = new Sound();
 const hyenas = new Hyenas(scene, CARCASS, A);
-const leopard = new Leopard(scene, { x: 40, z: 50, branchY: 2.8 }, A);   // zijn boom staat bij de rivier
+const leopard = new Leopard(scene, { x: AREA.leopard.tree[0], z: AREA.leopard.tree[1], branchY: AREA.leopard.branchY }, A);
 const throws = new Throws(scene);
-const zebras = new Zebras(scene, -42, -30, A);
-const sabres = new Sabres(scene, { x: -60, z: 10 }, zebras, A);   // hun leger ligt in het hoge gras
+const zebras = new Zebras(scene, AREA.zebras.at[0], AREA.zebras.at[1], A);
+const sabres = new Sabres(scene, { x: AREA.sabres.lair[0], z: AREA.sabres.lair[1] }, zebras, A);
 const group = new Group(scene, A);
 const enc = new Encounters(scene, A);   // wat je onderweg tegenkomt
-const giant = new Giant(scene, A);      // de reuzenolifant die zijn ronde loopt
+const giant = new Giant(scene, A, AREA.giant);      // de reuzenolifant die zijn ronde loopt
 
 // De maat van het beeld volgt het scherm. Een telefoon meldt na draaien of volledig scherm niet altijd (op tijd) een
 // resize, dus de lus kijkt elk beeld of de maat nog klopt; de stijl van het canvas laten we aan de CSS.
@@ -97,7 +97,6 @@ function discover(id) {
 // Je kiest er zelf één, ziet de stappen, en als ze alle vier gelukt zijn trekt de groep verder.
 const has = (it) => state.hands.includes(it);
 const carries = (it) => has(it) || !!(state.bag && state.bag.some((e) => e && e.it === it));
-const AREA = ERA.areas.find((x) => x.id === 'savanne');
 const MISSIONS = AREA.missions({ state, has, carries, player, hyenas, sabres });
 const NAMES = { tor: 'Tor', kem: 'Kem', ibo: 'Ibo' };
 for (const m of MISSIONS) m.steps.push({ t: 'Ga terug naar ' + NAMES[m.who], ok: () => false });

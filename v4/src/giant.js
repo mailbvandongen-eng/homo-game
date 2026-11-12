@@ -12,13 +12,15 @@ import { HOME } from './group.js';
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const SCALE = 2.23, WALK_V = 1.3, CHARGE_V = 7;
 // zijn ronde: [x, z, wat hij er doet]
-const ROUTE = [[95, -125, 'eat'], [142, -72, 'pass'], [128, -12, 'eat'], [105, riverZ(105) - 13, 'drink'], [66, -30, 'eat'], [44, -92, 'eat'], [-8, -132, 'pass'], [58, -152, 'eat']];
-const GRAVE = { x: 96, z: riverZ(96) - 15 };   // hier valt hij, vlak bij het water
+// zijn ronde en de plek waar hij valt komen uit het gebiedsbestand
+const atZ = (x, z) => (typeof z === 'number' ? z : riverZ(x) + z.river);
+let ROUTE = [], GRAVE = { x: 0, z: 0 };
 export const DEATH_DRY = 3;                     // op de zoveelste droge dag bezwijkt hij
 const PRINTS = 230, STEP = 1.7;
 
 export class Giant {
-  constructor(scene, A) {
+  constructor(scene, A, plan) {
+    ROUTE = plan.route.map(([x, z, what]) => [x, atZ(x, z), what]); GRAVE = { x: plan.grave[0], z: atZ(...plan.grave) };
     this.scene = scene; this.kind = 'giant';
     this.rig = new Rig(A, 'elephant', { scale: SCALE }); this.g = this.rig.root; scene.add(this.g);
     // afdrukken: donkere kuilen in het stof, die oplichten als je je zintuigen gebruikt

@@ -95,11 +95,11 @@ Elke stap is af en speelbaar voordat de volgende begint.
 |---|---|---|---|
 | A | Tijdperken en gebieden als gegevens; missies uit het gebiedsbestand | — | **klaar** |
 | B | Bewaren en verdergaan, opnieuw beginnen | A | **klaar** |
-| C | Gebied als gegevens: dieren, grondstoffen en planten van de savanne uit `main.js`/`world.js` naar een gebiedsbestand | A | volgende |
+| C | Gebied als gegevens: dieren, grondstoffen en planten van de savanne in `areas/savanne.js` (terrein en begroeiing volgen bij stap E) | A | **klaar** |
 | D | Overgang: de groep trekt verder (einde savanne → tocht → nieuw gebied), laden per gebied | B, C | |
 | E | **Gebied 2: bij het water** (nog *Homo habilis*), volledig speelbaar | D | |
 | F | `main.js` opsplitsen in `engine/` en `systems/` | C (gaandeweg) | |
-| G | Soortcontrole: test die tijd en plaats van elke soort tegen het gebied legt | C | |
+| G | Soortcontrole: `node tools/check-eras.mjs` legt tijd en plaats van elke soort (`species.js`) tegen het gebied | C | **klaar** |
 | H | Tijdperk 2: *Homo erectus* — nieuw lichaam, vuistbijl, vuur, grotere groep | E, F | |
 | I | Tijdperken 3–4 | H | |
 | J | Tijdperken 5–7: een fundamenteel ander spel (zie §5) — eerst apart ontwerpen | I | |
