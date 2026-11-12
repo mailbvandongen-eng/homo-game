@@ -12,14 +12,15 @@ Stand: november 2026. Het spel staat in `v4/` en draait op GitHub Pages.
 
 | Bestand | Regels | Wat het doet |
 |---|---|---|
-| `main.js` | ~1535 | Spelstaat, lus, invoer (aanraking, muis, toetsen), camera, handen en tas, steen slaan, gooien, missies, aanwijzingen, dag en nacht, seizoen, boekje, opslag |
-| `world.js` | 425 | Terrein, rivier, bomen, gras, licht, lucht |
+| `main.js` | ~1600 | Spelstaat, lus, invoer (aanraking, muis, toetsen), camera, handen en tas, steen slaan, gooien, missies, aanwijzingen, dag en nacht, seizoen, boekje, opslag |
+| `world.js` | 461 | Terrein (rivier of meeroever met poelen en zandbank, naar het gebied), bomen, gras, licht, lucht |
 | `hominin.js`, `rig.js` | 465 | De speler: model, animaties, lopen, sluipen, klimmen, gooien |
 | `group.js` | 124 | De drie groepsgenoten (Tor, Kem, Ibo) bij de slaapboom |
 | `predators.js` | 249 | Hyena's bij het karkas |
 | `hunt.js` | 241 | Sabeltandkatten en hun jacht, de verse prooi |
 | `encounters.js` | 473 | Luipaard, pofadder, vreemden, gewonde gazelle |
 | `giant.js` | 257 | De reuzenolifant en zijn dagelijkse ronde |
+| `shore.js` | 169 | De oever: krokodillen, meervallen in de poelen, knollen onder de korst |
 | `life.js`, `actors.js` | 438 | Kuddes, vogels, gieren, klein leven |
 | `items.js` | 289 | Alle teksten en gegevens van voorwerpen, dieren, vondsten |
 | `audio.js` | 188 | Geluid, volledig gesynthetiseerd |
@@ -28,7 +29,7 @@ Stand: november 2026. Het spel staat in `v4/` en draait op GitHub Pages.
 
 **Sterk.** De wereld, de besturing op een telefoon, de dieren met eigen gedrag, de zintuigen, het geluid en de rustige schermlaag werken en zijn getest (Playwright-tests in `/root/tools/pw/v4*.js`).
 
-**Zwak.** `main.js` is te groot en weet alles. Wereld en dieren zijn in code vastgelegd in plaats van in gegevens. Er is één gebied. Alles (26 MB) wordt in één keer geladen. Tot deze stap ging bij het sluiten van de pagina alles verloren.
+**Zwak.** `main.js` is te groot en weet alles. Wereld en dieren zijn in code vastgelegd in plaats van in gegevens. Er zijn twee gebieden. Alles (26 MB) wordt in één keer geladen. Tot deze stap ging bij het sluiten van de pagina alles verloren.
 
 ---
 
@@ -96,8 +97,8 @@ Elke stap is af en speelbaar voordat de volgende begint.
 | A | Tijdperken en gebieden als gegevens; missies uit het gebiedsbestand | — | **klaar** |
 | B | Bewaren en verdergaan, opnieuw beginnen | A | **klaar** |
 | C | Gebied als gegevens: dieren, grondstoffen en planten van de savanne in `areas/savanne.js` (terrein en begroeiing volgen bij stap E) | A | **klaar** |
-| D | Overgang: de groep trekt verder (einde savanne → tocht → nieuw gebied), laden per gebied | B, C | |
-| E | **Gebied 2: bij het water** (nog *Homo habilis*), volledig speelbaar | D | |
+| D | Overgang: de groep trekt verder (slotkaart → *Trek mee* → het nieuwe gebied wordt geladen; handen, tas, kennis en dag gaan mee) | B, C | **klaar** |
+| E | **Gebied 2: bij het water** (nog *Homo habilis*), volledig speelbaar | D | **klaar**, wacht op proefspelen |
 | F | `main.js` opsplitsen in `engine/` en `systems/` | C (gaandeweg) | |
 | G | Soortcontrole: `node tools/check-eras.mjs` legt tijd en plaats van elke soort (`species.js`) tegen het gebied | C | **klaar** |
 | H | Tijdperk 2: *Homo erectus* — nieuw lichaam, vuistbijl, vuur, grotere groep | E, F | |
@@ -106,7 +107,9 @@ Elke stap is af en speelbaar voordat de volgende begint.
 
 Later, los hiervan: proloog, controller, geluid bijstellen.
 
-**Gebied 2, bij het water** (ontwerp, nog te bouwen): rivier en meeroever in de droge tijd. Nieuw voedsel (knollen opgraven met een stok, schelpdieren, vis in opdrogende poelen), nieuw gevaar (krokodil, nijlpaard), nieuwe grondstof (betere steen in de rivierbedding). Missies: een graafstok maken, merg kraken met de hamersteen, de drinkplaats veilig leren gebruiken, en een noodgeval: iemand is ziek, haal het blad vóór het donker. De zon is de klok, er verschijnt geen teller en er sterft niemand; wie te laat is, probeert het de volgende dag opnieuw.
+**Gebied 2, bij het water** (gebouwd, `areas/water.js` + `shore.js`): een meeroever in de droge tijd. Het land is kaal, struiken staan alleen nog ver weg. Nieuw voedsel: knollen onder de harde korst (alleen los te wrikken met een graafstok: een tak waar je met een afslag een punt aan schraapt) en meervallen in de poelen die het zakkende meer achterlaat (wie rechtop door de poel plonst, jaagt ze weg; gebukt kun je ze grijpen). Nieuw gevaar: krokodillen die als een boomstam drijven en toeslaan zodra je bij hen in het water staat; een kei laat ze wegzakken. Het meer is te diep om over te steken, behalve over één ondiepe drempel tussen het riet naar een zandbank. Missies: *Maak een graafstok*, *Grijp een meerval* en het noodgeval *Bitterblad voor Tor*: het blad groeit alleen nog op de zandbank, wees terug voor het donker. De zon is de klok, er verschijnt geen teller en er sterft niemand; wie te laat is, kost de groep een nacht en probeert het de volgende dag opnieuw.
+
+Nog niet gebouwd uit het eerste ontwerp, mogelijk later: schelpdieren, nijlpaard, merg kraken als missie. Testen: `/root/tools/pw/v4water.js`; het gebied direct openen kan met `?gebied=water`.
 
 ---
 
@@ -135,9 +138,9 @@ De route, vastgesteld met Bob op 12 november 2026. Er wordt nooit aan een later 
 
 | # | Ontwikkeling | Stand |
 |---|---|---|
-| 1 | Architectuur geschikt maken voor het volledige spel (stappen A, C, F, G) | A klaar; C is de volgende |
-| 2 | Het huidige *Homo habilis*-spel afmaken: savanne rond, overgang "de groep trekt verder" (stap D) | |
-| 3 | Watergebied volledig speelbaar (stap E) | ontwerp staat in §3 |
+| 1 | Architectuur geschikt maken voor het volledige spel (stappen A, C, F, G) | A, C en G klaar; F (`main.js` opsplitsen) is de volgende |
+| 2 | Het huidige *Homo habilis*-spel afmaken: savanne rond, overgang "de groep trekt verder" (stap D) | **klaar** |
+| 3 | Watergebied volledig speelbaar (stap E) | **klaar**, wacht op proefspelen door Bob |
 | 4 | Opslaan en laden (stap B) | basis klaar; groeit mee met elk nieuw gebied |
 | 5 | *Homo erectus* en nieuwe technieken (stap H) | |
 | 6 | Neanderthalers en ijstijd | |

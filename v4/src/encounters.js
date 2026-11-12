@@ -3,6 +3,7 @@ import { height, WALK, riverZ, riverDist, blockers } from './world.js';
 import { Herd, turn } from './actors.js';
 import { Rig } from './rig.js';
 import { HOME } from './group.js';
+import { AREA } from './eras/index.js';
 
 // Ontmoetingen onderweg: ver van de slaapboom ligt er steeds iets op je pad.
 // Elke ontmoeting is een kleine keuze: een kans op eten, met een prijs.
@@ -11,7 +12,7 @@ const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const ORDER = ['gazelle', 'snake', 'nest', 'bees', 'strangers'];
 const FOOD = ['meat', 'honey', 'egg', 'bone'];   // wat vreemden van de grond willen oprapen
-const AVOID = [[HOME.x, HOME.z, 38], [-60, 10, 30], [40, 50, 25], [-70, -78, 22]];   // slaapboom, katten, luipaard, karkas
+const AVOID = [[HOME.x, HOME.z, 38], [...AREA.sabres.lair, 30], [...AREA.leopard.tree, 25], [AREA.carcass.x, AREA.carcass.z, 22]];   // slaapboom, katten, luipaard, karkas
 
 function haloTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 64;

@@ -12,5 +12,7 @@ export const SPECIES = {
   leopard: { name: 'Luipaard', latin: 'Panthera pardus', ma: [2.0, 0], regions: ['Oost-Afrika', 'Zuidelijk Afrika'], zeker: 'aannemelijk', note: 'Luipaardachtige katten zijn bekend uit Olduvai Bed I; de vroegste vondsten zijn schaars.' },
   puffadder: { name: 'Pofadder', latin: 'Bitis', ma: [2.0, 0], regions: ['Oost-Afrika', 'Zuidelijk Afrika'], zeker: 'vast', note: 'Bitis olduvaiensis is beschreven uit Olduvai.' },
   giant: { name: 'Reuzenolifant', latin: 'Palaeoloxodon recki', ma: [3.5, 0.6], regions: ['Oost-Afrika'], zeker: 'vast' },
+  croc: { name: 'Krokodil', latin: 'Crocodylus anthropophagus', ma: [1.9, 1.7], regions: ['Oost-Afrika'], zeker: 'vast', note: 'Beschreven uit Olduvai; bijtsporen op botten van mensachtigen uit dezelfde lagen.' },
+  catfish: { name: 'Meerval', latin: 'Clarias', ma: [5, 0], regions: ['Oost-Afrika', 'Zuidelijk Afrika', 'Noord-Afrika'], zeker: 'vast', note: 'Meervalresten met snijsporen bij Koobi Fora (ca. 1,95 miljoen jaar).' },
   vulture: { name: 'Gier', latin: 'Gyps e.a.', ma: [5, 0], regions: ['Oost-Afrika', 'Zuidelijk Afrika', 'Europa', 'West-Azië'], zeker: 'aannemelijk' },
 };

@@ -17,4 +17,6 @@ export const ERAS = [
 // zodat de wereld altijd uit één gebiedsbestand komt en er niets van het vorige blijft hangen.
 const saved = Save.read();
 export const ERA = ERAS.find((e) => e.playable && saved && e.id === saved.era) || habilis;
-export const AREA = ERA.areas.find((a) => a.playable && saved && a.id === saved.area) || ERA.areas[0];   // het tijdperk dat nu gespeeld wordt
+// ?gebied=water: alleen om te testen; begint zonder bewaard spel in dat gebied
+const pick = typeof location !== 'undefined' && /[?&]gebied=(\w+)/.exec(location.search);
+export const AREA = ERA.areas.find((a) => a.playable && (pick ? a.id === pick[1] : saved && a.id === saved.area)) || ERA.areas[0];   // het tijdperk dat nu gespeeld wordt

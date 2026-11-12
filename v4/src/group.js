@@ -47,6 +47,8 @@ export class Group {
     if (it === 'hide') return { gain: 25, text: 'Tor spreidt de huid uit onder de boom en klopt erop. Vannacht ligt Ibo zacht en warm.' };
     if (it === 'egg') return { gain: 15, text: 'Ibo tikt het ei open en slurpt het leeg. Hij kijkt je aan: nog een?' };
     if (it === 'bone') return { gain: 18, text: 'Tor legt het bot op een steen en kraakt het open. Het merg wordt eerlijk gedeeld.' };
+    if (it === 'fish') return { gain: 28, text: 'Een vis! Kem ruikt eraan, Ibo steekt zijn vinger in de bek. Dan trekt Tor hem open: zacht, vet vlees voor iedereen.' };
+    if (it === 'tuber') return { gain: 14, text: 'Tor kauwt de knol voor en geeft Ibo de helft. Taai, maar het vult.' };
     if (it === 'berry') return { gain: 8, text: 'Ibo propt de bessen in zijn mond en grijnst paars.' };
     if (it === 'leaf') {
       if (!sick) return { gain: null, text: 'Tor ruikt aan het blad en trekt een vies gezicht. Niemand heeft het nu nodig.' };

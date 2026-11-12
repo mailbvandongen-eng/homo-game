@@ -1,7 +1,9 @@
 import * as THREE from '../lib/three.module.js';
 import { variantsOf } from './assets.js';
+import { AREA } from './eras/index.js';
 
-// Proefstuk Riftvallei: één stuk savanne met een rivier, acacia's, rotsen en hoog gras.
+// Het land van één gebied. Twee vormen: 'rift' (savanne met een rivier erdoor) en 'lake' (een oever met een meer in het noorden).
+// Welke vorm, en waar de vaste bomen, het hoge gras en de poelen liggen, staat in het gebiedsbestand.
 // Alle maten in meters. Het midden van de kaart is (0, 0); je kunt tot WALK meter van het midden lopen.
 export const SIZE = 440;
 export const WALK = 175;
@@ -32,11 +34,46 @@ export function rng(seed) {
 }
 
 // ---------- vorm van het land ----------
-export function riverZ(x) { return 38 * Math.sin(x * 0.011) + 14 * Math.sin(x * 0.027 + 1.3) + 55; }
+export const LAKE = AREA.terrain === 'lake';
+const START = AREA.start || [2, -6], HILL = AREA.hill || [-40, -30], POOLS = AREA.pools || [], ISLE = AREA.island || null;
+// rift: het midden van de rivier. lake: de waterlijn; alles ten noorden daarvan is meer.
+export function riverZ(x) { return LAKE ? 62 + 9 * Math.sin(x * 0.02) + 4 * Math.sin(x * 0.055 + 1) : 38 * Math.sin(x * 0.011) + 14 * Math.sin(x * 0.027 + 1.3) + 55; }
 
-export function riverDist(x, z) { return Math.abs(z - riverZ(x)); }
+export function riverDist(x, z) { return LAKE ? Math.max(0, riverZ(x) - z) : Math.abs(z - riverZ(x)); }
+// welke kant op is het droge? (voor dieren die te dicht bij het water komen)
+export function awayZ(x, z) { return LAKE || z < riverZ(x) ? -1 : 1; }
+export function poolAt(x, z) { for (const p of POOLS) if (Math.hypot(x - p[0], z - p[1]) < p[2]) return p; return null; }
+// te diep om te waden
+export function deep(x, z) { return LAKE && height(x, z) < -1.0; }
+
+function lakeHeight(x, z) {
+  let h = 2.2 + (fbm(x * 0.006 + 10, z * 0.006 + 3) - 0.5) * 12;
+  if (h < 1.6) h = 1.6 - (1.6 - h) * 0.12;
+  h += (fbm(x * 0.04, z * 0.04, 2) - 0.5) * 0.9;
+  const s = z - riverZ(x);   // meters het meer in
+  // een vlak, modderig strand dat langzaam het water in loopt; verderop wordt het diep
+  if (s < 0) h = -0.35 + (h + 0.35) * THREE.MathUtils.smoothstep(-s, 0, 24);
+  else h = Math.max(-2.8, -0.35 - s * 0.055);
+  // poelen die achterblijven als het meer zakt
+  for (const [px, pz, r] of POOLS) {
+    const d = Math.hypot(x - px, z - pz);
+    if (d < r * 1.6) h += (-0.72 - h) * (1 - THREE.MathUtils.smoothstep(d, r * 0.45, r * 1.6));
+  }
+  // de zandbank, met een ondiepe drempel ernaartoe
+  if (ISLE) {
+    const iz = riverZ(ISLE.x) + ISLE.river, d = Math.hypot(x - ISLE.x, z - iz);
+    if (d < ISLE.r + 8) h = Math.max(h, 0.7 - (d / ISLE.r) ** 2 * 1.3);
+    if (z > riverZ(ISLE.x) - 2 && z < iz) h = Math.max(h, -0.66 - Math.max(0, Math.abs(x - ISLE.x) - 3) * 0.45);
+  }
+  // de wanden van de Riftvallei: niet in het meer
+  const r = Math.max(Math.abs(x), -z);
+  if (r > WALK - 25) h += Math.pow((r - (WALK - 25)) / 30, 2) * 14 * (0.7 + fbm(x * 0.02, z * 0.02) * 0.6);
+  if (AREA.hill) { const kd = Math.hypot(x - HILL[0], z - HILL[1]); if (kd < 22) h += Math.cos(kd / 22 * Math.PI / 2) ** 2 * 7; }
+  return h;
+}
 
 export function height(x, z) {
+  if (LAKE) return lakeHeight(x, z);
   let h = 2.2 + (fbm(x * 0.006 + 10, z * 0.006 + 3) - 0.5) * 14;
   // lage plekken vlak afronden: alleen de rivier staat onder water
   if (h < 1.6) h = 1.6 - (1.6 - h) * 0.12;
@@ -56,9 +93,7 @@ export function height(x, z) {
 }
 
 // Hoog gras: hier kun je je verstoppen
-export const TALL_GRASS = [
-  [20, -5, 11], [44, 10, 9], [60, -25, 12], [-15, 20, 8], [85, 30, 10], [-60, 15, 10], [10, -55, 9],
-];
+export const TALL_GRASS = AREA.tallGrass;
 export function tallGrassAt(x, z) {
   for (const [px, pz, r] of TALL_GRASS) { const dx = x - px, dz = z - pz; if (dx * dx + dz * dz < r * r) return true; }
   return false;
@@ -172,7 +207,7 @@ export function buildWorld(scene, A) {
   water.rotation.x = -Math.PI / 2; water.position.y = WATER - 0.35;
   scene.add(water);
 
-  const ok = (x, z, minRiver = 12) => riverDist(x, z) > minRiver && Math.max(Math.abs(x), Math.abs(z)) < WALK - 8 && Math.hypot(x - 2, z + 8) > 8;
+  const ok = (x, z, minRiver = 12) => riverDist(x, z) > minRiver && Math.max(Math.abs(x), Math.abs(z)) < WALK - 8 && Math.hypot(x - START[0], z - START[1] + 2) > 8 && !POOLS.some((p) => Math.hypot(x - p[0], z - p[1]) < p[2] * 1.6 + 2);
 
 
   // ---------- acacia's ----------
@@ -185,7 +220,7 @@ export function buildWorld(scene, A) {
     blockers.push({ x, z, r: Math.max(0.3, 0.3 * s) });   // iets ruimer dan de dunne stam: de reus en de dekking rekenen ermee
   }
   for (let i = 0; i < 70; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 10)) acacia(x, z, 0.8 + R() * 0.6); }
-  [[-8, -14, 1.75], [14, -20, 1], [-30, 10, 1.1], [40, 50, 1.3]].forEach(([x, z, s]) => acacia(x, z, s));
+  AREA.trees.forEach(([x, z, s]) => acacia(x, z, s));
   const leafMat = (map, tint) => {
     const m = new THREE.MeshStandardMaterial({ map, color: tint, alphaTest: 0.35, alphaToCoverage: true, side: THREE.DoubleSide, roughness: 0.9, metalness: 0, emissive: 0x1a2408 });
     // bladeren laten licht door: beide kanten krijgen licht van boven, anders is de onderkant zwart
@@ -218,8 +253,8 @@ export function buildWorld(scene, A) {
     if (s > 0.7 && v.size.y * k > 0.8) cover.push({ x, z, r: s * 0.9 });
   }
   for (let i = 0; i < 55; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 9)) rock(x, z, 0.4 + R() * 1.6); }
-  for (let i = 0; i < 14; i++) { const a = R() * 6.28, d = 6 + R() * 14; rock(-40 + Math.cos(a) * d, -30 + Math.sin(a) * d, 0.8 + R() * 1.8); }
-  for (let i = 0; i < 6; i++) rock(-3 + R() * 10, -2 + R() * 6, 0.3 + R() * 0.5);   // keien bij de start
+  for (let i = 0; i < 14; i++) { const a = R() * 6.28, d = 6 + R() * 14; const x = HILL[0] + Math.cos(a) * d, z = HILL[1] + Math.sin(a) * d, s = 0.8 + R() * 1.8; if (!LAKE || AREA.hill) rock(x, z, s); }
+  for (let i = 0; i < 6; i++) rock(START[0] - 5 + R() * 10, START[1] + 4 + R() * 6, 0.3 + R() * 0.5);   // keien bij de start
   const dm = new THREE.Object3D();
   function instance(v, spots, shadow = true) {
     for (const part of v.parts) {
@@ -316,8 +351,9 @@ export function buildWorld(scene, A) {
   });
   // groen riet langs de rivier
   scatter(grassMat(0.15, 0.15), 2500, [0, 1, 2], () => {
-    const x = (R() - 0.5) * 2 * WALK, z = riverZ(x) + (R() < 0.5 ? -1 : 1) * (6 + R() * 4);
-    return [x, z, 1.2 + R() * 0.6];
+    const x = (R() - 0.5) * 2 * WALK, side = R() < 0.5 ? -1 : 1, off = 6 + R() * 4;
+    // langs een meer staat het riet op het strand en met de voeten in het water
+    return [x, riverZ(x) + (LAKE ? (side < 0 ? -off * 0.6 : off - 6) : side * off), 1.2 + R() * 0.6];
   });
 
   const fogBase = new THREE.Color();

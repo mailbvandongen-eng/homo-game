@@ -1,5 +1,5 @@
 import * as THREE from '../lib/three.module.js';
-import { height, WALK, riverDist, rng } from './world.js';
+import { height, WALK, riverDist, awayZ, rng } from './world.js';
 import { turn } from './actors.js';
 import { Rig } from './rig.js';
 
@@ -86,7 +86,7 @@ export class Hyenas {
       else if (h.state === 'curious') h.yaw = turn(h.yaw, Math.atan2(p.x - h.x, p.z - h.z), dt * 4);
       h.x += Math.sin(h.yaw) * h.speed * dt; h.z += Math.cos(h.yaw) * h.speed * dt;
       const lim = WALK - 8; h.x = THREE.MathUtils.clamp(h.x, -lim, lim); h.z = THREE.MathUtils.clamp(h.z, -lim, lim);
-      if (riverDist(h.x, h.z) < 7) h.z += (h.z > 0 ? 1 : -1) * dt * 4;
+      if (riverDist(h.x, h.z) < 7) h.z += awayZ(h.x, h.z) * dt * 4;
       this.pose(h, dt, run);
     }
     // af en toe waagt de brutaalste een uitval

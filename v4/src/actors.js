@@ -1,5 +1,5 @@
 import * as THREE from '../lib/three.module.js';
-import { height, blockers, WALK, riverDist, tallGrassAt, rng, WIND, mergeStatic } from './world.js';
+import { height, blockers, WALK, riverDist, awayZ, tallGrassAt, rng, WIND, mergeStatic } from './world.js';
 import { rimify } from './hominin.js';
 import { Rig } from './rig.js';
 
@@ -130,7 +130,7 @@ export class Herd {
       m.x += Math.sin(m.yaw) * m.speed * dt; m.z += Math.cos(m.yaw) * m.speed * dt;
       const lim = WALK - 10; m.x = THREE.MathUtils.clamp(m.x, -lim, lim); m.z = THREE.MathUtils.clamp(m.z, -lim, lim);
       // niet de rivier in
-      if (riverDist(m.x, m.z) < 7) { m.z += (m.z > 0 ? 1 : -1) * dt * 4; }
+      if (riverDist(m.x, m.z) < 7) { m.z += awayZ(m.x, m.z) * dt * 4; }
       m.look += (look - m.look) * (1 - Math.exp(-dt * 6));
       this.pose(m, dt);
     }

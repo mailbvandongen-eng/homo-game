@@ -1,5 +1,6 @@
 import * as THREE from '../lib/three.module.js';
-import { height, blockers, cover, WALK, riverDist, tallGrassAt, mergeStatic } from './world.js';
+import { height, blockers, cover, WALK, riverDist, tallGrassAt, mergeStatic, deep } from './world.js';
+import { AREA } from './eras/index.js';
 import { Rig } from './rig.js';
 
 // ---------- materialen ----------
@@ -197,7 +198,7 @@ export class Hominin {
   }
 
   initState() {
-    this.pos = new THREE.Vector3(2, 0, -6);
+    this.pos = new THREE.Vector3(AREA.start[0], 0, AREA.start[1]);
     this.y = 0; this.vy = 0; this.onGround = true; this.jumpReq = false; this.landed = false;
     this.vel = new THREE.Vector3();
     this.yaw = 0;
@@ -216,10 +217,12 @@ export class Hominin {
     let want = this.sneaking ? 1.6 * mag : mag < 0.7 ? 2.6 * mag / 0.7 : 2.6 + (mag - 0.7) / 0.3 * 2.8;
     if (this.once) want *= this.once.slow;   // tijdens slaan loop je bijna niet
     if (this.toss) want *= 0.3;              // en tijdens mikken en gooien ook niet
-    const max = want * mods.speed * (riverDist(this.pos.x, this.pos.z) < 6 ? 0.45 : 1);
+    const max = want * mods.speed * (riverDist(this.pos.x, this.pos.z) < 6 || height(this.pos.x, this.pos.z) < -0.45 ? 0.45 : 1);
     const target = mag > 0.001 ? dir.clone().normalize().multiplyScalar(max) : dir.clone().set(0, 0, 0);
     this.vel.lerp(target, 1 - Math.exp(-dt * (this.onGround ? 6 : 1.5)));
+    const px = this.pos.x, pz = this.pos.z;
     this.pos.addScaledVector(this.vel, dt);
+    if (deep(this.pos.x, this.pos.z) && !deep(px, pz)) { this.pos.x = px; this.pos.z = pz; this.vel.multiplyScalar(0.3); this.tooDeep = true; }   // verder kun je niet staan
     for (const b of blockers) {
       if (b.top && this.y > b.top - 0.15) continue;   // over een lage rots heen springen
       const dx = this.pos.x - b.x, dz = this.pos.z - b.z, d = Math.hypot(dx, dz), min = b.r + 0.3;

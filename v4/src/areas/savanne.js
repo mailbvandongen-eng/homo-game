@@ -5,6 +5,9 @@
 export const savanne = {
   id: 'savanne', name: 'De savanne', terrain: 'rift', ma: 1.8, region: 'Oost-Afrika', playable: true, next: 'water',
   home: { x: -8, z: -14 },                 // de slaapboom
+  start: [2, -6],                          // hier begin je
+  trees: [[-8, -14, 1.75], [14, -20, 1], [-30, 10, 1.1], [40, 50, 1.3]],   // vaste acacia's: [x, z, maat]
+  tallGrass: [[20, -5, 11], [44, 10, 9], [60, -25, 12], [-15, 20, 8], [85, 30, 10], [-60, 15, 10], [10, -55, 9]],   // hier kun je je verstoppen: [x, z, straal]
   carcass: { x: -70, z: -78 },             // het oude karkas waar de hyena's op afkomen
   fauna: ['impala', 'zebra', 'gazelle', 'hyena', 'sabre', 'leopard', 'puffadder', 'giant', 'vulture', 'hominin'],
   herd: { species: 'impala', at: [42, -12], n: 9 },
@@ -25,6 +28,11 @@ export const savanne = {
   redBerries: [[9, 1], [-25, 30], [55, -40]],
   berries: [[-14, -22], [24, -32], [70, 15, 4], [-50, -40], [95, -60, 5], [-92, 2, 6]],   // dichtbij klein, ver weg rijk
   leaves: [-6, 40, -55],                   // bitterblad groeit alleen bij het water, op deze x
+  outro: {
+    title: 'De groep trekt verder',
+    text: ['Je kunt nu wat de groep hier nodig had: een scherpe rand slaan, een hyena op afstand houden, meer dragen dan je handen aankunnen en jezelf warm houden.',
+      'De struiken raken leeg en het gras verdort. Tor wijst naar het noorden, waar het water blijft staan.'],
+  },
   // g: de spelcontext (state, has, carries, player, hyenas, sabres)
   missions: (g) => [
   { id: 'flake', who: 'kem', ask: 'Kem rukt met zijn tanden aan een pees. Het lukt niet.', end: 'Kem voelt aan de scherpe rand en grijnst.', title: 'Maak een snijsteen', why: 'Met tanden en nagels krijg je geen huid open. Een scherpe rand wel.', done: () => !!g.state.knapped, steps: [

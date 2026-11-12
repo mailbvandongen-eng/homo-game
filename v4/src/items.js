@@ -89,6 +89,30 @@ export const ITEMS = {
     unknown: 'Eten kun je het niet. Maar het is groot, taai en zacht tegelijk…',
     known: 'Op een huid lig je zachter en warmer dan op de kale grond. Breng hem naar de slaapboom.',
   },
+  branch: {
+    name: 'Tak', color: '#8a6a48',
+    look: 'Een rechte, taaie tak van een acacia, zo lang als je arm. Het uiteinde is stomp en rafelig.',
+    unknown: 'Stevig. Maar zo stomp doet hij weinig.',
+    known: 'Met een scherpe afslag schraap je er een punt aan.',
+  },
+  stick: {
+    name: 'Graafstok', color: '#a07c50',
+    look: 'Een tak met een schuin geschraapte punt. Het hout is licht waar je de bast hebt weggehaald.',
+    unknown: 'Hiermee kom je dieper dan met je vingers.',
+    known: 'Hiermee wrik je knollen uit harde grond. En wie ermee zwaait, houdt dieren op afstand.',
+  },
+  tuber: {
+    name: 'Knol', color: '#b89468',
+    look: 'Een dikke, bleke wortel vol aarde. Hij is hard en ruikt naar natte grond.',
+    unknown: 'Zou je dit kunnen eten?',
+    known: 'Taai en melig, maar het vult. En hij zit er ook als alles boven de grond verdord is.',
+  },
+  fish: {
+    name: 'Meerval', color: '#5a5a52',
+    look: 'Een gladde, donkere vis met voelsprieten. Hij kronkelt nog.',
+    unknown: 'Glibberig. Zou je dit kunnen eten?',
+    known: 'Vet, zacht vlees zonder taaie huid. Een vis in een ondiepe poel kan nergens heen.',
+  },
 };
 
 // Ontdekkingen: dit is wat je in het proefstuk kunt leren
@@ -126,6 +150,10 @@ export const DISCOVERIES = [
   { id: 'giant', text: 'De reus waarschuwt eerst: oren wijd, kop omhoog. Wie dan niet wijkt, moet zorgen dat er een boom tussen staat.' },
   { id: 'fruit', text: 'Waar de reus aan een boom heeft geschud, liggen vruchten op de grond.' },
   { id: 'shield', text: 'Dicht bij de reus durven hyena\'s en luipaarden niet te komen.' },
+  { id: 'stick', text: 'Met een afslag schraap je een punt aan een tak: een graafstok.' },
+  { id: 'tuber', text: 'Onder planten met brede bladeren zitten knollen. Met een graafstok wrik je ze los.' },
+  { id: 'fish', text: 'In ondiepe poelen zitten meervallen gevangen. Wie plonst, jaagt ze weg; wie sluipt, grijpt er een.' },
+  { id: 'croc', text: 'Wat op een drijvende boomstam lijkt, kan een krokodil zijn. Een steen jaagt hem onder water.' },
   { id: 'feast', text: 'Aan het eind van de droogte bezwijkt de oude reus bij het water. Zoveel vlees zag de groep nooit.' },
 ];
 
@@ -156,6 +184,9 @@ export const LOOKS = {
   track: { name: 'Afdruk van de reus', look: 'Een ronde kuil in het stof, breder dan je onderarm lang is. Ernaast nog een, en nog een.', hint: 'Je zintuigen laten het spoor oplichten. Het leidt naar hem toe, of juist van hem weg.' },
   giantdead: { name: 'De gevallen reus', look: 'De droogte was te lang voor zijn oude kiezen. Hij ligt op zijn zij, vlak bij het water dat hij net niet meer haalde.', hint: 'De huid is te dik voor tanden en nagels. Met een scherpe afslag ligt hier eten voor dagen.' },
   molar: { name: 'Kies van de reus', look: 'Het enige wat de regen en de hyena\'s hebben laten liggen: een kies zo groot als je hoofd.', hint: 'Over twee miljoen jaar graaft iemand hem op.' },
+  croc: { name: 'Krokodil', look: 'Twee ogen en een rij bulten, roerloos in het water. De rest zie je niet: hij is langer dan drie mensen.', hint: 'Hij wacht op wie komt drinken. Gooi een steen, of kies een andere plek.' },
+  catfish: { name: 'Meerval', look: 'Een donkere schim net onder het oppervlak. Hij hapt lucht en woelt in de modder.', hint: 'De poel is ondiep en hij kan er niet uit. Maar hij voelt elke plons.' },
+  tuberplant: { name: 'Plant met brede bladeren', look: 'Een laag plantje met dikke, brede bladeren. De grond eromheen is gebarsten, alsof er iets onder opzwelt.', hint: 'Met je vingers kom je niet door de harde korst.' },
   tree: { name: 'De slaapboom', look: 'Een oude acacia met een brede kroon. Hier slaapt je groep, al zolang je je kunt herinneren.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
   tor: { name: 'Tor', look: 'De oudste van de groep. Zijn haar is grijs en hij loopt moeilijk, maar hij weet waar het water blijft staan als het droog is.', hint: 'Hij kan zelf niet meer ver lopen om eten te zoeken.' },
   kem: { name: 'Kem', look: 'Jong en nieuwsgierig. Kem slaat graag stenen tegen elkaar en eet alles wat je meebrengt.', hint: 'Echt alles. Ook wat je zelf nog niet kent.' },
@@ -163,7 +194,7 @@ export const LOOKS = {
 };
 
 // Wat je ervan weet, als kleur bij de zintuigen: goed, slecht of nog onbekend
-export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good', meat: 'good', egg: 'good', honey: 'good', hide: 'good' };
+export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good', meat: 'good', egg: 'good', honey: 'good', hide: 'good', branch: 'good', stick: 'good', tuber: 'good', fish: 'good' };
 
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 
@@ -226,11 +257,17 @@ export function placeItems(scene, A, area) {
   }
 
   // bitterblad: groeit alleen bij het water
-  for (const x of area.leaves) {
-    const z = riverZ(x) - 10;
+  for (const l of area.leaves) {
+    const x = Array.isArray(l) ? l[0] : l, z = Array.isArray(l) ? riverZ(x) + l[1].river : riverZ(x) - 10;
     const b = bush(scene, x, z, null, 0x5a8a40, 4);
     b.g.scale.set(0.9, 1.3, 0.9);
     add({ kind: 'bush', item: 'leaf', x, z, bush: b, label: 'Pluk bitterblad' });
+  }
+
+  // takken onder de bomen
+  for (const [x, z] of area.branches || []) {
+    const m = heldMesh('branch'); m.scale.setScalar(1.5); m.position.set(x, height(x, z) + 0.05, z); m.rotation.set(0, x * 2.3, Math.PI / 2); m.traverse((o) => { o.castShadow = true; }); scene.add(m);
+    add({ kind: 'pick', item: 'branch', x, z, mesh: m, label: 'Pak de tak' });
   }
 
   // botten bij het karkas
@@ -282,6 +319,21 @@ export function heldMesh(item, rock) {
     return g;
   }
   if (item === 'honey') { const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.12), new THREE.MeshLambertMaterial({ color: c, emissive: 0x4a2c00, flatShading: true })); return m; }
+  if (item === 'branch' || item === 'stick') {
+    // een tak; de graafstok heeft een lichte, schuine punt
+    const g = new THREE.Group(), s = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.022, 0.62, 6), lam(new THREE.Color('#7a5c3e'))); g.add(s);
+    if (item === 'stick') { const tip = new THREE.Mesh(new THREE.ConeGeometry(0.017, 0.12, 6), lam(new THREE.Color('#d8c098'))); tip.position.y = 0.37; g.add(tip); }
+    else { const twig = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, 0.16, 5), lam(new THREE.Color('#7a5c3e'))); twig.position.set(0.04, 0.2, 0); twig.rotation.z = -0.7; g.add(twig); }
+    g.position.y = 0.12;
+    return new THREE.Group().add(g);
+  }
+  if (item === 'tuber') { const m = new THREE.Mesh(new THREE.SphereGeometry(0.08, 7, 5), lam(c)); m.scale.set(0.8, 0.75, 1.5); return m; }
+  if (item === 'fish') {
+    const g = new THREE.Group(), body = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), lam(c)); body.scale.set(0.8, 0.7, 2.6); g.add(body);
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 4), lam(c)); tail.rotation.x = -Math.PI / 2; tail.scale.x = 0.25; tail.position.z = -0.22; g.add(tail);
+    const belly = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), lam(new THREE.Color('#c8c4b0'))); belly.scale.set(0.7, 0.4, 2.2); belly.position.y = -0.025; g.add(belly);
+    return g;
+  }
   if (item === 'leaf') { const m = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.22, 4), lam(c)); m.scale.z = 0.3; return m; }
   const g = new THREE.Group(), m = lam(c);
   for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 4), m); b.position.set((i % 2) * 0.06 - 0.03, Math.floor(i / 2) * 0.06, 0); g.add(b); }
