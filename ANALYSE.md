@@ -168,14 +168,18 @@ Een gerichte opdracht tussen fase 3 en 4: alleen de bediening op de telefoon en 
   maximaal drie kleinere `#alt0`–`#alt2` (54 px). `updateAction()` in `main.js` toont alleen wat `actionOptions()`
   nu teruggeeft; een knop komt zacht op en verdwijnt weer. Kan er meer dan in de boog past, dan opent de laatste
   knop de rest. De knoppen `Buk`, `Spring` en `Meer` bestaan niet meer.
-- **Je lijf** (`engine/controls.js`): tik rechts in beeld = springen (`bodyTap()` in `main.js`: niet op of vlak
-  naast een knop, hand of menu, en niet als de tik iets in de wereld raakt). Snel omlaag vegen links = bukken,
+- **Je lijf** (`engine/controls.js`): tik rechts in beeld = springen (`fingerTap()` en `bodyTap()` in `main.js`).
+  Voorbij 60% van het beeld is dat altijd zo, ook als daar iets ligt; alleen een knop, een hand of open keuzes
+  gaan voor. In het midden (45–60%) spring je tenzij je precies op een ding tikt. Dingen aantikken doe je links. Snel omlaag vegen links = bukken,
   omhoog = opstaan (`FLICK_MS`, `FLICK_PX`); tijdens zo'n veeg zet de stuurduim geen stap. Langzaam duwen blijft lopen.
 - **Keuzes bij een hand of ding** (`placeRadial`): ronde knoppen in een boog boven de plek, binnen het beeld.
 - **Eten**: de tekstmeldingen zijn weg. `taste()` in `main.js` laat `sound.voice('hm' | 'ugh')` horen, met een
   pauze (20 s na "hm", 8 s na "ugh") zodat het niet bij elke hap klinkt. De stem wordt gemaakt met een
   stembandtoon en drie mondklanken (formanten); er zijn geen geluidsbestanden bij gekomen.
 - **Test** `/root/tools/pw/v4touch.js`: echte aanrakingen in de testmodus, op vijf liggende schermformaten.
+
+- **Geven aan de groep** gaat alleen nog vanzelf binnen vijf meter van de slaapboom (`GIVE_R`; was negen).
+  De dichtste bessenstruik staat op tien meter: daar nam Ibo de bes al uit je hand.
 
 Wat nog niet goed is:
 

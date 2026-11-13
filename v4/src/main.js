@@ -426,7 +426,7 @@ function groupTakes(dt) {
   layT -= dt; if (layT > 0) return;
   layT = 1.5;
   if (state.sleeping > 0 || state.lost) return;
-  const t = things.find((x) => x.kind === 'pick' && !x.gone && ['meat', 'honey', 'hide', 'bone', 'egg', 'berry', 'fish', 'tuber'].includes(x.item) && Math.hypot(x.x - HOME.x, x.z - HOME.z) < 12);
+  const t = things.find((x) => x.kind === 'pick' && !x.gone && ['meat', 'honey', 'hide', 'bone', 'egg', 'berry', 'fish', 'tuber'].includes(x.item) && Math.hypot(x.x - HOME.x, x.z - HOME.z) < 6);
   if (t && share(t.item)) removeThing(t);
 }
 // bij de groep gaan slapen: de nacht gaat voorbij
@@ -769,18 +769,18 @@ function targetPos(t) {
 }
 const lastTap = { t: null, at: 0 };
 // geeft terug of de tik ergens over ging (een ding, een dier, of een open keuze die dichtgaat)
-function tapAt(sx, sy) {
+function tapAt(sx, sy, reach = 56) {
   const wasOpen = !!radial;
   const cands = [...things.filter(available), ...LOOK_TARGETS, ...herd.members.map((m) => ({ look: 'gazelle', member: m })),
     ...hyenas.list.map((h) => ({ look: 'hyena', member: h })), { look: 'leopard', member: leopard },
     ...zebras.alive.map((m) => ({ look: 'zebra', member: m })), ...sabres.list.map((m) => ({ look: 'sabre', member: m })), ...group.list.map((m) => ({ look: m.id, member: m })), ...enc.lookTargets(), ...giant.lookTargets(player.pos), ...(shore ? shore.lookTargets() : []), ...(fire ? fire.lookTargets() : [])];
-  let best = null, bd = 56;
+  let best = null, bd = reach;
   for (const c of cands) {
     const p = targetPos(c);
     if (Math.hypot(p.x - player.pos.x, p.z - player.pos.z) > (c.look ? 90 : 35)) continue;
     v3.set(p.x, p.y, p.z).project(camera); if (v3.z > 1) continue;
     const d = Math.hypot((v3.x + 1) / 2 * innerWidth - sx, (1 - v3.y) / 2 * innerHeight - sy);
-    if (d < bd || (d < 150 && !best && ['kill', 'prey', 'giantdead', 'carcass', 'herdkill'].includes(c.look) && Math.hypot(p.x - player.pos.x, p.z - player.pos.z) < 5)) { bd = Math.min(bd, d); best = c; }
+    if (d < bd || (reach > 50 && d < 150 && !best && ['kill', 'prey', 'giantdead', 'carcass', 'herdkill'].includes(c.look) && Math.hypot(p.x - player.pos.x, p.z - player.pos.z) < 5)) { bd = Math.min(bd, d); best = c; }
   }
   // dubbeltik op een platte steen: meteen omdraaien
   const now = performance.now();
@@ -793,21 +793,28 @@ function tapAt(sx, sy) {
   if (best) { openRadial(best); sound.pick(); } else closeRadial();
   return !!best || wasOpen;
 }
-// Een tik met je vinger op de rechterhelft, op niets in het bijzonder: je springt. Niet vlak bij een knop of een hand
-// (een duim die er net naast komt bedoelt de knop), niet tijdens het mikken en niet met de muis (daar is de spatiebalk voor).
+// Een tik met je vinger is op elke plek steeds hetzelfde. Rechts (voorbij 60% van het beeld) is je lijf: je springt, altijd,
+// ook als daar iets ligt. In het midden spring je ook, tenzij je precies op een ding tikt. Links tik je dingen aan.
+// Niet op een knop of hand (een duim die er net naast komt bedoelt de knop), niet tijdens het mikken, niet met de muis.
+const JUMP_ZONE = 0.6, MID_ZONE = 0.45;
 function bodyTap(x, y) {
-  if (!state.started || aim || menu.open || x < innerWidth * 0.5) return false;
-  for (const el of document.querySelectorAll('#pad .rb, #pad .hand, #swap, #menuBtn')) {
+  if (!state.started || aim || menu.open || x < innerWidth * MID_ZONE) return false;
+  for (const el of document.querySelectorAll('#pad .rb.show, #pad .hand, #bagBtn, #swap, #menuBtn')) {
     const r = el.getBoundingClientRect();
-    if (r.width && x > r.left - 18 && x < r.right + 18 && y > r.top - 18 && y < r.bottom + 18) return false;
+    if (r.width && x > r.left - 14 && x < r.right + 14 && y > r.top - 14 && y < r.bottom + 14) return false;
   }
   return true;
+}
+function fingerTap(x, y) {
+  if (!bodyTap(x, y)) { if (x < innerWidth * MID_ZONE) tapAt(x, y); return; }   // vlak naast een knop: niets, ook geen keuzes
+  if (radial) { closeRadial(); return; }   // open keuzes: de tik sluit ze
+  if (x >= innerWidth * JUMP_ZONE || !tapAt(x, y, 34)) jump();
 }
 
 const clock = { elapsedTime: 0, last: performance.now(), getDelta() { const n = performance.now(), d = (n - this.last) / 1000; this.last = n; return d; } };
 // ---------- besturing ----------
 // Toetsen, stuurduim, kijkvinger en camera zitten in engine/controls.js; hier staat alleen wat een toets in het spel betekent.
-const C = initControls({ canvas: renderer.domElement, camera, clock, player, tap: (x, y, by) => { if (!tapAt(x, y) && by && by.touch && bodyTap(x, y)) jump(); },
+const C = initControls({ canvas: renderer.domElement, camera, clock, player, tap: (x, y, by) => { if (by && by.touch) fingerTap(x, y); else tapAt(x, y); },
   // kort omlaag vegen met je stuurduim: bukken; omhoog: weer opstaan
   swipe: (d) => { if (state.started && !menu.open) setSneak(d === 'down'); }, wheel: (dy) => { if (!aim) return false; aim.dist = clampRange(aim.dist - dy * 0.012); aim.moved = 99; return true; } });
 const { keys, cam } = C;
@@ -1012,6 +1019,8 @@ let options = [];
 function actionContext() { return actionOptions()[0] || null; }
 // ---------- bij de groep gaat het vanzelf ----------
 // Kom je met eten de kring in, dan nemen ze het van je over. Stenen en afslagen houd je zelf.
+// Alleen echt in de kring (de dichtste bessenstruik staat op tien meter van de boom: daar pluk je voor jezelf).
+const GIVE_R = 5;
 let giveT = 0, stillT = 0, senseK = 0, lastLook = [0, 0];
 function handOver() {
   return GIVE.find((x) => state.hands.includes(x) && !(x === 'meat' && fire && fire.lit) && !(x === 'leaf' && !group.sick) && !(x === 'redberry' && state.known.has('redberry')));
@@ -1020,7 +1029,7 @@ function atHome(dt) {
   if (!state.started || state.sleeping > 0 || state.collapsed > 0) return;
   const dHome = Math.hypot(player.pos.x - HOME.x, player.pos.z - HOME.z);
   giveT -= dt;
-  if (dHome < 9 && giveT <= 0 && !player.once && !state.lost) {
+  if (dHome < GIVE_R && giveT <= 0 && !player.once && !state.lost) {
     const it = handOver();
     if (it) { giveT = 3.5; act('Interact', () => give(it)); return; }
   }

@@ -66,7 +66,7 @@ export function initControls({ canvas, camera, clock, player, tap, wheel, swipe 
   const endPointer = (e) => {
     // kort tikken zonder te schuiven = iets aantikken
     // de tijd van de aanraking zelf (niet het moment van verwerken): zo telt een tik ook als het beeld even hapert
-    const isTap = (o) => o.moved < 10 && e.timeStamp - o.t0 < 350;
+    const isTap = (o) => o.moved < 16 && e.timeStamp - o.t0 < 400;   // een duim rolt altijd een paar pixels
     if (e.pointerId === joy.id) {
       const quick = e.timeStamp - joy.t0 < FLICK_MS + 60;
       if (isTap(joy) && e.type === 'pointerup') tap(e.clientX, e.clientY, { touch: true, look: false });
