@@ -12,15 +12,15 @@ export const erectus = {
   id: 'erectus', ma: [1.9, 0.11], region: 'Oost-Afrika', species: 'Homo erectus', tradition: 'Acheuléen',
   when: 'vanaf ca. 1,9 miljoen jaar geleden; vuistbijlen vanaf ca. 1,76 miljoen', where: 'Oost-Afrika, later Eurazië',
   playable: true,
-  body: { height: 1.6, speed: 1.15 },      // langer en met langere benen: een loper (habilis: 1,35 m)
+  body: { height: 1.6, speed: 1.15, shape: 'erectus' },      // langer en met langere benen: een loper (habilis: 1,35 m)
   tech: ['axe', 'fire'],                   // wat in dit tijdperk te ontdekken valt
   // De groep. De eerste drie hebben een vaste rol in het spel: tor = de oudste, kem = de helper die meeloopt, ibo = het kind.
   group: [
     { id: 'tor', name: 'Oru', k: 0.99, spot: [2.8, -1.6], grey: true },
     { id: 'kem', name: 'Dak', k: 0.95, spot: [-2.4, 2.2], tint: 0xe8d2c0 },
     { id: 'ibo', name: 'Mio', k: 0.6, spot: [1.0, -3.0], child: true, tint: 0xfff0e0 },
-    { id: 'sen', name: 'Sen', k: 0.9, spot: [-3.0, -1.4], tint: 0xf0dcc8, look: 'Sen kent elke struik en elke knol in de wijde omtrek. Ze kijkt lang in de vlammen.', hint: 'Zij is degene die vlees boven het vuur houdt.' },
-    { id: 'bala', name: 'Bala', k: 0.86, spot: [3.4, 2.0], tint: 0xdcc4b0, look: 'Bala is de sterkste loper van de groep. Ze ziet een gier eerder dan wie ook.', hint: 'Met meer mensen zie je meer, draag je meer en schrik je meer af.' },
+    { id: 'sen', name: 'Sen', k: 0.9, woman: true, spot: [-3.0, -1.4], tint: 0xf0dcc8, look: 'Sen kent elke struik en elke knol in de wijde omtrek. Ze kijkt lang in de vlammen.', hint: 'Zij is degene die vlees boven het vuur houdt.' },
+    { id: 'bala', name: 'Bala', k: 0.86, woman: true, spot: [3.4, 2.0], tint: 0xdcc4b0, look: 'Bala is de sterkste loper van de groep. Ze ziet een gier eerder dan wie ook.', hint: 'Met meer mensen zie je meer, draag je meer en schrik je meer af.' },
   ],
   // Teksten uit de motor die nog de oude groep noemen, krijgen hier hun nieuwe naam.
   words: [['Kleine Ibo', 'Kleine Mio'], ['Tor', 'Oru'], ['Kem', 'Dak'], ['Ibo', 'Mio'], ['de slaapboom', 'het kamp'], ['De slaapboom', 'Het kamp']],
@@ -35,6 +35,6 @@ export const erectus = {
     onzeker: ['vlees braden in deze tijd (de kookhypothese)', 'gloeiend hout dagenlang meedragen naar een nieuw kamp', 'vuur dat roofdieren op afstand houdt'],
     artistiek: ['een vaste stookplaats met een kring van stenen', 'namen en vaste rollen in de groep', 'huidskleur, beharing, gezicht en stem', 'de kleuren en strepen van uitgestorven dieren'],
   },
-  beeld: { past: 'vervanger', note: 'Het lichaam is nu een model van een neanderthaler. Homo erectus was slanker, met lange benen, een lage lange schedel en zware wenkbrauwbogen, maar zonder het brede lijf van de neanderthaler. Een eigen model volgt.' },
+  beeld: { past: 'aangepast', note: 'Er bestaat geen vrij model van Homo erectus. Het lichaam is een model van een neanderthaler dat is omgevormd: langere benen, een smaller lijf, slankere armen en benen en een lage, lange schedel met een zware wenkbrauwboog. Huid, haar en gezichtstrekken blijven een invulling.' },
   areas: [berg, hoog],
 };

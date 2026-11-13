@@ -1,7 +1,8 @@
 import * as THREE from '../lib/three.module.js';
-import { height, blockers, WALK, riverDist, awayZ, tallGrassAt, rng, WIND, mergeStatic } from './world.js';
+import { height, blockers, WALK, riverDist, awayZ, tallGrassAt, rng, mergeStatic } from './world.js';
 import { rimify } from './hominin.js';
 import { Rig } from './rig.js';
+import { turn, step, sense, SENSES } from './animal.js';
 
 // losse onderdelen die samen bewegen, samenvoegen tot één stuk
 const merged = (...parts) => { const g = new THREE.Group(); parts.forEach((p) => g.add(p)); return mergeStatic(g); };
@@ -35,7 +36,7 @@ export function legParts(color, upLen, loLen, thick) {
 export class Herd {
   // persist: deze kudde kun je moe lopen. Een antilope raakt haar warmte alleen kwijt door stil te staan en te hijgen;
   // wie haar in de middaghitte steeds weer opjaagt, krijgt haar op den duur tot stilstand.
-  constructor(scene, cx, cz, n, A, { persist = false } = {}) {
+  constructor(scene, cx, cz, n, A, { persist = false, species = 'gazelle' } = {}) {
     const R = rng(21);
     this.members = [];
     this.persist = persist; this.heat = 0;   // 0..1: hoe verhit de kudde is
@@ -46,11 +47,14 @@ export class Herd {
     this.fleeing = 0;         // seconden dat de kudde nog vlucht
     this.home = new THREE.Vector2(cx, cz);
     for (let i = 0; i < n; i++) {
-      // echt model (kenchoo, CC BY 4.0); het kan alleen stilstaan, de poten laten we zelf bewegen
-      const rig = new Rig(A, 'gazelle', { scale: 0.21 * (0.92 + R() * 0.15) });
+      // echt model (kenchoo, CC BY 4.0); het kan alleen stilstaan, de poten laten we zelf bewegen.
+      // Een impala is groter dan een gazelle; alleen de ram draagt hoorns (liervormig). Het laatste dier is een jong.
+      const impala = species === 'impala', young = i === n - 1, ram = i % 3 === 0 && !young;
+      const shape = young ? 'hornless' : impala ? (ram ? 'impala' : 'hornless') : null;
+      const rig = new Rig(A, 'gazelle', { scale: (impala ? 0.27 : 0.21) * (young ? 0.62 : ram ? 1.04 : 0.92 + R() * 0.12), shape });
       const b = (n) => rig.bone(n);
       const m = {
-        g: rig.root, rig, side: new THREE.Vector3(), grz: 0,
+        g: rig.root, rig, side: new THREE.Vector3(), grz: 0, young, ram,
         neckB: b('Neck_'), neck2B: b('Neck.001'),
         legs: [['FrontLeg.L', 'FrontLowLeg.L', 0], ['FrontLeg.R', 'FrontLowLeg.R', 0], ['BackLeg.L', 'BackLowLeg.L', 1], ['BackLeg.R', 'BackLowLeg.R', 1]]
           .map(([t, l, hind]) => ({ top: b(t), low: b(l), hind })),
@@ -70,14 +74,11 @@ export class Herd {
     const p = player.pos, notice = player.noticeable;
     let maxAware = 0;
     for (const m of this.members) {
-      const dx = p.x - m.x, dz = p.z - m.z, dist = Math.hypot(dx, dz);
-      // zien en horen: dichtbij valt veel meer op
-      const range = player.hiddenFrom(m.x, m.z) ? 0 : 34 * notice;
-      // ruiken: waait de wind van jou naar het dier, dan ruikt het je van ver
-      const smell = dist < 48 && ((m.x - p.x) * WIND.x + (m.z - p.z) * WIND.z) / dist > 0.6;
+      // zien: dichtbij valt veel meer op. Ruiken: waait de wind van jou naar het dier, dan ruikt het je van ver (zie animal.js)
+      const { d: dist, sight: range, smelled: smell } = sense('herd', m, player);
       if (this.fleeing <= 0) {
         if (dist < range) m.aware += dt * (1 - dist / range) * 1.4 * (0.4 + notice);
-        if (smell) { m.aware += dt * (1 - dist / 48) * 0.9; m.smelled = true; }
+        if (smell) { m.aware += dt * (1 - dist / SENSES.herd.smell) * 0.9; m.smelled = true; }
         if (dist >= range && !smell) m.aware -= dt * 0.12;
         if (dist < 4 && range > 0) m.aware = 2;
         m.aware = Math.max(0, m.aware);
@@ -89,7 +90,7 @@ export class Herd {
       this.fleeing = 7 - 3 * this.heat;
       // hebben ze je geroken, of gezien?
       const first = this.members.reduce((a, b) => (b.aware > a.aware ? b : a));
-      const seen = Math.hypot(p.x - first.x, p.z - first.z) < 34 * notice;
+      const seen = Math.hypot(p.x - first.x, p.z - first.z) < SENSES.herd.see * notice;
       ui.flee(!seen && first.smelled);
     }
     this.alarm = Math.min(1, maxAware);
@@ -142,9 +143,7 @@ export class Herd {
         const ox = m.x - o.x, oz = m.z - o.z, od = Math.hypot(ox, oz);
         if (od < 1.6 && od > 0.01) { m.x += ox / od * (1.6 - od) * 0.5; m.z += oz / od * (1.6 - od) * 0.5; }
       }
-      m.speed += (spd - m.speed) * (1 - Math.exp(-dt * 5));
-      if (spd > 0) m.yaw = turn(m.yaw, Math.atan2(tx, tz), dt * (this.fleeing > 0 ? 6 : 2));
-      m.x += Math.sin(m.yaw) * m.speed * dt; m.z += Math.cos(m.yaw) * m.speed * dt;
+      step(m, tx, tz, spd, dt, 5, this.fleeing > 0 ? 6 : 2);
       const lim = WALK - 10; m.x = THREE.MathUtils.clamp(m.x, -lim, lim); m.z = THREE.MathUtils.clamp(m.z, -lim, lim);
       // niet de rivier in
       if (riverDist(m.x, m.z) < 7) { m.z += awayZ(m.x, m.z) * dt * 4; }
@@ -212,7 +211,6 @@ export class Herd {
   }
 }
 
-export function turn(a, b, k) { let d = b - a; d = Math.atan2(Math.sin(d), Math.cos(d)); return a + d * Math.min(1, k); }
 
 // ---------- gieren die boven een karkas cirkelen ----------
 export class Vultures {

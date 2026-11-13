@@ -118,3 +118,41 @@ Ontwikkelen gebeurt op de branch `ontwikkel`; alleen geteste fasen gaan naar `ma
 Nog niet gedaan in fase 2: handen, tas en eten staan nog in `main.js` (1320 regels). Dat verhuist in fase 5,
 samen met de nieuwe draagmiddelen, zodat het maar één keer verbouwd wordt. Hoe de knoppen onder echte duimen
 aanvoelen is alleen op een echte telefoon te beoordelen.
+
+## 8. Wat in fase 3 is gebouwd (mens en dieren)
+
+Er bestaan geen vrije, geanimeerde modellen van *Homo habilis*, *Homo erectus*, *Palaeoloxodon recki* of een pofadder.
+Daarom is er een eigen gereedschap gebouwd dat een bestaand model **omvormt** naar een andere soort, met behoud van
+botten en bewegingen:
+
+- **`v4/src/shape.js`** vormt een model om bij het laden: botten langer, korter, dikker of dunner maken (met de
+  bewegingen erbij omgerekend), de huid plaatselijk verschuiven (schedel, wenkbrauwboog, kaak), langs een lijn
+  uittrekken en buigen (slagtanden, hoorns) of juist wegknijpen (hoornloos), en een andere huid opleggen.
+- **`v4/src/shapes.js`** bevat de recepten, met de maten uit de literatuur als uitgangspunt.
+
+| Soort | Was | Is nu |
+|---|---|---|
+| *Homo habilis* (speler, groep, vreemden) | neanderthaler, verkleind | omgevormd: kortere benen, langere armen, kleine hersenpan, gezicht naar voren; eigen vorm voor man, vrouw en kind |
+| *Homo erectus* | dezelfde neanderthaler | omgevormd: lange benen, smal lijf, lage lange schedel, zware wenkbrauwboog; man, vrouw en kind |
+| Reuzenolifant *P. recki* | Afrikaanse olifant × 2 | omgevormd: hoge korte schedel met wal, kleinere oren, langere poten, lange rechte slagtanden; ruim 4 m |
+| Impala | gazelle | omgevormd: groter, rammen met liervormige hoorns, ooien zonder hoorns, een jong in elke kudde |
+| Pofadder | cobra die zich opricht | omgevormd: kort en dik, brede kop, eigen huid met V-banden. Nieuw gedrag: blijft liggen, blaast zich op, haalt uit |
+| Krokodil | bollen en kegels | echt model (CC BY), staart zwaait; verwant aan *Crocodylus anthropophagus* |
+| Meerval | een bol met een kegel | echt model met botten dat zwemt (CC0); een verwante meerval, geen *Clarias* |
+
+In `species.js` is een trede bijgekomen: **aangepast** (een verwant model dat wij zelf hebben omgevormd). Er staat
+bij elk dier eerlijk wat nog niet klopt (bijvoorbeeld: de impala draagt nog de vacht van de gazelle). Geen enkel dier
+heeft nog het label "vervanger".
+
+**Gedeelde basis voor diergedrag: `v4/src/animal.js`.** Hoe een dier je opmerkt (zien, sluipen, dekking, ruiken met
+de wind) staat nu op één plek, met per soort een regel met getallen (`SENSES`). Ook de stap "op snelheid komen,
+draaien, vooruit" is één functie (`step`) in plaats van acht kopieën. Kudde, zebra's, hyena's, sabeltandkatten,
+luipaard, reus, gewonde gazelle en vreemden gebruiken dit. Het gedrag zelf (grazen, loeren, jagen) blijft per soort.
+
+Nog **niet** gedaan in fase 3, en dus niet beloofd:
+
+- Voeten die het terrein volgen. Het terrein is nu zo glooiend dat het weinig opvalt; het hoort bij het reliëf van fase 4.
+- Hyena's, zebra's, sabeltandkatten en het luipaard ruiken je niet (alleen de kudde doet dat). De regel bestaat (`smell`), maar
+  aanzetten verandert de moeilijkheid en hoort bij de gameplay van fase 5.
+- Het krokodilmodel heeft geen botten: de bek staat altijd open en de poten bewegen niet.
+- Jong en volwassen bestaat bij de mensen en de impala's, nog niet bij de andere dieren.

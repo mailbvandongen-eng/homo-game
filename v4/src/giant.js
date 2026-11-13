@@ -1,7 +1,8 @@
 import * as THREE from '../lib/three.module.js';
 import { height, WALK, riverZ, blockers } from './world.js';
-import { Vultures, turn } from './actors.js';
+import { Vultures } from './actors.js';
 import { Rig } from './rig.js';
+import { turn, sense } from './animal.js';
 import { HOME } from './group.js';
 
 // De reus: een oude stier van de reuzenolifant Palaeoloxodon recki, ruim vier meter hoog.
@@ -10,7 +11,7 @@ import { HOME } from './group.js';
 // Kom je te dichtbij, dan waarschuwt hij en valt hij aan. Aan het eind van de droogte bezwijkt hij bij de rivier,
 // en dan ligt er meer vlees dan de groep ooit zag. Met de regen komt er een nieuwe stier.
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
-const SCALE = 2.23, WALK_V = 1.3, CHARGE_V = 7;
+const TALL = 4.3, WALK_V = 1.3, CHARGE_V = 7;
 // zijn ronde: [x, z, wat hij er doet]
 // zijn ronde en de plek waar hij valt komen uit het gebiedsbestand
 const atZ = (x, z) => (typeof z === 'number' ? z : riverZ(x) + z.river);
@@ -22,7 +23,7 @@ export class Giant {
   constructor(scene, A, plan) {
     ROUTE = plan.route.map(([x, z, what]) => [x, atZ(x, z), what]); GRAVE = { x: plan.grave[0], z: atZ(...plan.grave) };
     this.scene = scene; this.kind = 'giant';
-    this.rig = new Rig(A, 'elephant', { scale: SCALE }); this.g = this.rig.root; scene.add(this.g);
+    this.rig = new Rig(A, 'elephant', { shape: 'recki', tall: TALL }); this.g = this.rig.root; scene.add(this.g);
     // afdrukken: donkere kuilen in het stof, die oplichten als je je zintuigen gebruikt
     const geo = new THREE.CircleGeometry(0.4, 12); geo.rotateX(-Math.PI / 2);
     this.printMat = new THREE.MeshBasicMaterial({ color: 0x1c1712, transparent: true, opacity: 0.42, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
@@ -121,7 +122,7 @@ export class Giant {
     }
     if (this.dead) return this.updateDead(dt, game, t, d);
     const awake = game.state.collapsed <= 0 && game.state.sleeping <= 0;
-    const sneak = game.player.sneaking, hid = game.player.hiddenFrom(this.x, this.z), near = hid ? 4 : sneak ? 8 : 20, close = hid ? 3 : sneak ? 4.5 : 11;
+    const S = sense('giant', this, game.player), near = S.sight, isClose = S.close;
     this.calm = Math.max(0, this.calm - dt);
     if (d < 48 && !this.seen) { this.seen = true; game.murmur('Daar staat hij. Een stier zo hoog als een boom, met slagtanden langer dan jij. De grond trilt als hij loopt.', 7); game.sound.rumble(1); }
     // bij de reus durven de hyena's niet te komen
@@ -145,7 +146,7 @@ export class Giant {
       case 'watch':
         this.t += dt; this.walk(0, dt); this.yaw = turn(this.yaw, Math.atan2(p.x - this.x, p.z - this.z), dt * 0.9);
         if (!awake || d > near + 7) { this.state = 'roam'; this.t = 0; }
-        else if (d < close || this.t > 6) this.anger(game);
+        else if (isClose || this.t > 6) this.anger(game);
         break;
       case 'warn':
         this.t -= dt; this.walk(0, dt); this.yaw = turn(this.yaw, Math.atan2(p.x - this.x, p.z - this.z), dt * 1.2);

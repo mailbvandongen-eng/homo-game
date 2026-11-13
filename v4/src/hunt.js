@@ -1,6 +1,6 @@
 import * as THREE from '../lib/three.module.js';
 import { height, WALK, riverDist, rng } from './world.js';
-import { turn } from './actors.js';
+import { step, sense } from './animal.js';
 import { Rig } from './rig.js';
 
 const R = rng(91);
@@ -36,8 +36,7 @@ export class Zebras {
       if (z.state === 'dead') { z.rig.update(0); continue; }
       z.t -= dt;
       let tx = 0, tz = 0, spd = 0;
-      const d = Math.hypot(p.x - z.x, p.z - z.z);
-      if (z.state !== 'flee' && d < (game.player.sneaking ? 7 : 14) && !game.player.hiddenFrom(z.x, z.z)) { this.scare(p, 5); game.sound.flee(); }
+      if (z.state !== 'flee' && sense('zebra', z, game.player).seen) { this.scare(p, 5); game.sound.flee(); }
       if (z.state === 'flee') {
         const f = z.from, fd = Math.hypot(z.x - f.x, z.z - f.z) || 1;
         tx = (z.x - f.x) / fd; tz = (z.z - f.z) / fd; spd = 12.5 * z.slow;
@@ -51,9 +50,7 @@ export class Zebras {
         // naar een nieuw plekje bij de groep
         z.state = 'walk'; z.t = 8; z.goal = { x: this.center.x + (R() - 0.5) * 22, z: this.center.z + (R() - 0.5) * 22 };
       }
-      z.speed += (spd - z.speed) * (1 - Math.exp(-dt * 4));
-      if (spd > 0) z.yaw = turn(z.yaw, Math.atan2(tx, tz), dt * (spd > 5 ? 5 : 2.5));
-      z.x += Math.sin(z.yaw) * z.speed * dt; z.z += Math.cos(z.yaw) * z.speed * dt; clampWalk(z);
+      step(z, tx, tz, spd, dt, 4, spd > 5 ? 5 : 2.5); clampWalk(z);
       z.g.position.set(z.x, height(z.x, z.z), z.z); z.g.rotation.set(0, z.yaw, 0);
       if (z.speed > 5) z.rig.play('Gallop', { fade: 0.2, speed: z.speed / 12 });
       else if (z.speed > 0.3) z.rig.play('Trot', { fade: 0.3, speed: Math.max(0.35, z.speed / 4) });
@@ -220,10 +217,7 @@ export class Sabres {
           break;
         }
       }
-      c.speed += (spd - c.speed) * (1 - Math.exp(-dt * 5));
-      if (spd > 0) c.yaw = turn(c.yaw, Math.atan2(tx, tz), dt * (spd > 6 ? 7 : 3));
-      else if (face) c.yaw = turn(c.yaw, Math.atan2(face.x - c.x, face.z - c.z), dt * 4);
-      c.x += Math.sin(c.yaw) * c.speed * dt; c.z += Math.cos(c.yaw) * c.speed * dt; clampWalk(c);
+      step(c, tx, tz, spd, dt, 5, spd > 6 ? 7 : 3, face); clampWalk(c);
       c.g.position.set(c.x, height(c.x, c.z), c.z); c.g.rotation.y = c.yaw;
       if (anim === 'Layout') c.rig.play('Layout', { fade: 0.5, once: true });
       else if (anim === 'Run' || anim === 'Trot' || anim === 'Stalker') c.rig.play(anim, { fade: 0.25, speed: aspeed * Math.max(0.5, c.speed / Math.max(spd, 0.1)) });

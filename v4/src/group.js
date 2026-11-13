@@ -1,7 +1,7 @@
 import { ERA, AREA } from './eras/index.js';
 import * as THREE from '../lib/three.module.js';
 import { height } from './world.js';
-import { turn } from './actors.js';
+import { turn } from './animal.js';
 import { Rig } from './rig.js';
 import { BODY } from './hominin.js';
 
@@ -18,13 +18,15 @@ export class Group {
   constructor(scene, A) {
     this.list = []; this.away = false; this.t = 0;
     for (const w of WHO) {
-      // hetzelfde model als de hoofdpersoon, maar kleiner of grijzer
-      const rig = new Rig(A, 'hominin', { scale: BODY.height / 162 * w.k });
+      // hetzelfde model als de hoofdpersoon, met een eigen lijf: een kind heeft een groot hoofd en korte benen,
+      // een vrouw smallere schouders en geen baard
+      const shape = BODY.shape && BODY.shape + (w.child ? '_child' : w.woman ? '_woman' : '');
+      const rig = new Rig(A, 'hominin', { scale: BODY.height / 162 * w.k, shape, tall: BODY.height * w.k });
       rig.model.traverse((o) => {
         if (!o.isMesh) return;
         const hair = /beard|hair|transparency/i.test(o.material.name);
         o.material = o.material.clone();
-        if (hair && w.child) o.visible = false;
+        if (hair && (w.child || (w.woman && /beard/i.test(o.material.name)))) o.visible = false;
         else if (hair && w.grey) o.material.color.setRGB(2.4, 2.4, 2.5);
         else if (!hair && w.tint) o.material.color.multiply(new THREE.Color(w.tint));
         else if (!hair && w.grey) o.material.color.multiplyScalar(0.86);

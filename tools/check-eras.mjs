@@ -8,7 +8,7 @@ const fail = (m) => { bad++; console.log('FOUT  ' + m); };
 const TREDEN = ['vast', 'aannemelijk', 'onzeker', 'artistiek'];
 for (const [id, s] of Object.entries(SPECIES)) {
   if (!['vast', 'aannemelijk'].includes(s.zeker)) fail(`soort ${id}: 'zeker' ontbreekt of is onbekend`);
-  if (!['reconstructie', 'verwant', 'vervanger'].includes(s.beeld) || !s.beeldNote) fail(`soort ${id}: 'beeld' en 'beeldNote' moeten zeggen hoe goed het model past`);
+  if (!['reconstructie', 'verwant', 'aangepast', 'vervanger'].includes(s.beeld) || !s.beeldNote) fail(`soort ${id}: 'beeld' en 'beeldNote' moeten zeggen hoe goed het model past`);
   else if (s.beeld === 'vervanger') console.log(`let op  ${s.name} (${s.latin}): vervangend model. ${s.beeldNote}`);
 }
 for (const era of ERAS) {

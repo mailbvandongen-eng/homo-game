@@ -10,6 +10,7 @@ export const MODELS = [...ANIMALS, 'acacia', 'namaqualand_boulder_02', 'namaqual
 export const TEXTURES = [
   ['dry_ground_01_diff', true], ['dry_ground_01_nor', false], ['withered_grass_diff', true], ['withered_grass_nor', false],
   ['sparse_grass_diff', true], ['dry_ground_rocks_diff', true], ['grass_atlas', true],
+  ['puffadder', true, 'skin'],   // een andere huid voor een model (zie shapes.js); ligt zoals in het model, zonder herhaling
 ];
 
 // online krijgt elk bestand de versie van de map assets mee, zodat een vervangen model ook echt opnieuw wordt opgehaald
@@ -25,8 +26,9 @@ export async function loadAssets(renderer, onProgress = () => {}, extra = []) {
 
   // Een bestand dat ontbreekt mag het laden niet stil laten hangen: de fout krijgt de naam van het bestand mee.
   const named = (p, file) => p.catch(() => { throw new Error('Kan ' + file + ' niet laden'); });
-  const tex = Promise.all(TEXTURES.map(([n, srgb]) => named(tl.loadAsync(`./assets/tex/${n}.webp${Q}`), `assets/tex/${n}.webp`).then((t) => {
-    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = Math.min(8, maxAniso);
+  const tex = Promise.all(TEXTURES.map(([n, srgb, skin]) => named(tl.loadAsync(`./assets/tex/${n}.webp${Q}`), `assets/tex/${n}.webp`).then((t) => {
+    if (skin) t.flipY = false; else t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = Math.min(8, maxAniso);
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
     return tick([n, t]);
   })));

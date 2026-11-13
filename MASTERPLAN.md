@@ -24,6 +24,8 @@ Stand: november 2026. Het spel staat in `v4/` en draait op GitHub Pages.
 | `giant.js` | 257 | De reuzenolifant en zijn dagelijkse ronde |
 | `shore.js` | 169 | De oever: krokodillen, meervallen in de poelen, knollen onder de korst |
 | `life.js`, `actors.js` | 438 | Kuddes, vogels, gieren, klein leven |
+| `animal.js` | 40 | **Nieuw:** de gedeelde basis voor alle dieren: opmerken (zien, sluipen, dekking, wind) en de loopstap |
+| `shape.js`, `shapes.js` | 290 | **Nieuw:** een model omvormen naar een andere soort (botten, huid, hoorns, slagtanden) en de recepten per soort |
 | `items.js` | 289 | Alle teksten en gegevens van voorwerpen, dieren, vondsten |
 | `audio.js` | 188 | Geluid, volledig gesynthetiseerd |
 | `assets.js`, `icons.js` | 120 | Laden van modellen, pictogrammen |
@@ -104,15 +106,15 @@ De inventaris waarmee dit begon staat in [`ANALYSE.md`](ANALYSE.md).
 |---|---|---|
 | 1 | **Analyse en fundament**: inventaris, back-up en branch, knelpunten, testmodus `?dev=1`, scenario's, automatische controles, kennisbasis met vier treden | **klaar** (prestatiedoel deels: zie ANALYSE §6) |
 | 2 | **Interface en bediening**: invoer en camera uit `main.js` (`engine/controls.js`); joystick en camera met instelbare gevoeligheid en zoom; één knoppensysteem met woordknoppen (Buk, Spring, actie, Meer, handen, Tas); contextmenu; menu met pauze; instellingenscherm met beeldkwaliteit | **klaar** (handen/tas/eten uit `main.js` halen schuift naar fase 5; zie ANALYSE §7) |
-| 3 | **Mens en dieren**: eigen model per mensensoort; bewegingen met overgangen en voeten op de grond; de vervangende diermodellen (reuzenolifant, pofadder, impala, krokodil, meerval) vervangen; gedeelde basis voor diergedrag; jong/volwassen | volgende |
-| 4 | **Wereld**: reliëf, kloven en klimbare rotsen; botsingen; licht en weer; ruimtelijk geluid en voetstappen per ondergrond; LOD | |
+| 3 | **Mens en dieren**: een gereedschap dat modellen omvormt (`shape.js`, `shapes.js`); eigen vorm voor *Homo habilis* en *Homo erectus* (man, vrouw, kind); reuzenolifant, impala (ram, ooi, jong) en pofadder omgevormd; krokodil en meerval als echt model; gedeelde basis voor diergedrag (`animal.js`) | **klaar** (voeten op het terrein schuift naar fase 4; zie ANALYSE §8) |
+| 4 | **Wereld**: reliëf, kloven en klimbare rotsen; voeten die het terrein volgen; botsingen; licht en weer; ruimtelijk geluid en voetstappen per ondergrond; LOD | |
 | 5 | **Gameplay**: handen, tas en eten als eigen systeem (`systems/`); missies verdiepen; draagmiddelen (net, mand, waterzak); overleven; kennisscherm in het spel | |
 | 6 | **Kwaliteitscontrole**: elk gebied en scenario door de controles zonder "let op"; telefoonproef; licenties en bronnen nagelopen | |
 
 Regels die voor elke fase gelden:
 - Het spel blijft na elke fase speelbaar; bestaande functies verdwijnen niet zonder vervanging.
 - Elke wijziging wordt in het draaiende spel bekeken, ook op telefoonformaat.
-- Een tijdelijke oplossing krijgt een label (in `species.js`: `beeld: 'vervanger'`) en staat in de controles tot ze vervangen is.
+- Een tijdelijke oplossing krijgt een label (in `species.js`: `beeld: 'vervanger'`) en staat in de controles tot ze vervangen is. Een omgevormd model heet `'aangepast'`, met erbij wat nog niet klopt.
 - Bronnen en licenties van alle modellen, beelden en geluiden staan in `v4/assets/CREDITS.md`.
 - Nieuwe gebieden, missies en dieren worden vanzelf zichtbaar in de testmodus; een scenario erbij is een blokje in `v4/test_scenarios.json`.
 

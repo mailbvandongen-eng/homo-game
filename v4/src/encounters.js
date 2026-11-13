@@ -1,13 +1,15 @@
 import * as THREE from '../lib/three.module.js';
 import { height, WALK, riverZ, riverDist, blockers } from './world.js';
-import { Herd, turn } from './actors.js';
+import { Herd } from './actors.js';
+import { turn, step, sense } from './animal.js';
 import { Rig } from './rig.js';
 import { HOME } from './group.js';
+import { BODY } from './hominin.js';
 import { AREA } from './eras/index.js';
 
 // Ontmoetingen onderweg: ver van de slaapboom ligt er steeds iets op je pad.
 // Elke ontmoeting is een kleine keuze: een kans op eten, met een prijs.
-const SNAKE = 0.016, UP = new THREE.Vector3(0, 1, 0);   // de cobra is in zijn bestand zo'n 100 eenheden lang: hier anderhalve meter
+const SNAKE = 0.012, UP = new THREE.Vector3(0, 1, 0);   // de pofadder is in zijn bestand zo'n 95 eenheden lang: hier ruim een meter
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const ORDER = ['gazelle', 'snake', 'nest', 'bees', 'strangers'];
@@ -135,7 +137,7 @@ export class Encounters {
       return;
     }
     if (!e.seen && d < 32) { e.seen = true; game.murmur('Daar loopt een gazelle helemaal alleen. Ze trekt met haar achterpoot…', 5); }
-    const scared = d < (game.player.sneaking ? 7 : 16) && !game.player.hiddenFrom(m.x, m.z);
+    const scared = sense('gazelle', m, game.player).seen;
     let spd = 0;
     if (scared) {
       // weg van jou; maar ze wordt snel moe
@@ -176,25 +178,24 @@ export class Encounters {
 
   // ---------- de slang ----------
   mk_snake(x, z) {
-    // een cobra met botten; hij kan plat liggen, zich oprichten en uithalen (zie assets/CREDITS.md)
-    const rig = new Rig(this.A, 'cobra', { scale: SNAKE, facing: -Math.PI / 2 }), g = rig.root;
-    rig.model.position.set(33 * SNAKE, 0, -10 * SNAKE);   // het midden van het lijf op de plek zelf
+    // een pofadder: het model van een cobra, omgevormd (kort, dik, eigen huid; zie shapes.js en assets/CREDITS.md).
+    // Hij richt zich niet op zoals een cobra: hij blijft liggen, blaast zich op en sist, en haalt dan razendsnel uit.
+    const rig = new Rig(this.A, 'cobra', { scale: SNAKE, facing: -Math.PI / 2, shape: 'puffadder' }), g = rig.root;
+    rig.model.position.set(30.6 * SNAKE, 0, -18.6 * SNAKE);   // het midden van het lijf op de plek zelf
     // de botten van staart naar kop: daarlangs loopt de golf als hij wegkronkelt
     rig.chain = [['Tail_07', 'Tail_06', 'Tail_05', 'Tail_04', 'Tail_03', 'Tail_02', 'Tail_01'], ['Spine_01', 'Spine_02', 'Spine_03', 'Neck_01', 'Neck_02']].map((c) => c.map((n) => rig.bone(n)));
     rig.play('lie');
     g.position.set(x, height(x, z), z); g.rotation.y = Math.random() * 6.28; this.scene.add(g);
-    return { x, z, g, rig, anim: 'lie', state: 'lie', hissT: 0, t: 0, wig: Math.random() * 6, halo: halo(this.scene, 0xff5a3a, 1.6) };
+    return { x, z, g, rig, anim: 'lie', state: 'lie', hissT: 0, t: 0, puff: 0, wig: Math.random() * 6, halo: halo(this.scene, 0xff5a3a, 1.6) };
   }
   up_snake(e, dt, game) {
     const p = game.player.pos, s = game.state, d = dist(e, p) || 0.01;
     const up = e.shown || e.state === 'flee';
     e.wig += dt * (e.state === 'flee' ? 14 : up ? 3 : 0.6);
-    const want = e.state === 'strike' ? 'strike' : e.state === 'lie' && e.shown ? 'alert' : 'lie';
-    if (want !== e.anim) {
-      e.anim = want; e.rig.play(want, { fade: want === 'strike' ? 0.12 : 0.5, once: want === 'strike' });
-      if (want === 'alert') e.rig.current.setLoop(THREE.LoopPingPong, Infinity);   // heen en weer wiegen, zonder sprongetje
-    }
     e.rig.update(dt);
+    // opblazen: wie hem gezien heeft, ziet zijn lijf langzaam dikker en dunner worden
+    const puff = e.state === 'lie' && e.shown ? 0.07 + 0.07 * Math.sin(e.wig * 0.9) : 0;
+    e.puff += (puff - e.puff) * Math.min(1, dt * 4); const pf = SNAKE * (1 + e.puff); e.rig.model.scale.set(pf, SNAKE * (1 + e.puff * 1.6), pf); e.rig.model.position.set(30.6 * pf, 0, -18.6 * pf);
     if (e.state === 'flee') e.rig.chain.forEach((c, k) => c.forEach((bn, i) => e.rig.bend(bn, UP, Math.sin(e.wig + (k ? i : -i) * 0.9) * 0.3)));
     e.halo.visible = (s.sensing && d < 26 || !!e.shown) && e.state === 'lie';
     e.halo.position.set(e.x, height(e.x, e.z) + 0.3, e.z); e.halo.material.opacity = e.shown && !s.sensing ? 0.35 : 0.9;
@@ -204,7 +205,12 @@ export class Encounters {
       if (e.t < 0) e.done = true;
       return;
     }
-    if (e.state === 'strike') { e.t -= dt; if (e.t < 0) this.flee(e, p); return; }
+    if (e.state === 'strike') {   // de uithaal: een halve meter naar voren en meteen terug
+      e.t -= dt; const k = Math.sin(Math.PI * Math.min(1, (1.1 - e.t) / 0.3)) * 0.5;
+      e.g.position.set(e.x + Math.sin(e.g.rotation.y) * k, height(e.x, e.z) + k * 0.12, e.z + Math.cos(e.g.rotation.y) * k);
+      if (e.t < 0) { e.g.position.set(e.x, height(e.x, e.z), e.z); this.flee(e, p); }
+      return;
+    }
     e.g.rotation.y = turn(e.g.rotation.y, Math.atan2(p.x - e.x, p.z - e.z), dt * (up ? 3 : 0.4));
     if (s.sensing && d < 14 && !e.shown) { e.shown = true; game.toast('Daar! Tussen het gras ligt een slang, precies in de kleur van de grond.', 5); game.discover('snake'); }
     // sissen hoor je alleen als je zelf stil bent
@@ -290,10 +296,7 @@ export class Encounters {
         face = e; if (b.t < 0) e.done = true;
         break;
     }
-    b.speed += (spd - b.speed) * (1 - Math.exp(-dt * 6));
-    if (spd > 0) b.yaw = turn(b.yaw, Math.atan2(tx, tz), dt * 7);
-    else if (face) b.yaw = turn(b.yaw, Math.atan2(face.x - b.x, face.z - b.z), dt * 4);
-    b.x += Math.sin(b.yaw) * b.speed * dt; b.z += Math.cos(b.yaw) * b.speed * dt;
+    step(b, tx, tz, spd, dt, 6, 7, face);
     b.up += ((b.state === 'sit' ? 0 : 1) - b.up) * (1 - Math.exp(-dt * 5));
     b.phase += dt * b.speed * 2.6;
     b.g.position.set(b.x, height(b.x, b.z) - (1 - b.up) * 0.42, b.z); b.g.rotation.y = b.yaw;
@@ -364,7 +367,7 @@ export class Encounters {
   mk_strangers(x, z) {
     const list = [];
     for (let i = 0; i < 2; i++) {
-      const rig = new Rig(this.A, 'hominin', { scale: 1.35 / 162 * (i ? 0.93 : 1.02) });
+      const k = i ? 0.93 : 1.02, rig = new Rig(this.A, 'hominin', { scale: BODY.height / 162 * k, shape: BODY.shape, tall: BODY.height * k });
       rig.model.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); if (!/beard|hair|transparency/i.test(o.material.name)) o.material.color.multiply(new THREE.Color(i ? 0xc8a488 : 0xb89478)); } });
       const sx = x + (i ? 1.6 : -1.2), sz = z + (i ? 0.8 : -0.6);
       const m = { kind: 'stranger', rig, g: rig.root, x: sx, z: sz, sx, sz, yaw: 0, speed: 0, once: 0 };
@@ -410,10 +413,7 @@ export class Encounters {
           game.toast('De vreemde pakt je eten, ruikt eraan… en legt er iets voor terug. Ze schreeuwen niet meer.', 7);
         }
       } else if (dist(m, { x: m.sx, z: m.sz }) > 0.6) to({ x: m.sx, z: m.sz }, 2.2);
-      m.speed += (spd - m.speed) * (1 - Math.exp(-dt * 6));
-      if (spd > 0) m.yaw = turn(m.yaw, Math.atan2(tx, tz), dt * 6);
-      else if (face) m.yaw = turn(m.yaw, Math.atan2(face.x - m.x, face.z - m.z), dt * 3);
-      m.x += Math.sin(m.yaw) * m.speed * dt; m.z += Math.cos(m.yaw) * m.speed * dt;
+      step(m, tx, tz, spd, dt, 6, 6, face, 3);
       m.g.position.set(m.x, height(m.x, m.z), m.z); m.g.rotation.y = m.yaw;
       const R = m.rig;
       if (m.once <= 0) {

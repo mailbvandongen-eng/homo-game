@@ -1,6 +1,6 @@
 import * as THREE from '../lib/three.module.js';
 import { height, WALK, riverDist, awayZ, rng } from './world.js';
-import { turn } from './actors.js';
+import { turn, step } from './animal.js';
 import { Rig } from './rig.js';
 
 const R = rng(55);
@@ -81,10 +81,7 @@ export class Hyenas {
           if (h.t < 0) { h.state = 'roam'; h.t = 3; if (h.carry) { game.toast(h.carry === 'meat' ? 'De hyena is er met je vlees vandoor.' : 'De hyena heeft het bot meegenomen. Er liggen er meer bij het karkas.'); h.carry = null; } }
           break;
       }
-      h.speed += (spd - h.speed) * (1 - Math.exp(-dt * 5));
-      if (spd > 0) h.yaw = turn(h.yaw, Math.atan2(tx, tz), dt * (run ? 7 : 3));
-      else if (h.state === 'curious') h.yaw = turn(h.yaw, Math.atan2(p.x - h.x, p.z - h.z), dt * 4);
-      h.x += Math.sin(h.yaw) * h.speed * dt; h.z += Math.cos(h.yaw) * h.speed * dt;
+      step(h, tx, tz, spd, dt, 5, run ? 7 : 3, h.state === 'curious' ? p : null);
       const lim = WALK - 8; h.x = THREE.MathUtils.clamp(h.x, -lim, lim); h.z = THREE.MathUtils.clamp(h.z, -lim, lim);
       if (riverDist(h.x, h.z) < 7) h.z += awayZ(h.x, h.z) * dt * 4;
       this.pose(h, dt, run);
@@ -196,9 +193,7 @@ export class Leopard {
         if (this.t < 0) this.state = 'tree';
         break;
     }
-    this.speed += (spd - this.speed) * (1 - Math.exp(-dt * 6));
-    if (spd > 0) this.yaw = turn(this.yaw, Math.atan2(tx, tz), dt * (run ? 8 : 3));
-    this.x += Math.sin(this.yaw) * this.speed * dt; this.z += Math.cos(this.yaw) * this.speed * dt;
+    step(this, tx, tz, spd, dt, 6, run ? 8 : 3);
     // in de boom liggen, of naar beneden springen / naar boven klimmen
     const branch = this.tree.branchY, gy = height(this.x, this.z);
     let y = gy;

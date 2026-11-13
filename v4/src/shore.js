@@ -2,7 +2,8 @@ import * as THREE from '../lib/three.module.js';
 import { height, riverZ } from './world.js';
 import { AREA } from './eras/index.js';
 import { ICON } from './icons.js';
-import { turn } from './actors.js';
+import { turn } from './animal.js';
+import { Rig } from './rig.js';
 
 // De oever van het meer: krokodillen in het water, meervallen in de poelen en knollen onder de korst.
 // Elk van de drie vraagt iets anders van je: afstand houden, stil zijn, of het goede gereedschap.
@@ -10,25 +11,32 @@ const SURF = -0.35;   // het wateroppervlak
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 
-// een krokodil van ruim drie meter; y = 0 is de waterlijn als hij loert
-function crocMesh() {
-  const g = new THREE.Group(), skin = lam('#4c4a33'), dark = lam('#35341f'), part = (geo, mat, x, y, z, sx, sy, sz) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); g.add(m); return m; };
-  const ball = new THREE.SphereGeometry(0.5, 9, 6);
-  part(ball, skin, 0, -0.1, 0, 0.66, 0.36, 2.1);            // romp
-  part(ball, skin, 0, -0.06, 1.25, 0.44, 0.26, 0.9);        // kop
-  part(ball, skin, 0, -0.1, 1.75, 0.26, 0.14, 0.8);         // snuit
-  const tail = part(new THREE.ConeGeometry(0.2, 1.7, 6), skin, 0, -0.12, -1.75, 1, 1, 0.5); tail.rotation.x = -Math.PI / 2;
-  for (let i = 0; i < 9; i++) for (const s of [-1, 1]) part(new THREE.ConeGeometry(0.05, 0.09, 4), dark, s * 0.09, 0.09 - Math.abs(i - 3) * 0.008, -1.3 + i * 0.26, 1, 1, 1);   // de rij bulten
-  for (const s of [-1, 1]) { part(ball, dark, s * 0.13, 0.07, 1.1, 0.12, 0.11, 0.14); part(new THREE.SphereGeometry(0.5, 6, 4), new THREE.MeshBasicMaterial({ color: 0xc8b450 }), s * 0.15, 0.09, 1.13, 0.05, 0.05, 0.06); }   // ogen
-  g.traverse((o) => { o.castShadow = true; });
-  return g;
+// Een nijlkrokodil van ruim drieënhalve meter (model: zie assets/CREDITS.md). Het model heeft geen botten;
+// de staart zwaait doordat we de punten zelf heen en weer schuiven, steeds verder naar de punt toe.
+// y = 0 is de waterlijn als hij loert: dan steken alleen zijn ogen en zijn rug boven water uit.
+const CROC = 0.048, CROC_TOP = 0.2;
+let crocBase = null;
+function crocMesh(A) {
+  if (!crocBase) {
+    const src = A.models.croc; src.updateMatrixWorld(true);
+    src.traverse((o) => { if (o.isMesh && !crocBase) crocBase = { geo: o.geometry.clone().applyMatrix4(o.matrixWorld).scale(CROC, CROC, CROC), mat: o.material }; });
+    if (!crocBase) throw new Error('model croc heeft geen vorm');
+    crocBase.geo.computeBoundingBox(); crocBase.geo.translate(0, CROC_TOP - crocBase.geo.boundingBox.max.y, 0); crocBase.geo.computeBoundingSphere();
+    crocBase.geo.boundingSphere.radius += 0.6;
+  }
+  const mat = crocBase.mat.clone(), sway = { value: 0 }, amp = { value: 0.1 };
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uSway = sway; sh.uniforms.uAmp = amp;
+    sh.vertexShader = 'uniform float uSway;\nuniform float uAmp;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+      '#include <begin_vertex>\n  float tl = clamp(-transformed.z / 2.3, 0.0, 1.0);\n  transformed.x += sin(uSway - tl * 2.4) * tl * tl * uAmp;');
+  };
+  const m = new THREE.Mesh(crocBase.geo, mat); m.castShadow = true; m.receiveShadow = true;
+  const g = new THREE.Group(); g.add(m);
+  return { g, sway, amp };
 }
-function fishMesh() {
-  const g = new THREE.Group(), c = lam('#3c3b33');
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 5), c); body.scale.set(0.2, 0.13, 0.75); g.add(body);
-  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.22, 4), c); tail.rotation.x = -Math.PI / 2; tail.scale.x = 0.25; tail.position.z = -0.44; g.add(tail);
-  return g;
-}
+// een meerval van zeventig centimeter, met botten: hij zwemt echt (model: zie assets/CREDITS.md)
+const FISH = 3.5;
+function fishRig(A) { const rig = new Rig(A, 'catfish', { scale: FISH, facing: Math.PI / 2 }); rig.play('Animation'); return rig; }
 function plantMesh() {
   const g = new THREE.Group(), leaf = lam('#5e7d38'), dark = lam('#4a6a2e');
   for (let i = 0; i < 5; i++) {
@@ -41,16 +49,16 @@ function plantMesh() {
 }
 
 export class Shore {
-  constructor(scene) {
+  constructor(scene, A) {
     const S = AREA.shore;
     this.crocs = S.crocs.map(([x, s]) => {
-      const z = riverZ(x) + s, g = crocMesh(); scene.add(g);
-      return { kind: 'croc', g, x, z, home: { x, z }, yaw: Math.PI, state: 'lurk', t: Math.random() * 6, dip: 0.07, a: Math.random() * 6 };
+      const z = riverZ(x) + s, { g, sway, amp } = crocMesh(A); scene.add(g);
+      return { kind: 'croc', g, sway, amp, x, z, home: { x, z }, yaw: Math.PI, state: 'lurk', t: Math.random() * 6, dip: 0.07, a: Math.random() * 6 };
     });
     this.fish = [];
     for (const [px, pz, r] of AREA.pools) for (let i = 0; i < 2; i++) {
-      const g = fishMesh(); scene.add(g);
-      this.fish.push({ look: 'catfish', g, pool: [px, pz, r], a: i * 3.3 + px, dir: i ? -1 : 1, x: px, z: pz, hide: 0 });
+      const rig = fishRig(A), g = rig.root; scene.add(g);
+      this.fish.push({ look: 'catfish', g, rig, pool: [px, pz, r], a: i * 3.3 + px, dir: i ? -1 : 1, x: px, z: pz, hide: 0 });
     }
     this.plants = S.tubers.map(([x, z]) => {
       const g = plantMesh(); g.position.set(x, height(x, z), z); g.rotation.y = x * 1.3; scene.add(g);
@@ -149,6 +157,9 @@ export class Shore {
       c.g.visible = c.dip < 0.8;
       c.g.position.set(c.x, Math.max(SURF, height(c.x, c.z) + 0.25) - c.dip, c.z);
       c.g.rotation.set(c.state === 'lunge' ? -0.25 : 0, c.yaw, 0, 'YXZ');
+      // de staart: traag als hij drijft, hard als hij jaagt
+      const beat = c.state === 'lunge' ? 14 : c.state === 'stalk' ? 5 : 0.9;
+      c.sway.value += dt * beat; c.amp.value += ((c.state === 'lurk' ? 0.1 : 0.3) - c.amp.value) * Math.min(1, dt * 3);
     }
     // meervallen: wie rechtop door de poel plonst, ziet ze niet meer terug
     this.splashT -= dt;
@@ -163,7 +174,8 @@ export class Shore {
       if (dist(f, p) > 4) f.a += dt * 0.14 * f.dir;   // dichtbij hangt hij stil
       const want = Math.atan2(Math.cos(f.a) * f.dir, -Math.sin(f.a) * f.dir);
       f.x = px + Math.cos(f.a) * r * 0.3; f.z = pz + Math.sin(f.a) * r * 0.3;
-      f.g.visible = true; f.g.position.set(f.x, SURF - 0.02 + Math.sin(f.a * 9) * 0.015, f.z); f.g.rotation.y = want;
+      f.g.visible = true; f.g.position.set(f.x, SURF - 0.03 + Math.sin(f.a * 9) * 0.015, f.z); f.g.rotation.y = want;
+      f.rig.update(dt * (dist(f, p) > 4 ? 1 : 0.35));
     }
   }
 }

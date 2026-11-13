@@ -1,5 +1,7 @@
 import * as THREE from '../lib/three.module.js';
 import { SkeletonUtils } from '../lib/three-addons.js';
+import { applyShape, shapeClips } from './shape.js';
+import { SHAPES } from './shapes.js';
 
 // Een dier met botten en animaties uit een geladen model.
 // - play('Walk') speelt een animatie (zachte overgang); speed maakt hem sneller of trager
@@ -12,6 +14,7 @@ const tmpQ = new THREE.Quaternion(), tmpQ2 = new THREE.Quaternion(), tmpV = new 
 export const MISSING = new Set();
 const SPHERES = new Map();   // per model: de bol om elk onderdeel
 const RIGS = [];
+const SKINS = new Map();     // materialen met een andere huid, per (materiaal, huid)
 
 // Kleine onderdelen (tanden, ogen, wimpers) zie je van ver niet: die tekenen we alleen dichtbij.
 export function rigDetail(cam) {
@@ -23,10 +26,29 @@ export function rigDetail(cam) {
 }
 
 export class Rig {
-  // facing: hoe ver het model gedraaid moet worden zodat het naar +z kijkt; size: gewenste lengte of hoogte
-  constructor(A, name, { scale, facing = 0 }) {
+  // facing: hoe ver het model gedraaid moet worden zodat het naar +z kijkt
+  // shape: naam van een vorm uit shapes.js (een andere soort, een kind); tall: hoe hoog het dan moet worden, in meters
+  constructor(A, name, { scale, facing = 0, shape = null, tall = 0 }) {
     this.root = new THREE.Group();
     this.model = SkeletonUtils.clone(A.models[name]);
+    let clips = A.anims[name] || [];
+    if (shape) {
+      if (!SHAPES[shape]) throw new Error('vorm bestaat niet: ' + shape);
+      this.shaped = applyShape(this.model, SHAPES[shape]); clips = shapeClips(clips, this.shaped);
+      if (tall) scale = tall / this.shaped.height;
+    }
+    // een andere huid (de pofadder draagt de botten van de cobra, maar zijn eigen tekening)
+    const skin = shape && SHAPES[shape].skin;
+    if (skin) {
+      if (!A.tex[skin]) throw new Error('huid ontbreekt: ' + skin);
+      this.model.traverse((o) => {
+        if (!o.isMesh) return;
+        const id = o.material.uuid + '|' + skin; let m = SKINS.get(id);
+        if (!m) { m = o.material.clone(); m.map = A.tex[skin]; if (SHAPES[shape].flat) m.normalScale.setScalar(SHAPES[shape].flat); SKINS.set(id, m); }
+        o.material = m;
+      });
+    }
+    this.scale = scale;
     this.model.scale.setScalar(scale); this.model.rotation.y = facing;
     this.root.add(this.model);
     this.bones = {}; this.small = []; this.near = true; RIGS.push(this);
@@ -43,19 +65,20 @@ export class Rig {
     this.name = name;
     // Een dier buiten beeld hoeft niet getekend te worden. De bol om het dier is ruim genomen,
     // zodat het ook liggend, springend of met gestrekte poten nooit te vroeg verdwijnt.
-    let spheres = SPHERES.get(name);
+    const sid = name + '|' + (shape || '');
+    let spheres = SPHERES.get(sid);
     if (!spheres) {
       this.root.updateMatrixWorld(true);
       spheres = meshes.map((o) => {
         if (o.isSkinnedMesh) { o.skeleton.update(); o.computeBoundingSphere(); } else { o.geometry.computeBoundingSphere(); o.boundingSphere = o.geometry.boundingSphere.clone(); }
         const sp = o.boundingSphere.clone(); sp.radius = sp.radius * 2 + 0.2 / scale; return sp;
       });
-      SPHERES.set(name, spheres);
+      SPHERES.set(sid, spheres);
     }
     meshes.forEach((o, i) => { if (o.isSkinnedMesh) o.boundingSphere = spheres[i].clone(); else o.frustumCulled = false; });
     this.mixer = new THREE.AnimationMixer(this.model);
     this.actions = {};
-    for (const clip of A.anims[name] || []) this.actions[clip.name] = this.mixer.clipAction(clip);
+    for (const clip of clips) this.actions[clip.name] = this.mixer.clipAction(clip);
     this.current = null;
     this.bent = new Map();
   }

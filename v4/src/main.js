@@ -53,7 +53,8 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 700);
 const world = buildWorld(scene, A);
 const player = new Hominin(scene, A);
-const herd = new Herd(scene, AREA.herd.at[0], AREA.herd.at[1], AREA.herd.n, A, { persist: !!AREA.herd.persist });
+const HERD_NAME = AREA.herd.species === 'impala' ? 'impala\'s' : 'gazellen';
+const herd = new Herd(scene, AREA.herd.at[0], AREA.herd.at[1], AREA.herd.n, A, { persist: !!AREA.herd.persist, species: AREA.herd.species });
 const CARCASS = AREA.carcass;
 const vultures = new Vultures(scene, CARCASS.x, CARCASS.z, A);
 carcass(scene, CARCASS.x, CARCASS.z);
@@ -73,7 +74,7 @@ const sabres = new Sabres(scene, { x: AREA.sabres.lair[0], z: AREA.sabres.lair[1
 const group = new Group(scene, A);
 const enc = new Encounters(scene, A);   // wat je onderweg tegenkomt
 const giant = new Giant(scene, A, AREA.giant);      // de reuzenolifant die zijn ronde loopt
-const shore = AREA.shore ? new Shore(scene) : null;   // de oever: krokodillen, meervallen, knollen
+const shore = AREA.shore ? new Shore(scene, A) : null;   // de oever: krokodillen, meervallen, knollen
 const fire = AREA.fire ? new Fire(scene, AREA.fire, DAY_LEN, A) : null;   // vuur: vinden, dragen, brandend houden
 // wat er in dit tijdperk te ontdekken valt, en of je iets scherps in je hand hebt (een afslag of een vuistbijl)
 const ERA_IX = ERAS.indexOf(ERA), DISC = DISCOVERIES.filter((d) => !d.era || ERAS.findIndex((e) => e.id === d.era) <= ERA_IX);
@@ -879,7 +880,12 @@ function autoPickup() {
   const sw = $('swap');
   if (swapTarget && available(swapTarget)) {
     const a = anchorOf(swapTarget);
-    if (a) { sw.style.display = 'block'; sw.style.left = a.x + 'px'; sw.style.top = (a.y - 40) + 'px'; } else sw.style.display = 'none';
+    if (a) {
+      // niet over de knoppen rechtsonder heen: dan schuift het ruilknopje erboven
+      const pad = $('pad').getBoundingClientRect(); let y = a.y - 40;
+      if (a.x + 96 > pad.left && y + 24 > pad.top) y = pad.top - 30;
+      sw.style.display = 'block'; sw.style.left = a.x + 'px'; sw.style.top = y + 'px';
+    } else sw.style.display = 'none';
   } else { sw.style.display = 'none'; swapTarget = null; }
 }
 $('swap').onclick = () => {
@@ -931,7 +937,7 @@ function hitTarget(t, how = 'throw') {
   else if (t.kind === 'sabre') sabres.hit(t.m, predGame);
   else if (t.kind === 'zebra') { if (zebras.alarm <= 0) { zebras.scare(player.pos, 8); sound.flee(); sound.bray(); toast('Raak! De zebra\'s galopperen weg. Zo vang je er nooit een.'); } }
   else if (t.m === herd.spent) strikeSpent(t.m, how);
-  else if (herd.fleeing <= 0) { herd.fleeing = 7; sound.flee(); toast(herd.persist ? 'Raak! De gazellen stuiven weg. Erachteraan!' : 'Raak! Maar de gazellen zijn veel sneller dan jij.'); }
+  else if (herd.fleeing <= 0) { herd.fleeing = 7; sound.flee(); toast(herd.persist ? 'Raak! De gazellen stuiven weg. Erachteraan!' : `Raak! Maar de ${HERD_NAME} zijn veel sneller dan jij.`); }
 }
 // de gazelle die je moe hebt gelopen: één harde klap
 function strikeSpent(m, how) {
@@ -1073,7 +1079,7 @@ const ui = {
   flee(smelled) {
     sound.flee();
     if (smelled) { toast('Ze hebben je geroken! De wind waaide van jou naar hen toe.', 5); discover('wind'); }
-    else if (!herd.persist || herd.heat < 0.2) toast('De gazellen zien je en vluchten!');
+    else if (!herd.persist || herd.heat < 0.2) toast(`De ${HERD_NAME} zien je en vluchten!`);
   },
   // is het heet genoeg om een dier moe te lopen? Alleen als de zon hoog staat
   hot: () => dayP > 0.25 && dayP < 0.62,

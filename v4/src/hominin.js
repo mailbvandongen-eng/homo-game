@@ -158,12 +158,13 @@ export class Hominin {
     this.initState();
   }
 
-  // Het echte model: een neanderthaler (gb.prof.69, CC BY 4.0) met bewegingen uit de Universal Animation Library
-  // (Quaternius, CC0), overgezet op zijn skelet. Kleiner gemaakt tot zo'n 1,35 m, zoals een vroege mens.
+  // Het model: een neanderthaler (gb.prof.69, CC BY 4.0), omgevormd naar de maten van de soort die je speelt,
+  // met bewegingen uit de Universal Animation Library (Quaternius, CC0), overgezet op zijn skelet.
   initHuman(scene, A) {
-    const S = BODY.height / 162, K = BODY.height / 1.35;   // het model is in centimeters en 1,62 m lang
-    this.S = S;
-    this.rig = new Rig(A, 'hominin', { scale: S });
+    // het model is in centimeters en 1,62 m lang; de vorm (shapes.js) maakt er de soort van dit tijdperk van
+    const K = BODY.height / 1.35;
+    this.rig = new Rig(A, 'hominin', { scale: BODY.height / 162, shape: BODY.shape, tall: BODY.height });
+    const S = this.rig.scale; this.S = S;
     const act = (n) => { const a = this.rig.action(n); a.play(); a.setEffectiveWeight(0); a.timeScale = 0; return a; };
     // bewegingen die samen gemengd worden, met hun eigen snelheid (m/s) bij deze lengte
     this.loco = {

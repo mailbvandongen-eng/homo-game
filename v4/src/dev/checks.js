@@ -14,7 +14,7 @@ export const CLIPS = {
   elephant: ['01_Idle', '02_Walk', '03_Run', '04_Eating', '05_Attack'],
   zebra: ['Gallop', 'Trot', 'Idle01', 'Eating'],
   sabre: ['Layout', 'Run', 'Trot', 'Stalker', 'Eating', 'Roaring', 'Growling'],
-  leopard: ['Principal'], cobra: ['lie', 'strike'], gazelle: ['Animation'], vulture: ['Armature'],
+  leopard: ['Principal'], cobra: ['lie'], catfish: ['Animation'], gazelle: ['Animation'], vulture: ['Armature'],
   hominin: ['Walk_Loop', 'Jog_Fwd_Loop', 'Idle_Loop', 'Crouch_Idle_Loop', 'Interact', 'Punch_Jab', 'PickUp_Table', 'Spell_Simple_Shoot'],
 };
 // Grenzen voor een telefoon uit de middenklasse. Daarboven: eerst 'let op', dan 'fout'.
@@ -88,7 +88,7 @@ function checkLoaded(out, A, scene) {
     if (noTex) { bad++; add('fout', `model '${n}': ${noTex} textuur(en) zonder beeld`); }
   }
   for (const [n, need] of Object.entries(CLIPS)) {
-    if (!A.models[n]) { bad++; add('fout', `model '${n}' is niet geladen`); continue; }
+    if (!A.models[n]) { if (MODELS.includes(n) || (AREA.models || []).includes(n)) { bad++; add('fout', `model '${n}' is niet geladen`); } continue; }   // een model van een ander gebied hoeft hier niet geladen te zijn
     const have = (A.anims[n] || []).map((c) => c.name);
     for (const c of need) if (!have.some((h) => h === c || h.includes(c))) { bad++; add('fout', `'${n}' mist de beweging '${c}' (aanwezig: ${have.join(', ') || 'geen'})`); }
   }
