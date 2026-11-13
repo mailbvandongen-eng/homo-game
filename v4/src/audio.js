@@ -114,6 +114,37 @@ export class Sound {
   pick() { if (!this.ctx) return; this.burst(2200, 0.15, 0.08); this.tone(520, 0.08, 0.03, 'triangle', 120, 0.05); }
   eat() { if (!this.ctx) return; for (let i = 0; i < 4; i++) this.burst(1400 + Math.random() * 800, 0.06, 0.09, 'bandpass', i * 0.13, 2); }
   crack() { if (!this.ctx) return; this.burst(900, 0.25, 0.35, 'bandpass', 0, 0.7); this.tone(180, 0.2, 0.15, 'triangle', -100); }
+  // Een korte menselijke klank zonder woorden. Een stem is een zoemende stemband (zaagtand, licht bevend) met daarachter
+  // een mondholte die bepaalde tonen versterkt (formanten). 'hm' = mond dicht, door de neus, tevreden omhoog en weer omlaag.
+  // 'ugh' = mond open, kort en rauw, zakkend, met wat adem erachteraan.
+  voice(kind, v = 1) {
+    if (!this.ctx) return;
+    const c = this.ctx, t = c.currentTime + 0.02, ugh = kind === 'ugh';
+    const dur = ugh ? 0.34 : 0.5, base = (ugh ? 128 : 118) * (0.96 + Math.random() * 0.08);
+    const src = c.createGain(), o = c.createOscillator(); o.type = 'sawtooth';
+    const f = o.frequency;
+    if (ugh) { f.setValueAtTime(base * 1.1, t); f.exponentialRampToValueAtTime(base * 0.62, t + dur); }
+    else { f.setValueAtTime(base * 0.94, t); f.linearRampToValueAtTime(base * 1.16, t + dur * 0.4); f.linearRampToValueAtTime(base * 0.86, t + dur); }
+    // een stem is nooit strak: een lichte beving, en bij 'ugh' een kraak in de keel
+    const vib = c.createOscillator(), vg = c.createGain(); vib.frequency.value = ugh ? 31 : 5.5; vg.gain.value = ugh ? 9 : 2.2;
+    vib.connect(vg).connect(f); vib.start(t); vib.stop(t + dur + 0.1);
+    o.connect(src); o.start(t); o.stop(t + dur + 0.1);
+    // adem: een beetje ruis door dezelfde mond
+    const n = c.createBufferSource(), ng = c.createGain(); n.buffer = this.noise;
+    ng.gain.setValueAtTime(ugh ? 0.05 : 0.02, t); if (ugh) ng.gain.linearRampToValueAtTime(0.16, t + dur);
+    n.connect(ng).connect(src); n.start(t, Math.random()); n.stop(t + dur + 0.1);
+    const env = c.createGain(), peak = (ugh ? 0.075 : 0.06) * v;
+    env.gain.setValueAtTime(0.0001, t); env.gain.exponentialRampToValueAtTime(peak, t + (ugh ? 0.035 : 0.09));
+    env.gain.setValueAtTime(peak, t + dur * 0.55); env.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.06);
+    // mondholte: [toon, scherpte, sterkte]
+    const mouth = ugh ? [[620, 6, 1], [1180, 8, 0.5], [2400, 9, 0.16]] : [[260, 5, 1], [1050, 7, 0.1], [2200, 8, 0.04]];
+    for (const [fr, q, g] of mouth) {
+      const b = c.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = fr; b.Q.value = q;
+      const bg = c.createGain(); bg.gain.value = g * 3;
+      src.connect(b).connect(bg).connect(env);
+    }
+    env.connect(this.out);
+  }
   bad() { if (!this.ctx) return; this.tone(220, 0.5, 0.06, 'sawtooth', -90); }
   good() { if (!this.ctx) return; [523, 659, 784].forEach((f, i) => this.tone(f, 0.25, 0.04, 'sine', 0, i * 0.09)); }
   discover() { if (!this.ctx) return; [587, 740, 880, 1175].forEach((f, i) => this.tone(f, 0.5, 0.045, 'sine', 0, i * 0.12)); }

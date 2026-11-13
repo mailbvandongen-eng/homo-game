@@ -1,4 +1,5 @@
 // Invoer en camera. Toetsen, de stuurduim (links), de kijkvinger (rechts), knijpen om te zoomen, en waar de camera hangt.
+// Twee gebaren met je lijf: kort omlaag vegen met de stuurduim (bukken) en omhoog (opstaan). Een tik meldt ook met welke vinger.
 // Weet niets van het spel: wat een tik of een toets betekent, bepaalt main.js.
 import * as THREE from '../../lib/three.module.js';
 import { height, blockers } from '../world.js';
@@ -7,7 +8,7 @@ import { settings, setSetting } from './settings.js';
 export const ZOOM = [2.2, 10];
 const clampZoom = (d) => THREE.MathUtils.clamp(d, ...ZOOM);
 
-export function initControls({ canvas, camera, clock, player, tap, wheel }) {
+export function initControls({ canvas, camera, clock, player, tap, wheel, swipe }) {
   const keys = new Set();
   addEventListener('keydown', (e) => { if (!e.repeat) keys.add(e.code); });
   addEventListener('keyup', (e) => keys.delete(e.code));
@@ -22,13 +23,17 @@ export function initControls({ canvas, camera, clock, player, tap, wheel }) {
 
   const ring = document.querySelector('#joy .ring'), knob = document.querySelector('#joy .knob'), hint = document.getElementById('joyHint');
   const JOY_R = 60, DEAD = 0.12;
+  // Een veeg is kort en snel en gaat vooral recht omhoog of omlaag. Zolang een duim die omlaag gaat nog een veeg kan zijn,
+  // loop je niet achteruit: anders doe je bij elke buk eerst een stap terug.
+  const FLICK_MS = 260, FLICK_PX = 34;
+  const flicking = () => joy.id !== null && joy.flick && joy.dy > 0 && performance.now() - joy.t0 < FLICK_MS;
   canvas.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'mouse' && e.clientX < innerWidth * 0.45 && joy.id === null) {
-      Object.assign(joy, { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: 0, y: 0, t0: performance.now(), moved: 0 });
+      Object.assign(joy, { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: 0, y: 0, t0: e.timeStamp, moved: 0, flick: true, dy: 0 });
       ring.style.left = knob.style.left = e.clientX + 'px'; ring.style.top = knob.style.top = e.clientY + 'px';
       hint.style.display = 'none';
     } else if (look.id === null) {
-      Object.assign(look, { id: e.pointerId, lx: e.clientX, ly: e.clientY, sx: e.clientX, sy: e.clientY, t0: performance.now(), moved: 0 });
+      Object.assign(look, { id: e.pointerId, lx: e.clientX, ly: e.clientY, sx: e.clientX, sy: e.clientY, t0: e.timeStamp, moved: 0 });
     } else if (pinch.id === null && e.pointerType !== 'mouse') {
       // een tweede vinger erbij: knijpen om te zoomen
       Object.assign(pinch, { id: e.pointerId, x: e.clientX, y: e.clientY, d0: Math.max(20, Math.hypot(e.clientX - look.lx, e.clientY - look.ly)), z0: cam.dist });
@@ -39,8 +44,9 @@ export function initControls({ canvas, camera, clock, player, tap, wheel }) {
   canvas.addEventListener('pointermove', (e) => {
     if (e.pointerId === joy.id) {
       let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const d = Math.hypot(dx, dy);
-      joy.moved = Math.max(joy.moved, d);
-      if (joy.moved > 10) ring.style.display = knob.style.display = 'block';
+      joy.moved = Math.max(joy.moved, d); joy.dy = dy;
+      if (d > 12 && Math.abs(dy) < Math.abs(dx) * 1.5) joy.flick = false;   // schuin of opzij: dat is sturen
+      if (joy.moved > 10 && !flicking()) ring.style.display = knob.style.display = 'block';
       if (d > JOY_R) { dx *= JOY_R / d; dy *= JOY_R / d; }
       // een klein dood midden: een rustende duim laat je niet wegdrijven
       const m = Math.min(1, d / JOY_R), k = m < DEAD ? 0 : (m - DEAD) / (1 - DEAD) / (m || 1);
@@ -59,14 +65,17 @@ export function initControls({ canvas, camera, clock, player, tap, wheel }) {
   });
   const endPointer = (e) => {
     // kort tikken zonder te schuiven = iets aantikken
-    const isTap = (o) => o.moved < 10 && performance.now() - o.t0 < 350;
+    // de tijd van de aanraking zelf (niet het moment van verwerken): zo telt een tik ook als het beeld even hapert
+    const isTap = (o) => o.moved < 10 && e.timeStamp - o.t0 < 350;
     if (e.pointerId === joy.id) {
-      if (isTap(joy) && e.type === 'pointerup') tap(e.clientX, e.clientY);
+      const quick = e.timeStamp - joy.t0 < FLICK_MS + 60;
+      if (isTap(joy) && e.type === 'pointerup') tap(e.clientX, e.clientY, { touch: true, look: false });
+      else if (joy.flick && quick && Math.abs(joy.dy) >= FLICK_PX && e.type === 'pointerup' && swipe) swipe(joy.dy > 0 ? 'down' : 'up');
       joy.id = null; joy.x = joy.y = 0; ring.style.display = knob.style.display = 'none';
     }
     if (e.pointerId === pinch.id) pinch.id = null;
     if (e.pointerId === look.id) {
-      if (isTap(look) && e.type === 'pointerup') tap(e.clientX, e.clientY);
+      if (isTap(look) && e.type === 'pointerup') tap(e.clientX, e.clientY, { touch: e.pointerType !== 'mouse', look: true });
       look.id = null;
       // de andere vinger van het knijpen kijkt verder rond
       if (pinch.id !== null) { Object.assign(look, { id: pinch.id, lx: pinch.x, ly: pinch.y, sx: pinch.x, sy: pinch.y, moved: 99 }); pinch.id = null; }
@@ -79,6 +88,7 @@ export function initControls({ canvas, camera, clock, player, tap, wheel }) {
   // waar de duim of de toetsen heen wijzen: [opzij, vooruit/achteruit, hoe hard (0..1)]
   function stick() {
     let ix = joy.x, iy = joy.y;
+    if (flicking()) ix = iy = 0;
     if (keys.has('KeyA') || keys.has('ArrowLeft')) ix -= 1;
     if (keys.has('KeyD') || keys.has('ArrowRight')) ix += 1;
     if (keys.has('KeyW') || keys.has('ArrowUp')) iy -= 1;

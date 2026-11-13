@@ -98,6 +98,8 @@ Ontwikkelen gebeurt op de branch `ontwikkel`; alleen geteste fasen gaan naar `ma
 
 ## 7. Wat in fase 2 is gebouwd (interface en bediening)
 
+> De knoppen en de bediening van je lijf zijn op 13-11-2026 opnieuw ontworpen: zie §9. Menu, instellingen en `engine/controls.js` zijn gebleven.
+
 - **Eén knoppensysteem** (`.key` in `index.html`): alle knoppen zijn rechthoekige woordknoppen in dezelfde stijl.
   Rechtsonder staan bij elkaar: `Buk`/`Sta op`, `Spring`, de grote actieknop, `Meer`, de twee handen en `Tas`.
   Rechtsboven alleen `Menu`. De ronde icoonknoppen en het knopje met de drie puntjes zijn weg.
@@ -156,3 +158,29 @@ Nog **niet** gedaan in fase 3, en dus niet beloofd:
   aanzetten verandert de moeilijkheid en hoort bij de gameplay van fase 5.
 - Het krokodilmodel heeft geen botten: de bek staat altijd open en de poten bewegen niet.
 - Jong en volwassen bestaat bij de mensen en de impala's, nog niet bij de andere dieren.
+
+## 9. Herontwerp mobiele besturing en feedback (13-11-2026)
+
+Een gerichte opdracht tussen fase 3 en 4: alleen de bediening op de telefoon en de reacties bij het eten.
+
+- **Knoppen** (`.rb` in `index.html`): rond, halfdoorzichtig, aardekleuren, een teken in plaats van een woord
+  (`icons.js`; de naam staat in `aria-label`). Ze staan in een boog rechtsonder: de grote knop `#doBtn` (80 px) en
+  maximaal drie kleinere `#alt0`–`#alt2` (54 px). `updateAction()` in `main.js` toont alleen wat `actionOptions()`
+  nu teruggeeft; een knop komt zacht op en verdwijnt weer. Kan er meer dan in de boog past, dan opent de laatste
+  knop de rest. De knoppen `Buk`, `Spring` en `Meer` bestaan niet meer.
+- **Je lijf** (`engine/controls.js`): tik rechts in beeld = springen (`bodyTap()` in `main.js`: niet op of vlak
+  naast een knop, hand of menu, en niet als de tik iets in de wereld raakt). Snel omlaag vegen links = bukken,
+  omhoog = opstaan (`FLICK_MS`, `FLICK_PX`); tijdens zo'n veeg zet de stuurduim geen stap. Langzaam duwen blijft lopen.
+- **Keuzes bij een hand of ding** (`placeRadial`): ronde knoppen in een boog boven de plek, binnen het beeld.
+- **Eten**: de tekstmeldingen zijn weg. `taste()` in `main.js` laat `sound.voice('hm' | 'ugh')` horen, met een
+  pauze (20 s na "hm", 8 s na "ugh") zodat het niet bij elke hap klinkt. De stem wordt gemaakt met een
+  stembandtoon en drie mondklanken (formanten); er zijn geen geluidsbestanden bij gekomen.
+- **Test** `/root/tools/pw/v4touch.js`: echte aanrakingen in de testmodus, op vijf liggende schermformaten.
+
+Wat nog niet goed is:
+
+- De stem is gemaakt, niet opgenomen. Hoe menselijk hij klinkt is alleen met oren te beoordelen.
+- Bij de rode bes en het bitterblad stond eerst een zin (je wordt ziek; de pijn zakt). Die is weg. Je merkt het
+  nu aan het "ugh", aan je lijf en aan de ontdekking in "Wat je weet".
+- Niet op een echte telefoon geprobeerd. De testmachine tekent één beeld per seconde; voor tikken en vegen zet de
+  test het tekenen tijdelijk uit, anders komt geen enkele tik op tijd aan.

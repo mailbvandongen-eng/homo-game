@@ -12,10 +12,11 @@ export function initHints(G) {
   const nearTurn = (r) => things.some((t) => t.kind === 'turn' && !t.gone && Math.hypot(t.x - player.pos.x, t.z - player.pos.z) < r);
   const HINTS = [
     { id: 'move', when: () => hints.playT < 40, done: () => hints.moved > 5, text: coarse ? 'Schuif met je linkerduim om te lopen. Sleep rechts om rond te kijken.' : 'Loop met WASD of de pijltjes. Sleep om rond te kijken.' },
-    { id: 'cut', now: true, when: () => !!carcassNear() && (state.hands.includes('flake') || state.hands.includes('axe')), done: () => state.hands.includes('meat') || state.hands.includes('hide'), text: coarse ? 'Tik op Snijd.' : 'E: snijd met je afslag.' },
-    { id: 'honey', now: true, when: () => !!hiveNear(3.6), done: () => state.hands.includes('honey'), text: coarse ? 'Tik op Pak.' : 'E: graai naar de honing.' },
+    { id: 'body', when: () => coarse && hintSeen.has('move'), done: () => player.sneaking || did.jump, text: 'Tik rechts om te springen. Veeg links omlaag om te bukken, omhoog om op te staan.' },
+    { id: 'cut', now: true, when: () => !!carcassNear() && (state.hands.includes('flake') || state.hands.includes('axe')), done: () => state.hands.includes('meat') || state.hands.includes('hide'), text: coarse ? 'Tik op de grote knop om te snijden.' : 'E: snijd met je afslag.' },
+    { id: 'honey', now: true, when: () => !!hiveNear(3.6), done: () => state.hands.includes('honey'), text: coarse ? 'Tik op de grote knop om honing te pakken.' : 'E: graai naar de honing.' },
     { id: 'turn', now: true, when: () => nearTurn(5), done: () => did.turn, text: (coarse ? 'Dubbeltik' : 'Dubbelklik') + ' op de platte steen om hem om te draaien.' },
-    { id: 'throw', now: true, when: () => state.hands.includes('stone') && hyenas.list.some((h) => Math.hypot(h.x - player.pos.x, h.z - player.pos.z) < 30), done: () => did.throw, text: coarse ? 'Houd Gooi vast om te mikken. Schuif om te richten, laat los om te gooien.' : 'Houd E vast om te mikken, scrol voor de afstand, laat los om te gooien.' },
+    { id: 'throw', now: true, when: () => state.hands.includes('stone') && hyenas.list.some((h) => Math.hypot(h.x - player.pos.x, h.z - player.pos.z) < 30), done: () => did.throw, text: coarse ? 'Houd de grote knop vast om te mikken. Schuif om te richten, laat los om te gooien.' : 'Houd E vast om te mikken, scrol voor de afstand, laat los om te gooien.' },
   ];
   function hintTick(dt) {
     if (!state.started || state.sleeping > 0 || state.collapsed > 0) return;

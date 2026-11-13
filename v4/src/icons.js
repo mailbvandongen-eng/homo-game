@@ -30,6 +30,14 @@ export const ICON = {
   strike: svg('<path d="M14 22c0-4 2-6 5-6s4 2 4 5M23 20c0-4 2-6 5-6s4 2 4 5M32 20c0-3 2-5 4-5s4 2 4 5v8c0 9-6 15-14 15h-2c-7 0-12-5-12-12v-6c0-3 2-5 4-5s4 2 4 5"/><path d="M4 12l5 4M8 6l3 6M2 20h6"/>'),
   // springen: een figuurtje dat opspringt boven een boog
   jump: svg('<circle cx="26" cy="9" r="4"/><path d="M26 14v12M26 18l-8 4M26 18l8-3M26 26l-6 8M26 26l7 6"/><path d="M8 44c6-6 26-6 32 0" stroke-dasharray="3 5"/>'),
+  // opstaan: een rechtop figuurtje
+  stand: svg('<circle cx="24" cy="8" r="4"/><path d="M24 13v16M24 17l-8 7M24 17l8 7M24 29l-6 14M24 29l6 14"/>'),
+  // in de tas stoppen: een pijl de tas in
+  stow: svg('<path d="M13 24c-4 7-5 17 11 17s15-10 11-17z"/><path d="M14 24c4-3 16-3 20 0"/><path d="M24 4v14M19 13l5 5 5-5"/>'),
+  // een vel: een gespannen huid
+  hide: svg('<path d="M12 8l8 3h8l8-3 2 8-3 6 3 10 4 8-8-2-5 4h-10l-5-4-8 2 4-8 3-10-3-6z"/>'),
+  // een punt aan een stok
+  point: svg('<path d="M8 40L32 14"/><path d="M28 12l13-6-6 13z"/><path d="M16 22l-5-3M20 17l-4-4"/>'),
   // ruilen: twee pijlen
   swap: svg('<path d="M8 18h28l-7-7M40 30H12l7 7"/>'),
   book: svg('<path d="M8 10c6-2 11-1 16 3 5-4 10-5 16-3v28c-6-2-11-1-16 3-5-4-10-5-16-3z"/><path d="M24 13v28"/>'),

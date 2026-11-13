@@ -1,5 +1,6 @@
 // Het menu (rechtsboven) en de instellingen. Zolang het menu open is, staat het spel stil.
 import { $ } from '../engine/ui.js';
+import { ICON } from '../icons.js';
 import { settings, setSetting, onSetting, QUALITY, DEFAULTS, qualityNow } from '../engine/settings.js';
 
 const SIZES = [[0.92, 'Klein'], [1, 'Gewoon'], [1.2, 'Groot']];
@@ -46,7 +47,7 @@ export function initMenu({ sound, renderer, world, journal, restart }) {
     else if (act === 'defaults') { for (const k of ['look', 'volume', 'quality', 'size']) setSetting(k, DEFAULTS[k]); settingsView(); }
   });
   scr.addEventListener('pointerdown', (e) => { if (e.target === scr) close(); });
-  $('menuBtn').textContent = 'Menu';
+  $('menuBtn').innerHTML = ICON.menu;
   $('menuBtn').onclick = () => (M.open ? close() : main());
   addEventListener('keydown', (e) => { if (e.code === 'Escape' || e.code === 'KeyP') { if (M.open) close(); else if (e.code === 'KeyP') main(); } });
 

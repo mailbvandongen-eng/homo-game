@@ -181,13 +181,15 @@ function checkPerf(out, p) {
 // Knoppen: bestaan ze, zijn ze groot genoeg voor een duim, staan ze in beeld en niet over elkaar heen?
 function checkControls(out) {
   const add = (lvl, tekst) => out.push({ lvl, groep: 'Bediening', tekst });
-  const ids = ['menuBtn', 'doBtn', 'sneakBtn', 'jumpBtn', 'hand0', 'hand1'];
+  const ids = ['menuBtn', 'doBtn', 'alt0', 'alt1', 'alt2', 'hand0', 'hand1'];
   const miss = ids.filter((id) => !document.getElementById(id));
   if (miss.length) { add('fout', 'knop ontbreekt: ' + miss.join(', ')); return; }
   let bad = 0;
   const box = ids.map((id) => [id, document.getElementById(id).getBoundingClientRect()]);
   for (const [id, r] of box) {
-    if (r.width < 44 || r.height < 44) { bad++; add('fout', `${id} is te klein voor een duim (${Math.round(r.width)} × ${Math.round(r.height)})`); }
+    // een knop die nu niet nodig is, staat klein en doorzichtig klaar: de echte maat is de maat zonder die krimp
+    const el = document.getElementById(id), w = el.offsetWidth, h = el.offsetHeight;
+    if (w < 44 || h < 44) { bad++; add('fout', `${id} is te klein voor een duim (${w} × ${h})`); }
     if (r.left < 0 || r.top < 0 || r.right > innerWidth + 1 || r.bottom > innerHeight + 1) { bad++; add('fout', `${id} valt buiten beeld`); }
   }
   for (let i = 0; i < box.length; i++) for (let j = i + 1; j < box.length; j++) {
