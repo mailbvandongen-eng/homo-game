@@ -1,4 +1,7 @@
-import { WIND } from './world.js';
+import { WIND, steep } from './world.js';
+
+// zo steil (meters omhoog per meter) dat een dier er niet op of af gaat; het kijkt WALL_AHEAD meter voor zijn neus
+const WALL = 0.75, WALL_AHEAD = 1.3;
 
 // De gedeelde basis voor alle dieren: hoe een dier jou opmerkt (zien, ruiken) en hoe het zich verplaatst.
 // Elke soort heeft zijn eigen gedrag (grazen, loeren, jagen), maar ze merken je op en bewegen via deze ene plek.
@@ -32,7 +35,17 @@ export function sense(kind, a, player) {
 // accel: hoe snel het dier op snelheid komt; rate: hoe snel het draait. Staat het stil en is er iets om naar te kijken (face), dan draait het daarheen.
 export function step(m, tx, tz, spd, dt, accel, rate, face = null, faceRate = 4) {
   m.speed += (spd - m.speed) * (1 - Math.exp(-dt * accel));
-  if (spd > 0) m.yaw = turn(m.yaw, Math.atan2(tx, tz), dt * rate);
+  // m.wallT: het dier liep net tegen een wand of de rand van een kloof en loopt er een stukje langs
+  const want = Math.atan2(tx, tz) + (m.wallT > 0 ? m.wallSide * 1.5 : 0);
+  if (spd > 0) m.yaw = turn(m.yaw, want, dt * rate);
   else if (face) m.yaw = turn(m.yaw, Math.atan2(face.x - m.x, face.z - m.z), dt * faceRate);
-  m.x += Math.sin(m.yaw) * m.speed * dt; m.z += Math.cos(m.yaw) * m.speed * dt;
+  if (m.wallT > 0) m.wallT -= dt;
+  const sx = Math.sin(m.yaw), sz = Math.cos(m.yaw), d = m.speed * dt;
+  // geen dier gaat een wand op of af
+  if (d > 1e-4 && steep(m.x + sx * WALL_AHEAD, m.z + sz * WALL_AHEAD) > WALL && steep(m.x, m.z) < WALL) {
+    if (!(m.wallT > 0)) m.wallSide = Math.random() < 0.5 ? -1 : 1;
+    m.wallT = 1.6; m.speed *= Math.exp(-dt * 6);
+    return;
+  }
+  m.x += sx * d; m.z += sz * d;
 }

@@ -1,6 +1,7 @@
 import * as THREE from '../lib/three.module.js';
 import { variantsOf } from './assets.js';
 import { AREA } from './eras/index.js';
+import { shape, nearRelief } from './relief.js';
 
 // Het land van één gebied. Twee vormen: 'rift' (savanne met een rivier erdoor) en 'lake' (een oever met een meer in het noorden).
 // Welke vorm, en waar de vaste bomen, het hoge gras en de poelen liggen, staat in het gebiedsbestand.
@@ -74,7 +75,8 @@ function lakeHeight(x, z) {
   return h;
 }
 
-export function height(x, z) {
+// Het glooiende land, als formule. Het spel zelf vraagt de hoogte aan height(): die leest het raster hieronder.
+function baseHeight(x, z) {
   if (LAKE) return lakeHeight(x, z);
   let h = 2.2 + (fbm(x * 0.006 + 10, z * 0.006 + 3) - 0.5) * 14;
   // lage plekken vlak afronden: alleen de rivier staat onder water
@@ -94,6 +96,63 @@ export function height(x, z) {
   return h;
 }
 
+// ---------- het raster ----------
+// De hoogte van het land ligt vast in een raster, één punt per hoekpunt van het getekende land.
+// height() rekent tussen die punten precies zoals het land getekend wordt: je voeten staan dus altijd óp de grond, ook op een steile wand.
+export const RELIEF = AREA.relief || [];
+export const SEG = 256, CELL = SIZE / SEG;
+const GRID = new Float32Array((SEG + 1) * (SEG + 1));
+for (let j = 0; j <= SEG; j++) for (let i = 0; i <= SEG; i++) {
+  const x = i * CELL - SIZE / 2, z = j * CELL - SIZE / 2;
+  GRID[j * (SEG + 1) + i] = shape(RELIEF, x, z, baseHeight(x, z), vnoise);
+}
+export function height(x, z) {
+  const gx = Math.min(SEG - 1e-4, Math.max(0, (x + SIZE / 2) / CELL)), gz = Math.min(SEG - 1e-4, Math.max(0, (z + SIZE / 2) / CELL));
+  const i = Math.floor(gx), j = Math.floor(gz), fx = gx - i, fz = gz - j, k = j * (SEG + 1) + i;
+  const a = GRID[k], d = GRID[k + 1], b = GRID[k + SEG + 1], c = GRID[k + SEG + 2];
+  // elk vak is twee driehoeken, met de schuine lijn van b naar d
+  return fx + fz <= 1 ? a + (d - a) * fx + (b - a) * fz : c + (b - c) * (1 - fx) + (d - c) * (1 - fz);
+}
+// Hoe steil het land hier is: meters omhoog per meter vooruit (1 = 45 graden)
+export function steep(x, z) {
+  const e = CELL * 0.6;
+  return Math.hypot(height(x + e, z) - height(x - e, z), height(x, z + e) - height(x, z - e)) / (2 * e);
+}
+// Te steil om tegenop te lopen
+export const CLIMB = 1.15;
+
+// Grote keien: daar kun je op staan. Elke kei heeft een hoogtekaartje van zijn bovenkant, gemeten aan het model.
+const solids = [];
+function profile(v) {
+  if (v.prof) return v.prof;
+  const G = 14, top = new Float32Array(G * G).fill(-1);
+  for (const part of v.parts) {
+    const p = part.geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const cx = Math.min(G - 1, Math.max(0, Math.floor((p.getX(i) / v.size.x + 0.5) * G))), cz = Math.min(G - 1, Math.max(0, Math.floor((p.getZ(i) / v.size.z + 0.5) * G)));
+      if (p.getY(i) > top[cz * G + cx]) top[cz * G + cx] = p.getY(i);
+    }
+  }
+  return (v.prof = { G, top });
+}
+function rockTop(s, x, z) {
+  const dx = x - s.x, dz = z - s.z;
+  if (dx * dx + dz * dz > s.r2) return -1e9;
+  const lx = (dx * s.cos - dz * s.sin) / s.k, lz = (dx * s.sin + dz * s.cos) / s.k, { G, top } = s.prof;
+  const gx = (lx / s.sx + 0.5) * G - 0.5, gz = (lz / s.sz + 0.5) * G - 0.5;
+  if (gx < -0.5 || gz < -0.5 || gx > G - 0.5 || gz > G - 0.5) return -1e9;
+  const i = Math.min(G - 2, Math.max(0, Math.floor(gx))), j = Math.min(G - 2, Math.max(0, Math.floor(gz))), fx = Math.min(1, Math.max(0, gx - i)), fz = Math.min(1, Math.max(0, gz - j));
+  const a = top[j * G + i], b = top[j * G + i + 1], c = top[(j + 1) * G + i], d = top[(j + 1) * G + i + 1];
+  if (Math.min(a, b, c, d) < 0) return -1e9;   // naast de kei
+  return s.base + (a + (b - a) * fx + (c - a) * fz + (a - b - c + d) * fx * fz) * s.k;
+}
+// Waar je voeten op staan: de grond, of de bovenkant van een grote kei
+export function surface(x, z) {
+  let h = height(x, z);
+  for (const s of solids) { const t = rockTop(s, x, z); if (t > h) h = t; }
+  return h;
+}
+
 // Hoog gras: hier kun je je verstoppen
 export const TALL_GRASS = AREA.tallGrass;
 export function tallGrassAt(x, z) {
@@ -108,7 +167,7 @@ export const cover = [];
 
 
 export function buildWorld(scene, A) {
-  const R = rng(7);
+  const R = rng(7), STEEP = 0.8;
 
   // ---------- lucht en nevel ----------
   const skyGeo = new THREE.SphereGeometry(600, 32, 16);
@@ -162,32 +221,33 @@ export function buildWorld(scene, A) {
   scene.add(sun, sun.target);
 
   // ---------- het land ----------
-  const seg = 200;
-  const geo = new THREE.PlaneGeometry(SIZE, SIZE, seg, seg);
+  const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG);
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position, cols = [], mix = [];
   for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), z = pos.getZ(i), h = height(x, z);
+    const x = pos.getX(i), z = pos.getZ(i), h = GRID[i];
     pos.setY(i, h);
     // hoeveel verdord gras en hoeveel kort groen gras; de rest is kale droge grond
     const n = fbm(x * 0.03 + 5, z * 0.03, 3), n2 = fbm(x * 0.11, z * 0.11, 2), d = riverDist(x, z);
     let grass = THREE.MathUtils.clamp((n - 0.22) * 2.6 + (n2 - 0.5) * 0.8, 0, 1), green = THREE.MathUtils.clamp((n - 0.55) * 3 + (d < 18 ? (1 - d / 18) * 0.8 : 0), 0, 1);
     if (d < 9) { grass *= d / 9; green *= d / 9; }
     if (h > 9) { const k = THREE.MathUtils.clamp(1 - (h - 9) / 5, 0, 1); grass *= k; green *= k; }
-    mix.push(grass, green);
+    // op een steile wand ligt geen aarde: daar zie je de kale rots
+    const bare = THREE.MathUtils.smoothstep(steep(x, z), 0.75, 1.25);
+    mix.push(grass * (1 - bare), green * (1 - bare), bare);
     // licht kleurverschil: natter en donkerder bij het water
     const wet = d < 12 ? (1 - d / 12) * 0.35 : 0, v = 0.92 + (n2 - 0.5) * 0.16 - wet;
     cols.push(v, v * (1 - wet * 0.1), v * (1 - wet * 0.2));
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-  geo.setAttribute('aMix', new THREE.Float32BufferAttribute(mix, 2));
+  geo.setAttribute('aMix', new THREE.Float32BufferAttribute(mix, 3));
   geo.computeVertexNormals();
   const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * SIZE / 4, uv.getY(i) * SIZE / 4);
   const gmat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, normalMap: A.tex.dry_ground_01_nor, normalScale: new THREE.Vector2(1.2, 1.2) });
   gmat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, { tBare: { value: A.tex.dry_ground_01_diff }, tDry: { value: A.tex.withered_grass_diff }, tGreen: { value: A.tex.sparse_grass_diff }, tRock: { value: A.tex.dry_ground_rocks_diff } });
-    sh.vertexShader = 'attribute vec2 aMix; varying vec2 vMix; varying vec2 vW;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvMix = aMix; vW = (modelMatrix * vec4(position, 1.0)).xz;');
-    sh.fragmentShader = 'uniform sampler2D tBare, tDry, tGreen, tRock; varying vec2 vMix; varying vec2 vW;\n' + sh.fragmentShader.replace('#include <map_fragment>', `
+    sh.vertexShader = 'attribute vec3 aMix; varying vec3 vMix; varying vec2 vW; varying vec3 vFace;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvMix = aMix; vW = position.xz; vFace = vec3(position.y, normal.x, normal.z);');
+    sh.fragmentShader = 'uniform sampler2D tBare, tDry, tGreen, tRock; varying vec3 vMix; varying vec2 vW; varying vec3 vFace;\n' + sh.fragmentShader.replace('#include <map_fragment>', `
       // elke foto op twee schalen, zodat je geen herhaling ziet
       vec2 u1 = vW / 4.0, u2 = vW / 13.0 + vec2(0.37, 0.71);
       float big = texture2D(tRock, vW / 37.0).g;
@@ -196,6 +256,16 @@ export function buildWorld(scene, A) {
       vec3 grn = texture2D(tGreen, u1 * 0.9).rgb;
       vec3 g = mix(bare, dry, smoothstep(0.0, 1.0, vMix.x + (big - 0.5) * 0.6));
       g = mix(g, grn, min(1.0, vMix.y * 0.85 + ${(LK.green || 0).toFixed(2)}));
+      // een steile wand: kale rots, van opzij bekeken (anders rekt de foto uit), met lagen en scheuren
+      if (vMix.z > 0.01) {
+        float ax = abs(vFace.y), az = abs(vFace.z);
+        vec2 r1 = vec2(vW.x, vFace.x * 1.6) / 3.1, r2 = vec2(vW.y, vFace.x * 1.6) / 3.1;
+        vec3 rk = (texture2D(tRock, r1).rgb * az + texture2D(tRock, r2).rgb * ax) / max(0.001, ax + az);
+        float lum = dot(rk, vec3(0.3, 0.59, 0.11));
+        float layer = 0.82 + 0.18 * sin(vFace.x * 7.0 + big * 9.0);
+        rk = mix(rk, vec3(lum), 0.45) * vec3(0.78, 0.74, 0.72) * layer;
+        g = mix(g, rk, smoothstep(0.0, 1.0, vMix.z + (big - 0.5) * 0.3));
+      }
       // Oost-Afrikaanse grond is warmer en roder dan deze foto's
       diffuseColor.rgb *= g * vec3(${(LK.ground || [1.12, 0.93, 0.74]).map((v) => v.toFixed(2)).join(', ')});`);
   };
@@ -229,6 +299,7 @@ export function buildWorld(scene, A) {
   function acacia(x, z, s) {
     // evenveel trekkingen als de oude, getekende boom: zo blijft de rest van de wereld op zijn plek
     R(); const nb = 3 + Math.floor(R() * 2); for (let i = 0; i < nb * 35 + 10; i++) R();
+    if (steep(x, z) > STEEP) return;   // op een wand staat niets
     acaciaSpots.push([x, z, s * 0.85, (x * 12.9898 + z * 78.233) % 6.28]);
     blockers.push({ x, z, r: Math.max(0.3, 0.3 * s) });   // iets ruimer dan de dunne stam: de reus en de dekking rekenen ermee
   }
@@ -261,16 +332,46 @@ export function buildWorld(scene, A) {
   // ---------- rotsen: gescande granieten keien uit Zuid-Afrika ----------
   const rockVariants = [...variantsOf(A.models.namaqualand_boulder_02), ...variantsOf(A.models.namaqualand_boulder_05), ...variantsOf(A.models.namaqualand_rocks_01)];
   const rockSpots = rockVariants.map(() => []);
-  function rock(x, z, s) {
-    const vi = Math.floor(R() * rockVariants.length), v = rockVariants[vi];
+  // fam: alleen keien van één soort steen (voor een rotskop of een wand uit één stuk); up: zoveel meter boven de grond (op andere keien)
+  function rock(x, z, s, rnd = R, fam = null, up = 0) {
+    const vi = fam ? fam[Math.floor(rnd() * fam.length)] : Math.floor(rnd() * rockVariants.length), v = rockVariants[vi], ry = rnd() * 6.28;
     const k = (s * 2) / Math.max(v.size.x, v.size.z);   // zo groot als de oude rots
-    rockSpots[vi].push([x, z, k, R() * 6.28]);
-    if (s > 0.7) blockers.push({ x, z, r: s * 0.9, top: height(x, z) + v.size.y * k * 0.9 });
+    if (!fam && steep(x, z) > STEEP) return;
+    const sink = 0.1 - up / (k * v.size.y);
+    rockSpots[vi].push([x, z, k, ry, sink]);
+    if (s > 0.7) {
+      // rock: je loopt er niet doorheen maar je kunt erop (zie surface); de cirkel is er voor de dieren en de camera
+      blockers.push({ x, z, r: s * 0.9, top: height(x, z) + up + v.size.y * k * 0.9, rock: true });
+      solids.push({ x, z, k, cos: Math.cos(ry), sin: Math.sin(ry), sx: v.size.x, sz: v.size.z, r2: (Math.hypot(v.size.x, v.size.z) * k / 2) ** 2, base: height(x, z) - sink * k * v.size.y, prof: profile(v) });
+    }
     if (s > 0.7 && v.size.y * k > 0.8) cover.push({ x, z, r: s * 0.9 });
   }
   for (let i = 0; i < 55; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 9)) rock(x, z, 0.4 + R() * 1.6); }
   for (let i = 0; i < 14; i++) { const a = R() * 6.28, d = 6 + R() * 14; const x = HILL[0] + Math.cos(a) * d, z = HILL[1] + Math.sin(a) * d, s = 0.8 + R() * 1.8; if (!LAKE || AREA.hill) rock(x, z, s); }
   for (let i = 0; i < 6; i++) rock(START[0] - 5 + R() * 10, START[1] + 4 + R() * 6, 0.3 + R() * 0.5);   // keien bij de start
+  // een rotskop: grote keien op en tegen elkaar, om op te klimmen en ver te kijken (eigen willekeur: de rest van de wereld blijft op zijn plek)
+  const RK = rng(23);
+  const FAM = rockVariants.map((v, i) => i).filter((i) => i < variantsOf(A.models.namaqualand_boulder_02).length + variantsOf(A.models.namaqualand_boulder_05).length && i >= variantsOf(A.models.namaqualand_boulder_02).length);
+  for (const f of RELIEF) if (f.kind === 'kop') {
+    const n = f.rocks || 6;
+    for (let i = 0; i < n; i++) {
+      const a = i * 2.4 + RK() * 0.6, d = i ? (0.14 + RK() * 0.3) * f.r : 0;
+      rock(f.at[0] + Math.cos(a) * d, f.at[1] + Math.sin(a) * d, i ? 1.7 + RK() * 1.8 : 4, RK, FAM);
+    }
+    // en een paar die boven op de andere liggen
+    for (let i = 0; i < Math.ceil(n * 0.6); i++) {
+      const a = RK() * 6.28, d = (0.03 + RK() * 0.2) * f.r, x = f.at[0] + Math.cos(a) * d, z = f.at[1] + Math.sin(a) * d;
+      rock(x, z, 1.6 + RK() * 1.6, RK, FAM, Math.max(0, surface(x, z) - height(x, z)) * 0.75);
+    }
+  }
+  // langs een breuk steken keien uit de wand en ligt er puin aan de voet
+  for (const f of RELIEF) if (f.kind === 'breuk') for (let i = 1; i < f.path.length; i++) {
+    const [ax, az] = f.path[i - 1], [bx, bz] = f.path[i], L = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / L * (f.up || 1), nz = (bx - ax) / L * (f.up || 1);
+    for (let t = 3; t < L; t += 3.5 + RK() * 5) {
+      const off = -2.2 + RK() * 3, x = ax + (bx - ax) * t / L + nx * off, z = az + (bz - az) * t / L + nz * off, s = off < -1 ? 0.35 + RK() * 0.5 : 0.9 + RK() * 1.3;
+      if (steep(x - nx * off, z - nz * off) > 0.7) rock(x, z, s, RK, FAM);   // niet op de puinhelling
+    }
+  }
   const dm = new THREE.Object3D();
   function instance(v, spots, shadow = true) {
     for (const part of v.parts) for (const cell of perCell(spots, 220)) {
@@ -289,14 +390,15 @@ export function buildWorld(scene, A) {
     const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (!ok(x, z, 8)) continue;
     const vi = Math.floor(R() * bushVariants.length), v = bushVariants[vi];
     const bh = 1.0 + R() * 0.9;
-    bushSpots[vi].push([x, z, bh / v.size.y, R() * 6.28, 0.02]);
+    const ry = R() * 6.28; if (steep(x, z) > STEEP) continue;
+    bushSpots[vi].push([x, z, bh / v.size.y, ry, 0.02]);
     if (bh > 1.2) cover.push({ x, z, r: Math.max(v.size.x, v.size.z) * bh / v.size.y * 0.35 });
   }
   bushVariants.forEach((v, i) => bushSpots[i].length && instance(v, bushSpots[i]));
   const logs = variantsOf(A.models.dead_tree_trunk), twigs = variantsOf(A.models.dry_branches_medium_01);
   const logSpots = [], twigSpots = twigs.map(() => []);
-  for (let i = 0; i < 16; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 8)) logSpots.push([x, z, 1.1 + R() * 0.5, R() * 6.28, 0.15]); }
-  for (let i = 0; i < 40; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 6)) twigSpots[Math.floor(R() * twigs.length)].push([x, z, 0.8 + R() * 0.6, R() * 6.28, 0.05]); }
+  for (let i = 0; i < 16; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 8)) { const sp = [x, z, 1.1 + R() * 0.5, R() * 6.28, 0.15]; if (steep(x, z) < STEEP) logSpots.push(sp); } }
+  for (let i = 0; i < 40; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 6)) { const ti = Math.floor(R() * twigs.length), sp = [x, z, 0.8 + R() * 0.6, R() * 6.28, 0.05]; if (steep(x, z) < STEEP) twigSpots[ti].push(sp); } }
   instance(logs[0], logSpots);
   twigs.forEach((v, i) => twigSpots[i].length && instance(v, twigSpots[i], false));
 
@@ -359,7 +461,7 @@ export function buildWorld(scene, A) {
   scatter(grassMat(0.25, 0.8), 16000, [3, 4, 5, 6, 7], () => {
     const x = (R() - 0.5) * 2 * (WALK + 10), z = (R() - 0.5) * 2 * (WALK + 10);
     if (riverDist(x, z) < 6) return null;
-    if (fbm(x * 0.05, z * 0.05, 2) < (LK.lush || 0.4)) return null;
+    if (fbm(x * 0.05, z * 0.05, 2) < (LK.lush || 0.4) || steep(x, z) > STEEP) return null;
     return [x, z, 0.5 + R() * 0.5];
   });
   // hoog gras om je in te verstoppen: hoge pollen met pluimen

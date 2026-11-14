@@ -6,6 +6,13 @@ export const savanne = {
   id: 'savanne', name: 'De savanne', terrain: 'rift', ma: 1.8, region: 'Oost-Afrika', playable: true, next: 'water',
   home: { x: -8, z: -14 },                 // de slaapboom
   start: [2, -6],                          // hier begin je
+  // het reliëf van dit gebied (zie relief.js): een breuktrap in het noordwesten, een droge geul naar de rivier, een rotskop in het oosten en één over de rivier
+  relief: [
+    { kind: 'breuk', path: [[-155, -118], [-115, -134], [-70, -126], [-38, -140]], h: 3.4, up: -1, gaps: [0.55] },
+    { kind: 'geul', path: [[-152, -72], [-128, -44], [-120, -14]], w: 5.5, d: 3.4, lift: 2.2 },
+    { kind: 'kop', at: [140, 34], r: 13, h: 3, rocks: 7 },
+    { kind: 'kop', at: [-60, 130], r: 16, h: 4.5, rocks: 9 },
+  ],
   trees: [[-8, -14, 1.75], [14, -20, 1], [-30, 10, 1.1], [40, 50, 1.3]],   // vaste acacia's: [x, z, maat]
   tallGrass: [[20, -5, 11], [44, 10, 9], [60, -25, 12], [-15, 20, 8], [85, 30, 10], [-60, 15, 10], [10, -55, 9]],   // hier kun je je verstoppen: [x, z, straal]
   carcass: { x: -70, z: -78 },             // het oude karkas waar de hyena's op afkomen

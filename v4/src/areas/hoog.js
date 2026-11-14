@@ -7,6 +7,11 @@ export const hoog = {
   intro: 'Dagen lopen, steeds hoger. Het vuur ging mee.',
   home: { x: -100, z: -26 },               // het nieuwe kamp, onder een brede acacia niet ver van de rivier
   start: [-96, -20],
+  // het reliëf van dit gebied (zie relief.js): een breuktrap in het zuiden en een rotskop in het noordoosten
+  relief: [
+    { kind: 'breuk', path: [[-70, 118], [-28, 132], [20, 124], [58, 138]], h: 3.6, up: 1, gaps: [0.5] },
+    { kind: 'kop', at: [105, -145], r: 12, h: 3.4, rocks: 8 },
+  ],
   hill: [-30, -130],
   cold: 2.2,                               // hoe hard een nacht zonder vuur of huid aan je vreet (laagland: 1,5)
   // hoe het land eruitziet: groener gras, koelere grond en meer nevel dan in het laagland

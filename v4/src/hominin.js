@@ -1,5 +1,8 @@
 import * as THREE from '../lib/three.module.js';
-import { height, blockers, cover, WALK, riverDist, tallGrassAt, mergeStatic, deep } from './world.js';
+import { height, surface, CLIMB, blockers, cover, WALK, riverDist, tallGrassAt, mergeStatic, deep } from './world.js';
+
+// zo hoog kun je nog ergens op springen (meters boven je voeten)
+const LEDGE = 1.6;
 import { ERA, AREA } from './eras/index.js';
 
 // Het lichaam van dit tijdperk: lengte in meters en hoe hard je loopt (Homo habilis: klein; Homo erectus: lang, een loper)
@@ -203,7 +206,7 @@ export class Hominin {
 
   initState() {
     this.pos = new THREE.Vector3(AREA.start[0], 0, AREA.start[1]);
-    this.y = 0; this.vy = 0; this.onGround = true; this.jumpReq = false; this.landed = false;
+    this.y = 0; this.vy = 0; this.onGround = true; this.jumpReq = false; this.landed = false; this.fell = 0; this.top = 0; this.lastX = 1e9; this.lastZ = 1e9; this.blocked = false;
     this.vel = new THREE.Vector3();
     this.yaw = 0;
     this.phase = 0;
@@ -224,25 +227,64 @@ export class Hominin {
     const max = want * mods.speed * BODY.speed * (riverDist(this.pos.x, this.pos.z) < 6 || height(this.pos.x, this.pos.z) < -0.45 ? 0.45 : 1);
     const target = mag > 0.001 ? dir.clone().normalize().multiplyScalar(max) : dir.clone().set(0, 0, 0);
     this.vel.lerp(target, 1 - Math.exp(-dt * (this.onGround ? 6 : 1.5)));
+    // ergens anders neergezet (een nieuw gebied, wakker worden, een test)? Dan sta je daar meteen op de grond.
+    if (Math.hypot(this.pos.x - this.lastX, this.pos.z - this.lastZ) > 3) { this.y = Math.max(surface(this.pos.x, this.pos.z), -0.9); this.vy = 0; this.onGround = true; }
     const px = this.pos.x, pz = this.pos.z;
     this.pos.addScaledVector(this.vel, dt);
     if (deep(this.pos.x, this.pos.z) && !deep(px, pz)) { this.pos.x = px; this.pos.z = pz; this.vel.multiplyScalar(0.3); this.tooDeep = true; }   // verder kun je niet staan
     for (const b of blockers) {
-      if (b.top && this.y > b.top - 0.15) continue;   // over een lage rots heen springen
+      if (b.rock) continue;   // op een kei kun je staan: dat regelt de ondergrond hieronder
+      if (b.top && this.y > b.top - 0.15) continue;
       const dx = this.pos.x - b.x, dz = this.pos.z - b.z, d = Math.hypot(dx, dz), min = b.r + 0.3;
       if (d < min && d > 0.001) { this.pos.x = b.x + dx / d * min; this.pos.z = b.z + dz / d * min; }
     }
     const lim = WALK - 4;
     this.pos.x = THREE.MathUtils.clamp(this.pos.x, -lim, lim); this.pos.z = THREE.MathUtils.clamp(this.pos.z, -lim, lim);
+    // een wand of een hoge kei: daar loop je niet tegenop. Je glijdt erlangs, of je moet springen.
+    this.blocked = false;
+    if (mag < 0.05) this.roundSide = 0;
+    if (this.wall(px, pz, this.pos.x, this.pos.z)) {
+      this.blocked = true;
+      // welke kant loopt het op? Alleen het stuk langs de wand blijft over.
+      const bx = this.pos.x, bz = this.pos.z, e = 0.5, gx = surface(bx + e, bz) - surface(bx - e, bz), gz = surface(bx, bz + e) - surface(bx, bz - e), gl = Math.hypot(gx, gz);
+      let mx = bx - px, mz = bz - pz;
+      const want = Math.hypot(mx, mz);
+      this.pos.x = px; this.pos.z = pz;
+      if (gl > 0.01) {
+        const into = (mx * gx + mz * gz) / (gl * gl);
+        if (into > 0) { mx -= gx * into; mz -= gz * into; }
+        // recht tegen een kei aan: je loopt eromheen (altijd dezelfde kant op, zolang je blijft duwen)
+        const m = Math.hypot(mx, mz), isRock = surface(bx + gx / gl * 0.6, bz + gz / gl * 0.6) > height(bx + gx / gl * 0.6, bz + gz / gl * 0.6) + 0.3;
+        if (isRock && this.onGround && m < want * 0.6) {
+          const side = this.roundSide || (this.roundSide = mx * -gz + mz * gx >= 0 ? 1 : -1);
+          mx = -gz / gl * side * want * 0.6; mz = gx / gl * side * want * 0.6;
+        }
+        if (!this.wall(px, pz, px + mx, pz + mz)) { this.pos.x = px + mx; this.pos.z = pz + mz; }
+      }
+      if (this.pos.x === px && this.pos.z === pz && this.onGround) this.vel.multiplyScalar(0.5);
+    }
     // springen en vallen
-    const gy = Math.max(height(this.pos.x, this.pos.z), -0.9);
-    this.landed = false;
-    if (this.jumpReq && this.onGround && !this.sneaking) { this.vy = 5.2; this.onGround = false; }
+    const gy = Math.max(surface(this.pos.x, this.pos.z), -0.9);
+    this.landed = false; this.fell = 0;
+    if (this.onGround) this.top = this.y;
+    if (this.jumpReq && this.onGround && !this.sneaking) {
+      // staat er iets voor je waar je op kunt (een kei, een richel)? Dan zet je hoger af.
+      const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+      let rise = 0, edge = 0;
+      for (let k = 0.3; k < 1.9; k += 0.2) { const r = surface(this.pos.x + fx * k, this.pos.z + fz * k) - this.y; if (r >= LEDGE) break; if (r > 0.5 && !edge) { const r2 = surface(this.pos.x + fx * (k + 0.4), this.pos.z + fz * (k + 0.4)) - this.y; if (r2 < 0.5 || r2 >= LEDGE || surface(this.pos.x + fx * k, this.pos.z + fz * k) < height(this.pos.x + fx * k, this.pos.z + fz * k) + 0.1) break; edge = k; rise = Math.max(rise, r2); } rise = Math.max(rise, r); }
+      const ledge = edge > 0;   // alleen een kei; tegen een wand van aarde spring je niet op
+      this.vy = ledge ? Math.sqrt(2 * 15 * (rise + 0.3)) : 5.2;
+      // je zet af naar de kei toe: op het hoogste punt van de sprong ben je er net boven
+      if (ledge) { const v = Math.min(5.4, Math.max(Math.hypot(this.vel.x, this.vel.z), (edge + 0.35) / (this.vy / 15))); this.vel.set(fx * v, 0, fz * v); }
+      this.onGround = false; this.top = this.y;
+    }
     this.jumpReq = false;
     if (!this.onGround) {
-      this.vy -= 15 * dt; this.y += this.vy * dt;
-      if (this.y <= gy) { this.y = gy; this.vy = 0; this.onGround = true; this.landed = true; }
-    } else this.y = gy;
+      this.vy -= 15 * dt; this.y += this.vy * dt; this.top = Math.max(this.top, this.y);
+      if (this.y <= gy) { this.fell = this.top - gy; this.y = gy; this.vy = 0; this.onGround = true; this.landed = true; }
+    } else if (gy < this.y - 0.5) { this.onGround = false; this.vy = 0; this.top = this.y; }   // van een rand af: je valt
+    else this.y = gy;
+    this.lastX = this.pos.x; this.lastZ = this.pos.z;
     this.pos.y = this.y;
 
     this.speed = Math.hypot(this.vel.x, this.vel.z);
@@ -261,6 +303,17 @@ export class Hominin {
     if (this.lookT < 0) { this.lookT = 2 + Math.random() * 4; this.lookTarget = this.idle > 1.5 ? (Math.random() - 0.5) * 1.6 : 0; }
     this.lookYaw += ((this.lookTarget || 0) - this.lookYaw) * (1 - Math.exp(-dt * 2.5));
     this.pose(mods, dt);
+  }
+
+  // Kom je van (ax, az) naar (bx, bz) een wand tegen? Op de grond: te steil omhoog. In de lucht: iets wat hoger is dan je voeten.
+  wall(ax, az, bx, bz) {
+    const dx = bx - ax, dz = bz - az, d = Math.hypot(dx, dz);
+    if (d < 1e-5) return false;
+    const here = surface(bx, bz);
+    if (!this.onGround) return here > this.y + 0.25;
+    if (here - this.y > Math.max(0.45, d * CLIMB)) return true;
+    const ahead = surface(bx + dx / d * 0.6, bz + dz / d * 0.6);
+    return ahead > this.y + 0.45 && (ahead - here) / 0.6 > CLIMB;
   }
 
   pose(mods, dt = 1 / 60) {

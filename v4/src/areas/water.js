@@ -9,6 +9,11 @@ export const water = {
   intro: 'Het meer zakt. Wat achterblijft, is van wie het vindt.',
   home: { x: -6, z: 14 },
   start: [-4, 18],
+  // het reliëf van dit gebied (zie relief.js): een breuktrap langs de westrand en een rotskop in het zuidwesten
+  relief: [
+    { kind: 'breuk', path: [[-152, -30], [-140, -75], [-132, -125]], h: 3.2, up: -1, gaps: [0.45] },
+    { kind: 'kop', at: [-95, -125], r: 13, h: 3.2, rocks: 7 },
+  ],
   trees: [[-6, 14, 1.75], [30, -10, 1], [-50, -20, 1.1], [70, -50, 1.3], [-90, 30, 1.2], [110, 10, 1], [10, -80, 1.1]],
   tallGrass: [[-100, -10, 12], [30, -45, 10], [80, -70, 11], [-40, -90, 10], [-70, 34, 9], [104, 34, 9], [5, -40, 8]],
   models: ['croc', 'catfish'],              // alleen hier: de krokodil en de meerval

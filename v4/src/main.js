@@ -1,6 +1,6 @@
 import * as THREE from '../lib/three.module.js';
 import { rigDetail } from './rig.js';
-import { buildWorld, height, tallGrassAt, blockers, cover } from './world.js';
+import { buildWorld, height, tallGrassAt, blockers, cover, surface, steep } from './world.js';
 import { Hominin, Herd, Vultures, carcass } from './actors.js';
 import { ITEMS, ROCKS, DISCOVERIES, LOOKS, VERDICT, FINDS, placeItems, heldMesh } from './items.js';
 import { Hyenas, Leopard, Throws } from './predators.js';
@@ -1198,6 +1198,8 @@ function update(dt) {
   sound.tick(dt, { night, move: player.speed, tall, senses: state.sensing, danger });
   // voetstappen
   if (Math.floor(player.phase / Math.PI) !== stepPhase) { stepPhase = Math.floor(player.phase / Math.PI); if (player.speed > 0.5) sound.step(tall); }
+  // neerkomen: een bons; van hoog vallen doet pijn
+  if (player.landed) { sound.thud(); if (player.fell > 3) hurt(Math.min(45, 10 + (player.fell - 3) * 12)); }
 
   C.place(dt, t, sick);
 
@@ -1339,4 +1341,5 @@ window.__game = { eat, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, t
   // als lookFrom, maar met hoogtes ten opzichte van de grond op de plek waar je naar kijkt
   lookRel: (pos, look) => { const h = height(look[0], look[2]); cam.override = { pos: new THREE.Vector3(pos[0], pos[1] + h, pos[2]), look: new THREE.Vector3(look[0], look[1] + h, look[2]) }; }, setDay: (p) => { dayP = p; }, setSense,
   screenOf: (t) => { const a = anchorOf(t); return a && [a.x, a.y]; },
+  land: { height, surface, steep, blockers },
 };

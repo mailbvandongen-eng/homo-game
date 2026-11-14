@@ -7,6 +7,11 @@ export const berg = {
   intro: 'Veel later. Een andere groep, met langere benen.',
   home: { x: 10, z: -26 },                 // het kamp: de groep slaapt op de grond, onder de oude acacia
   start: [14, -20],
+  // het reliëf van dit gebied (zie relief.js): een diepe kloof naar de rivier en een rotskop in het noordwesten
+  relief: [
+    { kind: 'geul', path: [[-155, -60], [-132, -40], [-124, -12]], w: 4.5, d: 4.6, lift: 3.4 },
+    { kind: 'kop', at: [-135, -140], r: 12, h: 3, rocks: 7 },
+  ],
   hill: [-70, -110],                       // de heuvel waar de bliksem insloeg
   trees: [[10, -26, 1.75], [36, 44, 1.3], [-34, -6, 1.1], [58, -40, 1], [-84, 36, 1.2], [-10, -96, 1], [110, -20, 1.1]],
   tallGrass: [[26, -2, 10], [-64, 14, 12], [60, -36, 9], [-22, -58, 10], [-14, 22, 8], [92, 24, 10], [-100, -50, 10]],
