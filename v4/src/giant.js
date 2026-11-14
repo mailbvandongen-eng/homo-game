@@ -128,7 +128,7 @@ export class Giant {
     // bij de reus durven de hyena's niet te komen
     game.shield = d < 34;
     for (const h of game.hyenas.list) {
-      if (dist(h, this) < 38 && ['curious', 'windup', 'rush'].includes(h.state)) { h.state = 'retreat'; h.t = 6; game.sound.yelp(); this.shieldT = 9; }
+      if (dist(h, this) < 38 && ['curious', 'windup', 'rush'].includes(h.state)) { h.state = 'retreat'; h.t = 6; game.sound.from(h).yelp(); this.shieldT = 9; }
     }
     if (game.shield && game.hyenas.list.some((h) => dist(h, p) < 45 && h.state !== 'rest')) {
       this.shieldT += dt;
@@ -139,7 +139,7 @@ export class Giant {
       case 'roam': case 'stop':
         this.roam(dt, night, game);
         if (awake && this.calm <= 0 && d < near) {
-          this.state = 'watch'; this.t = 0; game.sound.rumble(0.8);
+          this.state = 'watch'; this.t = 0; game.sound.from(this).rumble(0.8);
           if (!this.warned) { this.warned = true; game.toast('De reus draait zijn kop naar je toe en zet zijn oren wijd uit. Niet dichterbij komen.', 5); }
         }
         break;
@@ -152,7 +152,7 @@ export class Giant {
         this.t -= dt; this.walk(0, dt); this.yaw = turn(this.yaw, Math.atan2(p.x - this.x, p.z - this.z), dt * 1.2);
         anim = 'warn';
         if (this.t < 0) {
-          if (awake && d < 27) { this.state = 'charge'; this.t = 7; game.sound.trumpet(1); }
+          if (awake && d < 27) { this.state = 'charge'; this.t = 7; game.sound.from(this).trumpet(1); }
           else { this.end(12, game); game.toast('De reus schudt zijn kop en laat het erbij. Deze keer.', 4); }
         }
         break;
@@ -168,7 +168,7 @@ export class Giant {
           const k = 1 / d; game.player.vel.set((p.x - this.x) * k * 15, 0, (p.z - this.z) * k * 15); game.player.vy = 4.5; game.player.onGround = false;
           game.quake(0.9); this.end(25, game);
         } else if (bonk) {
-          game.sound.thud(); game.quake(d < 25 ? 0.6 : 0); this.end(30, game);
+          game.sound.from(this).thud(); game.quake(d < 25 ? 0.6 : 0); this.end(30, game);
           game.toast('De reus dreunt tegen het hout. Hij schudt zijn kop en druipt af.', 5);
         } else if (this.t < 0 || !awake || dist(this, HOME) < 34) { this.end(20, game); if (awake) game.toast('De reus geeft het op en draait zich om. Je hart bonkt in je keel.', 5); }
         break;
@@ -188,13 +188,13 @@ export class Giant {
       this.stepT -= dt * (this.speed > 2.6 ? 3.2 : 1.1);
       if (this.stepT < 0) {
         this.stepT = 1; const v = Math.max(0, 1 - d / 60);
-        if (v > 0) { game.sound.stomp(v * (this.speed > 2.6 ? 1 : 0.6)); if (d < 26) game.quake((this.speed > 2.6 ? 0.35 : 0.12) * (1 - d / 26)); }
+        if (v > 0) { game.sound.from(this).stomp(v * (this.speed > 2.6 ? 1 : 0.6)); if (d < 26) game.quake((this.speed > 2.6 ? 0.35 : 0.12) * (1 - d / 26)); }
       }
     }
-    if (d < 70 && Math.random() < dt * 0.05) game.sound.rumble(Math.max(0.2, 1 - d / 70));
+    if (d < 70 && Math.random() < dt * 0.05) game.sound.from(this).rumble(Math.max(0.2, 1 - d / 70));
   }
   anger(game) {
-    this.state = 'warn'; this.t = 2.4; game.sound.trumpet(0.8);
+    this.state = 'warn'; this.t = 2.4; game.sound.from(this).trumpet(0.8);
     game.toast('Hij trompettert en stampt! Ren, of zorg dat er een boom tussen jullie staat!', 5);
   }
   end(calm, game) { this.state = 'roam'; this.calm = calm; this.t = 0; game.discover('giant'); }

@@ -8,6 +8,7 @@ export const hoog = {
   home: { x: -100, z: -26 },               // het nieuwe kamp, onder een brede acacia niet ver van de rivier
   start: [-96, -20],
   // het reliëf van dit gebied (zie relief.js): een breuktrap in het zuiden en een rotskop in het noordoosten
+  weather: { wind: 0.42 },   // op de hoge vlakte waait het altijd
   relief: [
     { kind: 'breuk', path: [[-70, 118], [-28, 132], [20, 124], [58, 138]], h: 3.6, up: 1, gaps: [0.5] },
     { kind: 'kop', at: [105, -145], r: 12, h: 3.4, rocks: 8 },

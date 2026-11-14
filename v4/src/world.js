@@ -1,7 +1,7 @@
 import * as THREE from '../lib/three.module.js';
 import { variantsOf } from './assets.js';
 import { AREA } from './eras/index.js';
-import { shape, nearRelief } from './relief.js';
+import { shape } from './relief.js';
 
 // Het land van één gebied. Twee vormen: 'rift' (savanne met een rivier erdoor) en 'lake' (een oever met een meer in het noorden).
 // Welke vorm, en waar de vaste bomen, het hoge gras en de poelen liggen, staat in het gebiedsbestand.
@@ -155,6 +155,15 @@ export function surface(x, z) {
 
 // Hoog gras: hier kun je je verstoppen
 export const TALL_GRASS = AREA.tallGrass;
+// Waar loop je op? (voor het geluid van je voeten)
+export function groundAt(x, z) {
+  const h = height(x, z);
+  if (h < WATER - 0.4) return 'water';
+  if (surface(x, z) > h + 0.1 || steep(x, z) > 0.75) return 'rots';
+  if (h < WATER - 0.05 || riverDist(x, z) < 5) return 'modder';
+  const n = fbm(x * 0.03 + 5, z * 0.03, 3), n2 = fbm(x * 0.11, z * 0.11, 2);
+  return (n - 0.22) * 2.6 + (n2 - 0.5) * 0.8 > 0.45 ? 'gras' : 'aarde';
+}
 export function tallGrassAt(x, z) {
   for (const [px, pz, r] of TALL_GRASS) { const dx = x - px, dz = z - pz; if (dx * dx + dz * dz < r * r) return true; }
   return false;
@@ -175,12 +184,12 @@ export function buildWorld(scene, A) {
     side: THREE.BackSide, depthWrite: false, fog: false,
     uniforms: {
       top: { value: new THREE.Color(0x6f9cc8) }, mid: { value: new THREE.Color(0xf2d39a) }, low: { value: new THREE.Color(0xe8b47a) },
-      sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color(0xfff0d0) }, cloud: { value: new THREE.Color(0xffffff) }, uTime: { value: 0 },
+      sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color(0xfff0d0) }, cloud: { value: new THREE.Color(0xffffff) }, uTime: { value: 0 }, cover: { value: 0 },
       tSky: { value: A.sky }, skyMix: { value: 1 }, skyTint: { value: new THREE.Color(1, 1, 1) },
     },
     vertexShader: 'varying vec3 vp; void main(){ vp = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     // verloop van de lucht, een zon met gloed en wolkenslierten
-    fragmentShader: `uniform vec3 top, mid, low, sunCol, cloud, sunDir, skyTint; uniform float uTime, skyMix; uniform sampler2D tSky; varying vec3 vp;
+    fragmentShader: `uniform vec3 top, mid, low, sunCol, cloud, sunDir, skyTint; uniform float uTime, skyMix, cover; uniform sampler2D tSky; varying vec3 vp;
       float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }
       float fbm(vec2 p){ float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { s += a * n(p); p *= 2.03; a *= 0.5; } return s; }
@@ -191,9 +200,9 @@ export function buildWorld(scene, A) {
         c += sunCol * (pow(sd, 8.0) * 0.35 + pow(sd, 90.0) * 0.6 + smoothstep(0.9993, 0.9997, sd) * 2.0);
         if (y > 0.0) {
           vec2 uv = vp.xz / (y + 0.12) * 1.6 + vec2(uTime * 0.004, uTime * 0.002);
-          float cl = smoothstep(0.52, 0.8, fbm(uv)) * smoothstep(0.0, 0.25, y);
-          vec3 cc = mix(cloud, sunCol, pow(sd, 6.0) * 0.6);
-          c = mix(c, cc, cl * 0.75);
+          float cl = smoothstep(0.52 - cover * 0.5, 0.8 - cover * 0.42, fbm(uv)) * smoothstep(0.0, 0.25 - cover * 0.2, y);
+          vec3 cc = mix(cloud, sunCol, pow(sd, 6.0) * 0.6 * (1.0 - cover)) * (1.0 - cover * 0.38 * smoothstep(0.35, 0.9, fbm(uv * 1.7 + 4.0)));
+          c = mix(c, cc, cl * (0.75 + cover * 0.22));
         }
         // overdag: de echte luchtfoto (een veld in Zuid-Afrika), 's avonds en 's nachts het verloop hierboven
         vec3 d = normalize(vp);
@@ -404,7 +413,7 @@ export function buildWorld(scene, A) {
 
 
   // ---------- gras dat meebeweegt in de wind ----------
-  const uniforms = { uTime: { value: 0 } };
+  const uniforms = { uTime: { value: 0 }, uWind: { value: 1 } };
   // twee gekruiste kaartjes met een foto van een gescande graspol (8 soorten in één atlas)
   const cardGeo = (() => {
     const a = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0), b = a.clone().rotateY(Math.PI / 2);
@@ -416,13 +425,13 @@ export function buildWorld(scene, A) {
   function grassMat(sway, dry) {
     const m = new THREE.MeshLambertMaterial({ map: A.tex.grass_atlas, alphaTest: 0.4, alphaToCoverage: true, side: THREE.DoubleSide });
     m.onBeforeCompile = (sh) => {
-      sh.uniforms.uTime = uniforms.uTime;
-      sh.vertexShader = 'uniform float uTime; attribute float aTile;\n' + sh.vertexShader
+      sh.uniforms.uTime = uniforms.uTime; sh.uniforms.uWind = uniforms.uWind;
+      sh.vertexShader = 'uniform float uTime, uWind; attribute float aTile;\n' + sh.vertexShader
         .replace('#include <uv_vertex>', `#include <uv_vertex>
           vMapUv = vec2((mod(aTile, 4.0) + uv.x) / 4.0, 0.5 - floor(aTile / 4.0) * 0.5 + uv.y * 0.5);`)
         .replace('#include <begin_vertex>', `#include <begin_vertex>
           vec2 ip = vec2(instanceMatrix[3].x, instanceMatrix[3].z);
-          float w = sin(uTime * 1.6 + ip.x * 0.15 + ip.y * 0.1) * 0.6 + sin(uTime * 3.1 + ip.x * 0.7) * 0.25;
+          float w = (sin(uTime * 1.6 + ip.x * 0.15 + ip.y * 0.1) * 0.6 + sin(uTime * 3.1 + ip.x * 0.7) * 0.25) * uWind + (uWind - 1.0) * 0.55;
           transformed.x += w * ${sway.toFixed(2)} * position.y * position.y;
           transformed.z += w * ${(sway * 0.5).toFixed(2)} * position.y * position.y;`)
         .replace('#include <beginnormal_vertex>', 'vec3 objectNormal = vec3(0.0, 1.0, 0.0);');
@@ -477,27 +486,36 @@ export function buildWorld(scene, A) {
     return [x, riverZ(x) + (LAKE ? (side < 0 ? -off * 0.6 : off - 6) : side * off), 1.2 + R() * 0.6];
   });
 
-  const fogBase = new THREE.Color();
+  const fogBase = new THREE.Color(), GREY = new THREE.Color(), sky = { cloud: 0, rain: 0, wind: 0.25 };
   return {
-    sun, uniforms, water, hemi,
+    sun, uniforms, water, hemi, sky,
     // p: moment van de dag (0 = dageraad, 0,4 = middag, 0,75 = zonsondergang, 0,9 = nacht)
     update(t, focus, p, senses) {
       uniforms.uTime.value = t;
       for (const im of shadowCells) { const c = im.boundingSphere.center; im.castShadow = Math.hypot(c.x - focus.x, c.z - focus.z) < im.boundingSphere.radius + 36; }
       const k = dayLook(p);
+      // het weer: wolken maken de lucht grijs, het licht vlak en de schaduwen zwak; regen trekt een sluier over het land
+      const cl = sky.cloud, wet = sky.rain;
+      uniforms.uWind.value = 0.55 + sky.wind * 1.9;
+      skyMat.uniforms.cover.value = cl;
+      if (cl > 0.01) {
+        const lum = (c) => c.r * 0.3 + c.g * 0.55 + c.b * 0.15;
+        for (const key of ['top', 'mid', 'low', 'fog', 'hemiSky']) { const v = lum(k[key]) * (key === 'top' ? 1.25 : 0.92); k[key].lerp(GREY.setRGB(v * 0.95, v * 0.98, v * 1.04), cl * 0.8); }
+        k.sun.lerp(GREY.setRGB(0.85, 0.88, 0.92), cl * 0.6); k.sunI *= 1 - cl * 0.72; k.hemiI *= 1 + cl * 0.12 - wet * 0.18;
+      }
       skyMat.uniforms.top.value.copy(k.top); skyMat.uniforms.mid.value.copy(k.mid); skyMat.uniforms.low.value.copy(k.low);
       skyMat.uniforms.sunCol.value.copy(k.sun).multiplyScalar(Math.min(1, k.sunI / 2));
       skyMat.uniforms.cloud.value.copy(k.mid).lerp(k.top, 0.2).offsetHSL(0, -0.1, 0.08);
       skyMat.uniforms.uTime.value = t;
       const dayK = p < 0.1 ? THREE.MathUtils.smoothstep(p, 0.02, 0.1) : p < 0.62 ? 1 : 1 - THREE.MathUtils.smoothstep(p, 0.62, 0.74);
-      skyMat.uniforms.skyMix.value = dayK * (senses ? 0.4 : 1);
+      skyMat.uniforms.skyMix.value = dayK * (senses ? 0.4 : 1) * (1 - Math.min(1, cl * 1.25));
       skyMat.uniforms.skyTint.value.setRGB(1, 1, 1).lerp(k.sun, 0.25);
       scene.environmentIntensity = (0.15 + 0.85 * dayK) * (senses ? 0.5 : 1);
       fogBase.copy(k.fog);
       if (MIST) fogBase.lerp(MIST[0], MIST[1] * (0.35 + 0.65 * dayK));
       if (senses) fogBase.lerp(SENSE_FOG, 0.6);
       scene.fog.color.copy(fogBase);
-      scene.fog.far = senses ? 120 : FOG[1];
+      scene.fog.far = senses ? 120 : FOG[1] * (1 - wet * 0.5); scene.fog.near = FOG[0] * (1 - wet * 0.6);
       sun.color.copy(k.sun); sun.intensity = k.sunI * (senses ? 0.45 : 1);
       hemi.color.copy(k.hemiSky); hemi.groundColor.copy(k.hemiGround); hemi.intensity = k.hemiI * (senses ? 0.6 : 1);
       // de zon komt op in het oosten (+x) en gaat onder in het westen; 's nachts schijnt de maan

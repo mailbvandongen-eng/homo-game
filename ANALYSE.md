@@ -188,3 +188,37 @@ Wat nog niet goed is:
   nu aan het "ugh", aan je lijf en aan de ontdekking in "Wat je weet".
 - Niet op een echte telefoon geprobeerd. De testmachine tekent één beeld per seconde; voor tikken en vegen zet de
   test het tekenen tijdelijk uit, anders komt geen enkele tik op tijd aan.
+
+## 10. Wat in fase 4 is gebouwd (wereld, 14-11-2026)
+
+- **Reliëf** (`relief.js`, per gebied in `relief: [...]`): drie vormen. Een `breuk` is een wand met een hoge en een
+  lage kant en een puinhelling (`gaps`) waar je wel omhoog kunt. Een `geul` is een droge bedding. Een `kop` is een
+  rotskop met een vlakke top. `height()` in `world.js` telt het reliëf bij het land op; `nearRelief()` zegt of een
+  punt erin ligt.
+- **Botsingen** (`hominin.js`): een wand houdt je tegen en je glijdt erlangs. Om een kei loop je heen. Op een kei tot
+  1,6 m spring je (`LEDGE`); de sprong meet zelf hoe hoog en hoe ver. Een aarden wand spring je niet op: daar is de
+  puinhelling voor. Dieren gebruiken dezelfde regels (`animal.js`).
+- **Voeten** (`footik.js`): na de loopbeweging zet het spel elke voet op de grond onder díé voet. Het bekken zakt
+  mee, het andere been buigt, de voet kantelt met de helling. Alleen bij de speler. Op vlakke grond verandert niets.
+- **Weer** (`systems/weather.js`): hoort bij het droge seizoen. Droge dagen zijn helder. Op de laatste droge dag
+  trekt het dicht en steekt de wind op, in de nacht begint de regen, de ochtend erna klaart het op. Wolken, licht,
+  nevel, gras en regenstrepen volgen `world.sky`. `weather.force = {cloud, rain, wind}` zet het weer vast (tests).
+  De hoge vlakte heeft meer wind (`weather: { wind }` in het gebied).
+- **Geluid** (`audio.js`): `sound.listen()` weet waar je staat en kijkt; `sound.from(dier).growl()` laat een geluid
+  van links of rechts komen, zachter en doffer op afstand. Rivier en vuur hoor je aanzwellen. Regen, harde wind en
+  onweer horen bij het weer. Voetstappen verschillen per ondergrond (`groundAt()`: aarde, gras, hoog gras, modder,
+  water, rots).
+- **Ver weg** (`rig.js`, `FAR`): dieren verder dan 45 m rekenen hun beweging om het beeld uit, verder dan 95 m om
+  de twee beelden. Dat scheelt meer dan de helft van het rekenwerk voor die dieren.
+- **Controle**: de testmodus meldt een fout als een vaste plek van een gebied in of tegen het reliëf ligt.
+- **Tests**: `/root/tools/pw/v4relief.js [gebied]` en `/root/tools/pw/v4wereld.js [gebied]`.
+
+Wat nog niet goed is:
+
+- Bomen, struiken en keien hebben geen eenvoudiger versie voor in de verte. Een beeld telt nog 600.000 tot 750.000
+  driehoeken; het doel voor een telefoon is 450.000. Daarvoor zijn lichtere modellen nodig.
+- De voeten van dieren en van de groep volgen het land niet; alleen die van de speler.
+- De grond wordt niet nat of donker in de regen, en er liggen geen plassen.
+- Geluid is gemaakt, niet opgenomen, en het is niet met oren beoordeeld. Links en rechts is gemeten.
+- Niet op een echte telefoon geprobeerd.
+

@@ -36,7 +36,7 @@ export class Zebras {
       if (z.state === 'dead') { z.rig.update(0); continue; }
       z.t -= dt;
       let tx = 0, tz = 0, spd = 0;
-      if (z.state !== 'flee' && sense('zebra', z, game.player).seen) { this.scare(p, 5); game.sound.flee(); }
+      if (z.state !== 'flee' && sense('zebra', z, game.player).seen) { this.scare(p, 5); game.sound.from(z).flee(); }
       if (z.state === 'flee') {
         const f = z.from, fd = Math.hypot(z.x - f.x, z.z - f.z) || 1;
         tx = (z.x - f.x) / fd; tz = (z.z - f.z) / fd; spd = 12.5 * z.slow;
@@ -96,7 +96,7 @@ export class Sabres {
 
   // een steen maakt zo'n kat alleen maar kwaad
   hit(c, game) {
-    game.sound.roar();
+    game.sound.from(c).roar();
     if (c.state !== 'attack') { c.state = 'attack'; c.t = 6; }
     game.toast('De steen ketst af op zijn dikke vacht. Nu is hij pas echt kwaad!', 4);
     game.discover('sabre');
@@ -118,7 +118,7 @@ export class Sabres {
         this.victim = Z.alive.reduce((a, b) => (dist(a, lead) < dist(b, lead) ? a : b));
         Z.scare(lead, 14); this.victim.slow = 0.62;
         for (const c of this.list) c.state = 'chase';
-        game.sound.roar(0.5); game.sound.bray();
+        game.sound.from(this.list[0]).roar(0.5); game.sound.from(this.victim).bray();
         game.event('hunt', this.victim);
       }
     }
@@ -132,7 +132,7 @@ export class Sabres {
         this.kill = { x: v.x, z: v.z, zebra: v, meat: 4, hide: 2, age: 0, open: false, hyenaT: 45, eatT: 0 };
         this.phase = 'feed'; this.feedT = 75;
         for (const c of this.list) c.state = 'feed';
-        game.sound.bray(); game.event('kill', this.kill);
+        game.sound.from(this.kill).bray(); game.event('kill', this.kill);
       }
     }
     const k = this.kill;
@@ -167,9 +167,9 @@ export class Sabres {
       // bewaken: bij de prooi op grotere afstand dan in het gras
       const guard = c.state === 'feed' ? [17, 8] : c.state === 'lie' ? [9, 4.5] : null;
       if (guard && canSee && c.cool <= 0) {
-        if (d < guard[1]) { c.state = 'attack'; c.t = 6; game.sound.roar(); }
+        if (d < guard[1]) { c.state = 'attack'; c.t = 6; game.sound.from(c).roar(); }
         else if (d < guard[0]) {
-          c.back = c.state; c.state = 'warn'; c.t = 1.2; c.anger = 0; game.sound.roar(0.7);
+          c.back = c.state; c.state = 'warn'; c.t = 1.2; c.anger = 0; game.sound.from(c).roar(0.7);
           if (!this.warned) { this.warned = true; game.toast('Een sabeltandkat! Hij gromt: tot hier en niet verder. Loop rustig achteruit.', 6); }
         }
       }
@@ -199,9 +199,9 @@ export class Sabres {
           anim = c.t > 0 ? 'Roaring' : 'Growling'; face = p;
           const lim = c.back === 'feed' ? [17, 8] : [9, 4.5];
           c.anger += dt * (d < lim[0] * 0.75 ? 1 : 0.35);
-          if (d < lim[1] || c.anger > 4.5) { c.state = 'attack'; c.t = 6; game.sound.roar(); }
+          if (d < lim[1] || c.anger > 4.5) { c.state = 'attack'; c.t = 6; game.sound.from(c).roar(); }
           else if (d > lim[0] + 3) { c.state = c.back; }
-          else if (R() < dt * 0.35) game.sound.roar(0.5);
+          else if (R() < dt * 0.35) game.sound.from(c).roar(0.5);
           break;
         }
         case 'attack':

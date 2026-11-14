@@ -1,9 +1,10 @@
 // Geluid van de savanne, helemaal opgewekt in de browser (geen geluidsbestanden).
-// Wind, krekels, vogels, ritselend gras, voetstappen en korte geluidjes bij wat je doet.
+// Wind, regen, krekels, vogels, ritselend gras, voetstappen per ondergrond en korte geluidjes bij wat je doet.
+// Wat een plek heeft (een dier, de rivier, het vuur) hoor je uit die richting: links of rechts, en van ver zachter en doffer.
 import { settings } from './engine/settings.js';
 
 export class Sound {
-  constructor() { this.ctx = null; this.volume = settings.volume; }
+  constructor() { this.ctx = null; this.volume = settings.volume; this.ear = { x: 0, z: 0, yaw: 0 }; }
 
   start() {
     if (this.ctx) return;
@@ -24,6 +25,11 @@ export class Sound {
     this.wind = this.loop(320, 'lowpass', 0.5, 0.05);
     // gras: ritselt als je loopt
     this.rustle = this.loop(2600, 'bandpass', 0.7, 0);
+    // regen: een hoog geruis en het getik op de grond
+    this.rainHi = this.loop(5200, 'highpass', 0.4, 0); this.rainLo = this.loop(950, 'bandpass', 0.5, 0);
+    // de rivier en het vuur klinken van hun eigen plek
+    this.river = this.place(640, 'bandpass', 0.45); this.riverHi = this.loop(2400, 'bandpass', 0.6, 0, this.river.pan);
+    this.fire = this.place(240, 'lowpass', 0.6); this.popT = 0; this.thunderT = 25;
     this.gust = 0; this.chirpT = 2; this.cricketT = 1; this.callT = 20;
     // spanning: een lage, zwevende dreun die aanzwelt als er gevaar is, en een hartslag
     this.drone = ctx.createGain(); this.drone.gain.value = 0;
@@ -33,12 +39,45 @@ export class Sound {
     this.heartT = 0; this.motifT = 25; this.danger = 0;
   }
 
-  loop(freq, type, q, vol) {
+  loop(freq, type, q, vol, dest = this.out) {
     const src = this.ctx.createBufferSource(); src.buffer = this.noise; src.loop = true;
     const f = this.ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
     const g = this.ctx.createGain(); g.gain.value = vol;
-    src.connect(f).connect(g).connect(this.out); src.start();
+    src.connect(f).connect(g).connect(dest); src.start(0, Math.random() * 2);
     return { f, g };
+  }
+  // een doorlopend geluid op een plek in de wereld
+  place(freq, type, q) {
+    const pan = this.panner(0);
+    return { ...this.loop(freq, type, q, 0, pan), pan };
+  }
+  panner(v) {
+    const c = this.ctx, p = c.createStereoPanner ? c.createStereoPanner() : c.createGain();
+    if (p.pan) p.pan.value = v;
+    p.connect(this.out); return p;
+  }
+
+  // ---- ruimte: waar sta je, waar kijk je heen, en waar komt een geluid vandaan ----
+  listen(x, z, yaw) { this.ear.x = x; this.ear.z = z; this.ear.yaw = yaw; }
+  // [richting (-1 = links, 1 = rechts), afstand in meters]
+  hear(x, z) {
+    const e = this.ear, dx = x - e.x, dz = z - e.z, d = Math.hypot(dx, dz);
+    return [d < 0.3 ? 0 : (dx * -Math.cos(e.yaw) + dz * Math.sin(e.yaw)) / d * Math.min(1, d / 4) * 0.9, d];
+  }
+  // het geluid dat je hierna maakt, komt van die plek:  sound.from(dier).growl()
+  from(o) {
+    if (!this.ctx || !o) return this;
+    const x = o.x ?? (o.pos && o.pos.x), z = o.z ?? (o.pos && o.pos.z);
+    if (typeof x !== 'number' || typeof z !== 'number') return this;
+    const c = this.ctx, [pan, d] = this.hear(x, z);
+    const p = this.panner(pan), f = c.createBiquadFilter(), g = c.createGain();
+    p.disconnect();
+    f.type = 'lowpass'; f.frequency.value = Math.max(1400, 18000 * Math.exp(-Math.max(0, d - 12) / 28));
+    g.gain.value = Math.max(0.3, Math.min(1, 1.15 - d / 90));
+    p.connect(f).connect(g).connect(this.muffle);
+    this.out = p;
+    Promise.resolve().then(() => { this.out = this.muffle; });
+    return this;
   }
 
   // hoe hard alles klinkt (0 = stil, 1 = voluit); komt uit de instellingen
@@ -57,18 +96,19 @@ export class Sound {
     o.connect(g).connect(dest); o.start(t); o.stop(t + dur + 0.05);
   }
   // korte ruisstoot
-  burst(freq, dur, vol, type = 'bandpass', when = 0, q = 1) {
+  burst(freq, dur, vol, type = 'bandpass', when = 0, q = 1, dest = this.out) {
     const c = this.ctx, t = c.currentTime + when;
     const s = c.createBufferSource(); s.buffer = this.noise;
     const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
     const g = c.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    s.connect(f).connect(g).connect(this.out); s.start(t, Math.random()); s.stop(t + dur + 0.05);
+    s.connect(f).connect(g).connect(dest); s.start(t, Math.random()); s.stop(t + dur + 0.05);
   }
 
   // elke frame: achtergrondgeluiden bijwerken
   // night: 0..1, move: snelheid, tall: in hoog gras, senses: zintuigen aan
   // danger: 0..1, hoe dichtbij het gevaar is
-  tick(dt, { night, move, tall, senses, danger = 0 }) {
+  // weather: { rain, wind } 0..1; river: afstand en plek van het water; fire: het vuur (of null)
+  tick(dt, { night, move, tall, senses, danger = 0, weather = null, river = null, fire = null }) {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
     this.danger = danger;
@@ -85,13 +125,32 @@ export class Sound {
     if (danger > 0.1) this.motifT = Math.max(this.motifT, 18);
     else if (this.motifT < 0 && night < 0.5) { this.motifT = 45 + Math.random() * 40; this.motif(); }
     this.gust -= dt;
-    if (this.gust < 0) { this.gust = 1.5 + Math.random() * 3; this.wind.g.gain.setTargetAtTime(0.03 + Math.random() * 0.07, now, 1.2); this.wind.f.frequency.setTargetAtTime(250 + Math.random() * 250, now, 1.5); }
+    const wind = weather ? weather.wind : 0.25, rain = weather ? weather.rain : 0;
+    if (this.gust < 0) { this.gust = 1.5 + Math.random() * 3; this.wind.g.gain.setTargetAtTime((0.03 + Math.random() * 0.07) * (0.45 + wind * 2.2), now, 1.2); this.wind.f.frequency.setTargetAtTime(230 + Math.random() * 250 + wind * 260, now, 1.5); }
+    // regen, en heel af en toe onweer in de verte
+    this.rainHi.g.gain.setTargetAtTime(rain * 0.075, now, 0.8); this.rainLo.g.gain.setTargetAtTime(rain * 0.11, now, 0.8);
+    this.thunderT -= dt;
+    if (rain > 0.45 && this.thunderT < 0) { this.thunderT = 35 + Math.random() * 50; this.thunder(Math.random() * 2 - 1); }
+    // de rivier: je hoort waar hij ligt
+    if (river) {
+      const [pan] = this.hear(river.x, river.z), v = Math.max(0, 1 - river.d / 42);
+      this.river.g.gain.setTargetAtTime(v * v * 0.1, now, 0.4); this.riverHi.g.gain.setTargetAtTime(v * v * v * 0.035, now, 0.4);
+      if (this.river.pan.pan) this.river.pan.pan.setTargetAtTime(pan * Math.min(1, river.d / 6), now, 0.2);
+    }
+    // het vuur: een zacht geloei en droog geknetter
+    if (fire) {
+      const [pan, d] = this.hear(fire.x, fire.z), v = Math.max(0, 1 - d / 30) ** 2 * fire.k;
+      this.fire.g.gain.setTargetAtTime(v * 0.1, now, 0.4);
+      if (this.fire.pan.pan) this.fire.pan.pan.setTargetAtTime(pan, now, 0.2);
+      this.popT -= dt;
+      if (v > 0.02 && this.popT < 0) { this.popT = 0.05 + Math.random() * 0.5; this.burst(1800 + Math.random() * 2600, 0.03, v * (0.08 + Math.random() * 0.2), 'bandpass', 0, 3, this.fire.pan); }
+    } else this.fire.g.gain.setTargetAtTime(0, now, 0.4);
     this.rustle.g.gain.setTargetAtTime(Math.min(1, move / 5) * (tall ? 0.09 : 0.025), now, 0.08);
     this.muffle.frequency.setTargetAtTime(senses ? 900 : 18000, now, 0.25);
 
     // vogels overdag
     this.chirpT -= dt;
-    if (this.chirpT < 0 && night < 0.5 && danger < 0.45) { this.chirpT = 1.5 + Math.random() * 5; this.bird(); }
+    if (this.chirpT < 0 && night < 0.5 && danger < 0.45 && rain < 0.25) { this.chirpT = 1.5 + Math.random() * 5; this.bird(); }
     // in de verte roept af en toe een grotere vogel (zoals een neushoornvogel)
     this.callT -= dt;
     if (this.callT < 0 && night < 0.5) { this.callT = 25 + Math.random() * 30; for (let i = 0; i < 4; i++) this.tone(420 - i * 20, 0.18, 0.025, 'triangle', -60, i * 0.32); }
@@ -110,7 +169,26 @@ export class Sound {
     for (let i = 0; i < n; i++) this.tone(base + (i % 2) * 400, 0.08 + Math.random() * 0.05, v, 'sine', (Math.random() - 0.3) * 900, i * 0.13);
   }
 
-  step(tall) { if (this.ctx) this.burst(tall ? 1800 : 260, tall ? 0.12 : 0.07, tall ? 0.05 : 0.08, tall ? 'bandpass' : 'lowpass'); }
+  // een voetstap klinkt naar waar je op loopt: aarde, gras, hoog gras, modder, water of rots.
+  // v: hoe hard je neerkomt (sluipen 0,4 .. rennen 1,3)
+  step(ground = 'aarde', v = 1) {
+    if (!this.ctx) return;
+    const j = 0.85 + Math.random() * 0.3;
+    this.lastStep = ground;
+    if (ground === 'hoog') { this.burst(1900 * j, 0.13, 0.05 * v, 'bandpass'); this.burst(4200 * j, 0.07, 0.02 * v, 'highpass', 0.02); }
+    else if (ground === 'gras') { this.burst(230 * j, 0.06, 0.055 * v, 'lowpass'); this.burst(2600 * j, 0.07, 0.022 * v, 'bandpass', 0.01, 0.8); }
+    else if (ground === 'modder') { this.burst(170 * j, 0.11, 0.09 * v, 'lowpass'); this.burst(700 * j, 0.09, 0.045 * v, 'bandpass', 0.05, 2.5); }
+    else if (ground === 'water') { this.burst(900 * j, 0.22, 0.09 * v, 'bandpass', 0, 0.7); this.burst(3200 * j, 0.16, 0.035 * v, 'highpass', 0.04); this.tone(420 * j, 0.09, 0.02 * v, 'sine', 380, 0.03); }
+    else if (ground === 'rots') { this.burst(1500 * j, 0.035, 0.085 * v, 'bandpass', 0, 2.5); this.burst(330 * j, 0.05, 0.05 * v, 'lowpass'); }
+    else this.burst(260 * j, 0.07, 0.08 * v, 'lowpass');
+  }
+  // onweer, ver weg: een lange, rollende dreun
+  thunder(pan = 0) {
+    if (!this.ctx) return;
+    const d = this.panner(pan);
+    for (let i = 0; i < 5; i++) this.burst(55 + Math.random() * 50, 1.2 + Math.random() * 1.6, 0.22 * (1 - i / 7), 'lowpass', i * 0.35 + Math.random() * 0.2, 1.2, d);
+    this.tone(41, 3.2, 0.07, 'sawtooth', -8, 0.1, d);
+  }
   pick() { if (!this.ctx) return; this.burst(2200, 0.15, 0.08); this.tone(520, 0.08, 0.03, 'triangle', 120, 0.05); }
   eat() { if (!this.ctx) return; for (let i = 0; i < 4; i++) this.burst(1400 + Math.random() * 800, 0.06, 0.09, 'bandpass', i * 0.13, 2); }
   crack() { if (!this.ctx) return; this.burst(900, 0.25, 0.35, 'bandpass', 0, 0.7); this.tone(180, 0.2, 0.15, 'triangle', -100); }

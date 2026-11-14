@@ -103,7 +103,7 @@ export class Birds {
     for (const f of this.flocks) {
       const d = Math.hypot(player.pos.x - f.x, player.pos.z - f.z);
       if (f.state === 'ground' && d < (player.sneaking ? 3.5 : 7) && !player.hiddenFrom(f.x, f.z)) {
-        f.state = 'fly'; f.t = 0; sound.flutter();
+        f.state = 'fly'; f.t = 0; sound.from(f).flutter();
         f.dir.set(f.x - player.pos.x, 0, f.z - player.pos.z).normalize();
       }
       if (f.state === 'fly') {

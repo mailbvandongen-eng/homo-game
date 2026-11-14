@@ -27,12 +27,12 @@ export class Hyenas {
     const pack = this.list.filter((o) => o !== h && o.state !== 'flee' && Math.hypot(o.x - h.x, o.z - h.z) < 15).length;
     this.hits = (this.hits || 0) + 1;
     if (this.hits > 1 && !h.angry && !window.__sure && R() < 0.18 + 0.12 * Math.min(2, pack) + 0.2 * game.night) {
-      h.angry = true; h.state = 'windup'; h.t = 1.1; game.sound.growl();
+      h.angry = true; h.state = 'windup'; h.t = 1.1; game.sound.from(h).growl();
       game.toast('Raak! Maar deze schrikt niet. Hij gromt, zet zijn nekharen op… en komt op je af!', 5);
       return;
     }
     h.angry = false; game.toast('Raak! De hyena jankt en maakt zich uit de voeten.', 4);
-    h.state = 'flee'; h.t = 12; game.sound.yelp();
+    h.state = 'flee'; h.t = 12; game.sound.from(h).yelp();
     for (const o of this.list) if (o !== h && o.state !== 'flee') { o.state = 'retreat'; o.t = 6; }
     game.discover('hyena');
   }
@@ -60,7 +60,7 @@ export class Hyenas {
           const want = 6.5, ang = Math.atan2(h.x - p.x, h.z - p.z) + dt * 0.5;
           const gx = p.x + Math.sin(ang) * want - h.x, gz = p.z + Math.cos(ang) * want - h.z, gd = Math.hypot(gx, gz);
           if (gd > 0.3) { tx = gx / gd; tz = gz / gd; spd = Math.min(3.5, gd * 1.5); }
-          if (R() < dt * 0.4) game.sound.giggle();
+          if (R() < dt * 0.4) game.sound.from(h).giggle();
           if (!interested && d > range + 6) { h.state = 'roam'; h.t = 2; }
           break;
         }
@@ -92,7 +92,7 @@ export class Hyenas {
       this.rushT -= dt * (0.6 + night);
       if (this.rushT < 0) {
         const h = curious[Math.floor(R() * curious.length)];
-        h.state = 'windup'; h.t = 0.9; game.sound.whoop();
+        h.state = 'windup'; h.t = 0.9; game.sound.from(h).whoop();
         this.rushT = 5 + R() * 4;
       }
     } else this.rushT = 3;
@@ -132,7 +132,7 @@ export class Leopard {
   get threat() { return ['stalk', 'freeze', 'pounce'].includes(this.state); }
 
   hit(game) {
-    this.state = 'flee'; this.t = 6; this.cool = 40; game.sound.growl();
+    this.state = 'flee'; this.t = 6; this.cool = 40; game.sound.from(this).growl();
     game.toast('Raak! Het luipaard springt weg en vlucht naar zijn boom.');
     game.discover('leopard');
   }
@@ -164,8 +164,8 @@ export class Leopard {
       case 'stalk':
         // laag door het gras naar je toe, vooral als je de andere kant op kijkt
         tx = (p.x - this.x) / d; tz = (p.z - this.z) / d; spd = facing ? 0 : 2.4; crouch = 1;
-        if (facing) { this.state = 'freeze'; this.watched = 0; game.sound.growl(); }
-        if (d < 4.5) { this.state = 'pounce'; this.t = 0.6; game.sound.growl(); }
+        if (facing) { this.state = 'freeze'; this.watched = 0; game.sound.from(this).growl(); }
+        if (d < 4.5) { this.state = 'pounce'; this.t = 0.6; game.sound.from(this).growl(); }
         if (!active && d > 20) this.state = 'home';
         break;
       case 'freeze':

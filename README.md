@@ -79,6 +79,7 @@ Een proef met een heel andere opzet: een 3D-wereld met de camera hoog achter de 
   - De vuist wordt een **rode gooi-knop** als er gevaar is en je een steen vasthoudt. Bij gevaar ren je vanzelf voluit, ook als je de duim maar half duwt. Je kunt ook op een roofdier tikken en gooien kiezen.
 - **Liggend:** op Android wordt het scherm liggend vastgezet; staand vraagt het spel je de telefoon te draaien.
 - De camera schuift naar voren als er grond of een rots tussen jou en de camera zit.
+- **Land en weer:** breuken, droge geulen en rotskoppen (`relief.js`); een wand houdt je tegen, op een kei spring je. Je voeten volgen de helling (`footik.js`). Wolken, wind en regen horen bij het seizoen (`systems/weather.js`). Geluid komt van links of rechts en klinkt anders per ondergrond.
 - Voeding en gezondheid; ben je te zwak, dan zak je in elkaar en kom je zwak weer bij (geen game over).
 - **Sfeer:** dag en nacht in 14 minuten (ochtend, middag, oranje avond, nacht), opgewekt geluid (wind, vogels, krekels, ritselend gras, voetstappen, hoeven), vogeltjes die opvliegen, vlinders, stof in het zonlicht.
 - Telefoon: duimstick links, rechts slepen om rond te kijken, knoppen rechtsonder. Computer: WASD/pijltjes, Shift (rennen), C (bukken), spatie (springen), E (actie), Q (ruiken en luisteren), P (menu) en de muis

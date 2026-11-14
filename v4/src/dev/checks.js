@@ -6,6 +6,7 @@ import { ITEMS, DISCOVERIES } from '../items.js';
 import { ITEM_ICON } from '../icons.js';
 import { MODELS, TEXTURES } from '../assets.js';
 import { MISSING } from '../rig.js';
+import { nearRelief } from '../relief.js';
 import { settings, qualityNow } from '../engine/settings.js';
 
 // Welke bewegingen het spel van elk model vraagt. Een model vervangen = deze lijst blijft de eis.
@@ -60,6 +61,9 @@ function checkConfig(out) {
       if (!who.has(m.who)) add('fout', w + `missie '${m.id}': '${m.who}' zit niet in de groep van ${era.species}`);
       if (m.needs && !mids.has(m.needs)) add('fout', w + `missie '${m.id}': heeft '${m.needs}' nodig, maar die missie bestaat niet`);
     }
+    // niets van het spel mag in een geul, tegen een breuk of op een rotskop staan
+    const inRelief = placesOf(area).filter((q) => !/^relief/.test(q.name) && nearRelief(area.relief || [], q.x, q.z, 5));
+    for (const q of inRelief) add('fout', w + `'${q.name}' (${Math.round(q.x)}, ${Math.round(q.z)}) ligt in of tegen het reliëf`);
     add('ok', `${era.species} · ${area.name}: ${(area.fauna || []).length} soorten, ${ms.length} missies`);
   }
   for (const d of DISCOVERIES) if (d.era && !ERAS.some((e) => e.id === d.era)) add('fout', `ontdekking '${d.id}': onbekend tijdperk '${d.era}'`);

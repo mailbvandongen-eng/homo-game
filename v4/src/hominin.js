@@ -8,6 +8,7 @@ import { ERA, AREA } from './eras/index.js';
 // Het lichaam van dit tijdperk: lengte in meters en hoe hard je loopt (Homo habilis: klein; Homo erectus: lang, een loper)
 export const BODY = { height: 1.35, speed: 1, ...ERA.body };
 import { Rig } from './rig.js';
+import { FootIK } from './footik.js';
 
 // ---------- materialen ----------
 // Een vachtje: korte streepjes in een textuur, gebruikt als kleur én als reliëf
@@ -167,6 +168,7 @@ export class Hominin {
     // het model is in centimeters en 1,62 m lang; de vorm (shapes.js) maakt er de soort van dit tijdperk van
     const K = BODY.height / 1.35;
     this.rig = new Rig(A, 'hominin', { scale: BODY.height / 162, shape: BODY.shape, tall: BODY.height });
+    this.feet = new FootIK(this.rig);
     const S = this.rig.scale; this.S = S;
     const act = (n) => { const a = this.rig.action(n); a.play(); a.setEffectiveWeight(0); a.timeScale = 0; return a; };
     // bewegingen die samen gemengd worden, met hun eigen snelheid (m/s) bij deze lengte
@@ -399,6 +401,7 @@ export class Hominin {
     r.update(dt);
     // ziek: wat voorovergebogen; stilstaand rondkijken
     const side = r.side(this._side || (this._side = new THREE.Vector3()));
+    if (this.feet) this.feet.update(dt, this.onGround, side);
     if (sick) r.bend(r.bone('spine_02'), side, 0.35);
     if (this.lookYaw && !this.once) r.bend(r.bone('head'), this._up || (this._up = new THREE.Vector3(0, 1, 0)), this.lookYaw * 0.7);
     if (this.toss) this.tossPose(dt, r);

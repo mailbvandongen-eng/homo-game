@@ -12,15 +12,17 @@ const tmpQ = new THREE.Quaternion(), tmpQ2 = new THREE.Quaternion(), tmpV = new 
 // Wat het spel vroeg maar het model niet heeft (een beweging of een bot). De testmodus (?dev=1) laat dit zien,
 // zodat een ontbrekende beweging nooit ongemerkt blijft.
 export const MISSING = new Set();
+export const FAR = [45, 95];   // vanaf hier (meters van de camera) beweegt een dier op halve snelheid van rekenen, en op een derde
 const SPHERES = new Map();   // per model: de bol om elk onderdeel
-const RIGS = [];
+export const RIGS = [];
 const SKINS = new Map();     // materialen met een andere huid, per (materiaal, huid)
 
 // Kleine onderdelen (tanden, ogen, wimpers) zie je van ver niet: die tekenen we alleen dichtbij.
 export function rigDetail(cam) {
   for (const r of RIGS) {
-    if (!r.small.length) continue;
-    const e = r.root.matrixWorld.elements, near = Math.hypot(e[12] - cam.x, e[13] - cam.y, e[14] - cam.z) < 14;
+    const e = r.root.matrixWorld.elements, d = Math.hypot(e[12] - cam.x, e[13] - cam.y, e[14] - cam.z), near = d < 14;
+    // ver weg zie je niet of een dier elk beeld beweegt: daar rekenen we de beweging om het beeld (of om de twee) uit
+    r.every = r.always ? 1 : d > FAR[1] ? 3 : d > FAR[0] ? 2 : 1;
     if (near !== r.near) { r.near = near; for (const o of r.small) o.visible = near; }
   }
 }
@@ -51,7 +53,7 @@ export class Rig {
     this.scale = scale;
     this.model.scale.setScalar(scale); this.model.rotation.y = facing;
     this.root.add(this.model);
-    this.bones = {}; this.small = []; this.near = true; RIGS.push(this);
+    this.bones = {}; this.small = []; this.near = true; this.every = 1; this.tick = 0; this.wait = 0; this.pose = new Map(); RIGS.push(this);
     const meshes = [];
     this.model.traverse((o) => {
       if (o.isMesh) {
@@ -109,14 +111,21 @@ export class Rig {
   freeze(part, at) { const a = this.action(part); if (!a) return; this.play(part, { fade: 0.2 }); a.time = a.getClip().duration * at; a.timeScale = 0; }
   update(dt) {
     // botten die we zelf draaien eerst terugzetten: anders stapelt de extra draaiing zich op bij botten zonder animatie
+    if (this.every > 1 && (this.tick = (this.tick + 1) % this.every)) {
+      // dit beeld slaan we over: de botten die we zelf draaien gaan terug naar de laatste stand van de beweging
+      this.wait += dt;
+      for (const [b, q] of this.pose) b.quaternion.copy(q);
+      return;
+    }
     for (const [b, q] of this.bent) b.quaternion.copy(q);
-    this.mixer.update(dt); this.model.updateMatrixWorld(true);
+    this.mixer.update(dt + this.wait); this.wait = 0; this.model.updateMatrixWorld(true);
+    for (const [b, q] of this.pose) q.copy(b.quaternion);
   }
 
   // extra draaiing om een as in de wereld, na de animatie
   bend(b, worldAxis, angle) {
     if (!b || !angle) return;
-    if (!this.bent.has(b)) this.bent.set(b, b.quaternion.clone());
+    if (!this.bent.has(b)) { this.bent.set(b, b.quaternion.clone()); this.pose.set(b, b.quaternion.clone()); }
     b.parent.getWorldQuaternion(tmpQ).invert();
     tmpV.copy(worldAxis).applyQuaternion(tmpQ).normalize();
     tmpQ2.setFromAxisAngle(tmpV, angle);
@@ -126,7 +135,7 @@ export class Rig {
   // als bend, maar met een hele draaiing (in de wereld) in één keer
   bendQ(b, q) {
     if (!b) return;
-    if (!this.bent.has(b)) this.bent.set(b, b.quaternion.clone());
+    if (!this.bent.has(b)) { this.bent.set(b, b.quaternion.clone()); this.pose.set(b, b.quaternion.clone()); }
     b.parent.getWorldQuaternion(tmpQ);
     tmpQ2.copy(tmpQ).invert().multiply(q).multiply(tmpQ);
     b.quaternion.premultiply(tmpQ2);

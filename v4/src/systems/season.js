@@ -2,13 +2,14 @@ import * as THREE from '../../lib/three.module.js';
 import { ITEMS } from '../items.js';
 import { HOME } from '../group.js';
 import { $, toast, showCard } from '../engine/ui.js';
+import { DRY_DAYS } from './weather.js';
 
 // Het droge seizoen en de nieuwe dag.
 export function initSeason(G) {
   const { state, things, sabres, shore, giant, group, sound, discover, freeHand, renderHands } = G;
   // Elke dag droogt het land verder uit, vanaf de slaapboom gezien: je moet steeds verder weg voor eten.
   // Na een paar droge dagen komt de regen en groeit alles weer.
-  const DRY_DAYS = 5, DRY_COLOR = new THREE.Color(0x8a6a3a);
+  const DRY_COLOR = new THREE.Color(0x8a6a3a);
   function setBush(t, n, dry) {
     const b = t.bush; b.left = n; b.dry = dry;
     if (b.berries) b.berries.count = Math.ceil(14 * n / b.max);

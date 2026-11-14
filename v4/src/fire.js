@@ -471,7 +471,7 @@ export class Fire {
       if (coal) { coal.getWorldPosition(this.torchFlame.position); flicker(this.torchFlame, t, 0.9 + Math.sin(t * 5) * 0.1); }
       for (const h of game.hyenas.list) {
         if (dist(h, p) < 10 && ['curious', 'windup', 'rush'].includes(h.state)) {
-          h.state = 'retreat'; h.t = 6; game.sound.yelp();
+          h.state = 'retreat'; h.t = 6; game.sound.from(h).yelp();
           if (!s.found.has('scare')) { game.toast('De hyena ziet de vlam en schrikt terug!', 4); game.discover('scare'); }
         }
       }

@@ -1,6 +1,6 @@
 import * as THREE from '../lib/three.module.js';
 import { rigDetail } from './rig.js';
-import { buildWorld, height, tallGrassAt, blockers, cover, surface, steep } from './world.js';
+import { buildWorld, height, tallGrassAt, blockers, cover, surface, steep, groundAt, riverDist, WIND } from './world.js';
 import { Hominin, Herd, Vultures, carcass } from './actors.js';
 import { ITEMS, ROCKS, DISCOVERIES, LOOKS, VERDICT, FINDS, placeItems, heldMesh } from './items.js';
 import { Hyenas, Leopard, Throws } from './predators.js';
@@ -22,6 +22,7 @@ import { lowerAuto } from './engine/settings.js';
 import { initMenu } from './systems/menu.js';
 import { initMissions } from './systems/missions.js';
 import { initSeason } from './systems/season.js';
+import { Weather } from './systems/weather.js';
 import { initHints } from './systems/hints.js';
 import { initBody } from './systems/body.js';
 import { initPersist } from './systems/persist.js';
@@ -120,7 +121,9 @@ const G = {
 let homeShown = false;
 const hints = G.hints = initHints(G), { did, hintTick } = hints;
 const { has, carries, MISSIONS, NEXT, NAMES, mission, offerOf, accept, complete, missionInfo, endCard, travel, questTick, murmur } = G.missions = initMissions(G);
-const { season, newDay, groupLeaves } = initSeason(G);   // het droge seizoen en de nieuwe dag
+const { season, newDay, groupLeaves } = initSeason(G);
+player.rig.always = true;   // de speler beweegt elk beeld, ook als de camera even ver weg staat
+const weather = new Weather(scene, AREA.weather);   // wolken, wind en regen   // het droge seizoen en de nieuwe dag
 G.season = season;
 
 // ---------- het menu en de instellingen ----------
@@ -1165,7 +1168,7 @@ function update(dt) {
   // bij de slaapboom durven de hyena's niet: de groep schreeuwt en gooit stenen
   for (const h of hyenas.list) {
     if (Math.hypot(h.x - HOME.x, h.z - HOME.z) < (fire && fire.lit ? 26 : 11) && ['curious', 'windup', 'rush'].includes(h.state)) {
-      h.state = 'retreat'; h.t = 6; sound.yelp();
+      h.state = 'retreat'; h.t = 6; sound.from(h).yelp();
       if (!chased) { chased = true; murmur('De groep schreeuwt en gooit stenen: de hyena\'s durven niet dichterbij.', 5); }
     }
   }
@@ -1178,6 +1181,8 @@ function update(dt) {
   herd.members.forEach((m, i) => senses.track(i, m.x, m.z, m.yaw));
   vultures.update(dt, t);
 
+  const sky = weather.update(dt, t, { day: state.day, rainDay: state.rainDay, p: dayP, night, cam: camera.position, wind: WIND });
+  world.sky.cloud = sky.cloud; world.sky.rain = sky.rain; world.sky.wind = sky.wind;
   world.update(t, player.pos, dayP, state.sensing);
   renderer.toneMappingExposure = 1.05 - 0.12 * senseK + night * 0.25;
   const part = partOfDay(dayP);
@@ -1195,9 +1200,16 @@ function update(dt) {
   birds.update(dt, t, player, sound);
   butterflies.update(t, night, player.pos);
   senses.update(dt, t, state.sensing, player.pos, sabres.kill || CARCASS, senseK);
-  sound.tick(dt, { night, move: player.speed, tall, senses: state.sensing, danger });
-  // voetstappen
-  if (Math.floor(player.phase / Math.PI) !== stepPhase) { stepPhase = Math.floor(player.phase / Math.PI); if (player.speed > 0.5) sound.step(tall); }
+  // geluid: je hoort met de oren van je mens, in de richting waarin je kijkt
+  sound.listen(player.pos.x, player.pos.z, cam.yaw);
+  const rd = riverDist(player.pos.x, player.pos.z), rs = riverDist(player.pos.x, player.pos.z + 1) < rd ? 1 : -1;
+  sound.tick(dt, { night, move: player.speed, tall, senses: state.sensing, danger, weather: sky,
+    river: { d: rd, x: player.pos.x, z: player.pos.z + rs * Math.max(rd, 0.5) }, fire: fire && fire.lit ? { x: fire.H.x, z: fire.H.z, k: 1 } : null });
+  // voetstappen: elke ondergrond klinkt anders
+  if (Math.floor(player.phase / Math.PI) !== stepPhase) {
+    stepPhase = Math.floor(player.phase / Math.PI);
+    if (player.speed > 0.5 && player.onGround) sound.step(tall ? 'hoog' : groundAt(player.pos.x, player.pos.z), player.sneaking ? 0.4 : 0.7 + Math.min(0.6, player.speed / 9));
+  }
   // neerkomen: een bons; van hoog vallen doet pijn
   if (player.landed) { sound.thud(); if (player.fell > 3) hurt(Math.min(45, 10 + (player.fell - 3) * 12)); }
 
@@ -1336,10 +1348,10 @@ begin();
 // voor testen
 window.__game = { eat, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, setSneak, still: () => stillT,
-  setCam: (y, p, d) => { cam.yaw = y; cam.pitch = p; if (d) cam.dist = d; }, setZoom: C.setZoom, zoom: () => cam.dist, C, jump, sound, world, menu, closeCard, clockT: () => clock.elapsedTime, actionContext, actionOptions, heard, tasteAt, bodyTap, prim: () => prim, alts: () => alts,
+  setCam: (y, p, d) => { cam.yaw = y; cam.pitch = p; if (d) cam.dist = d; }, setZoom: C.setZoom, zoom: () => cam.dist, C, jump, sound, world, weather, menu, closeCard, clockT: () => clock.elapsedTime, actionContext, actionOptions, heard, tasteAt, bodyTap, prim: () => prim, alts: () => alts,
   lookFrom: (pos, look) => { cam.override = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },
   // als lookFrom, maar met hoogtes ten opzichte van de grond op de plek waar je naar kijkt
   lookRel: (pos, look) => { const h = height(look[0], look[2]); cam.override = { pos: new THREE.Vector3(pos[0], pos[1] + h, pos[2]), look: new THREE.Vector3(look[0], look[1] + h, look[2]) }; }, setDay: (p) => { dayP = p; }, setSense,
   screenOf: (t) => { const a = anchorOf(t); return a && [a.x, a.y]; },
-  land: { height, surface, steep, blockers },
+  land: { height, surface, steep, blockers, groundAt },
 };

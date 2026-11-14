@@ -96,7 +96,7 @@ export class Shore {
   hit(t, how, game) {
     const c = t.m;
     if (how === 'fist') { game.toast('Je vuist ketst af op zijn pantser.', 3); c.state = 'lunge'; c.t = 0.45; return; }
-    this.sink(c, 50); game.sound.thud(); game.discover('croc');
+    this.sink(c, 50); game.sound.from(c).thud(); game.discover('croc');
     game.toast('Raak! De krokodil zakt weg onder water. Even is de weg vrij.', 4);
   }
   sink(c, sec) { c.state = 'sink'; c.t = sec; c.moved = false; }
@@ -139,7 +139,7 @@ export class Shore {
       } else if (c.state === 'stalk') {
         want = Math.atan2(p.x - c.x, p.z - c.z); spd = 2.1; dip = 0.04;
         if (!awake || !atWater || d > 24) { c.state = 'lurk'; c.t = 4; }
-        else if (d < 3.4) { c.state = 'lunge'; c.t = 0.45; c.yaw = want; game.sound.thud(); }
+        else if (d < 3.4) { c.state = 'lunge'; c.t = 0.45; c.yaw = want; game.sound.from(c).thud(); }
       } else if (c.state === 'lunge') {
         want = Math.atan2(p.x - c.x, p.z - c.z); spd = 9; dip = -0.16;
         if (d < 1.5 && awake) { game.bite(c, 28, true); this.sink(c, 18); }

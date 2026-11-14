@@ -216,7 +216,7 @@ export class Encounters {
     // sissen hoor je alleen als je zelf stil bent
     e.hissT -= dt;
     if (d < 8 && e.hissT < 0 && (game.player.speed < 2.3 || e.shown)) {
-      e.hissT = 2.2; game.sound.hiss(1 - d / 10);
+      e.hissT = 2.2; game.sound.from(e).hiss(1 - d / 10);
       if (!e.heard && !e.shown) { e.heard = true; game.toast('Ssss… Vlak voor je sist iets. Sta stil en gebruik je zintuigen.', 5); }
     }
     if (d < 1.05 && game.player.onGround && s.collapsed <= 0 && s.sleeping <= 0) {
@@ -271,7 +271,7 @@ export class Encounters {
     let tx = 0, tz = 0, spd = 0, face = null;
     const to = (o, v) => { const dd = dist(o, b) || 0.01; tx = (o.x - b.x) / dd; tz = (o.z - b.z) / dd; spd = v; return dd; };
     b.t -= dt; e.sqT -= dt;
-    const squawk = (gap) => { if (e.sqT < 0) { e.sqT = gap; game.sound.squawk(Math.max(0.2, 1 - db / 30)); } };
+    const squawk = (gap) => { if (e.sqT < 0) { e.sqT = gap; game.sound.from(b).squawk(Math.max(0.2, 1 - db / 30)); } };
     switch (b.state) {
       case 'sit':
         if (d < 10 && left > 0) { b.state = 'warn'; if (!e.warned) { e.warned = true; game.toast('Een grote vogel komt overeind van haar nest en blaast naar je. Daar liggen eieren!', 5); } }
@@ -309,7 +309,7 @@ export class Encounters {
   hit_bird(e, how, game) {
     const b = e.bird;
     if (how === 'fist') { game.toast('Je slaat naar de vogel. Ze springt opzij en pikt terug!', 3); game.hurt(4); return; }
-    b.state = 'fled'; b.t = 32; game.sound.squawk(1); game.sound.flutter();
+    b.state = 'fled'; b.t = 32; game.sound.from(b).squawk(1); game.sound.from(b).flutter();
     game.toast('Raak! De vogel rent krijsend weg. Snel, de eieren!', 4);
   }
   rm_nest(e, game) {
@@ -345,7 +345,7 @@ export class Encounters {
     e.drip.visible = e.honey > 0;
     e.halo.visible = s.sensing && d < 30 && e.honey > 0; e.halo.position.set(e.hx, e.hy, e.hz);
     e.buzzT -= dt;
-    if (d < 9 && e.buzzT < 0) { e.buzzT = 0.45; game.sound.buzz((1 - d / 10) * (awake ? 1 : 0.25) * (e.angry > 0 ? 2 : 1)); }
+    if (d < 9 && e.buzzT < 0) { e.buzzT = 0.45; game.sound.from(e).buzz((1 - d / 10) * (awake ? 1 : 0.25) * (e.angry > 0 ? 2 : 1)); }
     if (d < 11 && !e.seen) { e.seen = true; game.toast(awake ? 'Gezoem. Aan die stam hangt een bijennest. Daar zit honing in… en angels.' : 'Aan die stam hangt een bijennest. De bijen zitten stil in het donker.', 5); }
     if (chase && awake && s.collapsed <= 0) {
       e.stingT -= dt;
@@ -381,7 +381,7 @@ export class Encounters {
     if (!e.friendly && e.state === 'wary') {
       if (d < 18) {
         if (!e.met) { e.met = true; game.toast('Vreemden bij het water! Ze springen op en schreeuwen. Dit is hun plek.', 5); }
-        if (e.shoutT < 0) { e.shoutT = 2.4; game.sound.shout(Math.max(0.3, 1 - d / 25)); }
+        if (e.shoutT < 0) { e.shoutT = 2.4; game.sound.from(e).shout(Math.max(0.3, 1 - d / 25)); }
       }
       if (d < 9.5 && e.throwT < 0 && game.state.collapsed <= 0) {
         e.throwT = 2.4;
@@ -426,7 +426,7 @@ export class Encounters {
     }
   }
   hit_stranger(e, how, game) {
-    e.throwT = 0.3; game.sound.shout(1);
+    e.throwT = 0.3; game.sound.from(e).shout(1);
     if (e.friendly) { e.friendly = false; game.toast('Dat had je niet moeten doen. De vreemden zijn weer woedend.', 5); }
     else game.toast('De vreemden krijsen en grijpen naar stenen. Met zijn tweeën zijn ze sterker dan jij.', 5);
   }
