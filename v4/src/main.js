@@ -127,7 +127,7 @@ const weather = new Weather(scene, AREA.weather);   // wolken, wind en regen   /
 G.season = season;
 
 // ---------- het menu en de instellingen ----------
-const menu = initMenu({ sound, renderer, world, journal: () => journal(), restart: () => G.restart() });
+const menu = initMenu({ sound, renderer, world, journal: () => journal(), restart: () => G.restart(), goArea: (e, a) => G.goArea(e, a) });
 
 // ---------- je handen ----------
 // Elke kei heeft een soort en onthoudt hoe vaak erop geslagen is: state.rock loopt gelijk met state.hands.

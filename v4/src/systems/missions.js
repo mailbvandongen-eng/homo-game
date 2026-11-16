@@ -79,6 +79,8 @@ export function initMissions(G) {
   function travel() {
     if (!NEXT) return;
     window.__nosave = 1; closeCard(); $('fade').style.opacity = 1;
+    // was je daar al (zelf gekozen in het menu)? Dan ga je daar verder waar je was.
+    if (Save.slots()[NEXT.id]) { Save.write(G.snapshot()); Save.go(NEXT_ERA.id, NEXT.id); setTimeout(() => location.replace(location.pathname + (DEV ? '?dev=1' : '')), 900); return; }
     // een nieuw tijdperk: een andere groep, honderdduizenden jaren later. Wat je weet gaat mee, wat je droeg niet.
     const leap = NEXT_ERA === ERA ? {} : { era: NEXT_ERA.id, hands: [null, null], rock: [null, null], bag: state.bag ? state.bag.map(() => null) : state.bag, day: 1, food: 70, health: 100, group: 55 };
     Save.write({ ...G.snapshot(), ...leap, fire: undefined, area: NEXT.id, missions: [], mission: null, over: false, past: [...state.past, ...mission.done], rainDay: leap.era ? 0 : state.day - 1, dayP: 0.1, arrived: true });

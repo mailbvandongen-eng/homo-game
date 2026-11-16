@@ -1,8 +1,8 @@
 import * as THREE from '../../lib/three.module.js';
-import { ERA, AREA } from '../eras/index.js';
+import { ERA, AREA, ERAS } from '../eras/index.js';
 import { ITEMS } from '../items.js';
 import { HOME } from '../group.js';
-import { Save } from '../save.js';
+import { Save, DEV } from '../save.js';
 import { $, title, showCard, closeCard } from '../engine/ui.js';
 
 // Bewaren en verdergaan.
@@ -21,6 +21,13 @@ export function initPersist(G) {
   }
   function restore(d) {
     if (!d || d.era !== ERA.id || d.area !== AREA.id) return false;
+    if (d.fresh) {
+      // hier nog niet gespeeld: je begint op de eerste dag, maar wat je elders leerde weet je nog
+      for (const k of ['known', 'found', 'finds', 'rockKnown']) if (Array.isArray(d[k])) state[k] = new Set(d[k]);
+      if (Array.isArray(d.past)) state.past = d.past.filter((x) => typeof x === 'string');
+      if (AREA !== ERA.areas[0] || ERA !== ERAS[0]) title(ERA.species, AREA.name, AREA.intro || '', 6);
+      return false;
+    }
     const ok = (it) => it === null || !!ITEMS[it], num = (v, def) => (Number.isFinite(v) ? v : def);
     state.day = Math.max(1, num(d.day, 1)); state.rainDay = num(d.rainDay, 0); G.dayP = THREE.MathUtils.clamp(num(d.dayP, 0.12), 0, 0.6);   // nooit midden in de nacht wakker worden
     state.food = Math.max(25, num(d.food, 55)); state.health = Math.max(40, num(d.health, 100)); state.group = Math.max(20, num(d.group, 50));
@@ -48,11 +55,19 @@ export function initPersist(G) {
   addEventListener('pagehide', () => { if (state.started && !window.__nosave) Save.write(snapshot()); });
   document.addEventListener('visibilitychange', () => { if (document.hidden && state.started && !window.__nosave) Save.write(snapshot()); });
   function restart() {
-    showCard(`<div class="eyebrow">Opnieuw beginnen</div><h2>Alles vergeten?</h2><p>Je begint dan weer op de eerste dag, zonder wat je geleerd en gemaakt hebt.</p>
+    showCard(`<div class="eyebrow">Opnieuw beginnen</div><h2>${AREA.name} opnieuw?</h2><p>Je begint hier weer op de eerste dag, zonder wat je hier gemaakt hebt. De andere gebieden blijven zoals ze zijn.</p>
       <div class="row"><button class="btn" id="noRestart">Nee, verder spelen</button><button class="btn ghost" id="yesRestart">Ja, opnieuw</button></div>`);
     $('noRestart').onclick = closeCard;
-    $('yesRestart').onclick = () => { window.__nosave = 1; Save.clear(); location.reload(); };
+    $('yesRestart').onclick = () => { window.__nosave = 1; Save.reset(ERA.id, AREA.id); location.replace(location.pathname + (DEV ? '?dev=1' : '')); };
   }
+  // een ander gebied kiezen: eerst bewaren wat je hier hebt, dan daar verder (of er beginnen)
+  function goArea(era, area) {
+    if (area === AREA.id) return;
+    if (state.started && !window.__nosave) Save.write(snapshot());
+    window.__nosave = 1; Save.go(era, area); $('fade').style.opacity = 1;
+    setTimeout(() => location.replace(location.pathname + (DEV ? '?dev=1' : '')), 500);
+  }
+  G.goArea = goArea;
   G.restart = restart;
   return { snapshot, restore, saveTick };
 }
