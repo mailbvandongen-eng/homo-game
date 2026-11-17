@@ -260,3 +260,21 @@ passen niet bij *Homo habilis* en *Homo erectus* en schuiven naar tijdperk 3–4
 - Niet op een echte telefoon geprobeerd; het geluid van drinken is niet beluisterd.
 
 Tests: `/root/tools/pw/v4kies.js` (gebied kiezen) en `/root/tools/pw/v4dorst.js` (dorst, waterzak, kennisblad).
+
+## 12. Missieoverzicht: hoe andere spellen het doen (17-11-2026, ontwerp, nog niet gebouwd)
+
+Vraag van Bob: meerdere missies tegelijk, in een subtiel overzicht in plaats van een tekstblok dat het stuur blokkeert.
+
+**Wat andere spellen doen**
+- *Zelda: Breath of the Wild*: missies staan in een logboek achter een knop (hoofd-, zij- en heiligdommissies). Je kiest er één om te volgen; die krijgt een punt op de kaart. Tijdens het spelen staat er geen missietekst in beeld.
+- *Ancestors: The Humankind Odyssey* (zelfde onderwerp): geen missies en geen kaart, alles via beeld en geluid. Recensenten vonden dat te onduidelijk; de maker raadde zelf aan de hulp aan te laten. Les: helemaal niets tonen werkt niet.
+- Spellen met veel missies (World of Warcraft-hulpjes, Typewriter): veel missies mogen open staan, maar **één wordt gevolgd**. Alleen die staat in beeld, klein, met de huidige stap. De rest zit in een la.
+- Algemene regel uit ontwerpgidsen: begin met een leeg beeld en zet er alleen iets in dat steeds nodig is.
+- Uit eigen kennis (niet opgezocht): *Genshin Impact* en *The Witcher 3* tonen de gevolgde missie als één of twee kleine regels aan de rand, weg van de duimen, en laten die vervagen.
+
+**Voorstel voor Oersprong**
+1. **Meerdere missies tegelijk.** Iedereen die iets vraagt, mag je aannemen. Niets hoeft te worden afgezegd.
+2. **In beeld: één kleine regel**, bovenaan in het midden, alleen de huidige stap van de gevolgde missie ("Pak een tak"). Hij vangt geen aanraking op, verschijnt als de stap verandert en vervaagt na een paar tellen. Een klein stipje blijft staan als teken dat er iets loopt.
+3. **Overzicht achter één tik** op dat stipje: een smalle lijst met per missie de naam, wie het vroeg en de stappen met vinkjes. Tik op een missie om die te volgen. Het spel staat dan stil, zoals bij het menu.
+4. **De wereld wijst de weg.** Wie de missie gaf, wijst of kijkt de goede kant op; het doel zelf valt op (rook, gieren, een kale boom). Geen pijlen of kaartpunten.
+5. Een stap die klaar is geeft een kort geluid en een vinkje, geen scherm.

@@ -111,6 +111,28 @@ De inventaris waarmee dit begon staat in [`ANALYSE.md`](ANALYSE.md).
 | 5 | **Gameplay**: handen, tas en eten als eigen systeem (`systems/`); missies verdiepen; draagmiddelen (net, mand, waterzak); overleven; kennisscherm in het spel | **eerste deel klaar** (16-11-2026): vrij een gebied kiezen met eigen voortgang per gebied; handen, tas, eten en maken staan in `systems/`; dorst en drinken; de waterzak en de missie *Water voor Tor*; het blad *Hoe zeker is dit?*; zebra's en de gewonde gazelle ruiken je. **Net en mand komen niet in deze twee tijdperken**: touw en vlechtwerk zijn pas veel later aangetoond en horen bij tijdperk 3–4. Nog te doen: meer missies per gebied, voorwerpen combineren als één regel; zie ANALYSE §11 |
 | 6 | **Kwaliteitscontrole**: elk gebied en scenario door de controles zonder "let op"; telefoonproef; licenties en bronnen nagelopen | |
 
+### Fase 5b — speelbaarheid (opdracht van Bob, 17-11-2026)
+
+Na proefspelen op de telefoon. Dit geldt voor **alle gebieden en beide tijdperken**, niet alleen voor de plek
+waar het opviel. Volgorde van bouwen = volgorde van de tabel.
+
+| # | Wat | Waarom | Stand |
+|---|---|---|---|
+| 1 | **Tekst uit de weg van het stuur.** Geen tekst of balk die een aanraking opvangt op de linkerhelft; streepjes korter | de missieregel blokkeerde het sturen | |
+| 2 | **Missies duidelijker.** Meerdere missies tegelijk; een subtiel missieoverzicht in plaats van een groot tekstblok | zie ANALYSE §12; eerst terugkoppelen aan Bob | ontwerp ligt bij Bob |
+| 3 | **Vinden wat een missie vraagt.** Losse takken onder bomen, dode bomen herkenbaar, iemand uit de groep wijst de kant op | "Pak een tak" terwijl er nergens een tak ligt | |
+| 4 | **Meer eten in het land.** Botten met merg bij oude karkassen (gieren), vruchten onder bomen, noten kraken, knollen, meer eieren en honing; bessenstruik weg bij de slaapboom | alleen bessen is te mager | |
+| 5 | **De groep doet zelf mee.** Volwassenen zoeken overdag zelf eten; bij een karkas draagt iemand mee | de groep stond te wachten naast een struik | |
+| 6 | **Roofdieren met een reden.** Hyena's komen alleen als er iets te halen is, waarschuwen eerst, bijten alleen wie alleen of gewond is of bij hun prooi staat | hyena's liepen doelloos rond of beten zonder aanleiding | |
+| 7 | **Moe zonder donker.** Moe merk je aan je lijf (trager, hijgen, niet rennen); donker is alleen de nacht | het beeld werd zwart tijdens het lopen | |
+| 8 | **Minder zwaar begin.** Voeding en water zakken de eerste dagen langzamer | het spel is te zwaar | |
+
+Vaste regels die hieruit volgen (gelden ook voor alles wat later komt):
+- Wat een missie vraagt, is in dat gebied te vinden zonder zoeken naar een speld.
+- Geen gevolg zonder zichtbare oorzaak: een dier valt niet aan zonder waarschuwing, het beeld verandert niet zonder reden die je ziet.
+- De groep is geen publiek: wie kan lopen, doet iets.
+- Geen tekst op de plek van een duim.
+
 Regels die voor elke fase gelden:
 - Het spel blijft na elke fase speelbaar; bestaande functies verdwijnen niet zonder vervanging.
 - Elke wijziging wordt in het draaiende spel bekeken, ook op telefoonformaat.
