@@ -16,7 +16,8 @@ export function initMenu({ sound, renderer, world, journal, restart, goArea }) {
   function main() {
     show(`<div class="eyebrow">Het spel staat stil</div><h2>Menu</h2>
       <div class="menu">
-        <button class="key go" data-do="close">Verder spelen</button>
+        ${window.__newV ? '<button class="key go" data-do="update" id="updateBtn">Nieuwe versie laden</button>' : ''}
+        <button class="key${window.__newV ? '' : ' go'}" data-do="close">Verder spelen</button>
         <button class="key" data-do="journal" id="journalBtn">Wat je weet</button>
         <button class="key" data-do="areas" id="areasBtn">Kies een gebied</button>
         <button class="key" data-do="settings" id="settingsBtn">Instellingen</button>
@@ -52,6 +53,7 @@ export function initMenu({ sound, renderer, world, journal, restart, goArea }) {
     if (group) { const k = group.dataset.key, v = b.dataset.v; setSetting(k, typeof DEFAULTS[k] === 'number' ? +v : v); settingsView(); return; }
     const act = b.dataset.do;
     if (act === 'close') close();
+    else if (act === 'update') location.replace('./?v=' + window.__newV);   // je spel wordt bewaard bij het verlaten van de pagina
     else if (act === 'main') main();
     else if (act === 'settings') settingsView();
     else if (act === 'areas') areasView();

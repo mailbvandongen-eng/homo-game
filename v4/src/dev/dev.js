@@ -45,7 +45,7 @@ const el = (tag, attrs = {}, html = '') => { const e = document.createElement(ta
 const TIMES = [['Zonsopgang', 0.02], ['Ochtend', 0.12], ['Middag', 0.36], ['Namiddag', 0.55], ['Schemer', 0.7], ['Nacht', 0.86]];
 
 export async function initDev({ G, A, devFlags, renderer, height, makeCloak, dropCloak }) {
-  const { state, player, group } = G, { mission, MISSIONS } = G.missions;
+  const { state, player } = G, { mission, MISSIONS } = G.missions;
   const normalBefore = localStorage.getItem('homo-save');   // om te bewijzen dat het echte spel onaangeroerd blijft
   const errors = [];
   const noteError = (m) => { if (errors[errors.length - 1] !== m) errors.push(m); btn.classList.add('bad'); };
@@ -107,11 +107,11 @@ export async function initDev({ G, A, devFlags, renderer, height, makeCloak, dro
     if (c.fire && G.fire) { if (c.fire.built) { G.fire.ring = G.fire.need; G.fire.showRing(); } G.fire.restore({ ring: G.fire.ring, ...c.fire }); }
     if (c.done !== undefined || c.mission !== undefined) {
       if (c.done !== undefined) mission.done = new Set(c.done);
-      mission.over = false; mission.endT = 0; mission.cur = null; mission.giver = null;
+      mission.over = false; mission.endT = 0; G.missions.clear();
       const cur = c.mission && MISSIONS.find((m) => m.id === c.mission);
       if (cur) {
         if (cur.needs) mission.done.add(cur.needs);
-        mission.done.delete(cur.id); mission.cur = cur; mission.giver = group.list.find((g) => g.id === cur.who); mission.startT = 9; mission.shown = -1;
+        mission.done.delete(cur.id); G.missions.start(cur); G.missions.follow(cur);
         if (cur.onStart) cur.onStart();
       }
     }

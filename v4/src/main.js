@@ -1015,7 +1015,7 @@ function update(dt) {
   const part = partOfDay(dayP);
   if (state.started && part !== lastPart && lastPart) {
     if (part === 'evening') toast('De zon zakt. De groep wacht bij de slaapboom. In de schemering gaan de roofdieren op jacht…', 6);
-    if (part === 'night' && !(mission.cur && mission.cur.late)) toast('Het is nacht. Bij de slaapboom ben je veilig; daarbuiten niet.', 5);
+    if (part === 'night' && !mission.active.some((e) => e.m.late)) toast('Het is nacht. Bij de slaapboom ben je veilig; daarbuiten niet.', 5);
     if (part === 'dawn' && !state.slept) newDay('alone');
     if (part === 'day') state.slept = false;
   }
@@ -1133,7 +1133,8 @@ function frame() {
   requestAnimationFrame(frame);   // eerst: een fout in één beeld mag het spel niet stilzetten
   const raw = clock.getDelta(), dt = Math.min(raw, window.__dtCap || 1 / 20);   // __dtCap: alleen voor trage testbrowsers
   if (innerWidth !== sizeW || innerHeight !== sizeH) resize();
-  if (menu.open) { renderer.render(scene, camera); return; }   // menu open: het spel staat stil
+  if (mission.viewing && !$('cardScreen').classList.contains('open')) mission.viewing = false;
+  if (menu.open || mission.viewing) { renderer.render(scene, camera); return; }   // menu of missieoverzicht open: het spel staat stil
   clock.elapsedTime += dt;
   // Loopt het spel vijf tellen lang te traag, dan gaat het beeld (bij 'Vanzelf') een trap lager. Niet in de testbrowser: die is altijd traag.
   if (state.started && playTime > 8 && !navigator.webdriver) {
@@ -1174,7 +1175,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { eat, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
+window.__game = { eat, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, setSneak, still: () => stillT,
   setCam: (y, p, d) => { cam.yaw = y; cam.pitch = p; if (d) cam.dist = d; }, setZoom: C.setZoom, zoom: () => cam.dist, C, jump, sound, world, weather, menu, closeCard, clockT: () => clock.elapsedTime, actionContext, actionOptions, heard, tasteAt, bodyTap, prim: () => prim, alts: () => alts,
   lookFrom: (pos, look) => { cam.override = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },

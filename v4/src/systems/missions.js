@@ -2,7 +2,8 @@ import * as THREE from '../../lib/three.module.js';
 import { ERAS, ERA, AREA } from '../eras/index.js';
 import { HOME } from '../group.js';
 import { Save, DEV } from '../save.js';
-import { $, toast, title, showCard, closeCard } from '../engine/ui.js';
+import { ICON } from '../icons.js';
+import { $, say, toast, title, showCard, closeCard } from '../engine/ui.js';
 
 // Missies: wie in de groep iets nodig heeft roept en wenkt; aantikken is aannemen. Alle missies klaar: de groep trekt verder.
 export function initMissions(G) {
@@ -19,35 +20,52 @@ export function initMissions(G) {
   for (const m of MISSIONS) m.steps.push({ t: 'Ga terug naar ' + NAMES[m.who], ok: () => false });
   // Niemand duwt je een keuzescherm onder je neus: wie iets nodig heeft roept en wenkt bij de slaapboom.
   // Aantikken is aannemen. Daarna terug naar diegene, en het is volbracht.
-  const mission = { cur: null, giver: null, done: new Set(), over: false, callT: 12, calls: 0, startT: 0, endT: 0, shown: -1, late: false };
+  // Je kunt meer missies tegelijk hebben (active). Eén ervan volg je (cur): daarvan zie je de stap in beeld.
+  const mission = { active: [], cur: null, giver: null, done: new Set(), over: false, callT: 12, calls: 0, endT: 0, shown: -1, lineT: 0, tickT: 0, viewing: false };
   const stepOf = (m) => { let n = 0; while (n < m.steps.length - 1 && m.steps[n].ok()) n++; return n; };
-  const offerOf = (g) => (mission.cur || mission.over || g.sick > 0 ? null : MISSIONS.find((m) => m.who === g.id && !mission.done.has(m.id) && (!m.needs || mission.done.has(m.needs)) && (!m.when || m.when())) || null);
+  const entryOf = (m) => mission.active.find((e) => e.m === m);
+  const offerOf = (g) => (mission.over || g.sick > 0 ? null : MISSIONS.find((m) => m.who === g.id && !mission.done.has(m.id) && !entryOf(m) && (!m.needs || mission.done.has(m.needs)) && (!m.when || m.when())) || null);
+  function follow(m) { const e = m && entryOf(m); mission.cur = e ? e.m : null; mission.giver = e ? e.giver : null; mission.shown = -1; }
+  // een missie loopt (zonder plechtigheid): voor het bewaarde spel en de testmodus
+  function start(m, startT = 9) {
+    if (!m || entryOf(m) || mission.done.has(m.id)) return;
+    mission.active.push({ m, giver: group.list.find((g) => g.id === m.who), startT, late: false });
+    if (m.onStart) m.onStart();
+    if (!mission.cur) follow(m);
+  }
+  function clear() { mission.active = []; follow(null); }
   function accept(g) {
     const m = offerOf(g); if (!m) return;
-    closeRadial(); mission.cur = m; mission.giver = g; mission.startT = 0; mission.shown = -1; g.busy = 3;
-    G.camTurn = { x: g.x, z: g.z, t: 1.8 }; mission.late = false;
-    if (m.onStart) m.onStart();
+    closeRadial(); start(m, 0); follow(m); g.busy = 3;
+    G.camTurn = { x: g.x, z: g.z, t: 1.8 };
     sound.mission(); title('Missie', m.title, m.ask);
   }
   function complete(m) {
-    mission.done.add(m.id); mission.cur = null; mission.callT = 45; mission.calls = 0;
-    if (mission.giver) mission.giver.busy = 3;
+    const e = entryOf(m);
+    mission.done.add(m.id); mission.active = mission.active.filter((x) => x.m !== m); mission.callT = 45; mission.calls = 0;
+    if (e && e.giver) e.giver.busy = 3;
+    if (mission.cur === m) follow(mission.active.length ? mission.active[0].m : null);
+    showLine();
     state.group = Math.min(100, state.group + 10);
     sound.discover(); title('Missie volbracht', m.title, m.end, 4.5);
     if (mission.done.size === MISSIONS.length) mission.endT = 7;
   }
+  // het overzicht: per missie wie het vroeg, kerfjes voor de stappen; van de missie die je volgt ook de stappen zelf
   function missionInfo() {
-    const m = mission.cur; if (!m) return;
-    const n = stepOf(m);
-    showCard(`<div class="eyebrow">Missie van ${NAMES[m.who]}</div><h2>${m.title}</h2><p>${m.why}</p>
-      <ol class="steps">${m.steps.map((x, i) => `<li class="${i < n ? 'ok' : i === n ? 'now' : ''}">${x.t}</li>`).join('')}</ol>
-      <div class="row"><button class="btn" id="misGo">Verder spelen</button><button class="btn ghost" id="misDrop">Laat maar</button></div>`);
+    if (!mission.active.length) return;
+    const row = (e) => {
+      const m = e.m, n = stepOf(m), on = m === mission.cur;
+      return `<button class="mrow${on ? ' now' : ''}" data-m="${m.id}"><span class="mwho">${NAMES[m.who]}</span><b>${m.title}</b><span class="notch">${m.steps.map((x, i) => `<i class="${i < n ? 'ok' : i === n ? 'at' : ''}"></i>`).join('')}</span>`
+        + (on ? `<ol class="steps">${m.steps.map((x, i) => `<li class="${i < n ? 'ok' : i === n ? 'now' : ''}">${x.t}</li>`).join('')}</ol>` : '') + '</button>';
+    };
+    showCard(`<div class="eyebrow">Missies</div><div class="mlist">${mission.active.map(row).join('')}</div>`);
+    mission.viewing = true;
     $('card').onpointerdown = (e) => e.stopPropagation();
-    $('misGo').onclick = closeCard;
-    $('misDrop').onclick = () => { mission.cur = null; mission.callT = 60; mission.calls = 0; closeCard(); };
+    for (const b of $('card').querySelectorAll('.mrow')) b.onclick = () => { const m = MISSIONS.find((x) => x.id === b.dataset.m); if (m === mission.cur) closeCard(); else { follow(m); sound.pick(); missionInfo(); } };
   }
-  $('quest').addEventListener('pointerdown', (e) => e.stopPropagation());
-  $('quest').addEventListener('click', missionInfo);
+  $('questBtn').insertAdjacentHTML('afterbegin', ICON.quest);
+  $('questBtn').addEventListener('pointerdown', (e) => e.stopPropagation());
+  $('questBtn').addEventListener('click', missionInfo);
   // het teken boven het hoofd van wie je roept: een warm lichtje, pas zichtbaar als je in de buurt bent
   const callTex = (() => {
     const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
@@ -106,24 +124,24 @@ export function initMissions(G) {
       mission.endT -= dt;
       if (mission.endT <= 0 && !calm) mission.endT = 1;
       else if (mission.endT <= 0) {
-        mission.over = true; $('quest').classList.remove('on'); for (const g of group.list) { g.calling = null; g.mark.visible = false; }
+        mission.over = true; clear(); showLine(); for (const g of group.list) { g.calling = null; g.mark.visible = false; }
         endCard();
         return;
       }
     }
-    const m = mission.cur, sure = !!window.__sure;   // de testbot speelt zonder roepende groep
+    const sure = !!window.__sure;   // de testbot speelt zonder roepende groep
     // wie roept er, en wie wacht op je
     const asking = [];
     for (const g of group.list) {
       const o = !sure && !night && mission.endT <= 0 && hints.playT > 6 ? offerOf(g) : null;
-      const back = m && mission.giver === g && m.done();
+      const back = mission.active.some((e) => e.giver === g && e.m.done());
       g.calling = o ? (o.shiver ? 'shiver' : 'wave') : null;
       if (o) asking.push(g);
       const d = Math.hypot(g.x - player.pos.x, g.z - player.pos.z);
       markTick(g, (o || back) && d < 34 ? Math.min(1, (34 - d) / 8) : 0, dt);
     }
-    if (!m) {
-      $('quest').classList.remove('on');
+    if (!mission.active.length) {
+      showLine();
       mission.callT -= dt;
       if (mission.callT <= 0 && asking.length && calm && dHome < 48) {
         mission.calls++; mission.callT = mission.calls % 3 ? 7 : 80;
@@ -131,16 +149,28 @@ export function initMissions(G) {
       } else if (mission.callT <= 0) mission.callT = 2;
       return;
     }
-    mission.startT += dt;
-    // een missie met haast: de zon is de klok. Te laat kost de groep een nacht, en morgen ga je weer.
-    if (m.late) { const l = m.late(); if (l && !mission.late) { state.group = Math.max(0, state.group - 10); sound.bad(); toast(m.lateText, 7); } mission.late = l; }
-    if (!sure && m.done() && calm && mission.startT > 5 && (m.here || Math.hypot(mission.giver.x - player.pos.x, mission.giver.z - player.pos.z) < 3.4)) { $('quest').classList.remove('on'); complete(m); return; }
-    $('quest').classList.add('on');
-    const n = stepOf(m);
-    $('questN').textContent = m.title; $('questT').textContent = `${n + 1}/${m.steps.length}  ${m.steps[n].t}`;
-    if (n !== mission.shown) { if (mission.shown >= 0) sound.good(); mission.shown = n; const el = $('quest'); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+    for (const e of [...mission.active]) {
+      const m = e.m; e.startT += dt;
+      // een missie met haast: de zon is de klok. Te laat kost de groep een nacht, en morgen ga je weer.
+      if (m.late) { const l = m.late(); if (l && !e.late) { state.group = Math.max(0, state.group - 10); sound.bad(); toast(m.lateText, 7); } e.late = l; }
+      if (!sure && m.done() && calm && e.startT > 5 && (m.here || Math.hypot(e.giver.x - player.pos.x, e.giver.z - player.pos.z) < 3.4)) { complete(m); return; }
+    }
+    if (!mission.cur) follow(mission.active[0].m);
+    const n = stepOf(mission.cur);
+    // een stap gelukt: een kort geluid en een vinkje voor de regel, geen scherm
+    if (n !== mission.shown) { if (mission.shown >= 0) { sound.good(); mission.tickT = 2.5; } mission.shown = n; mission.lineT = 7; }
+    mission.tickT -= dt; $('quest').classList.toggle('tick', mission.tickT > 0);
+    if (!$('title').classList.contains('on')) mission.lineT -= dt;   // eerst de titel, dan de regel
+    showLine(mission.cur.steps[n].t, mission.lineT > 0 || state.sensing);
+  }
+  // in beeld: één kleine regel met de stap van nu, die weer vervaagt; het teken ernaast blijft zolang er iets loopt
+  function showLine(text, on) {
+    const n = mission.active.length;
+    $('questBtn').classList.toggle('show', n > 0); $('questN').textContent = n > 1 ? n : '';
+    if (text !== undefined && $('questT').textContent !== say(text)) $('questT').textContent = say(text);
+    $('quest').classList.toggle('on', !!on && n > 0 && !$('title').classList.contains('on'));
   }
   // terloopse opmerkingen leiden af; ze komen alleen nog als ze bij je missie horen
   function murmur(text, sec, tag) { if (tag && mission.cur && mission.cur.tag === tag) toast(text, sec); }
-  return { has, carries, MISSIONS, NEXT, NAMES, mission, offerOf, accept, complete, missionInfo, endCard, travel, questTick, murmur };
+  return { has, carries, MISSIONS, NEXT, NAMES, mission, offerOf, accept, start, clear, follow, stepOf, complete, missionInfo, endCard, travel, questTick, murmur };
 }

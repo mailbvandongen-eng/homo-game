@@ -7,7 +7,7 @@ import { $, title, showCard, closeCard } from '../engine/ui.js';
 
 // Bewaren en verdergaan.
 export function initPersist(G) {
-  const { state, player, group, hints, season, renderHands, renderBag, putCloak } = G, { mission, MISSIONS } = G.missions;
+  const { state, player, hints, season, renderHands, renderBag, putCloak } = G, { mission, MISSIONS } = G.missions;
   // Bewaard wordt wat je bent en weet, niet waar elk bot ligt: je wordt wakker bij de slaapboom en de wereld is weer vol.
   function snapshot() {
     return {
@@ -16,7 +16,7 @@ export function initPersist(G) {
       hands: state.hands, rock: state.rock, bag: state.bag, cloak: state.cloak, knapped: !!state.knapped,
       known: [...state.known], found: [...state.found], finds: [...state.finds], rockKnown: [...state.rockKnown], given: [...state.given],
       fire: G.fire ? G.fire.snapshot() : undefined,
-      missions: [...mission.done], mission: mission.cur ? mission.cur.id : null, over: mission.over, past: state.past,
+      missions: [...mission.done], mission: mission.cur ? mission.cur.id : null, active: mission.active.map((e) => e.m.id), over: mission.over, past: state.past,
     };
   }
   function restore(d) {
@@ -36,8 +36,10 @@ export function initPersist(G) {
     state.cloak = !!d.cloak; state.knapped = !!d.knapped;
     for (const k of ['known', 'found', 'finds', 'rockKnown', 'given']) if (Array.isArray(d[k])) state[k] = new Set(d[k]);
     mission.done = new Set((d.missions || []).filter((id) => MISSIONS.some((m) => m.id === id)));
-    const cur = MISSIONS.find((m) => m.id === d.mission && !mission.done.has(m.id));
-    if (cur) { mission.cur = cur; mission.giver = group.list.find((g) => g.id === cur.who); mission.startT = 9; if (cur.onStart) cur.onStart(); }
+    G.missions.clear();
+    for (const id of [...(Array.isArray(d.active) ? d.active : []), d.mission]) G.missions.start(MISSIONS.find((m) => m.id === id));
+    G.missions.follow(MISSIONS.find((m) => m.id === d.mission));
+    if (!mission.cur && mission.active.length) G.missions.follow(mission.active[0].m);
     if (Array.isArray(d.past)) state.past = d.past.filter((x) => typeof x === 'string');
     if (d.arrived) title(ERA.species, AREA.name, AREA.intro || '', 6);   // net aangekomen in een nieuw gebied
     mission.over = !!d.over;

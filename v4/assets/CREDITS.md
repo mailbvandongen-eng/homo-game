@@ -40,3 +40,11 @@ Aanpassingen: vereenvoudigd en texturen verkleind (gltf-transform). Bij de mensa
 # Bewegingen van de hoofdpersoon
 
 `anims/hominin.json`: bewegingen uit de [Universal Animation Library](https://quaternius.itch.io/universal-animation-library) van **Quaternius** (CC0), overgezet op het skelet van de neanderthaler met een eigen script (`/root/tools/homo-assets/retarget.html`). Gebruikt: stilstaan, lopen, joggen, sprinten, gebukt staan en lopen, springen, oppakken, iets doen met de handen, een stoot, een slag van boven, een werpbeweging, geraakt worden, neervallen, zwemmen, rollen en duwen.
+
+# Iconen
+
+De iconen op de knoppen komen uit de set van [game-icons.net](https://game-icons.net) ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)). De vormen staan als SVG-pad in `src/icons.js`; de kleur volgt de knop.
+
+| Icoon | Naam in de set | Maker |
+|---|---|---|
+| missies | stone-pile | [Delapouite](https://delapouite.com) |
