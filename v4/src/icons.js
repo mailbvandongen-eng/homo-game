@@ -9,6 +9,10 @@ export const ICON = {
   // een oog: bekijken
   eye: svg('<path d="M4 24c6-10 12-14 20-14s14 4 20 14c-6 10-12 14-20 14S10 34 4 24z"/><circle cx="24" cy="24" r="6"/>'),
   // neerleggen: een pijl naar beneden boven de grond
+  // een druppel: drinken
+  drink: svg('<path d="M24 5c8 11 13 18 13 25a13 13 0 0 1-26 0c0-7 5-14 13-25z"/><path d="M18 31c0 4 3 6 6 6"/>'),
+  // een zak met een druppel erboven: vullen
+  fill: svg('<path d="M24 3c3 4 4.5 6 4.5 8.5a4.5 4.5 0 0 1-9 0C19.500 9 21 7 24 3z"/><path d="M19 20h10l2 4c5 5 6 9 6 12 0 6-6 8-13 8s-13-2-13-8c0-3 1-7 6-12z"/>'),
   drop: svg('<path d="M24 6v24M14 21l10 10 10-10M8 40h32"/>'),
   // kei op een bot: openslaan
   crack: svg('<path d="M10 14l8-6 10 2 4 8-6 6-10-1z"/><path d="M8 38h32M30 34l4-6M36 36l6-3M18 34l-3-5"/>'),
@@ -72,6 +76,8 @@ export const ITEM_ICON = {
   egg: '<svg viewBox="0 0 48 48"><path d="M24 6c8 0 14 12 14 21s-6 15-14 15-14-6-14-15S16 6 24 6z" fill="#efe4c8" stroke="#3a3028" stroke-width="2.5"/><g fill="#9a7c58"><circle cx="19" cy="20" r="1.8"/><circle cx="28" cy="16" r="1.4"/><circle cx="30" cy="28" r="2"/><circle cx="20" cy="32" r="1.5"/><circle cx="25" cy="24" r="1.2"/></g></svg>',
   hide: '<svg viewBox="0 0 48 48"><path d="M12 8l8 3h8l8-3 2 8-3 6 3 10 4 8-8-2-5 4h-10l-5-4-8 2 4-8 3-10-3-6z" fill="#e4dac6" stroke="#2a2420" stroke-width="2.5" stroke-linejoin="round"/><g stroke="#2a2420" stroke-width="2.5" stroke-linecap="round"><path d="M17 17h14M16 23h16M17 29h14M19 35h10"/></g></svg>',
   branch: '<svg viewBox="0 0 48 48"><path d="M8 40L38 8" stroke="#3a2a1c" stroke-width="8" stroke-linecap="round"/><path d="M8 40L38 8" stroke="#8a6a48" stroke-width="4.5" stroke-linecap="round"/><path d="M24 23l10 3" stroke="#3a2a1c" stroke-width="5" stroke-linecap="round"/><path d="M24 23l10 3" stroke="#8a6a48" stroke-width="2.5" stroke-linecap="round"/></svg>',
+  pouch: '<svg viewBox="0 0 48 48"><path d="M19 12c2-3 8-3 10 0l1 6c7 3 10 8 9 14-1 6-8 8-15 8S10 38 9 32c-1-6 2-11 9-14z" fill="#c9a48c" stroke="#3a2a22" stroke-width="2.5" stroke-linejoin="round"/><path d="M15 31c4 3 14 3 18 0M18 25c3 2 9 2 12 0" fill="none" stroke="#3a2a22" stroke-width="2" stroke-linecap="round" opacity=".6"/></svg>',
+  waterbag: '<svg viewBox="0 0 48 48"><path d="M20 8c1-3 7-3 8 0l1 7c8 3 12 9 11 16-1 8-8 11-16 11S9 39 8 31c-1-7 3-13 11-16z" fill="#b88f78" stroke="#3a2a22" stroke-width="2.5" stroke-linejoin="round"/><path d="M24 21c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z" fill="#8fc6e0" stroke="#3a2a22" stroke-width="2" stroke-linejoin="round"/></svg>',
   stick: '<svg viewBox="0 0 48 48"><path d="M8 40L34 12" stroke="#3a2a1c" stroke-width="8" stroke-linecap="round"/><path d="M8 40L34 12" stroke="#a07c50" stroke-width="4.5" stroke-linecap="round"/><path d="M30 10l12-6-5 12z" fill="#e8d4a8" stroke="#3a2a1c" stroke-width="2.2" stroke-linejoin="round"/></svg>',
   tuber: '<svg viewBox="0 0 48 48"><path d="M10 30c-3-9 5-17 15-16s16 8 13 16-11 11-18 9-8-4-10-9z" fill="#b89468" stroke="#3a2a1c" stroke-width="2.5"/><path d="M24 14c0-5 2-8 5-9M21 14c-2-4-5-6-8-6" stroke="#5e8a32" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M18 26l3 2M28 24l3 3M24 32l2 1" stroke="#7a5c3e" stroke-width="2" stroke-linecap="round"/></svg>',
   fish: '<svg viewBox="0 0 48 48"><path d="M4 24c8-10 20-11 30-4l10-7-3 11 3 11-10-7c-10 7-22 6-30-4z" fill="#5a5a52" stroke="#1e1e1a" stroke-width="2.5" stroke-linejoin="round"/><circle cx="12" cy="22" r="1.8" fill="#e8e4d0"/><path d="M6 26c-2 3-3 5-3 8M9 27c-1 3-1 5 0 8" stroke="#1e1e1a" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>',

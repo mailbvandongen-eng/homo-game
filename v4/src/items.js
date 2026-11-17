@@ -91,6 +91,18 @@ export const ITEMS = {
     unknown: 'Eten kun je het niet. Maar het is groot, taai en zacht tegelijk…',
     known: 'Op een huid lig je zachter en warmer dan op de kale grond. Breng hem naar de slaapboom.',
   },
+  pouch: {
+    name: 'Lege maag', color: '#c9a48c',
+    look: 'De maag van een dier, leeggeknepen. Een taaie, slappe zak met één opening.',
+    unknown: 'Eten kun je hem niet. Maar hij is dicht en taai. Wat zou erin kunnen?',
+    known: 'Houd hem aan de rivier onder water: dan heb je water bij je.',
+  },
+  waterbag: {
+    name: 'Waterzak', color: '#b88f78',
+    look: 'De maag staat bol van het water. Je houdt de opening dichtgeknepen.',
+    unknown: 'Hij is zwaar en klotst.',
+    known: 'Water voor onderweg, of voor wie niet meer naar de rivier kan lopen.',
+  },
   branch: {
     name: 'Tak', color: '#8a6a48',
     look: 'Een rechte, taaie tak van een acacia, zo lang als je arm. Het uiteinde is stomp en rafelig.',
@@ -140,6 +152,9 @@ export const DISCOVERIES = [
   { id: 'berry', text: 'Paarse bessen zijn zoet en goed om te eten.' },
   { id: 'redberry', text: 'Van rode bessen word je ziek.' },
   { id: 'leaf', text: 'Bitterblad helpt als je ziek bent.' },
+  { id: 'drink', text: 'Stromend water lest je dorst.' },
+  { id: 'pool', text: 'Van stilstaand water in een poel word je ziek.' },
+  { id: 'waterbag', text: 'In de maag van een dier kun je water meedragen.' },
   { id: 'vultures', text: 'Gieren in de lucht wijzen naar een karkas.' },
   { id: 'marrow', text: 'In botten zit merg. Met een kei kraak je ze open.' },
   { id: 'sneak', text: 'Gebukt in het hoge gras zien dieren je niet zo snel.' },
@@ -235,7 +250,7 @@ export const LOOKS = {
 };
 
 // Wat je ervan weet, als kleur bij de zintuigen: goed, slecht of nog onbekend
-export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good', meat: 'good', egg: 'good', honey: 'good', hide: 'good', branch: 'good', stick: 'good', tuber: 'good', fish: 'good', axe: 'good', torch: 'good', roast: 'good' };
+export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good', meat: 'good', egg: 'good', honey: 'good', hide: 'good', pouch: 'good', waterbag: 'good', branch: 'good', stick: 'good', tuber: 'good', fish: 'good', axe: 'good', torch: 'good', roast: 'good' };
 
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 // Een tak: krom en knoestig, met bast. burn = zwartgeblakerd aan de top.
@@ -395,6 +410,14 @@ export function heldMesh(item, rock) {
   if (item === 'stone') { const m = stoneMesh(rock && rock.type, 0.13); m.children.forEach((o) => { o.position.y = -m.userData.h / m.scale.x / 2; }); return m; }
   if (item === 'flake') { const m = new THREE.Mesh(new THREE.TetrahedronGeometry(0.09, 0), lam(c)); m.scale.set(1, 0.35, 1.4); return m; }
   if (item === 'egg') { const m = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), lam(c)); m.scale.set(1, 1.3, 1); return m; }
+  if (item === 'pouch' || item === 'waterbag') {
+    // de maag van een dier: leeg een slappe zak, vol een bolle, met de dichtgeknepen hals erboven
+    const full = item === 'waterbag', g = new THREE.Group(), m = new THREE.MeshLambertMaterial({ color: c });
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), m); body.scale.set(full ? 1 : 0.85, full ? 1.15 : 0.5, full ? 0.9 : 0.45); body.position.y = full ? -0.02 : 0;
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.018, full ? 0.05 : 0.035, 0.09, 7), m); neck.position.y = full ? 0.12 : 0.07; neck.rotation.z = full ? 0 : 0.5;
+    g.add(body, neck); if (!full) g.rotation.z = 0.4;
+    return g;
+  }
   if (item === 'hide') {
     // een opgerolde lap huid: licht, met donkere strepen
     const g = new THREE.Group(), roll = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.3, 8), lam(c)); roll.rotation.z = Math.PI / 2; g.add(roll);

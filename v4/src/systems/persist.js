@@ -12,7 +12,7 @@ export function initPersist(G) {
   function snapshot() {
     return {
       era: ERA.id, area: AREA.id, day: state.day, rainDay: state.rainDay, dayP: +G.dayP.toFixed(3),
-      food: Math.round(state.food), health: Math.round(state.health), group: Math.round(state.group),
+      food: Math.round(state.food), water: Math.round(state.water), health: Math.round(state.health), group: Math.round(state.group),
       hands: state.hands, rock: state.rock, bag: state.bag, cloak: state.cloak, knapped: !!state.knapped,
       known: [...state.known], found: [...state.found], finds: [...state.finds], rockKnown: [...state.rockKnown], given: [...state.given],
       fire: G.fire ? G.fire.snapshot() : undefined,
@@ -30,7 +30,7 @@ export function initPersist(G) {
     }
     const ok = (it) => it === null || !!ITEMS[it], num = (v, def) => (Number.isFinite(v) ? v : def);
     state.day = Math.max(1, num(d.day, 1)); state.rainDay = num(d.rainDay, 0); G.dayP = THREE.MathUtils.clamp(num(d.dayP, 0.12), 0, 0.6);   // nooit midden in de nacht wakker worden
-    state.food = Math.max(25, num(d.food, 55)); state.health = Math.max(40, num(d.health, 100)); state.group = Math.max(20, num(d.group, 50));
+    state.food = Math.max(25, num(d.food, 55)); state.water = Math.max(30, num(d.water, 75)); state.health = Math.max(40, num(d.health, 100)); state.group = Math.max(20, num(d.group, 50));
     if (Array.isArray(d.hands) && d.hands.length === 2 && d.hands.every(ok)) { state.hands = d.hands; state.rock = Array.isArray(d.rock) && d.rock.length === 2 ? d.rock : [null, null]; }
     if (Array.isArray(d.bag) && d.bag.length === 5 && d.bag.every((e) => e === null || (e && ITEMS[e.it]))) state.bag = d.bag;
     state.cloak = !!d.cloak; state.knapped = !!d.knapped;

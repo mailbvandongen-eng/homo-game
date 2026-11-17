@@ -59,5 +59,9 @@ export const savanne = {
     { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', ok: () => g.carries('hide') || (g.carries('flake') && g.sabres.kill && Math.hypot(g.sabres.kill.x - g.player.pos.x, g.sabres.kill.z - g.player.pos.z) < 14) },
     { t: 'Wacht tot de roofdieren weg zijn en snijd: eerst vlees, dan de huid', ok: () => g.carries('hide') },
     { t: 'Houd huid en snijsteen vast, tik op de huid en kies de omslag', ok: () => g.state.cloak }] },
+  { id: 'water', who: 'tor', ask: 'Tor likt langs zijn droge lippen. Naar de rivier lopen kan hij niet meer.', end: 'Tor drinkt en geeft de zak door. Hij legt even zijn hand op je arm.', tag: 'waterbag', title: 'Water voor Tor', why: 'Water kun je niet in je handen dragen. In de maag van een dier wel.', needs: 'flake', done: () => g.state.given.has('waterbag'), steps: [
+    { t: 'Neem een snijsteen mee', ok: () => g.carries('flake') || g.carries('pouch') || g.carries('waterbag') },
+    { t: 'Zoek een vers gedood dier en snijd de maag eruit', ok: () => g.carries('pouch') || g.carries('waterbag') },
+    { t: 'Houd de lege maag bij de rivier onder water', ok: () => g.carries('waterbag') || g.state.given.has('waterbag') }] },
 ],
 };

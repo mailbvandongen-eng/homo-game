@@ -3,11 +3,11 @@ import { $, toast } from '../engine/ui.js';
 // Wat je lijf en je groep je laten merken: de streepjes, je knorrende maag, het huilen bij de boom.
 export function initBody(G) {
   const { state, sound } = G;
-  const statShow = { food: 0, health: 0, group: 0 }, statPrev = { food: 55, health: 100, group: 50 };
+  const statShow = { food: 0, water: 0, health: 0, group: 0 }, statPrev = { food: 55, water: 75, health: 100, group: 50 };
   let bellyT = 8, cryT = 5, hungerTold = false;
   function bodySignals(dt, sick, hd) {
     // de streepjes zie je alleen als er iets verandert, als het slecht gaat, of als je stilstaat en voelt hoe het met je is
-    for (const [k, id, low] of [['food', 'statFood', 20], ['health', 'statHealth', 35], ['group', 'statGroup', 20]]) {
+    for (const [k, id, low] of [['food', 'statFood', 20], ['water', 'statWater', 30], ['health', 'statHealth', 35], ['group', 'statGroup', 20]]) {
       const v = state[k];
       if (Math.abs(v - statPrev[k]) > 0.6) statShow[k] = 5;
       statPrev[k] = v; statShow[k] -= dt;

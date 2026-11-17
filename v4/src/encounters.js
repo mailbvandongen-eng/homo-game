@@ -137,7 +137,7 @@ export class Encounters {
       return;
     }
     if (!e.seen && d < 32) { e.seen = true; game.murmur('Daar loopt een gazelle helemaal alleen. Ze trekt met haar achterpoot…', 5); }
-    const scared = sense('gazelle', m, game.player).seen;
+    const scared = sense('gazelle', m, game.player).aware;
     let spd = 0;
     if (scared) {
       // weg van jou; maar ze wordt snel moe

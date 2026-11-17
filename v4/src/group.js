@@ -49,6 +49,7 @@ export class Group {
     if (it === 'meat') return { gain: 30, text: 'Vlees! Iedereen komt erbij zitten. Kleine Ibo krijgt het eerste stuk.' };
     if (it === 'honey') return { gain: 40, text: 'Honing! Tor lacht zijn laatste tanden bloot. Iedereen likt zijn vingers af, Ibo het langst.' };
     if (it === 'hide') return { gain: 25, text: 'Tor spreidt de huid uit onder de boom en klopt erop. Vannacht ligt Ibo zacht en warm.' };
+    if (it === 'waterbag') return { gain: 16, text: 'Tor drinkt met grote slokken. Dan gaat de zak rond: Kem, en Kleine Ibo, die er de laatste druppels uit knijpt.' };
     if (it === 'egg') return { gain: 15, text: 'Ibo tikt het ei open en slurpt het leeg. Hij kijkt je aan: nog een?' };
     if (it === 'bone') return { gain: 18, text: 'Tor legt het bot op een steen en kraakt het open. Het merg wordt eerlijk gedeeld.' };
     if (it === 'fish') return { gain: 28, text: 'Een vis! Kem ruikt eraan, Ibo steekt zijn vinger in de bek. Dan trekt Tor hem open: zacht, vet vlees voor iedereen.' };

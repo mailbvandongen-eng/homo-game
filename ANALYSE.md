@@ -222,3 +222,41 @@ Wat nog niet goed is:
 - Geluid is gemaakt, niet opgenomen, en het is niet met oren beoordeeld. Links en rechts is gemeten.
 - Niet op een echte telefoon geprobeerd.
 
+## 11. Wat in fase 5 is gebouwd (gameplay, eerste deel, 16-11-2026)
+
+**Vrij een gebied kiezen.** Menu → *Kies een gebied*. Elk gebied bewaart zijn eigen stand (`slots` in `save.js`):
+dag, handen, tas, missies. Wat je weet (ontdekkingen, vondsten, steensoorten) gaat mee naar een gebied waar je nog
+niet was. *Opnieuw beginnen* wist alleen het gebied waar je bent. Een oud bewaard spel blijft werken. Trek je via
+de slotkaart verder naar een gebied waar je al speelde, dan ga je daar verder waar je was.
+
+**Handen, tas, eten en maken uit `main.js`.** `systems/carry.js` (handen, draagvel, omslag), `systems/food.js`
+(eten, proeven, bot kraken), `systems/craft.js` (afslag, vuistbijl, graafstok), `systems/knowledge.js` (boekje en
+kennisblad). `main.js` ging van 1357 naar ongeveer 1180 regels.
+
+**Dorst** (`systems/thirst.js`). Een vierde streepje: Water. Het zakt in ruim een dag van vol naar leeg; in de
+middaghitte en als je rent ruim twee keer zo snel, in de regen bijna niet. Onder 30 hoor je een droge kuch, onder
+12 loop je langzamer, bij 0 gaat je gezondheid achteruit. Drinken doe je met de actieknop aan de rivier of het
+meer. Stilstaand water in een poel maakt ziek (één keer proberen, daarna biedt het spel het alleen nog aan als je
+bijna omvalt).
+
+**Waterzak.** Bij een vers gedood dier kun je met iets scherps de maag eruit snijden (één per dier). Aan de
+rivier vul je hem; daarna drink je eruit, stop je hem in het draagvel of breng je hem naar de groep (de groep
+drinkt, jij houdt de lege maag). Nieuwe missie in de savanne: *Water voor Tor*. In de kennisbasis staat dit bij
+*onzeker*: zo'n zak vergaat, dragen is niet te bewijzen.
+
+**Kennisblad.** *Wat je weet* heeft nu twee bladen: *Jouw boekje* en *Hoe zeker is dit?*. Het tweede toont per
+soort wat vaststaat, wat aannemelijk is, wat onzeker is en wat onze invulling is (uit `zeker` in `eras/*.js`).
+
+**Ruiken.** Zebra's en de gewonde gazelle ruiken je nu op 20 m als de wind van jou naar hen waait (`animal.js`).
+Bij roofdieren staat ruiken bewust uit: zij komen al op je af.
+
+**Niet gebouwd, met reden.** Net en mand: touw is pas aangetoond bij neanderthalers, vlechtwerk nog later. Ze
+passen niet bij *Homo habilis* en *Homo erectus* en schuiven naar tijdperk 3–4.
+
+**Werkt nog niet / open.**
+- De groep heeft geen eigen dorst; water brengen telt mee in de balk Groep.
+- Voorwerpen combineren is nog per geval geschreven (`crafts()` in `main.js`).
+- Alleen de savanne heeft een watermissie; de andere gebieden hebben wel dorst en de waterzak.
+- Niet op een echte telefoon geprobeerd; het geluid van drinken is niet beluisterd.
+
+Tests: `/root/tools/pw/v4kies.js` (gebied kiezen) en `/root/tools/pw/v4dorst.js` (dorst, waterzak, kennisblad).

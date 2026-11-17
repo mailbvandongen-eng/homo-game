@@ -36,7 +36,7 @@ export class Zebras {
       if (z.state === 'dead') { z.rig.update(0); continue; }
       z.t -= dt;
       let tx = 0, tz = 0, spd = 0;
-      if (z.state !== 'flee' && sense('zebra', z, game.player).seen) { this.scare(p, 5); game.sound.from(z).flee(); }
+      if (z.state !== 'flee' && sense('zebra', z, game.player).aware) { this.scare(p, 5); game.sound.from(z).flee(); }
       if (z.state === 'flee') {
         const f = z.from, fd = Math.hypot(z.x - f.x, z.z - f.z) || 1;
         tx = (z.x - f.x) / fd; tz = (z.z - f.z) / fd; spd = 12.5 * z.slow;

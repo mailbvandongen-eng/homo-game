@@ -190,6 +190,10 @@ export class Sound {
     this.tone(41, 3.2, 0.07, 'sawtooth', -8, 0.1, d);
   }
   pick() { if (!this.ctx) return; this.burst(2200, 0.15, 0.08); this.tone(520, 0.08, 0.03, 'triangle', 120, 0.05); }
+  // slokken water
+  sip() { if (!this.ctx) return; for (let i = 0; i < 3; i++) { this.burst(520 + Math.random() * 160, 0.09, 0.1, 'bandpass', i * 0.32, 5); this.tone(300, 0.08, 0.05, 'sine', -120, i * 0.32 + 0.05); } }
+  // een droge keel: een korte, schorre kuch
+  dry() { if (!this.ctx) return; this.burst(700, 0.12, 0.09, 'bandpass', 0, 1.5); this.burst(560, 0.16, 0.07, 'bandpass', 0.2, 1.5); }
   eat() { if (!this.ctx) return; for (let i = 0; i < 4; i++) this.burst(1400 + Math.random() * 800, 0.06, 0.09, 'bandpass', i * 0.13, 2); }
   crack() { if (!this.ctx) return; this.burst(900, 0.25, 0.35, 'bandpass', 0, 0.7); this.tone(180, 0.2, 0.15, 'triangle', -100); }
   // Een korte menselijke klank zonder woorden. Een stem is een zoemende stemband (zaagtand, licht bevend) met daarachter

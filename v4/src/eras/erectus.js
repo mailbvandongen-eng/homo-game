@@ -32,7 +32,7 @@ export const erectus = {
     aannemelijk: ['vuur meenemen van een natuurlijke brand en brandend houden: verkleurde aarde en verhitte stenen bij Koobi Fora en Chesowanja (ca. 1,5 miljoen jaar) wijzen erop, onomstreden is vuurgebruik pas vanaf ca. 1 miljoen jaar (Wonderwerkgrot)',
       'weinig lichaamshaar en zweten: lang kunnen lopen in de hitte', 'op de grond slapen in plaats van in bomen', 'grotere groepen dan bij Homo habilis', 'hout hakken en bewerken met een vuistbijl (slijtsporen van hout op vuistbijlen)',
       'een dier moe lopen in de middaghitte (uithoudingsjacht): het past bij het lange, zwetende lichaam, maar vondsten die het bewijzen zijn er niet'],
-    onzeker: ['vlees braden in deze tijd (de kookhypothese)', 'gloeiend hout dagenlang meedragen naar een nieuw kamp', 'vuur dat roofdieren op afstand houdt'],
+    onzeker: ['vlees braden in deze tijd (de kookhypothese)', 'water meedragen in de maag van een dier (zo\'n zak vergaat; dragen is niet te bewijzen)', 'gloeiend hout dagenlang meedragen naar een nieuw kamp', 'vuur dat roofdieren op afstand houdt'],
     artistiek: ['een vaste stookplaats met een kring van stenen', 'namen en vaste rollen in de groep', 'huidskleur, beharing, gezicht en stem', 'de kleuren en strepen van uitgestorven dieren'],
   },
   beeld: { past: 'aangepast', note: 'Er bestaat geen vrij model van Homo erectus. Het lichaam is een model van een neanderthaler dat is omgevormd: langere benen, een smaller lijf, slankere armen en benen en een lage, lange schedel met een zware wenkbrauwboog. Huid, haar en gezichtstrekken blijven een invulling.' },
