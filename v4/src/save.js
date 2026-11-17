@@ -10,7 +10,7 @@ const bare = (d) => { const c = { ...d }; delete c.slots; return c; };
 const slotsOf = (d) => (d ? { ...(d.fresh ? {} : { [d.area]: bare(d) }), ...(d.slots && typeof d.slots === 'object' ? d.slots : {}), ...(d.fresh ? {} : { [d.area]: bare(d) }) } : {});
 export const Save = {
   read() {
-    if (/[?&]nieuw\b/.test(location.search)) return null;
+    if (typeof location === 'undefined' || /[?&]nieuw\b/.test(location.search)) return null;
     return raw();
   },
   write(d) { const now = { version: VERSION, at: Date.now(), ...d }; return put({ ...now, slots: { ...slotsOf(raw()), [d.area]: bare(now) } }); },
