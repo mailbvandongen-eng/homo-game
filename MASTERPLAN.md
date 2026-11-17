@@ -127,11 +127,15 @@ waar het opviel. Volgorde van bouwen = volgorde van de tabel.
 | 7 | **Moe zonder donker.** Moe merk je aan je lijf (trager, hijgen, niet rennen); donker is alleen de nacht | het beeld werd zwart tijdens het lopen | |
 | 8 | **Minder zwaar begin.** Voeding en water zakken de eerste dagen langzamer | het spel is te zwaar | |
 
+| 9 | **Vormgeving uit de wereld.** Vensters van materiaal uit de tijd, iconen uit één gedownloade set (game-icons.net, CC BY 3.0), zo min mogelijk tekst, knoppen alleen als er iets kan, streepjes als kleine tekens | zie ANALYSE §13; keuze van het materiaal ligt bij Bob | ontwerp ligt bij Bob |
+
 Vaste regels die hieruit volgen (gelden ook voor alles wat later komt):
 - Wat een missie vraagt, is in dat gebied te vinden zonder zoeken naar een speld.
 - Geen gevolg zonder zichtbare oorzaak: een dier valt niet aan zonder waarschuwing, het beeld verandert niet zonder reden die je ziet.
 - De groep is geen publiek: wie kan lopen, doet iets.
 - Geen tekst op de plek van een duim.
+- Geen zelfgetekende iconen: alles uit dezelfde set, een ontbrekend icoon wordt uit die set afgeleid.
+- Een venster is van iets uit de wereld van dat tijdperk gemaakt.
 
 Regels die voor elke fase gelden:
 - Het spel blijft na elke fase speelbaar; bestaande functies verdwijnen niet zonder vervanging.

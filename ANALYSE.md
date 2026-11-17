@@ -278,3 +278,26 @@ Vraag van Bob: meerdere missies tegelijk, in een subtiel overzicht in plaats van
 3. **Overzicht achter één tik** op dat stipje: een smalle lijst met per missie de naam, wie het vroeg en de stappen met vinkjes. Tik op een missie om die te volgen. Het spel staat dan stil, zoals bij het menu.
 4. **De wereld wijst de weg.** Wie de missie gaf, wijst of kijkt de goede kant op; het doel zelf valt op (rook, gieren, een kale boom). Geen pijlen of kaartpunten.
 5. Een stap die klaar is geeft een kort geluid en een vinkje, geen scherm.
+
+## 13. Vormgeving van vensters, knoppen en iconen (17-11-2026, ontwerp, nog niet gebouwd)
+
+**Uitgangspunten** (akkoord van Bob): vensters passen bij de wereld; knoppen staan niet in de weg en verschijnen
+alleen als er iets kan; zo min mogelijk tekst; iconen uit één gedownloade set (voorkeur game-icons.net, CC BY 3.0,
+vermelding in `v4/assets/CREDITS.md`); de vier balken worden kleine tekens die vervagen als alles goed is.
+
+**Idee van Bob:** de binnenkant van een rendierhuid, tekst gekrast met een steen.
+Kanttekening: rendieren leefden niet in Oost-Afrika; in deze gebieden wordt het de huid van een antilope of zebra.
+Krassen met een steen past pas vanaf *Homo erectus* (de gekraste schelp van Trinil).
+
+**Alternatieven**
+- A. *De huid.* Binnenkant van een vel, opgespannen met pennen; tekens in houtskool en oker. Per gebied het dier dat daar leeft.
+- B. *De grond.* Je hurkt: de tas is het vel dat openligt met de echte voorwerpen erop; missies liggen als voorwerpen naast wie erom vroeg. Bijna geen tekst nodig.
+- C. *De rotswand.* Een vlakke steen bij het kamp waar alles op komt te staan; het boekje groeit het hele spel door.
+- D. *Het natte zand.* Met een vinger getekend bij het water; bij sluiten veegt het weg.
+- E. *Het materiaal groeit mee met de mens.* Habilis: grond en losse voorwerpen (B). Erectus: huid bij het vuur, houtskool (A). Neanderthaler: oker op huid. Moderne mens: schildering op de rotswand (C). De vensters vertellen zo zelf het verhaal van het spel.
+
+**Voorkeur:** E. Voor de twee tijdperken die er nu zijn betekent dat: B voor habilis, A voor erectus.
+
+**Missieoverzicht zonder tekstblok:** per missie het gezicht van wie het vroeg, daarnaast het icoon van wat hij wil, en kerfjes voor de stappen. Eén regel tekst alleen bij de missie die je aantikt.
+
+**Letters:** koppen in een gedownload lettertype dat op houtskool lijkt (vrije licentie); gewone tekst blijft een rustige, goed leesbare letter. Echt gekraste letters lezen slecht op een telefoon.
