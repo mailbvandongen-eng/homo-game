@@ -5,38 +5,55 @@
 export const hoog = {
   id: 'hoog', name: 'De hoge vlakte', terrain: 'rift', ma: 1.4, region: 'Oost-Afrika', playable: true,
   intro: 'Dagen lopen, steeds hoger. Het vuur ging mee.',
-  home: { x: -100, z: -26 },               // het nieuwe kamp, onder een brede acacia niet ver van de rivier
+  home: { x: -100, z: -26 },               // het nieuwe kamp: een bult in het gras, met een rij keien tegen de wind en een oude jeneverbes
   start: [-96, -20],
+  // Dit land: hoog en groen. Steile ruggen, bosjes jeneverbes, pollen gras en keien met mos. De rozetten op een stam staan voor de reuzenlobelia.
+  land: {
+    seed: 31, shift: [71, 190], amp: 20, freq: 0.007, river: [44, 24, 0.016, -0.4, 8, 0.041, 2], acacias: 0, logs: 8,
+    flora: [
+      { model: 'juniper_w', n: 64, tall: [5, 9], block: 0.5, gap: 4.5, patch: [10, 20], twigs: true, at: [[-105, -32, 8.6], [-110.5, -26.5, 7.2], [-108, -38, 6.4], [-114.5, -36.5, 7.8], [-113, -19, 6.8]], home: 0 },
+      { model: 'quiver_tree_02', n: 24, tall: [1.6, 3.2], block: 0.3, gap: 6, clump: 2 },
+      { model: 'grass_medium_02', each: true, n: 320, tall: [0.45, 0.85], gap: 1.1, clear: 1.6, home: 4, shadow: false, tint: 0xd0dcb0 },
+    ],
+    rocks: { models: ['rock_moss_set_01', 'namaqualand_boulder_05'], n: 70 },
+    // het windscherm: de wind komt uit het oosten
+    rocksAt: [[-93.2, -34.8, 1.9], [-90, -31, 2.3], [-88.8, -26.2, 2], [-90, -21.4, 2.4], [-93, -17.2, 1.7]],
+    bush: { n: 120, tint: 0xa8c890 },
+    ground: { bare: 'aerial_grass_rock', dry: 'grass_ground', rock: 'mossy_rock', wall: [0.3, 0.76, 0.8, 0.72] },
+    sky: { tint: [0.92, 0.98, 1.06] },
+  },
+  textures: ['aerial_grass_rock_diff', 'grass_ground_diff', 'mossy_rock_diff'],
   // het reliëf van dit gebied (zie relief.js): een breuktrap in het zuiden en een rotskop in het noordoosten
   weather: { wind: 0.42 },   // op de hoge vlakte waait het altijd
   relief: [
+    { kind: 'rug', at: [-100, -27], r: 19, h: 2.4 },
     { kind: 'breuk', path: [[-70, 118], [-28, 132], [20, 124], [58, 138]], h: 3.6, up: 1, gaps: [0.5] },
     { kind: 'kop', at: [105, -145], r: 12, h: 3.4, rocks: 8 },
   ],
   hill: [-30, -130],
   cold: 2.2,                               // hoe hard een nacht zonder vuur of huid aan je vreet (laagland: 1,5)
   // hoe het land eruitziet: groener gras, koelere grond en meer nevel dan in het laagland
-  look: { ground: [0.74, 0.98, 0.56], green: 0.7, dry: 0.25, lush: 0.27, fog: [34, 185], mist: [0xcfd8d4, 0.4] },
-  trees: [[-100, -26, 1.75], [-128, -14, 1.2], [-62, -64, 1.1], [-20, -10, 1.3], [24, 34, 1.2], [70, -30, 1.1], [112, 30, 1.3], [-140, -90, 1], [40, -120, 1.1], [130, -90, 1], [-70, 60, 1.1]],
-  tallGrass: [[22, 36, 11], [-56, -4, 9], [74, -34, 10], [-130, -60, 9], [100, 6, 9], [-10, -150, 10], [140, -60, 9]],
+  look: { ground: [0.96, 1.0, 0.86], green: 0.7, dry: 0.25, lush: 0.27, fog: [34, 185], mist: [0xcfd8d4, 0.4] },
+  trees: [[-128, -14, 1.2], [-62, -64, 1.1], [-20, -10, 1.3], [24, 24, 1.2], [70, -30, 1.1], [112, 30, 1.3], [-140, -90, 1], [40, -120, 1.1], [130, -90, 1], [-70, 60, 1.1]],
+  tallGrass: [[22, 24, 11], [-56, -4, 9], [74, -34, 10], [-130, -60, 9], [100, 6, 9], [-10, -150, 10], [140, -60, 9]],
   carcass: { x: 96, z: -122 },
   fauna: ['gazelle', 'zebra', 'hyena', 'sabre', 'leopard', 'puffadder', 'giant', 'vulture', 'hominin'],
   herd: { species: 'gazelle', at: [-34, -80], n: 9, persist: true },   // deze kudde kun je moe lopen
   zebras: { at: [60, -80] },
-  sabres: { lair: [22, 36] },              // precies langs de weg naar de zwarte rotsen
+  sabres: { lair: [22, 24] },              // precies langs de weg naar de zwarte rotsen
   leopard: { tree: [70, -30], branchY: 2.8 },
-  birds: [[-98, -30], [-60, -66], [-18, -12], [26, 30], [72, -28], [110, 28]],
+  birds: [[-98, -30], [-60, -66], [-18, -12], [26, 20], [72, -28], [110, 28]],
   giant: {
     route: [[-150, -130, 'eat'], [-140, -90, 'eat'], [-128, -14, 'eat'], [-140, { river: -13 }, 'drink'], [-62, -64, 'eat'], [40, -120, 'eat'], [130, -90, 'eat'], [60, -155, 'pass']],
     grave: [-136, { river: -15 }],
   },
-  models: ['oldtree', 'lengai', 'handaxe'],
+  models: ['oldtree', 'lengai', 'handaxe', 'juniper_w', 'quiver_tree_02', 'grass_medium_02', 'rock_moss_set_01'],
   // het vuur is meegedragen: het gloeit in een stuk hout bij het kamp. De kring van stenen moet je zelf leggen.
   fire: { source: [-95.5, -29.5], carried: true, hearth: [-95, -22], build: 6, wood: [[-112, -44], [-74, -30], [-118, -6]], volcano: [330, -330], quiet: true },
   // De zwarte rotsen: een oude lavastroom van vulkanisch glas, ver naar het oosten langs de rivier.
   outcrop: { at: [132, 58], type: 'obsidian', n: 7 },
   // Wat hier voor het oprapen ligt is korrelig en zacht. Goede steen moet van ver komen.
-  stones: [[-93, -33, 'sand'], [-106, -18, 'sand'], [-89, -15, 'sand'], [-110, -34, 'sand'], [-84, -27, 'sand'], [-99, -40, 'sand'], [-116, -24, 'sand'], [-92, -8, 'sand'],
+  stones: [[-97, -31, 'sand'], [-106, -18, 'sand'], [-89, -15, 'sand'], [-110, -34, 'sand'], [-84, -27, 'sand'], [-99, -40, 'sand'], [-116, -24, 'sand'], [-92, -8, 'sand'],
     [-60, -50, 'sand'], [-20, -30, 'sand'], [30, -60, 'sand'], [70, 10, 'sand'], [-40, -100, 'sand']],
   riverStones: [-150, -120, -90, -60, -20, 20, 60, 95],
   riverRock: ['sand'],
@@ -45,12 +62,14 @@ export const hoog = {
   branches: [[-98.5, -23], [-126, -12], [-60, -62], [-22, -8]],
   redBerries: [[-80, -8], [-40, -40], [50, -10]],
   // wat het land zelf geeft: vruchtbomen [x, z, soort], oude karkassen met merg in de botten, knolplanten (graven met een stok)
-  fruitTrees: [[-150, -10, 'fig'], [-60, 1, 'fig'], [-70, -90, 'baobab'], [-136, -52, 'baobab'], [10, -50, 'baobab']],
+  fruitTrees: [[-150, -10, 'fig'], [-60, 1, 'fig'], [-70, -90, 'fig'], [-136, -52, 'fig'], [10, -50, 'fig']],
   oldCarcasses: [[-55, -16], [-150, -60], [30, -80]],
-  tubers: [[-80, -52], [-124, -30], [-60, -30], [-94, 26], [-130, -10], [-20, -40]],
+  tubers: [[-80, -52], [-124, -30], [-60, -30], [-108, 2], [-130, -10], [-20, -40]],
   berries: [[-122, -58], [-72, -58], [-66, 2, 4], [-130, -20], [-10, -70, 5], [44, 16, 6], [90, -40]],
   leaves: [-120, -40, 30],
+  words: [['bij de boom', 'in het kamp'], ['naar de boom', 'naar het kamp'], ['onder de boom', 'in het kamp']],
   looks: {
+    tree: { name: 'Het kamp', look: 'Een bult in het gras. Aan de kant van de wind ligt een rij grote keien, en erachter staat een oude, kromme jeneverbes. Hier slaapt de groep.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
     gazelle: { name: 'Gazellen', look: 'Slanke antilopen met gebogen hoorns. Ze rennen veel harder dan jij. Maar na een stuk rennen staan ze stil en hijgen.', hint: 'Zij raken hun warmte kwijt door te hijgen. Jij zweet, en loopt gewoon door.' },
   },
   outro: {

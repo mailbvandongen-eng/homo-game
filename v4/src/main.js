@@ -51,7 +51,7 @@ document.body.prepend(renderer.domElement);
 
 // eerst de gescande natuur laden; daarna begint het spel vanzelf
 const loading = document.getElementById('loading');
-const A = await loadAssets(renderer, (f) => { loading.textContent = `Laden… ${Math.round(f * 100)}%`; }, AREA.models).catch((e) => {
+const A = await loadAssets(renderer, (f) => { loading.textContent = `Laden… ${Math.round(f * 100)}%`; }, AREA.models, AREA.textures).catch((e) => {
   // nooit stil blijven hangen op 'Laden…': zeg wat er mis is
   loading.textContent = e.message + '. Controleer je verbinding en laad de pagina opnieuw.'; loading.style.maxWidth = '80vw';
   throw e;

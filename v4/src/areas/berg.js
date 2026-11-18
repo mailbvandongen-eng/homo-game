@@ -5,15 +5,41 @@
 export const berg = {
   id: 'berg', name: 'Onder de rokende berg', terrain: 'rift', ma: 1.5, region: 'Oost-Afrika', playable: true,
   intro: 'Veel later. Een andere groep, met langere benen.',
-  home: { x: 10, z: -26 },                 // het kamp: de groep slaapt op de grond, onder de oude acacia
+  home: { x: 10, z: -26 },                 // het kamp: de groep slaapt op de grond, in de luwte van een donkere rotswand
   start: [14, -20],
+  // Dit land: ruw en donker. Zwarte lavagrond met as, kandelaarbomen en kokerbomen, kale stammen en overal donkere keien.
+  land: {
+    seed: 23, shift: [140, 33], amp: 17, fine: 1.3, river: [48, 42, 0.012, 0.5, 9, 0.033, 2.0], acacias: 10, logs: 22, twigs: 60,
+    flora: [
+      { model: 'cand1', n: 14, tall: [4, 7.5], block: 0.6, gap: 9, near: 'dry', reach: [30] },
+      { model: 'cand21', n: 14, tall: [3.6, 7], block: 0.6, gap: 9, near: 'dry', reach: [30] },
+      { model: 'cand6', n: 13, tall: [4, 7.5], block: 0.6, gap: 9, near: 'dry', reach: [30] },
+      { model: 'quiver_tree_01', n: 16, tall: [3, 5], block: 0.4, gap: 8, twigs: true },
+      { model: 'dead_quiver_trunk', n: 26, tall: [1.5, 2.8], block: 0.25, gap: 5 },
+    ],
+    rocks: { tint: 0x6a6462, n: 90, big: 2.0 },
+    // de wand achter het kamp: de wind komt uit het oosten, de rots staat in het westen en houdt de warmte van het vuur vast
+    props: [
+      { model: 'namaqualand_cliff_02', at: [-2, -27], tall: 6.2, ry: Math.PI / 2 + 0.12, tint: 0x6e6866 },
+      { model: 'rock_face_01', at: [2.5, -39.5], tall: 4.4, ry: 0.9, tint: 0x6e6866 },
+      { model: 'mountainside', at: [-0.5, -13.5], tall: 5.2, ry: -1.9, tint: 0x6e6866 },
+    ],
+    bush: { n: 35, tint: 0xb4aa94 },
+    ground: { bare: 'burned_ground_01', rock: 'dark_rock', grass: 0.42, greenK: 0.5, wall: [0.6, 0.52, 0.5, 0.49] },
+    grass: { short: 8000, gold: [2.5, 2.3, 1.8] },
+    sky: { tint: [0.88, 0.85, 0.84], sun: 0xf4e8dc, sunI: 0.94 },
+  },
+  textures: ['burned_ground_01_diff', 'dark_rock_diff'],
+  look: { ground: [1.0, 0.92, 0.86], fog: [48, 235], mist: [0xa39a92, 0.26] },
+  words: [['bij de boom', 'in het kamp'], ['naar de boom', 'naar het kamp'], ['onder de boom', 'in het kamp']],
+  looks: { tree: { name: 'Het kamp', look: 'Een hoge wand van donkere steen. Hij houdt de wind tegen en blijft \'s nachts lang warm. Hier slaapt de groep, op de grond.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' } },
   // het reliëf van dit gebied (zie relief.js): een diepe kloof naar de rivier en een rotskop in het noordwesten
   relief: [
     { kind: 'geul', path: [[-155, -60], [-132, -40], [-124, -12]], w: 4.5, d: 4.6, lift: 3.4 },
     { kind: 'kop', at: [-135, -140], r: 12, h: 3, rocks: 7 },
   ],
   hill: [-70, -110],                       // de heuvel waar de bliksem insloeg
-  trees: [[10, -26, 1.75], [36, 44, 1.3], [-34, -6, 1.1], [58, -40, 1], [-84, 36, 1.2], [-10, -96, 1], [110, -20, 1.1]],
+  trees: [[36, 44, 1.3], [-34, -6, 1.1], [58, -40, 1], [-84, 36, 1.2], [-10, -96, 1], [110, -20, 1.1]],
   tallGrass: [[26, -2, 10], [-64, 14, 12], [60, -36, 9], [-22, -58, 10], [-14, 22, 8], [92, 24, 10], [-100, -50, 10]],
   carcass: { x: 80, z: -70 },
   fauna: ['impala', 'zebra', 'gazelle', 'hyena', 'sabre', 'leopard', 'puffadder', 'giant', 'vulture', 'hominin'],
@@ -27,10 +53,10 @@ export const berg = {
     grave: [96, { river: -15 }],
   },
   // vuur: waar het smeult, waar het moet branden, waar dood hout ligt en de berg aan de horizon
-  models: ['oldtree', 'lengai', 'handaxe'],   // dode boom, de vulkaan aan de horizon, een echte vuistbijl uit Olduvai
+  models: ['oldtree', 'lengai', 'handaxe', 'cand1', 'cand21', 'cand6', 'quiver_tree_01', 'dead_quiver_trunk', 'namaqualand_cliff_02', 'rock_face_01', 'mountainside'],   // dode boom, de vulkaan aan de horizon, een echte vuistbijl uit Olduvai
   fire: { source: [-56, -94], hearth: [15, -21], wood: [[-3, -42], [-38, -70], [40, -16]], volcano: [-290, -390] },
   // grondstoffen
-  stones: [[16, -31, 'lava'], [6, -20, 'quartz'], [21, -15, 'sand'], [3, -34, 'lava'], [-20, -40, 'lava'], [40, -52, 'quartz'], [-48, -82, 'lava'], [-64, -98, 'lava'], [62, 10, 'sand'], [-30, 30, 'quartz']],
+  stones: [[16, -31, 'lava'], [6, -20, 'quartz'], [21, -15, 'sand'], [8, -36, 'lava'], [-20, -40, 'lava'], [40, -52, 'quartz'], [-48, -82, 'lava'], [-64, -98, 'lava'], [62, 10, 'sand'], [-30, 30, 'quartz']],
   riverStones: [-130, -95, -60, -28, 12, 48, 85, 120],
   flatStones: [[13, -35, 'grubs'], [30, -20, 'scorpion'], [-16, -30, 'grubs'], [70, -60, 'grubs'], [-44, -50, 'scorpion'], [50, 20, 'grubs']],
   bones: [[79.5, -69], [82, -71.5]],

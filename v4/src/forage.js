@@ -75,10 +75,10 @@ export class Forage {
     });
 
     // ---------- takken onder de acacia's ----------
-    // onder elke vaste boom, en onder ongeveer één op de drie andere
+    // onder elke vaste boom, en onder ongeveer één op de drie andere (één op de twee waar minder bomen staan)
     const fixed = new Set(AREA.trees.map(([x, z]) => x + ',' + z));
     TREES.forEach(([x, z, s], i) => {
-      if (!fixed.has(x + ',' + z) && i % 3) return;
+      if (!fixed.has(x + ',' + z) && i % (AREA.land ? 2 : 3)) return;
       if (things.some((t) => t.item === 'branch' && Math.hypot(t.x - x, t.z - z) < 4.5)) return;
       const R = rng(4111 + i * 17);
       for (let tries = 0; tries < 8; tries++) {

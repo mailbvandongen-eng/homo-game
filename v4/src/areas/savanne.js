@@ -6,6 +6,7 @@ export const savanne = {
   id: 'savanne', name: 'De savanne', terrain: 'rift', ma: 1.8, region: 'Oost-Afrika', playable: true, next: 'water',
   home: { x: -8, z: -14 },                 // de slaapboom
   start: [2, -6],                          // hier begin je
+  hill: [-40, -30],                        // de rotsheuvel om vanaf te kijken
   // het reliëf van dit gebied (zie relief.js): een breuktrap in het noordwesten, een droge geul naar de rivier, een rotskop in het oosten en één over de rivier
   relief: [
     { kind: 'breuk', path: [[-155, -118], [-115, -134], [-70, -126], [-38, -140]], h: 3.4, up: -1, gaps: [0.55] },

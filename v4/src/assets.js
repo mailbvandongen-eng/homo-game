@@ -15,10 +15,10 @@ export const TEXTURES = [
 
 // online krijgt elk bestand de versie van de map assets mee, zodat een vervangen model ook echt opnieuw wordt opgehaald
 const Q = window.__VA && window.__VA[0] !== '_' ? '?v=' + window.__VA : '';
-// extra: modellen die alleen dit gebied nodig heeft
-export async function loadAssets(renderer, onProgress = () => {}, extra = []) {
-  const names = [...MODELS, ...extra];
-  const total = names.length + TEXTURES.length + 2;
+// extra: modellen die alleen dit gebied nodig heeft; extraTex: grondfoto's die alleen dit gebied nodig heeft
+export async function loadAssets(renderer, onProgress = () => {}, extra = [], extraTex = []) {
+  const names = [...MODELS, ...extra], texs = [...TEXTURES, ...extraTex.map((n) => [n, true])];
+  const total = names.length + texs.length + 2;
   let done = 0;
   const tick = (x) => { onProgress(++done / total); return x; };
   const tl = new THREE.TextureLoader(), gl = new GLTFLoader();
@@ -26,7 +26,7 @@ export async function loadAssets(renderer, onProgress = () => {}, extra = []) {
 
   // Een bestand dat ontbreekt mag het laden niet stil laten hangen: de fout krijgt de naam van het bestand mee.
   const named = (p, file) => p.catch(() => { throw new Error('Kan ' + file + ' niet laden'); });
-  const tex = Promise.all(TEXTURES.map(([n, srgb, skin]) => named(tl.loadAsync(`./assets/tex/${n}.webp${Q}`), `assets/tex/${n}.webp`).then((t) => {
+  const tex = Promise.all(texs.map(([n, srgb, skin]) => named(tl.loadAsync(`./assets/tex/${n}.webp${Q}`), `assets/tex/${n}.webp`).then((t) => {
     if (skin) t.flipY = false; else t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.anisotropy = Math.min(8, maxAniso);
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;

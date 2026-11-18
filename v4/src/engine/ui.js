@@ -1,10 +1,11 @@
 // De schermlaag: meldingen, de grote titel en de kaart. Weet niets van het spel zelf.
-import { ERA } from '../eras/index.js';
+import { ERA, AREA } from '../eras/index.js';
 import { ICON } from '../icons.js';
 export const $ = (id) => document.getElementById(id);
 document.body.classList.add('era-' + ERA.id);   // de vensters volgen het tijdperk (zie index.html)
-// Een later tijdperk heeft een andere groep: namen uit oudere teksten worden hier vervangen (zie 'words' in het tijdperkbestand)
-const WORDS = (ERA.words || []).map(([a, b]) => [new RegExp('\\b' + a + '\\b', 'g'), b]);
+// Een later tijdperk heeft een andere groep: namen uit oudere teksten worden hier vervangen (zie 'words' in het tijdperkbestand).
+// Een gebied kan daar zijn eigen woorden bij zetten (het kamp ligt niet overal onder een boom).
+const WORDS = [...(ERA.words || []), ...(AREA.words || [])].map(([a, b]) => [new RegExp('\\b' + a + '\\b', 'g'), b]);
 export const say = (s) => (s ? WORDS.reduce((t, [a, b]) => t.replace(a, b), s) : s);
 
 let toastTimer = 0, titleT = 0;

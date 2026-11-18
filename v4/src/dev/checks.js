@@ -73,7 +73,7 @@ function checkConfig(out) {
 async function checkFiles(out) {
   const add = (lvl, tekst) => out.push({ lvl, groep: 'Bestanden', tekst });
   const files = new Set([...MODELS.map((n) => `assets/models/${n}.glb`), ...TEXTURES.map(([n]) => `assets/tex/${n}.webp`), 'assets/anims/hominin.json', 'assets/mpumalanga_veld_1k.hdr', 'assets/CREDITS.md']);
-  for (const { area } of allAreas()) for (const n of area.models || []) files.add(`assets/models/${n}.glb`);
+  for (const { area } of allAreas()) { for (const n of area.models || []) files.add(`assets/models/${n}.glb`); for (const n of area.textures || []) files.add(`assets/tex/${n}.webp`); }
   let bad = 0;
   await Promise.all([...files].map((f) => fetch('./' + f, { method: 'HEAD' }).then((r) => { if (!r.ok) { bad++; add('fout', `${f} ontbreekt (${r.status})`); } }).catch(() => { bad++; add('fout', `${f} is niet op te halen`); })));
   if (!bad) add('ok', `${files.size} bestanden van alle gebieden zijn aanwezig`);
@@ -150,7 +150,7 @@ export function placesOf(area) {
       for (const k of Object.keys(v)) walk(v[k], name ? `${name}.${k}` : k, depth + 1);
     }
   };
-  for (const k of Object.keys(area)) if (!['look', 'outro', 'missions', 'models', 'fauna', 'riverStones', 'leaves'].includes(k)) walk(area[k], k, 0);
+  for (const k of Object.keys(area)) if (!['look', 'land', 'textures', 'words', 'looks', 'outro', 'missions', 'models', 'fauna', 'riverStones', 'leaves'].includes(k)) walk(area[k], k, 0);
   return out;
 }
 

@@ -3,8 +3,10 @@ import { variantsOf } from './assets.js';
 import { AREA } from './eras/index.js';
 import { shape } from './relief.js';
 
-// Het land van één gebied. Twee vormen: 'rift' (savanne met een rivier erdoor) en 'lake' (een oever met een meer in het noorden).
+// Het land van één gebied. Twee vormen: 'rift' (land met een rivier erdoor) en 'lake' (een oever met een meer in het noorden).
 // Welke vorm, en waar de vaste bomen, het hoge gras en de poelen liggen, staat in het gebiedsbestand.
+// Onder 'land' staat daar ook wat dit gebied tot een eigen land maakt: de glooiing, de loop van de rivier, wat er groeit,
+// welke steen er ligt, de grond en het licht. Zonder 'land' krijg je de savanne.
 // Alle maten in meters. Het midden van de kaart is (0, 0); je kunt tot WALK meter van het midden lopen.
 export const SIZE = 440;
 export const WALK = 175;
@@ -38,9 +40,23 @@ export function rng(seed) {
 export const LAKE = AREA.terrain === 'lake';
 // hoe het land eruitziet kan per gebied verschillen (grondkleur, groen, nevel)
 const LK = AREA.look || {}, FOG = LK.fog || [45, 230], MIST = LK.mist ? [new THREE.Color(LK.mist[0]), LK.mist[1]] : null;
-const START = AREA.start || [2, -6], HILL = AREA.hill || [-40, -30], POOLS = AREA.pools || [], ISLE = AREA.island || null;
+const START = AREA.start || [2, -6], HILL = AREA.hill || null, POOLS = AREA.pools || [], ISLE = AREA.island || null;
+// land: shift = een ander stuk van de ruis (andere heuvels en dalen), amp = hoe hoog, freq = hoe breed, fine = hoe ruw de grond is,
+// river = [z, uitslag, golf, begin, uitslag, golf, begin]: twee bochten over elkaar
+const LAND = AREA.land || {}, NS = LAND.shift || [0, 0], AMP = LAND.amp || (LAKE ? 12 : 14), FREQ = LAND.freq || 0.006, FINE = LAND.fine || 0.9;
+const RV = LAND.river || [55, 38, 0.011, 0, 14, 0.027, 1.3];
+const GT = LAND.ground || {}, SKY = LAND.sky || {}, GR = LAND.grass || {};
+// Alle vaste plekken uit het gebiedsbestand (stenen, bomen, het kamp ...): wat het land zelf strooit, blijft daar vanaf.
+const KEEP = [];
+(function walk(v, d) {
+  if (v == null || typeof v !== 'object' || d > 3) return;
+  if (Array.isArray(v)) { if (typeof v[0] === 'number' && typeof v[1] === 'number' && v.length < 5) KEEP.push([v[0], v[1]]); else v.forEach((e) => walk(e, d + 1)); return; }
+  if (Number.isFinite(v.x) && Number.isFinite(v.z)) { KEEP.push([v.x, v.z]); return; }
+  for (const k of Object.keys(v)) if (!['look', 'land', 'outro', 'riverStones', 'leaves', 'island', 'weather'].includes(k)) walk(v[k], d + 1);
+})(AREA, 0);
+const clear = (x, z, r = 3.5) => !KEEP.some((q) => Math.abs(q[0] - x) < r && Math.abs(q[1] - z) < r && Math.hypot(q[0] - x, q[1] - z) < r);
 // rift: het midden van de rivier. lake: de waterlijn; alles ten noorden daarvan is meer.
-export function riverZ(x) { return LAKE ? 62 + 9 * Math.sin(x * 0.02) + 4 * Math.sin(x * 0.055 + 1) : 38 * Math.sin(x * 0.011) + 14 * Math.sin(x * 0.027 + 1.3) + 55; }
+export function riverZ(x) { return LAKE ? 62 + 9 * Math.sin(x * 0.02) + 4 * Math.sin(x * 0.055 + 1) : RV[1] * Math.sin(x * RV[2] + RV[3]) + RV[4] * Math.sin(x * RV[5] + RV[6]) + RV[0]; }
 
 export function riverDist(x, z) { return LAKE ? Math.max(0, riverZ(x) - z) : Math.abs(z - riverZ(x)); }
 // welke kant op is het droge? (voor dieren die te dicht bij het water komen)
@@ -50,9 +66,9 @@ export function poolAt(x, z) { for (const p of POOLS) if (Math.hypot(x - p[0], z
 export function deep(x, z) { return LAKE && height(x, z) < -1.0; }
 
 function lakeHeight(x, z) {
-  let h = 2.2 + (fbm(x * 0.006 + 10, z * 0.006 + 3) - 0.5) * 12;
+  let h = 2.2 + (fbm(x * FREQ + 10 + NS[0], z * FREQ + 3 + NS[1]) - 0.5) * AMP;
   if (h < 1.6) h = 1.6 - (1.6 - h) * 0.12;
-  h += (fbm(x * 0.04, z * 0.04, 2) - 0.5) * 0.9;
+  h += (fbm(x * 0.04 + NS[0], z * 0.04 + NS[1], 2) - 0.5) * FINE;
   const s = z - riverZ(x);   // meters het meer in
   // een vlak, modderig strand dat langzaam het water in loopt; verderop wordt het diep
   if (s < 0) h = -0.35 + (h + 0.35) * THREE.MathUtils.smoothstep(-s, 0, 24);
@@ -71,17 +87,17 @@ function lakeHeight(x, z) {
   // de wanden van de Riftvallei: niet in het meer
   const r = Math.max(Math.abs(x), -z);
   if (r > WALK - 25) h += Math.pow((r - (WALK - 25)) / 30, 2) * 14 * (0.7 + fbm(x * 0.02, z * 0.02) * 0.6);
-  if (AREA.hill) { const kd = Math.hypot(x - HILL[0], z - HILL[1]); if (kd < 22) h += Math.cos(kd / 22 * Math.PI / 2) ** 2 * 7; }
+  if (HILL) { const kd = Math.hypot(x - HILL[0], z - HILL[1]); if (kd < 22) h += Math.cos(kd / 22 * Math.PI / 2) ** 2 * 7; }
   return h;
 }
 
 // Het glooiende land, als formule. Het spel zelf vraagt de hoogte aan height(): die leest het raster hieronder.
 function baseHeight(x, z) {
   if (LAKE) return lakeHeight(x, z);
-  let h = 2.2 + (fbm(x * 0.006 + 10, z * 0.006 + 3) - 0.5) * 14;
+  let h = 2.2 + (fbm(x * FREQ + 10 + NS[0], z * FREQ + 3 + NS[1]) - 0.5) * AMP;
   // lage plekken vlak afronden: alleen de rivier staat onder water
   if (h < 1.6) h = 1.6 - (1.6 - h) * 0.12;
-  h += (fbm(x * 0.04, z * 0.04, 2) - 0.5) * 0.9;
+  h += (fbm(x * 0.04 + NS[0], z * 0.04 + NS[1], 2) - 0.5) * FINE;
   // de rivierbedding
   const d = riverDist(x, z);
   const bed = d < 7 ? -1.6 : d < 18 ? -1.6 + (d - 7) / 11 * 1.6 : 0;
@@ -90,9 +106,8 @@ function baseHeight(x, z) {
   // de wanden van de Riftvallei aan de rand
   const r = Math.max(Math.abs(x), Math.abs(z));
   if (r > WALK - 25) h += Math.pow((r - (WALK - 25)) / 30, 2) * 14 * (0.7 + fbm(x * 0.02, z * 0.02) * 0.6);
-  // een rotsheuvel om vanaf te kijken
-  const kx = x + 40, kz = z + 30, kd = Math.sqrt(kx * kx + kz * kz);
-  if (kd < 22) h += Math.cos(kd / 22 * Math.PI / 2) ** 2 * 7;
+  // een rotsheuvel om vanaf te kijken: alleen waar het gebied er een noemt
+  if (HILL) { const kd = Math.hypot(x - HILL[0], z - HILL[1]); if (kd < 22) h += Math.cos(kd / 22 * Math.PI / 2) ** 2 * 7; }
   return h;
 }
 
@@ -191,7 +206,7 @@ export function leafMat(map, tint) {
 export const TREES = [];
 
 export function buildWorld(scene, A) {
-  const R = rng(7), STEEP = 0.8;
+  const R = rng(LAND.seed || 7), STEEP = 0.8, OWN = !!LAND.seed;   // een gebied met een eigen land strooit anders
 
   // ---------- lucht en nevel ----------
   const skyGeo = new THREE.SphereGeometry(600, 32, 16);
@@ -247,7 +262,7 @@ export function buildWorld(scene, A) {
   // ---------- het land ----------
   const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG);
   geo.rotateX(-Math.PI / 2);
-  const pos = geo.attributes.position, cols = [], mix = [];
+  const pos = geo.attributes.position, cols = [], mix = [], shoreMix = [];
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), z = pos.getZ(i), h = GRID[i];
     pos.setY(i, h);
@@ -255,31 +270,43 @@ export function buildWorld(scene, A) {
     const n = fbm(x * 0.03 + 5, z * 0.03, 3), n2 = fbm(x * 0.11, z * 0.11, 2), d = riverDist(x, z);
     let grass = THREE.MathUtils.clamp((n - 0.22) * 2.6 + (n2 - 0.5) * 0.8, 0, 1), green = THREE.MathUtils.clamp((n - 0.55) * 3 + (d < 18 ? (1 - d / 18) * 0.8 : 0), 0, 1);
     if (d < 9) { grass *= d / 9; green *= d / 9; }
+    grass *= GT.grass ?? 1; green *= GT.greenK ?? 1;
     if (h > 9) { const k = THREE.MathUtils.clamp(1 - (h - 9) / 5, 0, 1); grass *= k; green *= k; }
     // op een steile wand ligt geen aarde: daar zie je de kale rots
     const bare = THREE.MathUtils.smoothstep(steep(x, z), 0.75, 1.25);
     mix.push(grass * (1 - bare), green * (1 - bare), bare);
+    // een eigen grond langs het water (modder die opdroogt en barst): ook rond de poelen
+    if (GT.shore) {
+      let e = d; for (const q of POOLS) e = Math.min(e, Math.max(0, Math.hypot(x - q[0], z - q[1]) - q[2]));
+      shoreMix.push((1 - THREE.MathUtils.smoothstep(e + (n2 - 0.5) * 8, GT.shoreW * 0.45, GT.shoreW)) * (1 - bare));
+    }
     // licht kleurverschil: natter en donkerder bij het water
     const wet = d < 12 ? (1 - d / 12) * 0.35 : 0, v = 0.92 + (n2 - 0.5) * 0.16 - wet;
     cols.push(v, v * (1 - wet * 0.1), v * (1 - wet * 0.2));
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
   geo.setAttribute('aMix', new THREE.Float32BufferAttribute(mix, 3));
+  if (GT.shore) geo.setAttribute('aShore', new THREE.Float32BufferAttribute(shoreMix, 1));
   geo.computeVertexNormals();
   const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * SIZE / 4, uv.getY(i) * SIZE / 4);
   const gmat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, normalMap: A.tex.dry_ground_01_nor, normalScale: new THREE.Vector2(1.2, 1.2) });
   gmat.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, { tBare: { value: A.tex.dry_ground_01_diff }, tDry: { value: A.tex.withered_grass_diff }, tGreen: { value: A.tex.sparse_grass_diff }, tRock: { value: A.tex.dry_ground_rocks_diff } });
-    sh.vertexShader = 'attribute vec3 aMix; varying vec3 vMix; varying vec2 vW; varying vec3 vFace;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvMix = aMix; vW = position.xz; vFace = vec3(position.y, normal.x, normal.z);');
-    sh.fragmentShader = 'uniform sampler2D tBare, tDry, tGreen, tRock; varying vec3 vMix; varying vec2 vW; varying vec3 vFace;\n' + sh.fragmentShader.replace('#include <map_fragment>', `
+    // de foto's van de grond: kaal, verdord gras, groen gras en rots. Een gebied kan er eigen foto's voor kiezen.
+    const T = (n, std) => ({ value: A.tex[(n || std) + '_diff'] }), WALL = GT.wall || [0.45, 0.78, 0.74, 0.72];
+    Object.assign(sh.uniforms, { tBare: T(GT.bare, 'dry_ground_01'), tDry: T(GT.dry, 'withered_grass'), tGreen: T(GT.green, 'sparse_grass'), tRock: T(GT.rock, 'dry_ground_rocks'), tShore: T(GT.shore, 'dry_ground_01') });
+    sh.vertexShader = `attribute vec3 aMix; ${GT.shore ? 'attribute float aShore; varying float vShore;' : ''} varying vec3 vMix; varying vec2 vW; varying vec3 vFace;\n` + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\nvMix = aMix; vW = position.xz; vFace = vec3(position.y, normal.x, normal.z);${GT.shore ? ' vShore = aShore;' : ''}`);
+    sh.fragmentShader = `uniform sampler2D tBare, tDry, tGreen, tRock, tShore; ${GT.shore ? 'varying float vShore;' : ''} varying vec3 vMix; varying vec2 vW; varying vec3 vFace;\n` + sh.fragmentShader.replace('#include <map_fragment>', `
       // elke foto op twee schalen, zodat je geen herhaling ziet
       vec2 u1 = vW / 4.0, u2 = vW / 13.0 + vec2(0.37, 0.71);
       float big = texture2D(tRock, vW / 37.0).g;
-      vec3 bare = mix(texture2D(tBare, u1).rgb, texture2D(tRock, u2).rgb, 0.45);
+      ${GT.bare ? `// een eigen grondfoto: ook gedraaid en groter, anders zie je van boven een ruitjespatroon
+      vec2 u3 = vec2(vW.x * 0.8 - vW.y * 0.6, vW.x * 0.6 + vW.y * 0.8) / 10.3;
+      vec3 bare = mix(mix(texture2D(tBare, u1).rgb, texture2D(tBare, u3).rgb, 0.3 + big * 0.5), mix(texture2D(tRock, u2).rgb, texture2D(tRock, u3 * 0.37).rgb, 0.5), ${(GT.rockMix ?? 0.3).toFixed(2)});` : 'vec3 bare = mix(texture2D(tBare, u1).rgb, texture2D(tRock, u2).rgb, 0.45);'}
       vec3 dry = mix(texture2D(tDry, u1 * 0.8).rgb, texture2D(tDry, u2).rgb, 0.4);
       vec3 grn = texture2D(tGreen, u1 * 0.9).rgb;
       vec3 g = mix(bare, dry, smoothstep(0.0, 1.0, vMix.x + (big - 0.5) * 0.6));
       g = mix(g, grn, min(1.0, vMix.y * 0.85 + ${(LK.green || 0).toFixed(2)}));
+      ${GT.shore ? 'g = mix(g, mix(texture2D(tShore, vW / 5.0).rgb, texture2D(tShore, u2).rgb, 0.3), smoothstep(0.0, 1.0, vShore + (big - 0.5) * 0.3));' : ''}
       // een steile wand: kale rots, van opzij bekeken (anders rekt de foto uit), met lagen en scheuren
       if (vMix.z > 0.01) {
         float ax = abs(vFace.y), az = abs(vFace.z);
@@ -287,7 +314,7 @@ export function buildWorld(scene, A) {
         vec3 rk = (texture2D(tRock, r1).rgb * az + texture2D(tRock, r2).rgb * ax) / max(0.001, ax + az);
         float lum = dot(rk, vec3(0.3, 0.59, 0.11));
         float layer = 0.82 + 0.18 * sin(vFace.x * 7.0 + big * 9.0);
-        rk = mix(rk, vec3(lum), 0.45) * vec3(0.78, 0.74, 0.72) * layer;
+        rk = mix(rk, vec3(lum), ${WALL[0].toFixed(2)}) * vec3(${WALL.slice(1).map((v) => v.toFixed(2)).join(', ')}) * layer;
         g = mix(g, rk, smoothstep(0.0, 1.0, vMix.z + (big - 0.5) * 0.3));
       }
       // Oost-Afrikaanse grond is warmer en roder dan deze foto's
@@ -328,7 +355,7 @@ export function buildWorld(scene, A) {
     TREES.push([x, z, s]);
     blockers.push({ x, z, r: Math.max(0.3, 0.3 * s) });   // iets ruimer dan de dunne stam: de reus en de dekking rekenen ermee
   }
-  for (let i = 0; i < 70; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 10)) acacia(x, z, 0.8 + R() * 0.6); }
+  for (let i = 0; i < (LAND.acacias ?? 70); i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 10) && (!OWN || clear(x, z, 5))) acacia(x, z, 0.8 + R() * 0.6); }
   AREA.trees.forEach(([x, z, s]) => acacia(x, z, s));
   const am = new THREE.Object3D();
   A.models.acacia.updateMatrixWorld(true);
@@ -344,7 +371,14 @@ export function buildWorld(scene, A) {
   });
 
   // ---------- rotsen: gescande granieten keien uit Zuid-Afrika ----------
-  const rockVariants = [...variantsOf(A.models.namaqualand_boulder_02), ...variantsOf(A.models.namaqualand_boulder_05), ...variantsOf(A.models.namaqualand_rocks_01)];
+  // welke steen er ligt kan per gebied verschillen: 'model' of 'model:2' (alleen die ene kei uit het model), met een eigen tint
+  const RS = LAND.rocks || {}, FAM = [];
+  const tinted = (parts, tint) => { if (!tint) return parts; const c = new THREE.Color(tint); return parts.map((q) => { const mat = q.mat.clone(); mat.color.multiply(c); return { ...q, mat }; }); };
+  const rockVariants = (RS.models || ['namaqualand_boulder_02', 'namaqualand_boulder_05', 'namaqualand_rocks_01']).flatMap((spec) => {
+    const [name, pick] = spec.split(':'), all = variantsOf(A.models[name]);
+    return (pick ? [all[+pick]] : all).map((v) => ({ ...v, parts: tinted(v.parts, RS.tint), fam: name === (RS.fam || 'namaqualand_boulder_05') }));
+  });
+  rockVariants.forEach((v, i) => v.fam && FAM.push(i));
   const rockSpots = rockVariants.map(() => []);
   // fam: alleen keien van één soort steen (voor een rotskop of een wand uit één stuk); up: zoveel meter boven de grond (op andere keien)
   function rock(x, z, s, rnd = R, fam = null, up = 0) {
@@ -360,12 +394,11 @@ export function buildWorld(scene, A) {
     }
     if (s > 0.7 && v.size.y * k > 0.8) cover.push({ x, z, r: s * 0.9 });
   }
-  for (let i = 0; i < 55; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 9)) rock(x, z, 0.4 + R() * 1.6); }
-  for (let i = 0; i < 14; i++) { const a = R() * 6.28, d = 6 + R() * 14; const x = HILL[0] + Math.cos(a) * d, z = HILL[1] + Math.sin(a) * d, s = 0.8 + R() * 1.8; if (!LAKE || AREA.hill) rock(x, z, s); }
+  for (let i = 0; i < (RS.n ?? 55); i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 9) && (!OWN || clear(x, z, 4))) rock(x, z, 0.4 + R() * (RS.big || 1.6)); }
+  if (HILL) for (let i = 0; i < 14; i++) { const a = R() * 6.28, d = 6 + R() * 14; const x = HILL[0] + Math.cos(a) * d, z = HILL[1] + Math.sin(a) * d, s = 0.8 + R() * 1.8; if (!OWN || clear(x, z, 4)) rock(x, z, s); }
   for (let i = 0; i < 6; i++) rock(START[0] - 5 + R() * 10, START[1] + 4 + R() * 6, 0.3 + R() * 0.5);   // keien bij de start
   // een rotskop: grote keien op en tegen elkaar, om op te klimmen en ver te kijken (eigen willekeur: de rest van de wereld blijft op zijn plek)
   const RK = rng(23);
-  const FAM = rockVariants.map((v, i) => i).filter((i) => i < variantsOf(A.models.namaqualand_boulder_02).length + variantsOf(A.models.namaqualand_boulder_05).length && i >= variantsOf(A.models.namaqualand_boulder_02).length);
   for (const f of RELIEF) if (f.kind === 'kop') {
     const n = f.rocks || 6;
     for (let i = 0; i < n; i++) {
@@ -386,22 +419,25 @@ export function buildWorld(scene, A) {
       if (steep(x - nx * off, z - nz * off) > 0.7) rock(x, z, s, RK, FAM);   // niet op de puinhelling
     }
   }
+  // keien die het gebied zelf op een vaste plek legt (een windscherm bij het kamp): [x, z, maat]
+  for (const [x, z, sz] of LAND.rocksAt || []) rock(x, z, sz, RK, FAM);
   const dm = new THREE.Object3D();
-  function instance(v, spots, shadow = true) {
-    for (const part of v.parts) for (const cell of perCell(spots, 220)) {
+  function instance(v, spots, shadow = true, CELL = 220) {
+    for (const part of v.parts) for (const cell of perCell(spots, CELL)) {
       const im = new THREE.InstancedMesh(part.geo, part.mat, cell.length);
       cell.forEach(([x, z, k, ry, sink = 0.1], i) => { dm.position.set(x, height(x, z) - sink * k * v.size.y, z); dm.rotation.set(0, ry, 0); dm.scale.setScalar(k); dm.updateMatrix(); im.setMatrixAt(i, dm.matrix); });
-      im.castShadow = shadow; im.receiveShadow = true; im.computeBoundingSphere();
+      im.castShadow = shadow; im.receiveShadow = !part.leaf; im.computeBoundingSphere();
       scene.add(shadow ? casts(im) : im);
     }
   }
   rockVariants.forEach((v, i) => rockSpots[i].length && instance(v, rockSpots[i]));
 
   // ---------- struiken, dood hout en takken ----------
-  const bushVariants = variantsOf(A.models.wild_rooibos_bush);
+  const BU = LAND.bush || {};
+  const bushVariants = variantsOf(A.models.wild_rooibos_bush).map((v) => ({ ...v, parts: tinted(v.parts, BU.tint) }));
   const bushSpots = bushVariants.map(() => []);
-  for (let i = 0; i < 90; i++) {
-    const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (!ok(x, z, 8)) continue;
+  for (let i = 0; i < (BU.n ?? 90); i++) {
+    const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (!ok(x, z, 8) || (OWN && !clear(x, z, 4))) continue;
     const vi = Math.floor(R() * bushVariants.length), v = bushVariants[vi];
     const bh = 1.0 + R() * 0.9;
     const ry = R() * 6.28; if (steep(x, z) > STEEP) continue;
@@ -411,11 +447,88 @@ export function buildWorld(scene, A) {
   bushVariants.forEach((v, i) => bushSpots[i].length && instance(v, bushSpots[i]));
   const logs = variantsOf(A.models.dead_tree_trunk), twigs = variantsOf(A.models.dry_branches_medium_01);
   const logSpots = [], twigSpots = twigs.map(() => []);
-  for (let i = 0; i < 16; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 8)) { const sp = [x, z, 1.1 + R() * 0.5, R() * 6.28, 0.15]; if (steep(x, z) < STEEP) logSpots.push(sp); } }
-  for (let i = 0; i < 40; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 6)) { const ti = Math.floor(R() * twigs.length), sp = [x, z, 0.8 + R() * 0.6, R() * 6.28, 0.05]; if (steep(x, z) < STEEP) twigSpots[ti].push(sp); } }
+  for (let i = 0; i < (LAND.logs ?? 16); i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 8) && (!OWN || clear(x, z, 4))) { const sp = [x, z, 1.1 + R() * 0.5, R() * 6.28, 0.15]; if (steep(x, z) < STEEP) logSpots.push(sp); } }
+  for (let i = 0; i < (LAND.twigs ?? 40); i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 6)) { const ti = Math.floor(R() * twigs.length), sp = [x, z, 0.8 + R() * 0.6, R() * 6.28, 0.05]; if (steep(x, z) < STEEP) twigSpots[ti].push(sp); } }
   instance(logs[0], logSpots);
   twigs.forEach((v, i) => twigSpots[i].length && instance(v, twigSpots[i], false));
 
+  // ---------- wat alleen hier groeit ----------
+  // Elk gebied heeft zijn eigen bomen en planten (land.flora). Per soort: model, hoeveel (n), hoe hoog (tall: [van, tot]),
+  // en waar: overal, bij het water (near: 'water', reach: [van, tot] meter van de waterlijn) of juist op het droge (near: 'dry').
+  // patch: [aantal, straal] zet ze in bosjes; clump: zoveel bij elkaar op één plek; at: vaste plekken [x, z, hoogte].
+  // each: het model bevat losse planten naast elkaar (pollen, struikjes) in plaats van één boom.
+  const FR = rng((LAND.seed || 7) + 101), HOME = AREA.home || { x: START[0], z: START[1] };
+  // een geladen boom als één geheel, de voet van de stam op (0, 0, 0); blad krijgt het bladmateriaal van de wereld
+  function whole(root, tint) {
+    root.updateMatrixWorld(true);
+    const parts = [], box = new THREE.Box3(), mats = new Map();
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      const geo = o.geometry.clone().applyMatrix4(o.matrixWorld); geo.computeBoundingBox(); box.union(geo.boundingBox);
+      const leaf = o.material.transparent || o.material.alphaTest > 0;
+      if (leaf && !mats.has(o.material)) mats.set(o.material, leafMat(o.material.map, tint || 0xd8e0c0));
+      parts.push({ geo, mat: leaf ? mats.get(o.material) : o.material, leaf });
+    });
+    // het midden van de stam: de onderste punten van het hout
+    const size = box.getSize(new THREE.Vector3());
+    let n = 0, cx = 0, cz = 0;
+    for (const q of parts) { if (q.leaf) continue; const pos = q.geo.attributes.position; for (let i = 0; i < pos.count; i++) if (pos.getY(i) < box.min.y + size.y * 0.05) { cx += pos.getX(i); cz += pos.getZ(i); n++; } }
+    if (!n) { cx = (box.min.x + box.max.x) / 2; cz = (box.min.z + box.max.z) / 2; n = 1; }
+    parts.forEach((q) => q.geo.translate(-cx / n, -box.min.y, -cz / n));
+    return { parts, size };
+  }
+  const leafy = (v, tint) => ({ ...v, parts: v.parts.map((q) => (q.mat.transparent || q.mat.alphaTest > 0 ? { ...q, mat: leafMat(q.mat.map, tint || 0xd8e0c0), leaf: true } : q)) });
+  for (const F of LAND.flora || []) {
+    const V = F.each ? variantsOf(A.models[F.model]).map((v) => leafy(v, F.tint)) : [whole(A.models[F.model], F.tint)];
+    if (F.bark) for (const v of V) v.parts = v.parts.map((q) => (q.leaf ? q : tinted([q], F.bark)[0]));
+    const spots = V.map(() => []), mine = [], [t0, t1] = F.tall, gap = F.gap ?? 3, block = F.block ?? 0;
+    const put = (x, z, tall) => {
+      const vi = Math.floor(FR() * V.length), k = tall / V[vi].size.y;
+      spots[vi].push([x, z, k, FR() * 6.28, F.sink ?? 0.02]); mine.push([x, z]);
+      if (block) blockers.push({ x, z, r: block * tall / t1 });
+      if (F.cover) cover.push({ x, z, r: F.cover * tall / t1 });
+      if (F.twigs) TREES.push([x, z, 1]);
+    };
+    const free = (x, z, g = gap) => height(x, z) > 0.25 && steep(x, z) < (F.steep ?? 0.5) && Math.max(Math.abs(x), Math.abs(z)) < WALK - 4 && clear(x, z, F.clear ?? 4.5) && Math.hypot(x - HOME.x, z - HOME.z) > (F.home ?? 9)
+      && !POOLS.some((q) => Math.hypot(x - q[0], z - q[1]) < q[2] * 1.5 + 1) && !mine.some((q) => Math.hypot(q[0] - x, q[1] - z) < g) && (!block || !blockers.some((b) => Math.hypot(b.x - x, b.z - z) < b.r + block + 0.8));
+    for (const [x, z, tall] of F.at || []) put(x, z, tall || t1);
+    // bosjes: een paar plekken waar de soort bij elkaar staat
+    const groves = [];
+    if (F.patch) for (let i = 0, tries = 0; i < F.patch[0] && tries < 400; tries++) {
+      const x = (FR() - 0.5) * 2 * (WALK - 20), z = (FR() - 0.5) * 2 * (WALK - 20);
+      if (riverDist(x, z) > (F.minRiver ?? 14) && height(x, z) > 0.5 && !groves.some((q) => Math.hypot(q[0] - x, q[1] - z) < F.patch[1] * 1.6)) { groves.push([x, z]); i++; }
+    }
+    for (let i = 0, tries = 0; i < (F.n || 0) && tries < F.n * 40; tries++) {
+      let x = (FR() - 0.5) * 2 * WALK, z = (FR() - 0.5) * 2 * WALK;
+      if (groves.length) { const q = groves[Math.floor(FR() * groves.length)], a = FR() * 6.28, d = Math.sqrt(FR()) * F.patch[1]; x = q[0] + Math.cos(a) * d; z = q[1] + Math.sin(a) * d; }
+      else if (F.near === 'water') { const off = F.reach[0] + FR() * (F.reach[1] - F.reach[0]); z = riverZ(x) + (LAKE || FR() < 0.5 ? -off : off); }
+      if (F.near === 'dry' && riverDist(x, z) < (F.reach ? F.reach[0] : 40)) continue;
+      if (F.high != null && height(x, z) < F.high) continue;
+      if (riverDist(x, z) < (F.minRiver ?? 8) || !free(x, z)) continue;
+      put(x, z, t0 + FR() * (t1 - t0)); i++;
+      // een paar bij elkaar: zo groeien palmen en jonge bomen
+      for (let c = 1, ct = 0; c < (F.clump || 1) && ct < 12; ct++) {
+        const a = FR() * 6.28, d = gap * (0.45 + FR() * 0.5), cx = x + Math.cos(a) * d, cz = z + Math.sin(a) * d;
+        if (riverDist(cx, cz) < (F.minRiver ?? 8) || !free(cx, cz, gap * 0.4)) continue;
+        put(cx, cz, (t0 + FR() * (t1 - t0)) * (0.7 + FR() * 0.3)); c++;
+      }
+    }
+    V.forEach((v, i) => spots[i].length && instance(v, spots[i], F.shadow !== false, F.each ? 110 : 70));
+  }
+  // blikvangers: één groot stuk rots op een vaste plek (een wand achter het kamp). Je loopt er niet doorheen.
+  for (const P of LAND.props || []) {
+    const v = variantsOf(A.models[P.model])[P.pick || 0], k = P.tall / v.size.y, ry = P.ry || 0, [x, z] = P.at, parts = tinted(v.parts, P.tint);
+    for (const q of parts) {
+      const m = new THREE.Mesh(q.geo, q.mat); m.position.set(x, height(x, z) - (P.sink || 0.08) * P.tall, z); m.rotation.y = ry; m.scale.setScalar(k);
+      m.castShadow = m.receiveShadow = true; scene.add(m);
+    }
+    const lx = v.size.x * k, lz = v.size.z * k, long = Math.max(lx, lz), short = Math.min(lx, lz), r = short * 0.42, n = Math.max(1, Math.ceil((long - short) / (r * 1.2)) + 1);
+    for (let i = 0; i < n; i++) {
+      const u = n === 1 ? 0 : (i / (n - 1) - 0.5) * (long - short), ax = lx >= lz ? u : 0, az = lx >= lz ? 0 : u;
+      blockers.push({ x: x + ax * Math.cos(ry) + az * Math.sin(ry), z: z - ax * Math.sin(ry) + az * Math.cos(ry), r });
+    }
+    cover.push({ x, z, r: short * 0.5 });
+  }
 
   // ---------- gras dat meebeweegt in de wind ----------
   const uniforms = { uTime: { value: 0 }, uWind: { value: 1 } };
@@ -445,7 +558,7 @@ export function buildWorld(scene, A) {
         // het gescande gras is groen; de savanne is droog en goudgeel
         .replace('#include <map_fragment>', `#include <map_fragment>
           float lum = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
-          diffuseColor.rgb = mix(diffuseColor.rgb * 1.4, lum * vec3(2.9, 2.35, 1.2), ${(dry * (dry > 0.5 ? LK.dry || 1 : 1)).toFixed(2)});`);
+          diffuseColor.rgb = mix(diffuseColor.rgb * 1.4, lum * vec3(${(GR.gold || [2.9, 2.35, 1.2]).map((v) => v.toFixed(2)).join(', ')}), ${(dry * (dry > 0.5 ? LK.dry || 1 : 1)).toFixed(2)});`);
     };
     return m;
   }
@@ -472,7 +585,7 @@ export function buildWorld(scene, A) {
     }
   }
   // kort gras: pollen, niet overal
-  scatter(grassMat(0.25, 0.8), 16000, [3, 4, 5, 6, 7], () => {
+  scatter(grassMat(0.25, 0.8), GR.short ?? 16000, [3, 4, 5, 6, 7], () => {
     const x = (R() - 0.5) * 2 * (WALK + 10), z = (R() - 0.5) * 2 * (WALK + 10);
     if (riverDist(x, z) < 6) return null;
     if (fbm(x * 0.05, z * 0.05, 2) < (LK.lush || 0.4) || steep(x, z) > STEEP) return null;
@@ -485,10 +598,12 @@ export function buildWorld(scene, A) {
     return [px + Math.cos(a) * d, pz + Math.sin(a) * d, 1.3 + R() * 0.7];
   });
   // groen riet langs de rivier
-  scatter(grassMat(0.15, 0.15), 2500, [0, 1, 2], () => {
+  scatter(grassMat(0.15, 0.15), GR.reed ?? 2500, [0, 1, 2], () => {
     const x = (R() - 0.5) * 2 * WALK, side = R() < 0.5 ? -1 : 1, off = 6 + R() * 4;
+    // rietbedden: op sommige stukken oever staat het dicht en hoog, daartussen is de oever open
+    if (GR.beds && fbm(x * 0.035 + 3, 7.7, 2) < GR.beds) return null;
     // langs een meer staat het riet op het strand en met de voeten in het water
-    return [x, riverZ(x) + (LAKE ? (side < 0 ? -off * 0.6 : off - 6) : side * off), 1.2 + R() * 0.6];
+    return [x, riverZ(x) + (LAKE ? (side < 0 ? -off * (GR.beds ? 1.2 : 0.6) : off - 6) : side * off), (1.2 + R() * 0.6) * (GR.reedTall || 1)];
   });
 
   const fogBase = new THREE.Color(), GREY = new THREE.Color(), sky = { cloud: 0, rain: 0, wind: 0.25 };
@@ -499,6 +614,8 @@ export function buildWorld(scene, A) {
       uniforms.uTime.value = t;
       for (const im of shadowCells) { const c = im.boundingSphere.center; im.castShadow = Math.hypot(c.x - focus.x, c.z - focus.z) < im.boundingSphere.radius + 36; }
       const k = dayLook(p);
+      // het eigen licht van dit gebied (as in de lucht, ijle berglucht)
+      if (SUN_TINT) { k.sun.multiply(SUN_TINT); k.sunI *= SKY.sunI || 1; k.hemiI *= SKY.hemiI || 1; }
       // het weer: wolken maken de lucht grijs, het licht vlak en de schaduwen zwak; regen trekt een sluier over het land
       const cl = sky.cloud, wet = sky.rain;
       uniforms.uWind.value = 0.55 + sky.wind * 1.9;
@@ -515,6 +632,7 @@ export function buildWorld(scene, A) {
       const dayK = p < 0.1 ? THREE.MathUtils.smoothstep(p, 0.02, 0.1) : p < 0.62 ? 1 : 1 - THREE.MathUtils.smoothstep(p, 0.62, 0.74);
       skyMat.uniforms.skyMix.value = dayK * (senses ? 0.4 : 1) * (1 - Math.min(1, cl * 1.25));
       skyMat.uniforms.skyTint.value.setRGB(1, 1, 1).lerp(k.sun, 0.25);
+      if (SKY.tint) skyMat.uniforms.skyTint.value.multiply(SKY_TINT);
       scene.environmentIntensity = (0.15 + 0.85 * dayK) * (senses ? 0.5 : 1);
       fogBase.copy(k.fog);
       if (MIST) fogBase.lerp(MIST[0], MIST[1] * (0.35 + 0.65 * dayK));
@@ -583,6 +701,7 @@ export function mergeStatic(group) {
 // ---------- de kleuren van de dag ----------
 const C = (h) => new THREE.Color(h);
 const SENSE_FOG = C(0x4a5a6a);
+const SUN_TINT = SKY.sun ? C(SKY.sun) : null, SKY_TINT = SKY.tint ? new THREE.Color(...SKY.tint) : null;
 const DAY = [
   { p: 0.00, top: C(0x3a4a78), mid: C(0xe8a07a), low: C(0x8a6a5a), fog: C(0xc8988a), sun: C(0xffb080), sunI: 1.2, hemiSky: C(0x9aa8d8), hemiGround: C(0x6a4a3a), hemiI: 0.7, water: C(0x5a6a8a) },
   { p: 0.12, top: C(0x6a98c8), mid: C(0xf2d8a8), low: C(0xe0b88a), fog: C(0xe6d2a8), sun: C(0xffe0b0), sunI: 2.3, hemiSky: C(0xcfe0ff), hemiGround: C(0x8a6a3a), hemiI: 1.05, water: C(0x4f8a8c) },

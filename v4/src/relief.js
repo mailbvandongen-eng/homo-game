@@ -5,6 +5,7 @@
 // - breuk: { kind: 'breuk', path, h, up, back, gaps } een breuktrap: aan één kant van de lijn ligt het land h meter hoger (up: 1 of -1 kiest de kant).
 //                                                    De wand is te steil om te lopen. gaps: plekken langs de lijn (0..1) waar een puinhelling omhoog loopt.
 // - kop:   { kind: 'kop', at, r, h, rocks }          een rotskop: een bult met een stapel grote keien erop (de keien zet world.js neer).
+// - rug:   { kind: 'rug', at, r, h }                 een lage, brede bult zonder keien: een zandrug of een terp om op te wonen.
 const ss = (x, a, b) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 // Het dichtste punt op een gebroken lijn: [afstand, kant (+1 of -1), hoe ver langs de lijn (0..1)]
@@ -23,7 +24,7 @@ export function along(path, x, z) {
 // h: de hoogte van het glooiende land op (x, z); terug komt de hoogte met het reliëf erin. noise(x, z) geeft 0..1.
 export function shape(list, x, z, h, noise) {
   for (const f of list) {
-    if (f.kind === 'kop') {
+    if (f.kind === 'kop' || f.kind === 'rug') {
       const d = Math.hypot(x - f.at[0], z - f.at[1]);
       if (d < f.r) h += Math.cos(d / f.r * Math.PI / 2) ** 2 * f.h;
       continue;
@@ -54,6 +55,7 @@ export function shape(list, x, z, h, noise) {
 // Ligt dit punt op of vlak bij reliëf? (voor de controle dat er niets van het spel in een kloof of wand staat)
 export function nearRelief(list, x, z, margin = 4) {
   for (const f of list) {
+    if (f.kind === 'rug') continue;   // daar mag je juist wonen
     if (f.kind === 'kop') { if (Math.hypot(x - f.at[0], z - f.at[1]) < f.r + margin) return f; continue; }
     const [dist, side] = along(f.path, x, z);
     if (f.kind === 'geul' && dist < f.w + margin + (f.lift ? 8 : 0)) return f;

@@ -391,3 +391,59 @@ de gewone snelheid, op dag 2 op 75%, vanaf dag 3 gewoon. Zo is er tijd om het la
 
 **Eerlijk:** gezondheid was bij de start al 100 en kan niet hoger. Het teken Groep zakt even snel als eerst; daar helpt
 de groep nu zelf bij (§15). Ziek zijn (buikpijn) is niet veranderd.
+
+## 18. Fase 5c — elk gebied een eigen land (ontwerp, 18-11-2026)
+
+**Wat er mis was.** De vier gebieden deelden één landformule: dezelfde heuvels (zelfde ruis), dezelfde rivier, dezelfde
+70 acacia's en 55 keien op dezelfde plek (zelfde willekeur), dezelfde reuzenolifant met bijna dezelfde ronde, en het kamp
+in drie van de vier gebieden binnen 40 meter van hetzelfde punt. Alleen "hoog" had een eigen kleur.
+
+**Wat een gebied nu zelf bepaalt** (in het gebiedsbestand, onder `land`):
+
+| Sleutel | Wat |
+|---|---|
+| `land.shift`, `land.amp`, `land.rough` | een ander stuk van de ruis, hoe hoog de heuvels zijn, hoe ruw de grond |
+| `land.river` | de loop en de breedte van de rivier (of `terrain: 'lake'`) |
+| `land.seed` | de willekeur voor alles wat gestrooid wordt: bomen, keien en struiken staan in elk gebied ergens anders |
+| `land.flora` | welke bomen en struiken er groeien en hoeveel: `[{ model, n, size, near }]` |
+| `land.rocks` | welke keien (familie en tint) en hoeveel |
+| `land.ground` | de vier grondfoto's (kaal, droog, groen, rots) en de tint |
+| `land.sky` | tint van licht, nevel en lucht |
+| `camp` | hoe het kamp eruitziet: `boom`, `palmen`, `overhang` of `kring` |
+| `hill` | alleen een heuvel als het gebied er een noemt |
+
+**De vier landen.**
+
+| Gebied | Land | Kamp | Groeit er | Alleen hier |
+|---|---|---|---|---|
+| savanne | glooiende grassavanne, brede rivier | onder de oude schermacacia | schermacacia's, baobabs, vijgen | de reuzenolifant |
+| water | vlakke, lichte oever van een zakkend meer; zand en gebarsten modder | op een zandrug tussen palmen, het meer in zicht | dadelpalmen, waaierpalmen, rietvelden | nijlpaarden in het meer |
+| berg | zwart lavaland onder de vulkaan: ruw, kaal, as en basalt | onder een overhangende rotswand | kandelaarbomen (euphorbia), boomaloë's, dode stammen | de rokende berg, stoom uit de grond |
+| hoog | koel, groen hoogland met nevel; een smalle beek, bemoste rotsen | een open kring van keien bij een rotspunt | jeneverbes, wilde olijf, graspollen | het verre uitzicht over de rand |
+
+**Volgorde.** (1) motor + land + kamp + planten per gebied; (2) eigen grote dieren per gebied; (3) trekken binnen een
+gebied (de groep breekt op naar een volgende kampplek); (4) missies die je het land in sturen.
+
+**Modellen** (zie `v4/assets/CREDITS.md`): PlantCatalog (CC BY 4.0) dadelpalm, waaierpalm, kandelaarboom; Poly Haven (CC0)
+boomaloë, olijfachtige boom, maanrots (als basalt), bemoste keien, rotswanden; Valery.Li (CC BY) jeneverbes.
+
+### 18a. Wat van stap 1 is gebouwd (land, 18-11-2026)
+
+De tabel hierboven was het ontwerp. Dit is wat er staat:
+
+- **Sleutels in `land`** (gelezen in `world.js`): `seed`, `shift`, `amp`, `freq`, `fine`, `river`, `acacias`, `logs`, `twigs`,
+  `flora` (per soort: `model`, `n`, `tall`, `near: 'water'|'dry'`, `reach`, `patch`, `clump`, `at` voor vaste plekken, `each` voor
+  een set losse pollen), `rocks` (`models`, `tint`, `n`, `big`), `rocksAt`, `props` (grote losse rotsstukken met botsing en dekking),
+  `bush`, `ground` (`bare`, `dry`, `green`, `rock`, `shore`, `wall`), `grass`, `sky`. Extra foto's staan in `textures`,
+  eigen woorden in `words`, de tekst bij het kamp in `looks.tree`.
+- **Geen sleutel `camp`.** Het kamp is opgebouwd uit dezelfde bouwstenen: palmen op vaste plekken (water), drie rotsstukken als
+  wand (berg), een rij keien en een bosje (hoog), plus een lage bult (`relief`, soort `rug`).
+- **Een heuvel alleen als het gebied `hill` noemt.** Berg en hoog hadden een `hill` voor de reus, maar de heuvel lag altijd op de plek van de savanne. Nu ligt hij waar het gebied hem zet.
+- **Niets schuift over vaste plekken.** Alles wat gestrooid wordt, blijft weg van de vaste plekken uit het gebiedsbestand (`clear()`).
+- **Afwijkingen van het ontwerp.** Geen wilde olijf (geen goed model): op de hoge vlakte staan jeneverbessen en rozetten op een stam.
+  De wand bij de berg hangt niet over; het zijn drie rotsblokken naast elkaar. De rotspunt en "het verre uitzicht" op de hoge vlakte zijn niet gebouwd.
+  Nijlpaarden en andere eigen dieren horen bij de volgende stap; de reuzenolifant loopt nog in alle gebieden.
+- **Vervangers** (staan zo in CREDITS.md): Europese en Californische waaierpalm voor de doumpalm, Canarische dadelpalm voor de wilde dadelpalm,
+  westelijke jeneverbes voor de Afrikaanse, kokerboom-rozet voor de reuzenlobelia.
+- **Prestaties.** Driehoeken bij de start: savanne 692 duizend (was gelijk), water 694, berg rond 860, hoog 811. De controle waarschuwt vanaf 450 en keurt af boven 900: berg zit daar dicht tegenaan.
+- **Controleren:** `node /root/tools/pw/v4land.js <gebied> [abcdef]` maakt schermfoto's van het kamp van zes kanten.

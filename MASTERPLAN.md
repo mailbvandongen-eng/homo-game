@@ -148,9 +148,20 @@ Twee uitgangspunten, die voor alles gelden wat nog komt:
 
 | # | Wat | Stand |
 |---|---|---|
-| 1 | **Elk gebied een eigen land.** Eigen vorm van het terrein, eigen kampplek (niet steeds een slaapboom), eigen bomen en planten, eigen grond, licht en lucht, eigen dieren en eigen blikvanger. Op één schermfoto bij het kamp zie je welk gebied het is | |
+| 1 | **Elk gebied een eigen land.** Eigen vorm van het terrein, eigen kampplek (niet steeds een slaapboom), eigen bomen en planten, eigen grond, licht en lucht, eigen dieren en eigen blikvanger. Op één schermfoto bij het kamp zie je welk gebied het is | **land klaar** (18-11): elk gebied heeft een eigen terrein, rivierloop, kampplek, planten, keien, grond en licht (zie hieronder). **Dieren nog niet**: de reus loopt nog overal |
 | 2 | **Trekken binnen een gebied.** De groep blijft niet het hele seizoen op één plek: als het eten of het water opraakt, breekt ze op naar een volgende kampplek verderop | |
 | 3 | **Missies sturen je het land in.** Al in de eerste minuten weg van het kamp, naar wat dit gebied bijzonder maakt | |
+
+Hoe de vier gebieden nu van elkaar verschillen (stap 1, land):
+
+| Gebied | Kamp | Land | Planten en keien |
+|---|---|---|---|
+| De savanne | de slaapboom, een oude acacia bij de heuvel | droge, vlakke grasvlakte | schermacacia's, baobabs, granieten keien |
+| Bij het water | een lage zandrug tussen hoge palmen, het meer in zicht | vlak, zand, gebarsten modder langs het water, veel riet | waaierpalmen, palmbosjes aan de oever, lichte keien |
+| Onder de rokende berg | tegen een donkere rotswand | ruw, donkere lavagrond, grijze lucht, kort geel gras | kandelaarbomen, boomaloë's, dode stammen, zwartgrijze keien |
+| De hoge vlakte | een bult in het gras, een rij keien tegen de wind, een bosje jeneverbes | steile ruggen, groen, nevel, koel licht | jeneverbessen in bosjes, rozetten op een stam, graspollen, keien met mos, vijgen (geen baobabs) |
+
+Een gebied beschrijft zijn land in het eigen bestand onder `land` (zie ANALYSE §18). De savanne heeft geen `land` en is niet veranderd.
 
 Vaste regel erbij: twee gebieden delen nooit dezelfde blikvanger (boom, dier, heuvel) op dezelfde plek.
 
