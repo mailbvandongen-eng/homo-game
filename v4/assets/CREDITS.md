@@ -61,6 +61,11 @@ Aanpassingen: vereenvoudigd en texturen verkleind (gltf-transform). Bij de mensa
 
 `anims/hominin.json`: bewegingen uit de [Universal Animation Library](https://quaternius.itch.io/universal-animation-library) van **Quaternius** (CC0), overgezet op het skelet van de neanderthaler met een eigen script (`/root/tools/homo-assets/retarget.html`). Gebruikt: stilstaan, lopen, joggen, sprinten, gebukt staan en lopen, springen, oppakken, iets doen met de handen, een stoot, een slag van boven, een werpbeweging, geraakt worden, neervallen, zwemmen, rollen en duwen.
 
+In hetzelfde bestand staan bewegingen uit twee andere bronnen, overgezet met `/root/tools/homo-assets/retarget2.html`:
+
+- **Liggen, zitten en opstaan** (`Sleep_*`, `Sit_*`): opnamen van een echt mens uit de [CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu/), proefpersoon 140, opname 03 en 04 ("Get Up Laying on Side"). De data is vrij te gebruiken; de database is gemaakt met steun van NSF EIA-0196217. Het gaan liggen is dezelfde opname, achteruit afgespeeld.
+- **Eten** (`Consume`): uit de [Universal Animation Library 2](https://quaternius.itch.io/universal-animation-library-2) van **Quaternius** (CC0).
+
 # Iconen
 
 Alle tekens in het spel (knoppen, voorwerpen in je hand en je tas, de tekens voor voeding, water, gezondheid en groep) komen uit de set van [game-icons.net](https://game-icons.net) ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)). De vormen staan als SVG-pad in `src/iconshapes.js`; de kleur geven wij ze in `src/icons.js`. Makers: Lorc, Delapouite, Sbed, SeregaCthtuf, Caro Asercion en anderen (zie de tabel).

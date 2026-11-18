@@ -1,13 +1,12 @@
 import { ERA, AREA } from './eras/index.js';
 import * as THREE from '../lib/three.module.js';
-import { height } from './world.js';
+import { height, steep, blockers } from './world.js';
 import { turn } from './animal.js';
 import { Rig } from './rig.js';
 import { BODY } from './hominin.js';
 import { heldMesh } from './items.js';
 
-// De slaapboom: hier wacht je groep. Overdag scharrelen ze rond de stam, 's nachts slapen ze er.
-const bonesOf = (root) => { const L = []; root.traverse((o) => { if (o.isBone) L.push(o); }); return L; };
+// De slaapplek: hier wacht je groep. Overdag scharrelen ze er rond, 's nachts slapen ze er dicht bij elkaar.
 export const HOME = AREA.home;   // de slaapboom van dit gebied
 const WHO = ERA.group || [
   { id: 'tor', name: 'Tor', k: 0.99, spot: [2.6, 1.2], grey: true },
@@ -15,6 +14,26 @@ const WHO = ERA.group || [
   { id: 'ibo', name: 'Ibo', k: 0.6, spot: [0.9, -2.8], child: true, tint: 0xfff0e0 },
 ];
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+const RAD = Math.PI / 180, UP = new THREE.Vector3(0, 1, 0), tQ = new THREE.Quaternion(), tN = new THREE.Vector3();
+// Liggen en zitten zijn opgenomen bewegingen van echte mensen (zie assets/CREDITS.md). Elke houding heeft drie delen:
+// gaan liggen, blijven liggen en opstaan. De opname begint en eindigt staand op het nulpunt; het lijf ligt daar een stukje vandaan.
+// off: waar de heup dan ligt (meters, bij een lijf van 1,6 m) · head: de kant waar het hoofd ligt · belly: de kant van de buik (graden)
+const POSE = {
+  side: { down: 'Sleep_Down', loop: 'Sleep_Side', up: 'Sleep_Rise', off: [0.01, -0.45], head: 171, belly: -97, slow: 0.16 },
+  side2: { down: 'Sleep_Down2', loop: 'Sleep_Side2', up: 'Sleep_Rise2', off: [-0.25, -0.58], head: -160, belly: 110, slow: 0.12 },
+  sit: { down: 'Sit_Down', loop: 'Sit_Ground', up: 'Sit_Stand', off: [0.13, -0.33], head: 0, belly: 0, slow: 0.14 },
+};
+const DOWN = ['settle', 'down', 'rest', 'up'];   // bezig met gaan liggen, liggen of opstaan
+const NO_BITE = ['hide'];                        // wat je geeft maar niemand opeet
+// Een ligplek: het lijf ligt met de heup op (x, z), het hoofd wijst naar 'to' (bij zitten: daar kijkt hij heen).
+// Geeft terug waar hij moet gaan staan en welke kant hij dan op kijkt, zodat hij precies daar neerkomt.
+function bedAt(x, z, to, pose, k) {
+  const P = POSE[pose], yaw = to - P.head * RAD, s = BODY.height * k / 1.6, c = Math.cos(yaw), n = Math.sin(yaw);
+  const e = 0.6, nx = (height(x - e, z) - height(x + e, z)) / (2 * e), nz = (height(x, z - e) - height(x, z + e)) / (2 * e);
+  return { x: x - (P.off[0] * c + P.off[1] * n) * s, z: z - (-P.off[0] * n + P.off[1] * c) * s, yaw, pose: P, lx: x, lz: z, n: new THREE.Vector3(nx, 1, nz).normalize() };
+}
+// Op de zij, met de buik naar 'belly': links en rechts liggen is elk een eigen opname
+const sideBed = (x, z, belly, left, k) => bedAt(x, z, left ? belly - 92 * RAD : belly + 90 * RAD, left ? 'side' : 'side2', k);
 // Wijzen: de rechterarm strekt zich naar een plek in de verte. w (0..1) is hoe ver de arm al omhoog is.
 const pA = new THREE.Vector3(), pB = new THREE.Vector3(), pC = new THREE.Vector3(), pU = new THREE.Vector3(), pV = new THREE.Vector3(), pQ = new THREE.Quaternion(), pI = new THREE.Quaternion();
 function pointArm(R, at, w) {
@@ -48,18 +67,64 @@ export class Group {
         else if (!hair && w.tint) o.material.color.multiply(new THREE.Color(w.tint));
         else if (!hair && w.grey) o.material.color.multiplyScalar(0.86);
       });
-      const m = { ...w, kind: 'member', rig, g: rig.root, x: HOME.x + w.spot[0], z: HOME.z + w.spot[1], yaw: Math.atan2(-w.spot[0], -w.spot[1]) + Math.PI, speed: 0, state: 'idle', t: 2 + this.list.length * 3, sick: 0, busy: 0, pointW: 0, able: !w.child && !w.grey };
+      const m = { ...w, kind: 'member', rig, g: rig.root, x: HOME.x + w.spot[0], z: HOME.z + w.spot[1], yaw: Math.atan2(-w.spot[0], -w.spot[1]) + Math.PI, speed: 0, state: 'idle', t: 2 + this.list.length * 3, sick: 0, busy: 0, eatT: 0, lieW: 0, pointW: 0, able: !w.child && !w.grey };
       // wat hij draagt, zie je in zijn hand
       rig.root.updateMatrixWorld(true);
       const hb = rig.bone('hand_r'), mid = rig.bone('middle_01_r'); m.hold = new THREE.Group();
       if (hb) { m.hold.scale.setScalar(1 / hb.getWorldScale(new THREE.Vector3()).x); if (mid) m.hold.position.copy(hb.worldToLocal(mid.getWorldPosition(new THREE.Vector3()))); hb.add(m.hold); }
+      // eten brengt hij met zijn linkerhand naar zijn mond
+      const hl = rig.bone('hand_l'), midL = rig.bone('middle_01_l'); m.bit = new THREE.Group();
+      if (hl) { m.bit.scale.copy(m.hold.scale); if (midL) m.bit.position.copy(hl.worldToLocal(midL.getWorldPosition(new THREE.Vector3()))); hl.add(m.bit); }
       scene.add(rig.root); this.list.push(m);
     }
+    this.beds();
+  }
+  // De slaapplekken liggen vast. Eén houdt de wacht en zit rechtop; de anderen liggen op hun zij, het kind tegen een volwassene aan.
+  // Is er een vuurplaats, dan liggen ze in een boog om het vuur, met de buik naar de warmte. Anders liggen ze bij de stam of op de open plek.
+  beds() {
+    const L = this.list, guard = L[1], child = L.find((m) => m.child), lie = L.filter((m) => m !== guard && m !== child);
+    const F = AREA.fire && { x: AREA.fire.hearth[0], z: AREA.fire.hearth[1] };
+    const trunk = !F && blockers.find((b) => !b.beast && dist(b, HOME) < 1.2);
+    const dir = (a) => [Math.sin(a), Math.cos(a)];
+    const plan = (a) => {
+      const [ux, uz] = dir(a), [vx, vz] = dir(a + Math.PI / 2), out = [];
+      if (F) {
+        // om het vuur: a is het midden van de boog
+        const R = 2.5, n = lie.length + 1, slots = [...lie.slice(0, 2), guard, ...lie.slice(2)];
+        slots.forEach((m, i) => {
+          const b = a + (i - (n - 1) / 2) * 52 * RAD, [dx, dz] = dir(b), x = F.x + dx * R, z = F.z + dz * R;
+          if (m === guard) { out.push([m, bedAt(x, z, b + Math.PI, 'sit', m.k)]); return; }
+          out.push([m, sideBed(x, z, b + Math.PI, i % 2 === 0, m.k)]);
+          if (child && m === (lie.find((q) => q.woman) || lie[0])) out.push([child, sideBed(F.x + dx * (R - 0.45), F.z + dz * (R - 0.45), b + Math.PI, i % 2 === 0, child.k)]);
+        });
+      } else {
+        // bij de stam: de waker zit er met zijn rug tegenaan en kijkt naar a; de anderen liggen links en rechts voor hem
+        const r0 = trunk ? Math.min(trunk.r, 0.3) + 0.22 : 0, C = trunk || HOME, gx = C.x + ux * r0, gz = C.z + uz * r0;
+        out.push([guard, bedAt(gx, gz, a, 'sit', guard.k)]);
+        lie.forEach((m, i) => {
+          const sg = i % 2 ? -1 : 1, w = 1.05 + Math.floor(i / 2) * 1.1, x = gx + ux * 1.1 + vx * sg * w, z = gz + uz * 1.1 + vz * sg * w, belly = a - sg * Math.PI / 2;
+          out.push([m, sideBed(x, z, belly, sg > 0, m.k)]);
+          if (child && i === 0) out.push([child, sideBed(x + ux * 0.2 - vx * sg * 0.45, z + uz * 0.2 - vz * sg * 0.45, belly, sg > 0, child.k)]);
+        });
+      }
+      return out;
+    };
+    // de vlakste kant, vrij van stammen en keien, en niet in het water
+    let best = null, bc = 1e9; const a0 = F ? Math.atan2(HOME.x - F.x, HOME.z - F.z) : 0;
+    for (let i = 0; i < 16; i++) {
+      const a = a0 + i * Math.PI / 8, P = plan(a); let c = F ? (1 - Math.cos(a - a0)) * 0.25 : 0;
+      for (const [, b] of P) { c += steep(b.lx, b.lz) * 4 + (height(b.lx, b.lz) < 0.25 ? 9 : 0); for (const k of blockers) if (k !== trunk && !k.beast && !(F && dist(k, F) < 0.1) && dist(k, { x: b.lx, z: b.lz }) < k.r + 0.8) c += 9; }
+      if (c < bc) { bc = c; best = P; }
+    }
+    for (const [m, b] of best) m.bed = b;
+    // wie ziek is, zit overdag op zijn eigen plek op de grond
+    for (const m of L) m.seat = bedAt(HOME.x + m.spot[0], HOME.z + m.spot[1], Math.atan2(-m.spot[0], -m.spot[1]), 'sit', m.k);
+    this.guard = guard;
   }
   nearest(p) { let best = null, bd = 1e9; for (const m of this.list) { const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return { m: best, d: bd }; }
   get sick() { return this.list.find((m) => m.sick > 0); }
   // Na een goede nacht loopt Kem een dag met je mee. Staat hij naast je, dan plukt of snijdt hij ook.
-  startFollow() { const k = this.list[1]; if (k.sick > 0) return false; k.state = 'follow'; return true; }
+  startFollow() { const k = this.list[1]; if (k.sick > 0) return false; if (DOWN.includes(k.state)) k.after = 'follow'; else k.state = 'follow'; return true; }
   setCarry(m, it) { m.carry = it; m.hold.clear(); if (it) { const h = heldMesh(it); if (h) m.hold.add(h); } }
   // Jij snijdt vlees van een dier: wie kan lopen komt een lap halen en draagt hem naar het kamp.
   fetch(k, game) {
@@ -73,7 +138,8 @@ export class Group {
   // Iets aan de groep geven. Geeft terug hoeveel de groep ervan opknapt (of null als ze het niet willen).
   give(it, game) {
     const s = game.state, sick = this.sick, kem = this.list[1];
-    for (const m of this.list) m.busy = 5;
+    // wie het krijgt, komt overeind, pakt het aan en eet: het bitterblad is alleen voor de zieke, de onbekende bes voor wie hem proeft
+    for (const m of it === 'leaf' ? [sick].filter(Boolean) : it === 'redberry' && !s.known.has('redberry') ? [kem] : this.list) m.food = it;
     if (it === 'roast') return { gain: 45, text: 'Gebraden vlees! Het is zo zacht dat zelfs Tor en Kleine Ibo het kunnen kauwen. Niemand zegt iets: iedereen eet.' };
     if (it === 'meat') return { gain: 30, text: 'Vlees! Iedereen komt erbij zitten. Kleine Ibo krijgt het eerste stuk.' };
     if (it === 'honey') return { gain: 40, text: 'Honing! Tor lacht zijn laatste tanden bloot. Iedereen likt zijn vingers af, Ibo het langst.' };
@@ -101,6 +167,7 @@ export class Group {
 
   update(dt, game) {
     const p = game.player.pos, night = game.night, dHome = dist(p, HOME);
+    this.t += dt;
     // kom je van ver terug, dan rent de kleinste je tegemoet
     if (dHome > 32) this.away = true;
     const greet = this.away && dHome < 17 && night < 0.6;
@@ -111,27 +178,38 @@ export class Group {
       this.forT = 6;
       const busy = this.list.some((m) => m.state === 'out' || m.state === 'gather' || (m.own && m.carry));
       if (!busy && night < 0.2 && game.danger < 0.5 && game.state.group < 92) {
-        const can = this.list.filter((m) => m.able && m.state === 'idle' && m.sick <= 0 && m.busy <= 0 && !m.carry && !(m.calling && dist(m, p) < 12) && !(this.point && this.point.m === m && dHome < 14));
+        const can = this.list.filter((m) => m.able && m.state === 'idle' && m.sick <= 0 && m.busy <= 0 && m.eatT <= 0 && !m.carry && !(m.calling && dist(m, p) < 12) && !(this.point && this.point.m === m && dHome < 14));
         const m = can[Math.floor(Math.random() * can.length)], spot = m && game.foodSpot();
         if (spot) { m.state = 'out'; m.job = spot; m.t = 70; this.forT = 28 + Math.random() * 24; }
       }
     }
     for (const m of this.list) {
-      const d = dist(m, p) || 0.01, sx = HOME.x + m.spot[0], sz = HOME.z + m.spot[1];
+      const d = dist(m, p) || 0.01, R = m.rig;
       m.t -= dt; m.busy = Math.max(0, m.busy - dt);
+      // eten gekregen: wie staat, pakt het aan en eet; wie ligt, komt eerst overeind
+      if (m.food && !DOWN.includes(m.state)) {
+        if (d < 14) { m.busy = NO_BITE.includes(m.food) ? 3 : 1.5; m.eatT = NO_BITE.includes(m.food) ? 0 : 6; m.bite = m.food; }
+        m.food = null;
+      }
+      if (m.eatT > 0) {
+        m.eatT -= dt;
+        if (m.eatT <= 0) { m.bit.clear(); m.bite = null; } else if (m.busy <= 0 && m.bite) { const h = heldMesh(m.bite); if (h) m.bit.add(h); m.bite = null; }
+      }
       if (m.sick > 0) { m.sick -= dt; if (m.sick <= 0) game.murmur(`${m.name} is weer opgeknapt. Maar het duurde lang…`, 5); }
       let tx = 0, tz = 0, spd = 0, face = null;
       // wijzen doet hij als je bij hem staat, en alleen naar iets dat niet al voor je voeten ligt
       const P = this.point, pt = P && P.m === m && m.state === 'idle' && m.busy <= 0 && m.sick <= 0 && d < 8 && Math.hypot(P.x - p.x, P.z - p.z) > 3 ? P : null;
-      const sleepy = night > 0.6;
+      const sleepy = night > 0.6, eating = m.busy > 0 || m.eatT > 0;
+      // waar hij nu hoort te liggen of te zitten: 's nachts op zijn slaapplek, ziek op zijn eigen plek
+      const B = sleepy ? m.bed : m.sick > 0 ? m.seat : null;
       if (m.carry && dist(m, HOME) < (m.own ? 5 : 11)) { game.event(m.own ? 'gift' : 'kemgift', m.carry); this.setCarry(m, null); m.own = false; }
-      if (greet && m.child && m.sick <= 0) { m.state = 'greet'; m.t = 8; }
+      if (greet && m.child && m.sick <= 0 && !DOWN.includes(m.state)) { m.state = 'greet'; m.t = 8; }
       switch (m.state) {
         case 'idle':
-          if (sleepy || m.sick > 0) { m.state = 'toSpot'; break; }
-          if (d < 6 || (m.calling && d < 30)) face = p;
+          if (B && !eating) { m.state = 'toSpot'; break; }
+          if (d < 6 || eating || (m.calling && d < 30)) face = p;
           if (pt) { face = pt; m.t = Math.max(m.t, 1.5); }   // hij wijst: daar moet je zijn
-          if (m.t < 0 && m.busy <= 0 && d > 3 && !m.calling) { const a = Math.random() * 6.28, r = 2.5 + Math.random() * 4; m.goal = { x: HOME.x + Math.cos(a) * r, z: HOME.z + Math.sin(a) * r }; m.state = 'wander'; m.t = 9; }
+          if (m.t < 0 && !eating && d > 3 && !m.calling) { const a = Math.random() * 6.28, r = 2.5 + Math.random() * 4; m.goal = { x: HOME.x + Math.cos(a) * r, z: HOME.z + Math.sin(a) * r }; m.state = 'wander'; m.t = 9; }
           break;
         case 'wander': {
           const gd = dist(m, m.goal);
@@ -158,37 +236,59 @@ export class Group {
           if (d > 2.6) { tx = (p.x - m.x) / d; tz = (p.z - m.z) / d; spd = Math.min(6.4, 1 + (d - 2.6) * 1.6); } else face = p;
           break;
         case 'toSpot': {
-          const gd = Math.hypot(sx - m.x, sz - m.z);
-          if (gd < 0.4) m.state = 'rest'; else { tx = (sx - m.x) / gd; tz = (sz - m.z) / gd; spd = (gd > 8 ? 4.6 : 1.1) * m.k; }
+          const G = B || m.seat, gd = dist(m, G);
+          if (gd < 0.3) { if (B) { m.state = 'settle'; m.at = B; } else { m.state = 'idle'; m.t = 2 + Math.random() * 4; } } else { tx = (G.x - m.x) / gd; tz = (G.z - m.z) / gd; spd = (gd > 8 ? 4.6 : 1.1) * m.k; }
           break;
         }
-        case 'rest':   // slapen, of ziek op de grond zitten
-          if (!sleepy && m.sick <= 0) { m.state = 'idle'; m.t = 2 + Math.random() * 4; }
+        case 'settle': {   // hij staat op zijn plek en draait zich goed
+          const A = m.at; m.yaw = turn(m.yaw, A.yaw, dt * 3); m.x += (A.x - m.x) * Math.min(1, dt * 4); m.z += (A.z - m.z) * Math.min(1, dt * 4);
+          if (B !== A) { m.state = 'idle'; m.t = 1; break; }
+          if (Math.abs(Math.atan2(Math.sin(A.yaw - m.yaw), Math.cos(A.yaw - m.yaw))) < 0.06) { m.x = A.x; m.z = A.z; m.yaw = A.yaw; m.state = 'down'; m.len = m.t = R.actions[A.pose.down].getClip().duration; R.play(A.pose.down, { fade: 0.4, once: true }); }
+          break;
+        }
+        case 'down':   // hij gaat liggen (of zitten)
+          if (m.t < 0) { m.state = 'rest'; m.lag = null; }
+          break;
+        case 'rest': {   // slapen, de wacht houden, of ziek op de grond zitten
+          if (m.food) m.wake = true;
+          if (B === m.at && !m.wake) { m.lag = null; break; }
+          // opstaan doen ze niet allemaal tegelijk
+          if (m.lag == null) m.lag = m.wake ? Math.random() * 0.8 : this.list.indexOf(m) * 2.2 + Math.random() * 2;
+          m.lag -= dt;
+          if (m.lag < 0) { m.state = 'up'; m.wake = false; m.len = m.t = R.actions[m.at.pose.up].getClip().duration / 1.25; R.play(m.at.pose.up, { fade: 0.5, once: true, speed: 1.25 }); }
+          break;
+        }
+        case 'up':
+          if (m.t < 0) { m.state = m.after || 'idle'; m.after = null; m.t = 1 + Math.random() * 3; }
           break;
       }
       m.speed += (spd - m.speed) * (1 - Math.exp(-dt * 6));
       if (spd > 0) m.yaw = turn(m.yaw, Math.atan2(tx, tz), dt * 5);
       else if (face) m.yaw = turn(m.yaw, Math.atan2(face.x - m.x, face.z - m.z), dt * 3);
       m.x += Math.sin(m.yaw) * m.speed * dt; m.z += Math.cos(m.yaw) * m.speed * dt;
-      m.g.position.set(m.x, height(m.x, m.z) + (m.lift || 0), m.z); m.g.rotation.y = m.yaw;
-      m.g.rotation.z = m.calling === 'shiver' && m.speed < 0.2 ? Math.sin(performance.now() * 0.046) * 0.018 : 0;
-      const R = m.rig;
-      const lying = m.state === 'rest' && sleepy && m.busy <= 0;   // krijgen ze iets, dan komen ze overeind
-      if (lying) R.freeze('Death01', 0.97);
-      else if (m.state === 'rest') R.play('Crouch_Idle_Loop', { fade: 0.5 });
+      // Wie ligt, ligt met zijn hele lijf op de grond: op een helling helt hij mee.
+      const A = m.at, lw = m.state === 'rest' ? 1 : m.state === 'down' ? 1 - Math.max(0, m.t) / m.len : m.state === 'up' ? Math.max(0, m.t) / m.len : 0;
+      m.lieW = lw;
+      let y = height(m.x, m.z);
+      m.g.quaternion.setFromAxisAngle(UP, m.yaw);
+      if (lw > 0) {
+        const N = A.n, flat = height(A.lx, A.lz) + (N.x * (A.lx - m.x) + N.z * (A.lz - m.z)) / N.y;
+        y += (flat - y) * lw; m.g.quaternion.premultiply(tQ.setFromUnitVectors(UP, tN.copy(UP).lerp(N, lw).normalize()));
+      }
+      m.g.position.set(m.x, y, m.z);
+      if (m.calling === 'shiver' && m.speed < 0.2 && !lw) m.g.rotateZ(Math.sin(performance.now() * 0.046) * 0.018);
+      if (m.state === 'down' || m.state === 'up') { /* de beweging is gestart bij de overgang en loopt één keer */ }
+      else if (m.state === 'rest') R.play(A.pose.loop, { fade: 0.8, speed: A.pose.slow });
       else if (m.speed > 2) R.play('Jog_Fwd_Loop', { fade: 0.25, speed: m.speed / (3 * m.k) });
       else if (m.speed > 0.2) R.play('Walk_Loop', { fade: 0.3, speed: m.speed / (1.25 * m.k) });
       else if (m.busy > 0 || m.state === 'gather') R.play('Interact', { fade: 0.25 });
+      else if (m.eatT > 0) R.play('Consume', { fade: 0.3 });   // hij eet wat hij kreeg
       else if (m.calling === 'shiver') R.play('Crouch_Idle_Loop', { fade: 0.6 });   // ineengedoken van de kou
       else if (game.state.group < 15) R.play('Crouch_Idle_Loop', { fade: 0.6 });   // hongerig en slap
       else R.play(m.fuss && !pt ? 'Interact' : 'Idle_Loop', { fade: 0.5, speed: m.fuss && !pt ? 0.5 : 1 });
       R.update(dt);
-      // Wie ligt, ligt óp de grond: het laagste punt van het lijf rust op het land, ook op een helling.
-      if (lying) {
-        let lo = 9;
-        for (const o of m.bones || (m.bones = bonesOf(R.root))) { const e = o.matrixWorld.elements; lo = Math.min(lo, e[13] - height(e[12], e[14])); }
-        if (lo < 8) m.lift = Math.max(0, Math.min(0.6, (m.lift || 0) + (0.1 * m.k - lo) * Math.min(1, dt * 5)));
-      } else if (m.lift) m.lift = Math.max(0, m.lift - dt * 0.6);
+      // de waker kijkt in het donker langzaam om zich heen
+      if (m === this.guard && m.state === 'rest' && sleepy) R.bend(R.bone('head'), UP, Math.sin(this.t * 0.33) * 0.6 + Math.sin(this.t * 0.11) * 0.25);
       const aimed = pt && Math.abs(Math.atan2(Math.sin(Math.atan2(pt.x - m.x, pt.z - m.z) - m.yaw), Math.cos(Math.atan2(pt.x - m.x, pt.z - m.z) - m.yaw))) < 0.5;
       m.pointW += ((aimed ? 1 : 0) - m.pointW) * (1 - Math.exp(-dt * 4));
       if (m.pointW > 0.02 && (pt || m.pointAt)) { if (pt) m.pointAt = { x: pt.x, z: pt.z }; pointArm(R, m.pointAt, m.pointW); }
