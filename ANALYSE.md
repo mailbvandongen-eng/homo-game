@@ -327,3 +327,21 @@ gebouwd: er is geen bruikbaar model gevonden. In het hoogland stonden een boom, 
 in de rivier; die zijn verplaatst.
 
 **Controle:** `v4forage.js` (alle vier gebieden).
+
+## 15. Wat in fase 5b stap 4 is gebouwd (de groep doet mee, 18-11-2026)
+
+**Zelf eten zoeken.** Wie kan lopen (niet de oude, niet het kind) gaat overdag om de beurt op pad: naar een
+bessenstruik of een vijgenbosje binnen 75 m van het kamp, over droog land. Hij plukt echt (de struik raakt leger, de
+vijg is weg), draagt het in zijn hand terug en de groep eet: het teken Groep stijgt een beetje (bes 2,5, vijg 3). Er
+is er steeds maar één weg, met een halve minuut tot bijna een minuut ertussen. De laatste bessen aan een struik laten ze hangen en ze
+plukken niet voor je neus weg. Niet 's nachts, niet bij gevaar, niet als de groep vol zit.
+
+**Vlees halen.** Snijd je vlees van een dier, dan komt de dichtstbijzijnde volwassene aanrennen, snijdt zelf een stuk
+en draagt het naar het kamp (Groep +30). Zo levert één dier meer op dan jij alleen kunt dragen.
+
+**Eerlijk:** in de savanne en bij het water kan alleen Kem lopen, dus daar helpt één persoon. Wie op pad is, kun je
+onderweg een missie laten geven; hij loopt dan wel door. De groep redt het hiermee niet alleen: het teken zakt
+langzamer, maar jij blijft nodig.
+
+**Controle:** `v4groep.js` (alle vier gebieden).
+

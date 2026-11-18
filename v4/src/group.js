@@ -4,6 +4,7 @@ import { height } from './world.js';
 import { turn } from './animal.js';
 import { Rig } from './rig.js';
 import { BODY } from './hominin.js';
+import { heldMesh } from './items.js';
 
 // De slaapboom: hier wacht je groep. Overdag scharrelen ze rond de stam, 's nachts slapen ze er.
 export const HOME = AREA.home;   // de slaapboom van dit gebied
@@ -30,6 +31,7 @@ function pointArm(R, at, w) {
 export class Group {
   constructor(scene, A) {
     this.list = []; this.away = false; this.t = 0;
+    this.forT = 25;      // tot de volgende zelf eten gaat zoeken
     this.point = null;   // { m, x, z }: dit groepslid wijst naar die plek (zie systems/missions.js)
     for (const w of WHO) {
       // hetzelfde model als de hoofdpersoon, met een eigen lijf: een kind heeft een groot hoofd en korte benen,
@@ -45,7 +47,11 @@ export class Group {
         else if (!hair && w.tint) o.material.color.multiply(new THREE.Color(w.tint));
         else if (!hair && w.grey) o.material.color.multiplyScalar(0.86);
       });
-      const m = { ...w, kind: 'member', rig, g: rig.root, x: HOME.x + w.spot[0], z: HOME.z + w.spot[1], yaw: Math.atan2(-w.spot[0], -w.spot[1]) + Math.PI, speed: 0, state: 'idle', t: 2 + this.list.length * 3, sick: 0, busy: 0, pointW: 0 };
+      const m = { ...w, kind: 'member', rig, g: rig.root, x: HOME.x + w.spot[0], z: HOME.z + w.spot[1], yaw: Math.atan2(-w.spot[0], -w.spot[1]) + Math.PI, speed: 0, state: 'idle', t: 2 + this.list.length * 3, sick: 0, busy: 0, pointW: 0, able: !w.child && !w.grey };
+      // wat hij draagt, zie je in zijn hand
+      rig.root.updateMatrixWorld(true);
+      const hb = rig.bone('hand_r'), mid = rig.bone('middle_01_r'); m.hold = new THREE.Group();
+      if (hb) { m.hold.scale.setScalar(1 / hb.getWorldScale(new THREE.Vector3()).x); if (mid) m.hold.position.copy(hb.worldToLocal(mid.getWorldPosition(new THREE.Vector3()))); hb.add(m.hold); }
       scene.add(rig.root); this.list.push(m);
     }
   }
@@ -53,6 +59,14 @@ export class Group {
   get sick() { return this.list.find((m) => m.sick > 0); }
   // Na een goede nacht loopt Kem een dag met je mee. Staat hij naast je, dan plukt of snijdt hij ook.
   startFollow() { const k = this.list[1]; if (k.sick > 0) return false; k.state = 'follow'; return true; }
+  setCarry(m, it) { m.carry = it; m.hold.clear(); if (it) { const h = heldMesh(it); if (h) m.hold.add(h); } }
+  // Jij snijdt vlees van een dier: wie kan lopen komt een lap halen en draagt hem naar het kamp.
+  fetch(k, game) {
+    if (k.fetch || k.meat <= 0 || game.night > 0.25 || dist(k, HOME) > 150) return;
+    const m = this.list.filter((q) => q.able && q.sick <= 0 && !q.carry && (q.state === 'idle' || q.state === 'wander' || (q.state === 'out' && !q.job.kill))).sort((a, b) => dist(a, k) - dist(b, k))[0];
+    if (!m || !game.dryPath(m, k)) return;
+    k.fetch = m; m.state = 'out'; m.job = { x: k.x, z: k.z, kill: k }; m.t = 100;
+  }
   helper(p) { const k = this.list[1]; return k.state === 'follow' && !k.carry && dist(k, p) < 9 ? k : null; }
 
   // Iets aan de groep geven. Geeft terug hoeveel de groep ervan opknapt (of null als ze het niet willen).
@@ -90,6 +104,17 @@ export class Group {
     if (dHome > 32) this.away = true;
     const greet = this.away && dHome < 17 && night < 0.6;
     if (greet) { this.away = false; game.event('home'); }
+    // overdag zoekt wie kan lopen zelf eten in de buurt: om de beurt gaat er één op pad
+    this.forT -= dt;
+    if (this.forT < 0) {
+      this.forT = 6;
+      const busy = this.list.some((m) => m.state === 'out' || m.state === 'gather' || (m.own && m.carry));
+      if (!busy && night < 0.2 && game.danger < 0.5 && game.state.group < 92) {
+        const can = this.list.filter((m) => m.able && m.state === 'idle' && m.sick <= 0 && m.busy <= 0 && !m.carry && !(m.calling && dist(m, p) < 12) && !(this.point && this.point.m === m && dHome < 14));
+        const m = can[Math.floor(Math.random() * can.length)], spot = m && game.foodSpot();
+        if (spot) { m.state = 'out'; m.job = spot; m.t = 70; this.forT = 28 + Math.random() * 24; }
+      }
+    }
     for (const m of this.list) {
       const d = dist(m, p) || 0.01, sx = HOME.x + m.spot[0], sz = HOME.z + m.spot[1];
       m.t -= dt; m.busy = Math.max(0, m.busy - dt);
@@ -98,7 +123,7 @@ export class Group {
       // wijzen doet hij als je bij hem staat, en alleen naar iets dat niet al voor je voeten ligt
       const P = this.point, pt = P && P.m === m && m.state === 'idle' && m.busy <= 0 && m.sick <= 0 && d < 8 && Math.hypot(P.x - p.x, P.z - p.z) > 3 ? P : null;
       const sleepy = night > 0.6;
-      if (m.carry && dist(m, HOME) < 11) { game.event('kemgift', m.carry); m.carry = null; }
+      if (m.carry && dist(m, HOME) < (m.own ? 5 : 11)) { game.event(m.own ? 'gift' : 'kemgift', m.carry); this.setCarry(m, null); m.own = false; }
       if (greet && m.child && m.sick <= 0) { m.state = 'greet'; m.t = 8; }
       switch (m.state) {
         case 'idle':
@@ -112,6 +137,16 @@ export class Group {
           if (gd < 0.5 || m.t < 0 || sleepy || m.calling || (P && P.m === m && d < 8)) { m.state = 'idle'; m.t = 4 + Math.random() * 9; m.fuss = Math.random() < 0.4; } else { tx = (m.goal.x - m.x) / gd; tz = (m.goal.z - m.z) / gd; spd = 1.1 * m.k; }
           break;
         }
+        case 'out': {   // op pad: naar een struik of boom met eten, of naar het dier waar jij staat te snijden
+          const J = m.job, gd = dist(m, J);
+          if (night > 0.25 || m.sick > 0 || m.t < 0 || (game.danger > 0.6 && !J.kill)) { m.state = 'toSpot'; break; }
+          if (gd > (J.kill ? 1.9 : 1.3)) { tx = (J.x - m.x) / gd; tz = (J.z - m.z) / gd; spd = (J.kill ? 4.2 : 2.9) * m.k; } else { m.state = 'gather'; m.t = J.kill ? 3.2 : 2.4; }
+          break;
+        }
+        case 'gather':   // plukken, rapen of snijden; daarna ermee naar het kamp
+          face = m.job;
+          if (m.t < 0) { const it = game.groupTake(m.job); if (it) { this.setCarry(m, it); m.own = true; } m.state = 'toSpot'; }
+          break;
         case 'greet':
           if (d < 2.4 || m.t < 0) { m.state = 'idle'; m.t = 6; } else { tx = (p.x - m.x) / d; tz = (p.z - m.z) / d; spd = 3.4 * m.k; }
           break;
@@ -141,7 +176,7 @@ export class Group {
       else if (m.state === 'rest') R.play('Crouch_Idle_Loop', { fade: 0.5 });
       else if (m.speed > 2) R.play('Jog_Fwd_Loop', { fade: 0.25, speed: m.speed / (3 * m.k) });
       else if (m.speed > 0.2) R.play('Walk_Loop', { fade: 0.3, speed: m.speed / (1.25 * m.k) });
-      else if (m.busy > 0) R.play('Interact', { fade: 0.25 });
+      else if (m.busy > 0 || m.state === 'gather') R.play('Interact', { fade: 0.25 });
       else if (m.calling === 'shiver') R.play('Crouch_Idle_Loop', { fade: 0.6 });   // ineengedoken van de kou
       else if (game.state.group < 15) R.play('Crouch_Idle_Loop', { fade: 0.6 });   // hongerig en slap
       else R.play(m.fuss && !pt ? 'Interact' : 'Idle_Loop', { fade: 0.5, speed: m.fuss && !pt ? 0.5 : 1 });

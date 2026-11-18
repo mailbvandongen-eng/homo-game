@@ -179,7 +179,7 @@ function cutKill() {
   k.meat--; state.hands[h] = 'meat'; renderHands(); sound.eat();
   toast(k.meat > 0 ? 'Je snijdt een lap vlees los. Er zit nog meer aan… maar hoe lang ben je hier nog alleen?' : 'Je snijdt de laatste lap vlees los.', 5);
   discover('kill'); discover('cut');
-  kemHelps(null, k);
+  kemHelps(null, k); group.fetch(k, predGame);
 }
 // met een afslag de huid van de prooi snijden
 function cutHide() {
@@ -280,12 +280,27 @@ function wake() {
 // loopt Kem met je mee, dan plukt of snijdt hij ook een deel
 function kemHelps(t, k) {
   const m = group.helper(player.pos); if (!m) return;
-  if (t && t.item === 'berry' && available(t)) { take(t); m.carry = 'berry'; }
-  else if (k && k.meat > 0) { k.meat--; m.carry = 'meat'; }
+  if (t && t.item === 'berry' && available(t)) { take(t); group.setCarry(m, 'berry'); }
+  else if (k && k.meat > 0) { k.meat--; group.setCarry(m, 'meat'); }
   else return;
   m.busy = 2;
   const what = m.carry === 'meat' ? 'snijdt ook een lap vlees los' : 'plukt ook een handvol';
   setTimeout(() => murmur(`Kem ${what}. Hij draagt het naar de boom.`, 4), 1800);
+}
+// De groep zoekt zelf ook eten. Waar: een bessenstruik of een vijg niet te ver van het kamp, over droog land te bereiken.
+// De laatste bessen aan een struik laten ze hangen, en ze plukken niet voor je neus weg.
+function dryPath(a, b) { for (let i = 1; i < 12; i++) { const k = i / 12; if (height(a.x + (b.x - a.x) * k, a.z + (b.z - a.z) * k) < 0.25) return false; } return true; }
+function foodSpot() {
+  const far = (t, o) => Math.hypot(t.x - o.x, t.z - o.z);
+  const c = things.filter((t) => ((t.bush && t.item === 'berry' && t.bush.left > 1) || (t.item === 'fig' && t.lies && !t.gone)) && far(t, HOME) < 75 && far(t, player.pos) > 7 && dryPath(HOME, t))
+    .sort((a, b) => far(a, HOME) - far(b, HOME)).slice(0, 3);
+  const t = c[Math.floor(Math.random() * c.length)];
+  return t ? { x: t.x, z: t.z, t } : null;
+}
+function groupTake(job) {
+  if (job.kill) { if (job.kill.meat <= 0) return null; job.kill.meat--; return 'meat'; }
+  const t = job.t; if (!available(t) || (t.bush && t.bush.left <= 1)) return null;
+  take(t); return t.item;
 }
 // een platte steen omdraaien: hij kantelt over zijn rand en valt ondersteboven naast zijn kuil
 const turning = [];
@@ -576,6 +591,12 @@ function aimRelease(cancel) {
 function quickThrow(m) { if (aimStart('tap', m)) aimRelease(); }
 // wat er in de wereld gebeurt rond de jacht van de sabeltandkatten
 function event(name, k) {
+  // iemand uit de groep komt terug met wat hij zelf vond, of met vlees van het dier waar jij sneed
+  if (name === 'gift') {
+    state.group = Math.min(100, state.group + (k === 'meat' ? 30 : k === 'fig' ? 3 : 2.5));
+    if (k === 'meat') { state.brought.meat = (state.brought.meat || 0) + 1; if (Math.hypot(HOME.x - player.pos.x, HOME.z - player.pos.z) < 25) sound.good(); }
+    return;
+  }
   if (name === 'kemgift') {
     state.group = Math.min(100, state.group + (k === 'meat' ? 30 : 8)); state.brought[k] = (state.brought[k] || 0) + 1;
     murmur(k === 'meat' ? 'Kem legt zijn lap vlees bij de boom. Ibo zit er al naast.' : 'Kem deelt zijn bessen uit bij de boom.', 4); sound.good();
@@ -604,7 +625,7 @@ function event(name, k) {
     murmur(loot ? 'Kleine Ibo rent je tegemoet: hij heeft gezien dat je iets bij je hebt!' : 'Kleine Ibo rent je tegemoet. Je bent weer bij de groep.', 4);
   }
 }
-const predGame = { player, state, sound, toast, murmur, carries, discover, bite, event, hyenas, night: 0, things, throws, group, leopard, sabres, carcass: CARCASS, drop: dropAtPos, removeThing, giveHand, renderHands, hurt, kemHelps, shield: false, quake: (v) => { cam.shake = Math.max(cam.shake, v); } };
+const predGame = { player, state, sound, toast, murmur, carries, discover, bite, event, hyenas, night: 0, things, throws, group, leopard, sabres, carcass: CARCASS, drop: dropAtPos, removeThing, giveHand, renderHands, hurt, kemHelps, foodSpot, groupTake, dryPath, shield: false, quake: (v) => { cam.shake = Math.max(cam.shake, v); } };
 
 // ---------- wat kun je aantikken? ----------
 const LOOK_TARGETS = [{ look: 'carcass', x: CARCASS.x, z: CARCASS.z }, { look: 'tree', x: HOME.x, z: HOME.z }];
@@ -802,6 +823,7 @@ function cutHerd() {
   k.meat--; state.hands[h] = 'meat'; renderHands(); sound.eat();
   toast(k.meat > 0 ? 'Je snijdt een lap vlees los. Er zit nog meer aan.' : 'Je snijdt de laatste lap vlees los.', 5);
   discover('cut'); discover('runcut');
+  group.fetch(k, predGame);
 }
 // slaan: met een steen of bot in je hand een harde klap, anders met je vuist
 function strike() {
