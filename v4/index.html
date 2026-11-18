@@ -25,7 +25,9 @@ canvas{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;display:blo
 .stat.on{opacity:1;transition:opacity .25s}
 .stat.low{animation:low 1.1s ease-in-out infinite}
 @keyframes low{50%{transform:scale(1.14)}}
-#statFood{--c:var(--sun)}#statWater{--c:#7fc3e6}#statHealth{--c:var(--red)}#statGroup{--c:var(--leaf)}#statSick{--c:#c9f28a;--v:0}
+.stat.blink{animation:blink 1s ease-in-out infinite}
+@keyframes blink{50%{opacity:.25}}
+#statFood{--c:var(--sun)}#statWater{--c:#7fc3e6}#statHealth{--c:var(--red)}#statGroup{--c:var(--leaf)}#statSick{--c:#c9f28a;--v:0}#statTired{--c:#e8c98a;--v:0}
 .stat.word{width:auto;height:26px;padding:0 9px 0 6px;border-radius:13px;display:flex;gap:5px;font-size:12px;font-weight:700;color:#f3e6cb;text-shadow:0 1px 2px #000}
 .stat.word::before{display:none}.stat.word svg{width:17px;height:17px}
 #homeDir{fill:var(--ink);stroke:#0009}
@@ -114,7 +116,6 @@ canvas{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;display:blo
 #senseVeil{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;transition:opacity .5s;background:radial-gradient(ellipse at center,transparent 45%,#0a1420cc 100%)}
 #senseVeil.on{opacity:.55;transition:opacity 1.8s}
 #hurt{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 40%,#c01010cc 100%);transition:opacity .5s}
-#weak{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 50%,#a01010b0 100%);transition:opacity .6s}
 #fade{position:fixed;inset:0;z-index:6;pointer-events:none;background:#000;opacity:0;transition:opacity 1.2s}
 
 /* ---------- vensters: gemaakt van wat er is. Homo habilis tekent in de grond; Homo erectus spant een huid op en tekent met houtskool en oker. ---------- */
@@ -196,10 +197,9 @@ li.no::before{background:none;box-shadow:inset 0 0 0 1px var(--faint)}
 <div id="senseVeil"></div>
 <div id="fade"></div>
 <div id="hurt"></div>
-<div id="weak"></div>
 <div id="rotate"><div><svg viewBox="0 0 48 48" fill="none" stroke="#f4f2ec" stroke-width="2.5" stroke-linejoin="round"><rect x="14" y="4" width="20" height="40" rx="4"/><path d="M21 38h6"/></svg>Draai je telefoon een kwartslag.<br>Dit spel speel je liggend.</div></div>
 <div class="hud" id="stats">
-  <div class="stat" id="statFood"></div><div class="stat" id="statWater"></div><div class="stat" id="statHealth"></div><div class="stat" id="statGroup"></div><div class="stat" id="statSick"></div>
+  <div class="stat" id="statFood"></div><div class="stat" id="statWater"></div><div class="stat" id="statHealth"></div><div class="stat" id="statGroup"></div><div class="stat" id="statSick"></div><div class="stat" id="statTired"></div>
   <div class="stat word" id="dayRow"><span id="dayIcon"></span><span id="dayLbl">1</span></div>
   <div class="stat word" id="homeRow"><span id="homeIcon"></span><svg id="homeDir" viewBox="0 0 24 24" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2l7 18-7-5-7 5z"/></svg><span id="homeDist"></span></div>
 </div>

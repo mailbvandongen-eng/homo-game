@@ -124,8 +124,8 @@ waar het opviel. Volgorde van bouwen = volgorde van de tabel.
 | 4 | **Meer eten in het land.** Botten met merg bij oude karkassen (gieren), vruchten onder bomen, noten kraken, knollen, meer eieren en honing; bessenstruik weg bij de slaapboom | alleen bessen is te mager | **klaar** (18-11, `forage.js`): per gebied twee vijgenbosjes (elke ochtend drie vijgen), drie baobabs (vrucht kraken met een kei; in de droogte staat hij kaal en liggen er drie), oude karkassen met gieren en mergbotten, knolplanten op het droge (graven met de stok), vaker een nest of bijen, meer honing. **Niet gebouwd:** marula en losse noten (geen bruikbaar model gevonden) |
 | 5 | **De groep doet zelf mee.** Volwassenen zoeken overdag zelf eten; bij een karkas draagt iemand mee | de groep stond te wachten naast een struik | **klaar** (18-11, `group.js`): overdag gaat om de beurt één volwassene zelf op pad naar een struik of vijgenbosje bij het kamp, plukt, draagt het in zijn hand terug en de groep eet (teken Groep stijgt een beetje). Snijd je vlees van een dier, dan komt er iemand aanrennen die zelf een stuk snijdt en naar het kamp draagt. Niet 's nachts, niet bij gevaar, de oude en het kind blijven |
 | 6 | **Roofdieren met een reden.** Hyena's komen alleen als er iets te halen is, waarschuwen eerst, bijten alleen wie alleen of gewond is of bij hun prooi staat | hyena's liepen doelloos rond of beten zonder aanleiding | **klaar** (18-11, `predators.js`): hyena's blijven bij hun karkas tot er iets te halen is; eerst grommen en omcirkelen, dan pas een uitval; niet bij wie iemand naast zich heeft; los vlees stelen ze, bij vlees in het kamp of een nacht zonder vuur draaien er twee om het kamp. Zie ANALYSE §16 |
-| 7 | **Moe zonder donker.** Moe merk je aan je lijf (trager, hijgen, niet rennen); donker is alleen de nacht | het beeld werd zwart tijdens het lopen | |
-| 8 | **Minder zwaar begin.** Voeding en water zakken de eerste dagen langzamer | het spel is te zwaar | |
+| 7 | **Moe zonder donker.** Moe merk je aan je lijf (trager, hijgen, niet rennen); donker is alleen de nacht | het beeld werd zwart tijdens het lopen | **klaar** (18-11): geen zwart beeld en geen rode waas meer. Moe = trager, niet rennen, hijgen, voorovergebogen, knipperend teken (longen). Wie instort, valt en krabbelt op in beeld. Zie ANALYSE §17 |
+| 8 | **Minder zwaar begin.** Voeding en water zakken de eerste dagen langzamer | het spel is te zwaar | **klaar** (18-11): start met voeding 70 en water 85; op dag 1 zakken ze op 55% van de snelheid, op dag 2 op 75% |
 
 | 9 | **Vormgeving uit de wereld.** Vensters van materiaal uit de tijd, iconen uit één gedownloade set (game-icons.net, CC BY 3.0), zo min mogelijk tekst, knoppen alleen als er iets kan, streepjes als kleine tekens | zie ANALYSE §13; keuze E: het materiaal groeit mee (habilis de grond, erectus de binnenkant van een huid) | **klaar** (18-11): alle iconen uit game-icons.net, vensters van grond of huid, koppen in Cabin Sketch, vier ronde tekens met leeglopende rand in plaats van balken, korte meldingen met teken + woord voor wat vaak gebeurt. De lange verhalende meldingen blijven tekst |
 
@@ -136,6 +136,23 @@ Vaste regels die hieruit volgen (gelden ook voor alles wat later komt):
 - Geen tekst op de plek van een duim.
 - Geen zelfgetekende iconen: alles uit dezelfde set, een ontbrekend icoon wordt uit die set afgeleid.
 - Een venster is van iets uit de wereld van dat tijdperk gemaakt.
+
+### Fase 5c — de groep trekt, elk gebied een eigen land (opdracht van Bob, 18-11-2026)
+
+Bob zag dat alle beelden op elkaar leken: vier gebieden op dezelfde kaart, met dezelfde boom, dezelfde olifant
+en dezelfde heuvel, en het kamp bijna op dezelfde plek. "Jagers-verzamelaars trekken toch rond? Nu zijn ze altijd daar. Dodelijk saai."
+
+Twee uitgangspunten, die voor alles gelden wat nog komt:
+- **Bij elke keuze over de omgeving en het spel: de beste, mooiste en meest uitgebreide optie.** Hoeveel werk het kost, telt niet mee.
+- **Deze mensen trekken rond.** Een gebied is een andere plek, geen andere opdracht op dezelfde plek.
+
+| # | Wat | Stand |
+|---|---|---|
+| 1 | **Elk gebied een eigen land.** Eigen vorm van het terrein, eigen kampplek (niet steeds een slaapboom), eigen bomen en planten, eigen grond, licht en lucht, eigen dieren en eigen blikvanger. Op één schermfoto bij het kamp zie je welk gebied het is | |
+| 2 | **Trekken binnen een gebied.** De groep blijft niet het hele seizoen op één plek: als het eten of het water opraakt, breekt ze op naar een volgende kampplek verderop | |
+| 3 | **Missies sturen je het land in.** Al in de eerste minuten weg van het kamp, naar wat dit gebied bijzonder maakt | |
+
+Vaste regel erbij: twee gebieden delen nooit dezelfde blikvanger (boom, dier, heuvel) op dezelfde plek.
 
 Regels die voor elke fase gelden:
 - Het spel blijft na elke fase speelbaar; bestaande functies verdwijnen niet zonder vervanging.

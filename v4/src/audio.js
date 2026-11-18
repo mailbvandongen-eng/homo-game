@@ -193,6 +193,8 @@ export class Sound {
   // slokken water
   sip() { if (!this.ctx) return; for (let i = 0; i < 3; i++) { this.burst(520 + Math.random() * 160, 0.09, 0.1, 'bandpass', i * 0.32, 5); this.tone(300, 0.08, 0.05, 'sine', -120, i * 0.32 + 0.05); } }
   // een droge keel: een korte, schorre kuch
+  // hijgen: adem in (hoog, kort), adem uit (lager, langer)
+  pant(v = 1) { if (!this.ctx) return; this.burst(1700, 0.2, 0.045 * v, 'bandpass', 0, 1.1); this.burst(900, 0.32, 0.07 * v, 'bandpass', 0.27, 1.1); }
   dry() { if (!this.ctx) return; this.burst(700, 0.12, 0.09, 'bandpass', 0, 1.5); this.burst(560, 0.16, 0.07, 'bandpass', 0.2, 1.5); }
   eat() { if (!this.ctx) return; for (let i = 0; i < 4; i++) this.burst(1400 + Math.random() * 800, 0.06, 0.09, 'bandpass', i * 0.13, 2); }
   crack() { if (!this.ctx) return; this.burst(900, 0.25, 0.35, 'bandpass', 0, 0.7); this.tone(180, 0.2, 0.15, 'triangle', -100); }

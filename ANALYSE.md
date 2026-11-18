@@ -368,3 +368,26 @@ veilige gebied 26 m in plaats van 11 m. Loop je alleen met een bot het kamp uit,
 
 **Eerlijk:** dicht bij de oerolifant komen ze niet (dat was al zo). De luipaard en de sabeltandkatten zijn niet
 veranderd; die hadden al een reden (nacht bij de bomen, hun eigen prooi).
+
+## 17. Wat in fase 5b stap 6 is gebouwd (moe zonder donker, lichter begin, 18-11-2026)
+
+**Wat er donker was.** Twee dingen maakten het beeld donker terwijl je liep: de rode waas om het beeld bij weinig
+gezondheid, en het bijna zwarte beeld als je instortte. Beide zijn weg. Het beeld wordt alleen nog donker in de nacht
+en als je gaat slapen.
+
+**Moe.** Hoe moe je bent volgt uit je lijf: honger (voeding onder 22), dorst (water onder 18) of weinig gezondheid
+(onder 40); de ergste van de drie telt. Je merkt het zo:
+- je loopt tot 30% trager, en rennen lukt steeds minder; wie echt moe is, kan alleen nog lopen;
+- je hijgt (adem in, adem uit; sneller als je loopt);
+- je loopt voorovergebogen met je hoofd omlaag en je borst gaat op en neer;
+- het teken met de longen knippert naast de andere tekens; de rand laat zien hoe moe.
+Eten, drinken of herstellen: het gaat vanzelf over.
+
+**Instorten.** Is je gezondheid op, dan val je achterover en blijf je vier tellen liggen. Daarna krabbel je op met
+gezondheid 35. Het beeld blijft open; je ziet wat er om je heen gebeurt.
+
+**Lichter begin.** Je begint met voeding 70 (was 55) en water 85 (was 75). Op dag 1 zakken voeding en water op 55% van
+de gewone snelheid, op dag 2 op 75%, vanaf dag 3 gewoon. Zo is er tijd om het land te leren kennen.
+
+**Eerlijk:** gezondheid was bij de start al 100 en kan niet hoger. Het teken Groep zakt even snel als eerst; daar helpt
+de groep nu zelf bij (§15). Ziek zijn (buikpijn) is niet veranderd.

@@ -103,7 +103,7 @@ addEventListener('resize', resize); resize();
 
 // ---------- toestand ----------
 const state = {
-  food: 55, water: 75, health: 100, sick: 0, hands: [null, null], rock: [null, null], rockKnown: new Set(), known: new Set(), found: new Set(),
+  food: 70, water: 85, health: 100, sick: 0, hands: [null, null], rock: [null, null], rockKnown: new Set(), known: new Set(), found: new Set(),
   started: false, collapsed: 0, sensing: false, finds: new Set(), carcassMeat: 1,
   past: [], group: 50, day: 1, sleeping: 0, slept: false, brought: {}, given: new Set(), bag: null, cloak: false, starve: 0, rainDay: 0, lost: false,
 };
@@ -984,6 +984,7 @@ const ui = {
 // eigen klok: tijd in seconden sinds de start
 const dir = new THREE.Vector3();
 let deepTold = false;
+let weary = 0, pantT = 0;
 let hintStage = 0, sneakNear = 0, playTime = 0, dayP = 0.12, lastPart = '', stepPhase = 0, danger = 0, groupWarn = 0, chased = false;
 
 function partOfDay(p) { return p < 0.06 ? 'dawn' : p < 0.7 ? 'day' : p < 0.8 ? 'evening' : p < 0.97 ? 'night' : 'dawn'; }
@@ -1015,7 +1016,11 @@ function update(dt) {
   else { stillT += dt; if (stillT > 3.5) setSense(true); }
 
   const sick = state.sick > 0;
-  player.update(dt, dir, { speed: sick ? 0.6 : state.food < 15 || state.water < 12 ? 0.8 : 1, sick }); cloakTick();
+  // moe: honger, dorst of een zwak lijf. Dat merk je aan je lijf (trager, hijgen, niet rennen), niet aan het beeld
+  const tire = !state.started ? 0 : Math.min(1, Math.max(0, (22 - state.food) / 22, (18 - state.water) / 18, (40 - state.health) / 40));
+  weary += (tire - weary) * Math.min(1, dt * 0.8);
+  player.update(dt, dir, { speed: sick ? 0.6 : 1 - weary * 0.3, sick, weary }); cloakTick();
+  if (weary > 0.25 && state.collapsed <= 0 && state.sleeping <= 0 && (pantT -= dt * (1 + player.speed * 0.3)) <= 0) { pantT = 1.9 - weary * 0.6; sound.pant(0.5 + weary * 0.5); }
   if (player.tooDeep) { player.tooDeep = false; if (!deepTold) { deepTold = true; note('water', 'Te diep', 3); } }
   // de dag
   if (state.started && !devFlags.noTime) dayP = (dayP + dt / DAY_LEN) % 1;
@@ -1102,8 +1107,9 @@ function update(dt) {
     } else state.starve = 0;
   }
   if (state.started && state.collapsed <= 0 && state.sleeping <= 0) {
-    thirst.tick(dt, { heat: Math.max(0, 1 - Math.abs(dayP - 0.4) / 0.22) * (1 - sky.cloud * 0.5), rain: sky.rain, running: player.speed > 4.5, off: devFlags.noHunger });
-    if (!devFlags.noHunger) state.food = Math.max(0, state.food - dt * 0.18 * (predGame.night > 0.6 && !state.cloak && !(fire && fire.warm(player.pos)) ? AREA.cold || 1.5 : 1));   // kou vreet energie
+    const ease = state.day <= 1 ? 0.55 : state.day === 2 ? 0.75 : 1;   // de eerste dagen heb je de tijd om het land te leren kennen
+    thirst.tick(dt * ease, { heat: Math.max(0, 1 - Math.abs(dayP - 0.4) / 0.22) * (1 - sky.cloud * 0.5), rain: sky.rain, running: player.speed > 4.5, off: devFlags.noHunger });
+    if (!devFlags.noHunger) state.food = Math.max(0, state.food - dt * 0.18 * ease * (predGame.night > 0.6 && !state.cloak && !(fire && fire.warm(player.pos)) ? AREA.cold || 1.5 : 1));   // kou vreet energie
     if (sick) { state.sick -= dt; state.health -= dt * 0.9; if (state.sick <= 0) toast('De pijn is vanzelf gezakt. Dat duurde lang…'); }
     else if (state.food < 12 || state.water <= 0) state.health -= dt * 0.5;
     else if (state.food > 40 && state.water > 25) state.health = Math.min(100, state.health + dt * 0.6);
@@ -1113,14 +1119,14 @@ function update(dt) {
     state.collapsed -= dt;
     if (state.collapsed <= 0) {
       state.health = 35; state.food = Math.max(state.food, 30); state.sick = 0;
-      $('fade').style.opacity = 0;
+      player.rise();
       toast('Je komt langzaam weer bij. Je bent zwak. Zoek eten en neem het rustig aan.', 6);
     }
   }
   $('dayLbl').textContent = state.day;
   // een pijltje naar de slaapboom als je ver weg bent
   const hdx = HOME.x - player.pos.x, hdz = HOME.z - player.pos.z, hd = Math.hypot(hdx, hdz);
-  bodySignals(dt, sick, hd);
+  bodySignals(dt, sick, hd, weary);
   if (player.sneaking && !coverTold && player.nearCover) { coverTold = true; murmur('Gebukt achter een rots of struik ben je onzichtbaar voor wie aan de andere kant staat.', 6); }
   // moet je naar huis (avond, nacht, of eten voor de groep in je handen), dan wijst een pijl aan de schermrand de weg
   const homeward = ['evening', 'night'].includes(partOfDay(dayP)) || !!handOver() || state.sensing;
@@ -1165,7 +1171,7 @@ function update(dt) {
 
 function collapse() {
   state.collapsed = 4; state.health = 0; walkTo = null;
-  $('fade').style.opacity = 0.85;
+  player.fall();
   toast('Je bent te zwak en zakt in elkaar…', 4);
 }
 

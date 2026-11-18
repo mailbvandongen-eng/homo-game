@@ -206,6 +206,10 @@ export class Hominin {
     this.once = { a, len: a.getClip().duration * upto, at: a.getClip().duration * at, onAt, slow };
   }
 
+  // te zwak: je zakt in elkaar en blijft liggen, tot rise() je weer overeind laat komen
+  fall() { this.playOnce('Death01', { speed: 1.1, slow: 0, upto: 0.96 }); if (this.once) this.once.hold = true; }
+  rise() { const O = this.once; if (!O || !O.hold) return; O.back = true; O.a.paused = false; O.a.timeScale = -0.9; }
+
   initState() {
     this.pos = new THREE.Vector3(AREA.start[0], 0, AREA.start[1]);
     this.y = 0; this.vy = 0; this.onGround = true; this.jumpReq = false; this.landed = false; this.fell = 0; this.top = 0; this.lastX = 1e9; this.lastZ = 1e9; this.blocked = false;
@@ -226,6 +230,8 @@ export class Hominin {
     let want = this.sneaking ? 1.6 * mag : mag < 0.7 ? 2.6 * mag / 0.7 : 2.6 + (mag - 0.7) / 0.3 * 2.8;
     if (this.once) want *= this.once.slow;   // tijdens slaan loop je bijna niet
     if (this.toss) want *= 0.3;              // en tijdens mikken en gooien ook niet
+    // moe: rennen lukt steeds minder, tot je alleen nog kunt lopen
+    if (mods.weary > 0) want = Math.min(want, 5.4 - 2.8 * THREE.MathUtils.smoothstep(mods.weary, 0.2, 0.6));
     const max = want * mods.speed * BODY.speed * (riverDist(this.pos.x, this.pos.z) < 6 || height(this.pos.x, this.pos.z) < -0.45 ? 0.45 : 1);
     const target = mag > 0.001 ? dir.clone().normalize().multiplyScalar(max) : dir.clone().set(0, 0, 0);
     this.vel.lerp(target, 1 - Math.exp(-dt * (this.onGround ? 6 : 1.5)));
@@ -393,8 +399,9 @@ export class Hominin {
     if (this.once) {
       const O = this.once, t = O.a.time;
       if (O.onAt && t >= O.at) { const f = O.onAt; O.onAt = null; f(); }
-      o = Math.min(1, t / 0.12, (O.len - t) / 0.18);
-      if (t >= O.len - 0.001) { O.a.setEffectiveWeight(0); O.a.stop(); this.once = null; o = 0; }
+      o = Math.min(1, t / 0.12, O.hold ? 1 : (O.len - t) / 0.18);
+      if (O.hold && !O.back && t >= O.len - 0.12) { O.a.paused = true; O.a.time = O.len; }   // blijven liggen
+      if (O.hold ? O.back && t <= 0.03 : t >= O.len - 0.001) { O.a.setEffectiveWeight(0); O.a.stop(); this.once = null; o = 0; }
       else O.a.setEffectiveWeight(Math.max(0, o));
     }
     for (const n in L) L[n].a.setEffectiveWeight(L[n].w * (1 - o));
@@ -403,6 +410,11 @@ export class Hominin {
     const side = r.side(this._side || (this._side = new THREE.Vector3()));
     if (this.feet) this.feet.update(dt, this.onGround, side);
     if (sick) r.bend(r.bone('spine_02'), side, 0.35);
+    // moe: schouders naar voren, hoofd omlaag, en je borst gaat zwaar op en neer
+    else if (mods.weary > 0.05 && !this.once) {
+      const w = mods.weary, breath = Math.sin(this.time * (3.2 + w * 2.4));
+      r.bend(r.bone('spine_02'), side, w * (0.2 + 0.07 * breath)); r.bend(r.bone('head'), side, w * (0.16 - 0.05 * breath));
+    }
     if (this.lookYaw && !this.once) r.bend(r.bone('head'), this._up || (this._up = new THREE.Vector3(0, 1, 0)), this.lookYaw * 0.7);
     if (this.toss) this.tossPose(dt, r);
   }
