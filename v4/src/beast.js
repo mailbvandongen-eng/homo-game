@@ -483,7 +483,7 @@ export class Beast {
   }
   cut(game) {
     const T = this.T;
-    if (!(game.state.hands.includes('flake') || game.state.hands.includes('axe'))) { game.toast(T.thick, 5); return; }
+    if (!(game.state.hands.includes('flake') || game.state.hands.includes('axe'))) { game.need('flake', T.thick); return; }
     if (!game.giveHand('meat')) return;
     this.meat--; this.cuts++; game.sound.eat(); game.discover('cut'); game.discover(this.P.dies.feast);
     game.toast(this.meat > 0 ? T.cut : T.cutLast, 4);

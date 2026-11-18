@@ -4,7 +4,7 @@ import { ERAS, ERA, AREA } from '../eras/index.js';
 import { HOME } from '../group.js';
 import { Save, DEV } from '../save.js';
 import { ICON } from '../icons.js';
-import { $, say, toast, title, showCard, closeCard } from '../engine/ui.js';
+import { $, toast, title, sign, showCard, closeCard } from '../engine/ui.js';
 
 // Missies: wie in de groep iets nodig heeft roept en wenkt; aantikken is aannemen. Alle missies klaar: de groep trekt verder.
 export function initMissions(G) {
@@ -39,7 +39,7 @@ export function initMissions(G) {
     const m = offerOf(g); if (!m) return;
     closeRadial(); start(m, 0); follow(m); g.busy = 3;
     G.camTurn = { x: g.x, z: g.z, t: 1.8 };
-    sound.mission(); title('Missie', m.title, m.ask);
+    sound.mission(); title('Missie', m.title, m.ask); show(m, g);
   }
   function complete(m) {
     const e = entryOf(m);
@@ -48,21 +48,22 @@ export function initMissions(G) {
     if (mission.cur === m) follow(mission.active.length ? mission.active[0].m : null);
     showLine();
     state.group = Math.min(100, state.group + 10);
-    sound.discover(); title('Missie volbracht', m.title, m.end, 4.5);
+    sound.discover(); title('Missie volbracht', m.title, m.end); if (e) show(m, e.giver, 'check');
     if (mission.done.size === MISSIONS.length) mission.endT = 7;
   }
   // wat de vrager wil hebben, als teken
   const WANT = { flake: 'flake', hyena: 'hyena', bag: 'pouch', cloak: 'hide', water: 'waterbag', stick: 'stick', fish: 'fish', sick: 'leaf', axe: 'axe', fire: 'fire', keep: 'fire', camp: 'fire', roast: 'roast', glass: 'flake', run: 'run' };
   const face = initPortrait(G);
-  // het overzicht: per missie wie het vroeg, kerfjes voor de stappen; van de missie die je volgt ook de stappen zelf
+  // een missie begint of is klaar: het gezicht van wie het vroeg en het teken van wat hij wil (of een vinkje), zonder woorden
+  function show(m, g, mark) { sign(`<img alt="" src="${face(g)}">${ICON[WANT[m.id]] || ''}${mark ? ICON[mark] : ''}`, 4, mark ? 'good' : ''); }
+  // het overzicht: per missie het gezicht van wie het vroeg, het teken van wat hij wil en een kerfje per stap. Geen woorden.
   function missionInfo() {
     if (!mission.active.length) return;
     const row = (e) => {
       const m = e.m, n = stepOf(m), on = m === mission.cur;
-      return `<button class="mrow${on ? ' now' : ''}" data-m="${m.id}"><img class="mface" alt="${NAMES[m.who]}" src="${face(e.giver)}"><span class="mwant">${ICON[WANT[m.id]] || ''}</span><b>${m.title}</b><span class="notch">${m.steps.map((x, i) => `<i class="${i < n ? 'ok' : i === n ? 'at' : ''}"></i>`).join('')}</span>`
-        + (on ? `<ol class="steps">${m.steps.map((x, i) => `<li class="${i < n ? 'ok' : i === n ? 'now' : ''}">${x.t}</li>`).join('')}</ol>` : '') + '</button>';
+      return `<button class="mrow${on ? ' now' : ''}" data-m="${m.id}" aria-label="${m.title}"><img class="mface" alt="" src="${face(e.giver)}"><span class="mwant">${ICON[WANT[m.id]] || ''}</span><span class="notch">${m.steps.map((x, i) => `<i class="${i < n ? 'ok' : i === n ? 'at' : ''}"></i>`).join('')}</span></button>`;
     };
-    showCard(`<div class="eyebrow">Missies</div><div class="mlist">${mission.active.map(row).join('')}</div>`);
+    showCard(`<div class="mlist">${mission.active.map(row).join('')}</div>`);
     mission.viewing = true;
     $('card').onpointerdown = (e) => e.stopPropagation();
     for (const b of $('card').querySelectorAll('.mrow')) b.onclick = () => { const m = MISSIONS.find((x) => x.id === b.dataset.m); if (m === mission.cur) closeCard(); else { follow(m); sound.pick(); missionInfo(); } };
@@ -88,14 +89,13 @@ export function initMissions(G) {
     g.busy = Math.max(g.busy, 1.6);
   }
   // Alles is hier gedaan: de groep trekt verder. Meegaan = bewaren met het nieuwe gebied en de wereld opnieuw opbouwen.
+  // Geen afscheidstekst: Tor wenkt, en bij hem kies je met twee tekens: meelopen of nog blijven.
   function endCard() {
-    const o = AREA.outro;
-    showCard(`<div class="eyebrow">${AREA.name}</div><h2>${o.title}</h2>${o.text.map((p) => `<p>${p}</p>`).join('')}` + (NEXT
-      ? '<div class="row"><button class="btn" id="goNext">' + (o.go || 'Trek mee') + '</button><button class="btn ghost" id="stayHere">Nog even blijven</button></div>'
-      : `<p class="fine">${o.fine}</p>`));
     if (!NEXT) return;
+    const tor = group.list.find((g) => g.id === 'tor');
+    showCard(`<div class="choice"><img class="mface" alt="" src="${face(tor)}"><button class="rb" id="goNext" aria-label="Trek mee">${ICON.steps}</button><button class="rb" id="stayHere" aria-label="Nog even blijven">${ICON.home}</button></div>`);
     $('card').onpointerdown = (e) => e.stopPropagation();
-    $('stayHere').onclick = () => { closeCard(); toast('Tor wacht bij de slaapboom. Tik hem aan als je mee wilt.', 6); };
+    $('stayHere').onclick = closeCard;
     $('goNext').onclick = travel;
   }
   function travel() {
@@ -130,7 +130,7 @@ export function initMissions(G) {
       if (mission.endT <= 0 && !calm) mission.endT = 1;
       else if (mission.endT <= 0) {
         mission.over = true; clear(); showLine(); for (const g of group.list) { g.calling = null; g.mark.visible = false; }
-        endCard();
+        sound.mission();
         return;
       }
     }
@@ -170,18 +170,15 @@ export function initMissions(G) {
       const spot = G.spotOf(mission.cur.steps[n].find || null);
       group.point = spot && mission.giver && !night ? { m: mission.giver, x: spot.x, z: spot.z } : null;
     }
-    // een stap gelukt: een kort geluid en een vinkje voor de regel, geen scherm
-    if (n !== mission.shown) { if (mission.shown >= 0) { sound.good(); mission.tickT = 2.5; } mission.shown = n; mission.lineT = 7; }
-    mission.tickT -= dt; $('quest').classList.toggle('tick', mission.tickT > 0);
-    if (!$('title').classList.contains('on')) mission.lineT -= dt;   // eerst de titel, dan de regel
-    showLine(mission.cur.steps[n].t, mission.lineT > 0 || state.sensing);
+    // een stap gelukt: een kort geluid en een vinkje bij het teken, geen scherm
+    if (n !== mission.shown) { if (mission.shown >= 0) { sound.good(); sign(ICON[WANT[mission.cur.id]] + ICON.check, 2.2, 'good'); } mission.shown = n; }
+    showLine(mission.cur.steps[n].t);
   }
-  // in beeld: één kleine regel met de stap van nu, die weer vervaagt; het teken ernaast blijft zolang er iets loopt
-  function showLine(text, on) {
+  // in beeld staat alleen het teken rechtsboven, zolang er iets loopt. De stap zelf wordt bijgehouden voor de tests.
+  function showLine(text) {
     const n = mission.active.length;
     $('questBtn').classList.toggle('show', n > 0); $('questN').textContent = n > 1 ? n : '';
-    if (text !== undefined && $('questT').textContent !== say(text)) $('questT').textContent = say(text);
-    $('quest').classList.toggle('on', !!on && n > 0 && !$('title').classList.contains('on'));
+    if (text !== undefined) $('questT').textContent = text;
   }
   // terloopse opmerkingen leiden af; ze komen alleen nog als ze bij je missie horen
   function murmur(text, sec, tag) { if (tag && mission.cur && mission.cur.tag === tag) toast(text, sec); }

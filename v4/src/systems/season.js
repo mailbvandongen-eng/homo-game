@@ -1,7 +1,7 @@
 import * as THREE from '../../lib/three.module.js';
 import { ITEMS } from '../items.js';
 import { HOME } from '../group.js';
-import { $, toast, showCard } from '../engine/ui.js';
+import { $, toast } from '../engine/ui.js';
 import { DRY_DAYS } from './weather.js';
 
 // Het droge seizoen en de nieuwe dag.
@@ -61,8 +61,9 @@ export function initSeason(G) {
     } else if (g >= 25) { title = 'De magen knorren'; text = 'Iedereen is er nog, maar er is weinig over. Tor heeft geen kracht om stenen te slaan.'; }
     else { title = 'De groep is zwak'; text = 'Kleine Ibo huilt van de honger. Als er vandaag niets komt, trekt de groep verder zonder jou.'; }
     if (rain) title = 'De regen is gekomen';
-    const got = how === 'lost' ? '' : `<p>${list ? 'Gisteren bracht je: ' + list + '.' : 'Gisteren bracht je niets naar de boom.'}</p>`;
-    showCard(`<div class="eyebrow">Dag ${state.day}</div><h2>${title}</h2><p>${text}</p>${got}<p class="know">${hint}</p>`);
+    const got = how === 'lost' ? '' : list ? 'Gisteren bracht je: ' + list + '.' : 'Gisteren bracht je niets naar de boom.';
+    // geen dagkaart: de nieuwe dag zie je aan het licht en aan de groep. De tekst wordt alleen bijgehouden voor de tests.
+    toast(`Dag ${state.day}. ${title}. ${text} ${got} ${hint}`);
   }
   // de groep heeft te lang niets gehad en trekt verder
   function groupLeaves() {

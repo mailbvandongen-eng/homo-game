@@ -51,7 +51,7 @@ export function plantMesh() {
 // een knol loswrikken (aan de oever, en overal waar zo'n plant staat)
 export function digTuber(p, game) {
   if (p.left <= 0) return;
-  if (!game.state.hands.includes('stick')) { game.toast('De korst is keihard. Met je vingers kom je er niet doorheen.', 4); return; }
+  if (!game.state.hands.includes('stick')) { game.need('stick', 'De korst is keihard. Met je vingers kom je er niet doorheen.'); return; }
   if (!game.giveHand('tuber')) return;
   p.left = 0; p.g.scale.setScalar(0.5); p.g.rotation.z = 0.5; game.sound.crack();
   game.toast(game.state.found.has('tuber') ? 'Je wrikt weer een knol los.' : 'Je steekt de punt onder de korst en wrikt. De grond breekt open: een dikke, bleke knol!', 5);

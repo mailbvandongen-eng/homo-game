@@ -1,13 +1,13 @@
 import { height, poolAt, WATER } from '../world.js';
-import { toast } from '../engine/ui.js';
+import { toast, need } from '../engine/ui.js';
 
 // Dorst. Je lijf verliest water: in de hitte van de middag en als je rent het snelst. Drinken doe je aan de rivier of het meer.
 // Stilstaand water in een poel maakt ziek. In de maag van een dier kun je water meedragen: voor onderweg, of voor de groep.
-const FULL_DAY = 14 * 60;   // zo lang doe je in de schaduw met een volle buik water
+const FULL_DAY = 2 * 14 * 60;   // zo lang doe je in de schaduw met een volle buik water: twee hele dagen
 
 export function initThirst(G) {
   const { state, player, sound, discover, renderHands, freeHand, handsFull } = G;
-  let told = false, dryT = 6;
+  let told = false, dryT = 6, sipT = 0;
 
   // sta je aan of in het water? 'river' (stromend, of het meer), 'pool' (stilstaand) of null
   function waterAt() {
@@ -23,7 +23,14 @@ export function initThirst(G) {
   // heat: 0..1 hoe heet het is · rain: 0..1 · running: ren je?
   function tick(dt, { heat, rain, running, off }) {
     if (off) return;
-    const k = (1 + heat * 0.7) * (running ? 1.5 : 1) * (1 - Math.min(1, rain * 1.5) * 0.8);
+    // Sta je in stromend water, dan drink je vanzelf: je hoeft er geen knop voor te zoeken. (Een poel is anders: daar kies je zelf.)
+    const p = player.pos;
+    if (state.water < 100 && height(p.x, p.z) < WATER - 0.02 && !poolAt(p.x, p.z)) {
+      state.water = Math.min(100, state.water + dt * 16);
+      if ((sipT -= dt) <= 0) { sipT = 1.3; sound.sip(); discover('drink'); }
+      return;
+    }
+    const k = (1 + heat * 0.4) * (running ? 1.3 : 1) * (1 - Math.min(1, rain * 1.5) * 0.8);
     state.water = Math.max(0, state.water - dt * 100 / FULL_DAY * k);
     if (state.water >= 30) { told = false; return; }
     dryT -= dt;
@@ -64,7 +71,7 @@ export function initThirst(G) {
   // met iets scherps de maag uit een vers gedood dier snijden
   function cutPouch(k) {
     if (!k || k.noPouch) return;
-    if (!G.sharp()) { toast('Met je handen krijg je de buik niet open. Je hebt iets scherps nodig.', 5); return; }
+    if (!G.sharp()) { need('flake', 'Met je handen krijg je de buik niet open. Je hebt iets scherps nodig.'); return; }
     if (freeHand() < 0) { handsFull(); return; }
     k.noPouch = true; state.hands[freeHand()] = 'pouch'; renderHands(); sound.eat();
     if (!state.known.has('pouch')) toast('Je snijdt de maag los en knijpt hem leeg. Een taaie, lege zak. Wat zou erin kunnen?', 6);

@@ -387,7 +387,7 @@ export class Fire {
     const s = game.state;
     if (!s.hands.includes('axe')) {
       game.sound.bad();
-      game.toast(s.hands.includes('flake') ? 'Je snijdt met de scherf in de tak. Het lukt niet: de scherf is te klein.' : 'Je trekt hard aan een tak. Hij buigt, maar breekt niet. Je hebt iets zwaars en scherps nodig.', 5);
+      game.need('axe', s.hands.includes('flake') ? 'Je snijdt met de scherf in de tak. Het lukt niet: de scherf is te klein.' : 'Je trekt hard aan een tak. Hij buigt, maar breekt niet. Je hebt iets zwaars en scherps nodig.');
       return;
     }
     if (w.cool > 0) return;

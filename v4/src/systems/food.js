@@ -14,9 +14,12 @@ export function initFood(G) {
     setTimeout(() => sound.voice(k), 650);
   }
   const FOOD = { berry: 15, redberry: 5, roast: 55, meat: 35, egg: 20, honey: 30, tuber: 18, fish: 30, fig: 12 };
+  // sappig eten lest ook je dorst: een knol is voor wie ver van het water woont bijna een waterzak
+  const JUICE = { berry: 6, redberry: 4, fig: 9, tuber: 14, fish: 5, meat: 4, egg: 6, honey: 2 };
   function eat(it) {
     player.action = 0.5; sound.eat(); taste(it);
     state.food = Math.min(100, state.food + (FOOD[it] || 0));
+    state.water = Math.min(100, state.water + (JUICE[it] || 0));
     if (it === 'roast') { state.health = Math.min(100, state.health + 5); state.ate = { ...state.ate, roast: true }; }
     if (it === 'honey') state.health = Math.min(100, state.health + 8);
     if (it === 'redberry') state.sick = 75;
@@ -43,7 +46,7 @@ export function initFood(G) {
   function crackFruit() {
     const b = state.hands.indexOf('baobab'); if (b < 0) return;
     state.hands[b] = null; renderHands(); player.action = 0.5; sound.crack();
-    state.food = Math.min(100, state.food + 26); state.water = Math.min(100, state.water + 4);
+    state.food = Math.min(100, state.food + 26); state.water = Math.min(100, state.water + 8);
     state.known.add('baobab'); taste('baobab'); discover('baobab');
   }
   // met een afslag de laatste reepjes vlees van het karkas snijden

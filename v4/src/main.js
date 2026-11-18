@@ -2,7 +2,7 @@ import * as THREE from '../lib/three.module.js';
 import { rigDetail } from './rig.js';
 import { buildWorld, height, tallGrassAt, blockers, cover, surface, steep, groundAt, riverDist, WIND } from './world.js';
 import { Hominin, Herd, Vultures, carcass } from './actors.js';
-import { ITEMS, ROCKS, DISCOVERIES, LOOKS, VERDICT, FINDS, placeItems, heldMesh } from './items.js';
+import { DISCOVERIES, LOOKS, VERDICT, FINDS, placeItems, heldMesh } from './items.js';
 import { Hyenas, Leopard, Throws } from './predators.js';
 import { Zebras, Sabres } from './hunt.js';
 import { Group, HOME } from './group.js';
@@ -11,13 +11,13 @@ import { Save, DEV } from './save.js';
 import { Glints, Motes, Birds, Butterflies, Senses } from './life.js';
 import { Sound } from './audio.js';
 import { loadAssets } from './assets.js';
-import { ICON, ITEM_ICON } from './icons.js';
+import { ICON } from './icons.js';
 import { Encounters } from './encounters.js';
 import { Beast } from './beast.js';
 import { BEASTS } from './beasts.js';
 import { Shore, digTuber } from './shore.js';
 import { Fire } from './fire.js';
-import { $, toast, note, title, showCard, closeCard, uiTick } from './engine/ui.js';
+import { $, toast, note, need, sign, title, closeCard, uiTick } from './engine/ui.js';
 import { initControls } from './engine/controls.js';
 import { lowerAuto } from './engine/settings.js';
 import { initMenu } from './systems/menu.js';
@@ -51,8 +51,8 @@ renderer.toneMappingExposure = 1.05;
 document.body.prepend(renderer.domElement);
 
 // eerst de gescande natuur laden; daarna begint het spel vanzelf
-const loading = document.getElementById('loading');
-const A = await loadAssets(renderer, (f) => { loading.textContent = `Laden… ${Math.round(f * 100)}%`; }, [...(AREA.models || []), BEASTS[AREA.beast.kind].model], AREA.textures).catch((e) => {
+const loading = document.getElementById('loading'); loading.className = 'hud stat on'; loading.style.setProperty('--c', '#f3e6cb'); loading.style.setProperty('--v', 0);
+const A = await loadAssets(renderer, (f) => { loading.style.setProperty('--v', Math.round(f * 100)); }, [...(AREA.models || []), BEASTS[AREA.beast.kind].model], AREA.textures).catch((e) => {
   // nooit stil blijven hangen op 'Laden…': zeg wat er mis is
   loading.textContent = e.message + '. Controleer je verbinding en laad de pagina opnieuw.'; loading.style.maxWidth = '80vw';
   throw e;
@@ -125,7 +125,7 @@ function discover(id) {
 const G = {
   state, player, scene, renderer, things, hyenas, sabres, group, beast, shore, forage, fire, herd, sound, closeRadial, openRadial, dropAt, act, sharp, discover, carcassNear, hiveNear, spotOf,
   get predGame() { return predGame; }, get dayP() { return dayP; }, set dayP(v) { dayP = v; }, get danger() { return danger; }, get aim() { return aim; },
-  get camYaw() { return cam.yaw; }, set camTurn(v) { cam.turnTo = v; }, get clock() { return clock; }, stopWalk() { walkTo = null; }, get walking() { return !!walkTo; },
+  get camYaw() { return cam.yaw; }, get camera() { return camera; }, set camTurn(v) { cam.turnTo = v; }, get clock() { return clock; }, stopWalk() { walkTo = null; }, get walking() { return !!walkTo; },
 };
 let homeShown = false;
 const carry = initCarry(G), { renderHands, freeHand, handsFull, giveHand, renderBag, stow, unstow, makeBag, wearHide, putCloak, cloakTick } = carry;
@@ -146,35 +146,19 @@ const menu = initMenu({ sound, renderer, world, journal: () => journal(), restar
 
 // ---------- je handen, je tas, eten en maken: zie systems/carry.js, food.js en craft.js ----------
 
-// ---------- bekijken ----------
+// ---------- een vondst ----------
+// Wat je vindt, komt in je boekje (in het menu); in het spel zelf hoor je het en zie je het teken.
+function found(f) { toast('Vondst: ' + f.name); sign(ICON.book, 3, 'good'); }
 function lookAt(target) {
-  if (target.find && !state.finds.has(target.find)) {
-    state.finds.add(target.find); sound.discover();
-    const f = FINDS[target.find];
-    showCard(`<div class="eyebrow">Vondst</div><h2>${f.name}</h2><p>${f.text}</p><p class="know">Je vondst staat in je boekje.</p>`);
-    return;
-  }
-  if (target.look) {
-    const L = (target.member && target.member.look && target.member) || LOOKS[target.look];
-    showCard(`<div class="eyebrow">Bekijken</div><h2>${L.name}</h2><p>${L.look}</p><p class="q">${L.hint}</p>`);
-    return;
-  }
-  const it = target.item;
-  let def = ITEMS[it], known = state.known.has(it);
-  if (it === 'stone' && target.rock) {
-    const R = ROCKS[target.rock.type], tried = state.rockKnown.has(target.rock.type);
-    def = { name: R.name, look: R.look + (target.rock.hits ? ' Er zitten verse butsen in.' : ''), known: tried ? R.good : def.known + ' Maar is elke kei hetzelfde?', unknown: def.unknown };
-    known = known || tried;
-  }
-  showCard(`<div class="eyebrow">Bekijken</div><span class="big">${ITEM_ICON[it]}</span><h2>${def.name}</h2><p>${def.look}</p>
-    <p class="${known ? 'know' : 'q'}">${known ? def.known : def.unknown}</p>`);
+  if (!target.find || state.finds.has(target.find)) return;
+  state.finds.add(target.find); sound.discover(); found(FINDS[target.find]);
 }
 
 // ---------- eten en doen ----------
 // met een afslag een lap vlees van de verse prooi snijden
 function cutKill() {
   const k = sabres.kill; if (!k || k.meat <= 0) return;
-  if (!sharp()) { toast('Met je handen krijg je de taaie huid niet open. Je hebt iets scherps nodig.', 5); return; }
+  if (!sharp()) { need('flake', 'Met je handen krijg je de taaie huid niet open. Je hebt iets scherps nodig.'); return; }
   const h = freeHand();
   if (h < 0) { handsFull(); return; }
   k.meat--; state.hands[h] = 'meat'; renderHands(); sound.eat();
@@ -185,7 +169,7 @@ function cutKill() {
 // met een afslag de huid van de prooi snijden
 function cutHide() {
   const k = sabres.kill; if (!k || !k.hide) return;
-  if (!sharp()) { toast('Met je handen krijg je de taaie huid niet los. Je hebt iets scherps nodig.', 5); return; }
+  if (!sharp()) { need('flake', 'Met je handen krijg je de taaie huid niet los. Je hebt iets scherps nodig.'); return; }
   const h = freeHand();
   if (h < 0) { handsFull(); return; }
   k.hide -= 1; state.hands[h] = 'hide'; renderHands(); sound.eat(); killLook(k);
@@ -272,7 +256,7 @@ function wake() {
     newDay('lost');
     return;
   }
-  state.health = Math.min(100, state.health + 25 + state.group * 0.5); state.food = Math.max(8, state.food - 8); state.water = Math.max(10, state.water - 20); state.sick = 0;
+  state.health = Math.min(100, state.health + 25 + state.group * 0.5); state.food = Math.max(8, state.food - 8); state.water = Math.max(25, state.water - 10); state.sick = 0;
   newDay('slept');
   discover('sleep');
   if (fire) fire.morning(predGame, dayP);
@@ -331,7 +315,7 @@ function turnStone(t) {
   } else if (FINDS[t.under]) {
     state.finds.add(t.under); sound.discover();
     const f = FINDS[t.under];
-    showCard(`<div class="eyebrow">Vondst</div><h2>${f.name}</h2><p>${f.text}</p><p class="know">Je vondst staat in je boekje.</p>`);
+    found(f);
   }
 }
 // De wereld wijst de weg: waar is het dichtstbijzijnde van wat een missiestap vraagt? Wie de missie gaf wijst erheen,
@@ -401,7 +385,6 @@ function openRadial(target) {
   if (target.more) opts.push(...target.more);
   else if (target.hand !== undefined) {
     const i = target.hand, it = state.hands[i];
-    opts.push({ t: 'Bekijk', icon: ICON.eye, fn: () => lookAt({ item: it, rock: state.rock[i] }) });
     if (EDIBLE.has(it)) opts.push({ t: state.known.has(it) ? 'Eet' : 'Proef', icon: ICON.mouth, q: !state.known.has(it), fn: () => { state.hands[i] = null; renderHands(); eat(it); } });
     if (it === 'waterbag') opts.push({ t: 'Drink', icon: ICON.drink, fn: () => thirst.drinkBag(i) });
     if (it === 'pouch' && thirst.waterAt() === 'river') opts.push({ t: 'Vul met water', icon: ICON.fill, fn: () => act('PickUp_Table', () => thirst.fill(i), 1.4) });
@@ -409,10 +392,9 @@ function openRadial(target) {
     if (state.bag && it !== 'torch' && state.bag.includes(null)) opts.push({ t: 'Stop in je tas', icon: ICON.stow, fn: () => stow(i) });
     opts.push({ t: 'Leg neer', icon: ICON.drop, fn: () => { state.hands[i] = null; renderHands(); dropAt(it); } });
   } else if (target.kind === 'turn') {
-    opts.push({ t: 'Bekijk', icon: ICON.eye, fn: () => lookAt(target) });
     opts.push({ t: 'Draai om', icon: ICON.turn, fn: () => goAndDo(target, () => act('PickUp_Table', () => turnStone(target), 1.4)) });
   } else if (target.look) {
-    opts.push({ t: 'Bekijk', icon: ICON.eye, fn: () => lookAt(target) });
+    if (target.find && !state.finds.has(target.find)) opts.push({ t: 'Bekijk', icon: ICON.eye, fn: () => lookAt(target) });
     if (['hyena', 'leopard', 'sabre', 'zebra', 'wounded', 'bird', 'snake', 'stranger', 'croc', 'gazelle'].includes(target.look) && hasStone) opts.push({ t: 'Gooi', icon: ICON.throw, fn: () => quickThrow(target.member) });
     // snijden: zonder afslag merk je vanzelf dat het niet gaat
     const flake = sharp(), cut = (fn) => () => (sharp() ? act('Interact', fn) : fn());
@@ -430,7 +412,6 @@ function openRadial(target) {
     if (target.fire) { const ic = fire.canUse(target, state); if (ic) opts.push({ t: fire.verb(target, state), icon: ic, fn: () => goAndDo(target, () => act('Interact', () => fire.use(target, predGame), target.fire === 'wood' ? 1.3 : 1.6), 2.4) }); }
     if (target.look === 'bees' && target.enc.honey > 0) opts.push({ t: 'Pak honing', icon: ICON.hand, fn: () => goAndDo(target, () => act('Interact', () => enc.takeHoney(target.enc, predGame)), 2.6) });
   } else {
-    opts.push({ t: 'Bekijk', icon: ICON.eye, fn: () => lookAt(target) });
     opts.push({ t: 'Pak', icon: ICON.hand, fn: () => goAndDo(target, () => grab(target)) });
     if (EDIBLE.has(target.item)) opts.push({ t: state.known.has(target.item) ? 'Eet' : 'Proef', icon: ICON.mouth, q: !state.known.has(target.item), fn: () => goAndDo(target, () => tasteFrom(target)) });
   }
@@ -508,7 +489,7 @@ function bite(attacker, dmg, big) {
 // een steen gooien naar een roofdier
 function throwAt(member, kind = member.kind, dur) {
   const i = state.hands[1] === 'stone' ? 1 : state.hands.indexOf('stone');
-  if (i < 0) { note('stone', 'Geen kei'); return; }
+  if (i < 0) { need('stone', 'Geen kei'); return; }
   const rock = state.rock[i];
   state.hands[i] = null; renderHands();
   sound.whoosh();
@@ -626,7 +607,7 @@ function event(name, k) {
     murmur(loot ? 'Kleine Ibo rent je tegemoet: hij heeft gezien dat je iets bij je hebt!' : 'Kleine Ibo rent je tegemoet. Je bent weer bij de groep.', 4);
   }
 }
-const predGame = { camp: HOME, campSafe: 11, campMeat: 0, lit: false, player, state, sound, toast, murmur, carries, discover, bite, event, hyenas, night: 0, things, throws, group, leopard, sabres, carcass: CARCASS, drop: dropAtPos, removeThing, giveHand, renderHands, hurt, kemHelps, foodSpot, groupTake, dryPath, shield: false, quake: (v) => { cam.shake = Math.max(cam.shake, v); } };
+const predGame = { camp: HOME, campSafe: 11, campMeat: 0, lit: false, player, state, sound, toast, need, murmur, carries, discover, bite, event, hyenas, night: 0, things, throws, group, leopard, sabres, carcass: CARCASS, drop: dropAtPos, removeThing, giveHand, renderHands, hurt, kemHelps, foodSpot, groupTake, dryPath, shield: false, quake: (v) => { cam.shake = Math.max(cam.shake, v); } };
 
 // ---------- wat kun je aantikken? ----------
 const LOOK_TARGETS = [{ look: 'carcass', x: CARCASS.x, z: CARCASS.z }, { look: 'tree', x: HOME.x, z: HOME.z }];
@@ -806,7 +787,7 @@ function hitTarget(t, how = 'throw') {
 }
 // de gazelle die je moe hebt gelopen: één harde klap
 function strikeSpent(m, how) {
-  if (how === 'fist') { toast('Met je vuist lukt het niet. Je hebt een kei of je vuistbijl nodig.', 5); return; }
+  if (how === 'fist') { need('stone', 'Met je vuist lukt het niet. Je hebt een kei of je vuistbijl nodig.'); return; }
   if (!herd.strike(m)) return;
   const k = herd.kill;
   LOOK_TARGETS.push({ look: 'herdkill', x: k.x, z: k.z }); vultures.center.set(k.x, height(k.x, k.z), k.z);
@@ -818,7 +799,7 @@ function strikeSpent(m, how) {
 // vlees van de gazelle snijden
 function cutHerd() {
   const k = herd.kill; if (!k || k.meat <= 0) return;
-  if (!sharp()) { toast('Met je handen krijg je de taaie huid niet open. Je hebt iets scherps nodig.', 5); return; }
+  if (!sharp()) { need('flake', 'Met je handen krijg je de taaie huid niet open. Je hebt iets scherps nodig.'); return; }
   const h = freeHand();
   if (h < 0) { handsFull(); return; }
   k.meat--; state.hands[h] = 'meat'; renderHands(); sound.eat();
@@ -1110,9 +1091,10 @@ function update(dt) {
   if (state.started && state.collapsed <= 0 && state.sleeping <= 0) {
     const ease = state.day <= 1 ? 0.55 : state.day === 2 ? 0.75 : 1;   // de eerste dagen heb je de tijd om het land te leren kennen
     thirst.tick(dt * ease, { heat: Math.max(0, 1 - Math.abs(dayP - 0.4) / 0.22) * (1 - sky.cloud * 0.5), rain: sky.rain, running: player.speed > 4.5, off: devFlags.noHunger });
-    if (!devFlags.noHunger) state.food = Math.max(0, state.food - dt * 0.18 * ease * (predGame.night > 0.6 && !state.cloak && !(fire && fire.warm(player.pos)) ? AREA.cold || 1.5 : 1));   // kou vreet energie
-    if (sick) { state.sick -= dt; state.health -= dt * 0.9; if (state.sick <= 0) toast('De pijn is vanzelf gezakt. Dat duurde lang…'); }
-    else if (state.food < 12 || state.water <= 0) state.health -= dt * 0.5;
+    if (!devFlags.noHunger) state.food = Math.max(0, state.food - dt * 0.07 * ease * (predGame.night > 0.6 && !state.cloak && !(fire && fire.warm(player.pos)) ? AREA.cold || 1.5 : 1));   // kou vreet energie
+    // Honger, dorst en buikpijn maken je zwak en traag, maar je gaat er niet aan dood: daar zorgen de dieren wel voor.
+    if (sick) { state.sick -= dt; if (state.health > 20) state.health -= dt * 0.9; if (state.sick <= 0) toast('De pijn is vanzelf gezakt. Dat duurde lang…'); }
+    else if (state.food < 12 || state.water <= 0) { if (state.health > 30) state.health -= dt * 0.2; }
     else if (state.food > 40 && state.water > 25) state.health = Math.min(100, state.health + dt * 0.6);
     if (state.health <= 0) collapse();
   }
@@ -1140,7 +1122,7 @@ function update(dt) {
     if (homeShown) {
       const e = $('homeEdge');
       e.style.transform = `translate(${innerWidth / 2 + Math.sin(ang) * innerWidth * 0.38}px, ${innerHeight / 2 - Math.cos(ang) * innerHeight * 0.3}px)`;
-      $('homeEdgeDir').style.transform = `rotate(${ang}rad)`; $('homeEdgeDist').textContent = Math.round(hd) + ' m';
+      $('homeEdgeDir').style.transform = `rotate(${ang}rad)`; 
     }
   }
   $('veil').style.opacity = sick ? 1 : 0;

@@ -128,6 +128,10 @@ Alle tekens in het spel (knoppen, voorwerpen in je hand en je tas, de tekens voo
 | vijg | kiwi-fruit | Delapouite |
 | noot | acorn | Lorc |
 | marula | plum | Delapouite |
+| voordoen hoe je stuurt | click | Skoll |
+| dit mist nog | interdiction | Lorc |
+| meetrekken | footsteps | Skoll |
+| wond verzorgen | arm-bandage | Delapouite |
 | gieren | vulture | Lorc |
 | hyena | hyena-head | Caro Asercion |
 | karkas | ribcage | Lorc |

@@ -7,6 +7,7 @@ import { BODY } from './hominin.js';
 import { heldMesh } from './items.js';
 
 // De slaapboom: hier wacht je groep. Overdag scharrelen ze rond de stam, 's nachts slapen ze er.
+const bonesOf = (root) => { const L = []; root.traverse((o) => { if (o.isBone) L.push(o); }); return L; };
 export const HOME = AREA.home;   // de slaapboom van dit gebied
 const WHO = ERA.group || [
   { id: 'tor', name: 'Tor', k: 0.99, spot: [2.6, 1.2], grey: true },
@@ -72,7 +73,7 @@ export class Group {
   // Iets aan de groep geven. Geeft terug hoeveel de groep ervan opknapt (of null als ze het niet willen).
   give(it, game) {
     const s = game.state, sick = this.sick, kem = this.list[1];
-    for (const m of this.list) m.busy = 2.5;
+    for (const m of this.list) m.busy = 5;
     if (it === 'roast') return { gain: 45, text: 'Gebraden vlees! Het is zo zacht dat zelfs Tor en Kleine Ibo het kunnen kauwen. Niemand zegt iets: iedereen eet.' };
     if (it === 'meat') return { gain: 30, text: 'Vlees! Iedereen komt erbij zitten. Kleine Ibo krijgt het eerste stuk.' };
     if (it === 'honey') return { gain: 40, text: 'Honing! Tor lacht zijn laatste tanden bloot. Iedereen likt zijn vingers af, Ibo het langst.' };
@@ -169,10 +170,11 @@ export class Group {
       if (spd > 0) m.yaw = turn(m.yaw, Math.atan2(tx, tz), dt * 5);
       else if (face) m.yaw = turn(m.yaw, Math.atan2(face.x - m.x, face.z - m.z), dt * 3);
       m.x += Math.sin(m.yaw) * m.speed * dt; m.z += Math.cos(m.yaw) * m.speed * dt;
-      m.g.position.set(m.x, height(m.x, m.z), m.z); m.g.rotation.y = m.yaw;
+      m.g.position.set(m.x, height(m.x, m.z) + (m.lift || 0), m.z); m.g.rotation.y = m.yaw;
       m.g.rotation.z = m.calling === 'shiver' && m.speed < 0.2 ? Math.sin(performance.now() * 0.046) * 0.018 : 0;
       const R = m.rig;
-      if (m.state === 'rest' && sleepy) R.freeze('Death01', 0.97);
+      const lying = m.state === 'rest' && sleepy && m.busy <= 0;   // krijgen ze iets, dan komen ze overeind
+      if (lying) R.freeze('Death01', 0.97);
       else if (m.state === 'rest') R.play('Crouch_Idle_Loop', { fade: 0.5 });
       else if (m.speed > 2) R.play('Jog_Fwd_Loop', { fade: 0.25, speed: m.speed / (3 * m.k) });
       else if (m.speed > 0.2) R.play('Walk_Loop', { fade: 0.3, speed: m.speed / (1.25 * m.k) });
@@ -181,6 +183,12 @@ export class Group {
       else if (game.state.group < 15) R.play('Crouch_Idle_Loop', { fade: 0.6 });   // hongerig en slap
       else R.play(m.fuss && !pt ? 'Interact' : 'Idle_Loop', { fade: 0.5, speed: m.fuss && !pt ? 0.5 : 1 });
       R.update(dt);
+      // Wie ligt, ligt óp de grond: het laagste punt van het lijf rust op het land, ook op een helling.
+      if (lying) {
+        let lo = 9;
+        for (const o of m.bones || (m.bones = bonesOf(R.root))) { const e = o.matrixWorld.elements; lo = Math.min(lo, e[13] - height(e[12], e[14])); }
+        if (lo < 8) m.lift = Math.max(0, Math.min(0.6, (m.lift || 0) + (0.1 * m.k - lo) * Math.min(1, dt * 5)));
+      } else if (m.lift) m.lift = Math.max(0, m.lift - dt * 0.6);
       const aimed = pt && Math.abs(Math.atan2(Math.sin(Math.atan2(pt.x - m.x, pt.z - m.z) - m.yaw), Math.cos(Math.atan2(pt.x - m.x, pt.z - m.z) - m.yaw))) < 0.5;
       m.pointW += ((aimed ? 1 : 0) - m.pointW) * (1 - Math.exp(-dt * 4));
       if (m.pointW > 0.02 && (pt || m.pointAt)) { if (pt) m.pointAt = { x: pt.x, z: pt.z }; pointArm(R, m.pointAt, m.pointW); }

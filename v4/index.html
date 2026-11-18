@@ -32,17 +32,36 @@ canvas{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;display:blo
 .stat.word::before{display:none}.stat.word svg{width:17px;height:17px}
 #homeDir{fill:var(--ink);stroke:#0009}
 
-/* ---------- melding: tekst op een donkere band, als een ondertitel ---------- */
-#loading{bottom:max(18px,var(--sab));left:50%;transform:translateX(-50%);font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:#fffc;text-shadow:0 1px 3px #000}
-#toast{top:max(12px,var(--sat));left:50%;transform:translateX(-50%);width:max-content;max-width:min(560px,58vw);text-align:center;font-weight:500;font-size:15px;line-height:1.4;padding:8px 34px;background:linear-gradient(90deg,transparent,#0c0f12cc 14%,#0c0f12cc 86%,transparent);text-shadow:0 1px 3px #000;opacity:0;transition:opacity .4s}
-#toast.on{opacity:1}
-#toast.note{display:flex;align-items:center;gap:9px;padding:6px 30px;font-weight:700}#toast.note svg{width:24px;height:24px;color:#f0a030;filter:drop-shadow(0 1px 2px #000)}
-#title{top:24%;left:50%;transform:translateX(-50%);width:max-content;max-width:88vw;text-align:center;padding:10px 60px;opacity:0;transition:opacity .8s;background:linear-gradient(90deg,transparent,#0c0f1299 22%,#0c0f1299 78%,transparent);text-shadow:0 2px 6px #000,0 0 14px #000a;z-index:4}
-#title.on{opacity:1;transition:opacity .35s}#title i{display:block;font-style:normal;font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:#f0a030;font-weight:700}
-#title b{display:block;font:400 clamp(26px,5.6vw,40px)/1.1 Kool,system-ui,sans-serif;margin:2px 0 4px}#title span{display:block;font-size:14px;opacity:.92}
+/* ---------- een teken dat even bovenin verschijnt: een plaatje, nooit een woord ---------- */
+#loading{position:fixed;bottom:max(18px,var(--sab));left:50%;margin-left:-22px;width:44px;height:44px}
+#sign{top:max(12px,var(--sat));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:999px;background:#2c2117b0;opacity:0;transition:opacity .9s;z-index:4}
+#sign.on{opacity:1;transition:opacity .2s}
+#sign svg{width:30px;height:30px;color:#f0a030;filter:drop-shadow(0 1px 2px #000)}
+#sign img{width:40px;height:40px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 1.5px #ead3a260}
+#sign.need{background:none;box-shadow:inset 0 0 0 2px #f3e6cb99;border-radius:50%;padding:11px;animation:low .7s ease-in-out 3}#sign.need svg{color:#f3e6cb;opacity:.75}
+#sign.good svg:last-child{color:var(--leaf)}
 .steps{margin:8px 0 14px;padding-left:20px;font-size:14px;line-height:1.5}.steps li{padding:4px 0 4px 4px;list-style:decimal;border:0}.steps li::before{display:none}.steps li.ok{opacity:.5;text-decoration:line-through}.steps li.now{color:var(--acc,#f0a030);font-weight:700}
-#hint{bottom:calc(max(14px,var(--sab)) + 92px);left:50%;transform:translateX(-50%);width:max-content;max-width:min(460px,70vw);text-align:center;font-size:14px;font-weight:500;line-height:1.35;padding:7px 16px;border-radius:999px;background:#0c0f12b3;box-shadow:inset 0 0 0 1px #f4f2ec33;text-shadow:0 1px 2px #000;opacity:0;transition:opacity .5s}
-#hint.on{opacity:1}
+/* ---------- een vinger doet voor wat je duim moet doen (zie systems/hints.js). Het punt (left, top) is de vingertop. ---------- */
+#hint{left:0;top:0;width:0;height:0;opacity:0;transition:opacity .5s;z-index:4}
+#hint.on{opacity:.92}
+#hint svg{position:absolute;left:-9px;top:-6px;width:54px;height:54px;color:#f3e6cb;filter:drop-shadow(0 2px 4px #000c)}
+#hint i{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;box-shadow:inset 0 0 0 2px #f3e6cb;opacity:0}
+#hint b{position:absolute;left:34px;top:-44px;width:34px;height:34px;color:#f0a030}#hint b svg{position:static;width:100%;height:100%}
+#hint.g-move>svg{animation:gMove 3.2s ease-in-out infinite}
+#hint.g-look>svg{animation:gLook 2.8s ease-in-out infinite}
+#hint.g-down>svg{animation:gDown 2s ease-in infinite}
+#hint.g-tap>svg{animation:gTap 1.5s ease-in-out infinite}#hint.g-tap i{animation:gRing 1.5s ease-out infinite}
+#hint.g-tap2>svg{animation:gTap2 2s ease-in-out infinite}#hint.g-tap2 i{animation:gRing2 2s ease-out infinite}
+#hint.g-hold>svg{animation:gHold 3.4s ease-in-out infinite}#hint.g-hold i{animation:gHoldRing 3.4s linear infinite}
+@keyframes gMove{0%,100%{transform:translate(0,0) scale(1.12);opacity:0}10%{transform:translate(0,0) scale(.92);opacity:1}35%{transform:translate(36px,-26px) scale(.92)}60%{transform:translate(-30px,-34px) scale(.92)}85%{transform:translate(0,0) scale(.92);opacity:1}}
+@keyframes gLook{0%,100%{transform:translate(-60px,0) scale(1.12);opacity:0}12%{transform:translate(-60px,0) scale(.92);opacity:1}55%{transform:translate(60px,0) scale(.92);opacity:1}70%{transform:translate(60px,0) scale(1.12);opacity:0}}
+@keyframes gDown{0%{transform:translate(0,-10px) scale(1.12);opacity:0}20%{transform:translate(0,-10px) scale(.92);opacity:1}45%{transform:translate(0,64px) scale(.92);opacity:1}60%,100%{transform:translate(0,64px) scale(1.12);opacity:0}}
+@keyframes gTap{0%,100%{transform:scale(1.14)}45%{transform:scale(.88)}}
+@keyframes gRing{0%,40%{transform:scale(.3);opacity:0}45%{opacity:.9}100%{transform:scale(1.5);opacity:0}}
+@keyframes gTap2{0%,24%,48%,100%{transform:scale(1.14)}12%,36%{transform:scale(.86)}}
+@keyframes gRing2{0%,10%{transform:scale(.3);opacity:0}12%{opacity:.9}24%{transform:scale(1.2);opacity:0}34%{transform:scale(.3);opacity:0}36%{opacity:.9}60%,100%{transform:scale(1.5);opacity:0}}
+@keyframes gHold{0%,100%{transform:translate(0,0) scale(1.14);opacity:0}8%{transform:translate(0,0) scale(.88);opacity:1}50%{transform:translate(0,0) scale(.88)}78%{transform:translate(-46px,-58px) scale(.88);opacity:1}88%{transform:translate(-46px,-58px) scale(1.14);opacity:0}}
+@keyframes gHoldRing{0%,8%{transform:scale(.4);opacity:0}10%{opacity:.9}50%{transform:scale(1.6);opacity:.9}55%,100%{transform:scale(1.6);opacity:0}}
 #homeEdge{left:0;top:0;display:none;flex-direction:column;align-items:center;gap:1px;font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--ink);text-shadow:0 1px 3px #000;margin:-22px 0 0 -22px;width:44px}
 #homeEdge svg{fill:#e39a4a;stroke:#000a;filter:drop-shadow(0 1px 3px #000a)}
 
@@ -165,10 +184,11 @@ li.no{color:var(--faint)}
 #quest{top:max(12px,var(--sat));left:50%;transform:translateX(-50%);width:max-content;max-width:min(420px,50vw);text-align:center;font-size:13px;font-weight:600;line-height:1.3;color:#f3e6cb;text-shadow:0 1px 3px #000,0 0 8px #000c;opacity:0;transition:opacity 1.2s}
 #quest.on{opacity:.95;transition:opacity .3s}#quest.tick::before{content:'✓ ';color:#f0a030}#toast.on~#quest{opacity:0}
 body.newver #menuBtn::after{content:'';position:absolute;right:1px;top:1px;width:11px;height:11px;border-radius:50%;background:#f0a030;box-shadow:0 0 0 2px #2c2117,0 0 8px #f0a030}
+.choice{display:flex;align-items:center;justify-content:center;gap:22px;padding:8px 6px}.choice .mface{width:64px;height:64px}.choice .rb{width:72px;height:72px}#goNext{color:#f0a030}
 #questBtn{display:none;width:44px;height:44px;margin-right:8px;opacity:.85}#questBtn.show{display:inline-grid}
 #questBtn em{position:absolute;right:-2px;top:-2px;min-width:17px;height:17px;border-radius:9px;background:#2c2117e6;font:700 11px/17px system-ui;font-style:normal;text-align:center;color:#f3e6cb}#questBtn em:empty{display:none}
 .mlist{display:grid;gap:8px;margin-top:12px}
-.mrow{display:grid;grid-template-columns:auto auto 1fr auto;gap:2px 12px;align-items:center;text-align:left;font:inherit;color:var(--ink);padding:6px 12px;border:0;border-radius:10px 13px 11px 14px/13px 10px 14px 11px;background:var(--glass);box-shadow:inset 0 0 0 1px var(--line);cursor:pointer;touch-action:manipulation}
+.mrow{display:grid;grid-template-columns:auto auto 1fr;justify-items:end;gap:2px 12px;align-items:center;text-align:left;font:inherit;color:var(--ink);padding:6px 12px;border:0;border-radius:10px 13px 11px 14px/13px 10px 14px 11px;background:var(--glass);box-shadow:inset 0 0 0 1px var(--line);cursor:pointer;touch-action:manipulation}
 .mrow.now{box-shadow:inset 0 0 0 2px var(--acc)}.mrow b{font:400 19px/1.15 Kool,system-ui,sans-serif}.mface{width:42px;height:42px;border-radius:50%;object-fit:cover;background:var(--glass);box-shadow:0 0 0 1.5px var(--line)}.mwant{display:grid;width:30px;height:30px;color:var(--acc)}.mwant svg{width:100%;height:100%}
 .mrow .steps{grid-column:1/-1;margin:6px 0 0}
 .notch{display:flex;gap:4px}.notch i{width:5px;height:16px;border-radius:2px;background:var(--line)}.notch i.ok{background:var(--ink)}.notch i.at{background:var(--acc)}
@@ -197,18 +217,17 @@ li.no::before{background:none;box-shadow:inset 0 0 0 1px var(--faint)}
 <div id="senseVeil"></div>
 <div id="fade"></div>
 <div id="hurt"></div>
-<div id="rotate"><div><svg viewBox="0 0 48 48" fill="none" stroke="#f4f2ec" stroke-width="2.5" stroke-linejoin="round"><rect x="14" y="4" width="20" height="40" rx="4"/><path d="M21 38h6"/></svg>Draai je telefoon een kwartslag.<br>Dit spel speel je liggend.</div></div>
+<div id="rotate"><div><svg viewBox="0 0 48 48" fill="none" stroke="#f4f2ec" stroke-width="2.5" stroke-linejoin="round"><rect x="14" y="4" width="20" height="40" rx="4"/><path d="M21 38h6"/></svg></div></div>
 <div class="hud" id="stats">
   <div class="stat" id="statFood"></div><div class="stat" id="statWater"></div><div class="stat" id="statHealth"></div><div class="stat" id="statGroup"></div><div class="stat" id="statSick"></div><div class="stat" id="statTired"></div>
   <div class="stat word" id="dayRow"><span id="dayIcon"></span><span id="dayLbl">1</span></div>
-  <div class="stat word" id="homeRow"><span id="homeIcon"></span><svg id="homeDir" viewBox="0 0 24 24" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2l7 18-7-5-7 5z"/></svg><span id="homeDist"></span></div>
+  <div class="stat word" id="homeRow"><span id="homeIcon"></span><svg id="homeDir" viewBox="0 0 24 24" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2l7 18-7-5-7 5z"/></svg><span id="homeDist" hidden></span></div>
 </div>
 <div class="hud" id="topRight"><button class="rb" id="questBtn" aria-label="Missies"><em id="questN"></em></button><button class="rb" id="menuBtn" aria-label="Menu"></button></div>
-<div class="hud" id="toast"></div>
-<div class="hud" id="quest"><span id="questT"></span></div>
-<div class="hud" id="title"><i id="titleE"></i><b id="titleH"></b><span id="titleS"></span></div>
+<div id="toast" hidden></div><div class="hud" id="sign"></div>
+<div id="quest" hidden><span id="questT"></span></div>
 <div class="hud" id="hint"></div>
-<div class="hud" id="homeEdge"><svg id="homeEdgeDir" viewBox="0 0 24 24" width="30" height="30" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2l7 18-7-5-7 5z"/></svg><span id="homeEdgeDist"></span></div>
+<div class="hud" id="homeEdge"><svg id="homeEdgeDir" viewBox="0 0 24 24" width="30" height="30" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2l7 18-7-5-7 5z"/></svg><span id="homeEdgeDist" hidden></span></div>
 <div class="hud" id="joyHint"></div>
 <div class="hud" id="joy"><div class="ring"></div><div class="knob"></div></div>
 <div class="hud" id="pad">
@@ -226,7 +245,7 @@ li.no::before{background:none;box-shadow:inset 0 0 0 1px var(--faint)}
 <div class="hud" id="radial"></div>
 <button class="rb" id="swap" aria-label="Ruil" style="display:none;z-index:4;pointer-events:auto"></button>
 
-<div class="hud" id="loading">Laden…</div>
+<div class="hud" id="loading"></div>
 <template id="credits">Hoofdpersoon door gb.prof.69 met bewegingen van Quaternius (CC0); hyena en olifant door <a href="https://animalanimator.com">Animal Animator</a>, luipaard door GremorySaiyan, gazelle door kenchoo, sabeltandkat door slang107123456789, zebra door NoaSeller, nijlpaard door Mehrus, neushoorn door LasquetiSpice, giraffe door animalanimator (Sketchfab, CC BY 4.0). Natuur: Poly Haven (CC0). <a href="assets/CREDITS.md">Alle bronnen</a></template>
 
 <div class="screen" id="cardScreen"><div class="skin"><div class="card" id="card"></div></div></div>
