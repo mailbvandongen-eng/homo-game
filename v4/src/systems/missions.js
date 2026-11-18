@@ -1,4 +1,5 @@
 import * as THREE from '../../lib/three.module.js';
+import { initPortrait } from './portrait.js';
 import { ERAS, ERA, AREA } from '../eras/index.js';
 import { HOME } from '../group.js';
 import { Save, DEV } from '../save.js';
@@ -50,12 +51,15 @@ export function initMissions(G) {
     sound.discover(); title('Missie volbracht', m.title, m.end, 4.5);
     if (mission.done.size === MISSIONS.length) mission.endT = 7;
   }
+  // wat de vrager wil hebben, als teken
+  const WANT = { flake: 'flake', hyena: 'hyena', bag: 'pouch', cloak: 'hide', water: 'waterbag', stick: 'stick', fish: 'fish', sick: 'leaf', axe: 'axe', fire: 'fire', keep: 'fire', camp: 'fire', roast: 'roast', glass: 'flake', run: 'run' };
+  const face = initPortrait(G);
   // het overzicht: per missie wie het vroeg, kerfjes voor de stappen; van de missie die je volgt ook de stappen zelf
   function missionInfo() {
     if (!mission.active.length) return;
     const row = (e) => {
       const m = e.m, n = stepOf(m), on = m === mission.cur;
-      return `<button class="mrow${on ? ' now' : ''}" data-m="${m.id}"><span class="mwho">${NAMES[m.who]}</span><b>${m.title}</b><span class="notch">${m.steps.map((x, i) => `<i class="${i < n ? 'ok' : i === n ? 'at' : ''}"></i>`).join('')}</span>`
+      return `<button class="mrow${on ? ' now' : ''}" data-m="${m.id}"><img class="mface" alt="${NAMES[m.who]}" src="${face(e.giver)}"><span class="mwant">${ICON[WANT[m.id]] || ''}</span><b>${m.title}</b><span class="notch">${m.steps.map((x, i) => `<i class="${i < n ? 'ok' : i === n ? 'at' : ''}"></i>`).join('')}</span>`
         + (on ? `<ol class="steps">${m.steps.map((x, i) => `<li class="${i < n ? 'ok' : i === n ? 'now' : ''}">${x.t}</li>`).join('')}</ol>` : '') + '</button>';
     };
     showCard(`<div class="eyebrow">Missies</div><div class="mlist">${mission.active.map(row).join('')}</div>`);

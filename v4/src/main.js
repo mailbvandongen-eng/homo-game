@@ -16,7 +16,7 @@ import { Encounters } from './encounters.js';
 import { Giant } from './giant.js';
 import { Shore } from './shore.js';
 import { Fire } from './fire.js';
-import { $, toast, title, showCard, closeCard, uiTick } from './engine/ui.js';
+import { $, toast, note, title, showCard, closeCard, uiTick } from './engine/ui.js';
 import { initControls } from './engine/controls.js';
 import { lowerAuto } from './engine/settings.js';
 import { initMenu } from './systems/menu.js';
@@ -120,7 +120,7 @@ function discover(id) {
 // ---------- wat de onderdelen van elkaar mogen weten ----------
 // Systemen (systems/) krijgen dit ene object mee. Wat pas verderop in dit bestand ontstaat, wordt op het moment van gebruik opgehaald.
 const G = {
-  state, player, scene, things, hyenas, sabres, group, giant, shore, fire, herd, sound, closeRadial, openRadial, dropAt, act, sharp, discover, carcassNear, hiveNear,
+  state, player, scene, renderer, things, hyenas, sabres, group, giant, shore, fire, herd, sound, closeRadial, openRadial, dropAt, act, sharp, discover, carcassNear, hiveNear,
   get predGame() { return predGame; }, get dayP() { return dayP; }, set dayP(v) { dayP = v; }, get danger() { return danger; }, get aim() { return aim; },
   get camYaw() { return cam.yaw; }, set camTurn(v) { cam.turnTo = v; }, get clock() { return clock; }, stopWalk() { walkTo = null; }, get walking() { return !!walkTo; },
 };
@@ -470,7 +470,7 @@ function bite(attacker, dmg, big) {
 // een steen gooien naar een roofdier
 function throwAt(member, kind = member.kind, dur) {
   const i = state.hands[1] === 'stone' ? 1 : state.hands.indexOf('stone');
-  if (i < 0) { toast('Je hebt geen steen in je hand.'); return; }
+  if (i < 0) { note('stone', 'Geen kei'); return; }
   const rock = state.rock[i];
   state.hands[i] = null; renderHands();
   sound.whoosh();
@@ -482,7 +482,7 @@ function throwAt(member, kind = member.kind, dur) {
       const hit = bestTargetAt(x, z, 1.8);
       if (hit) hitTarget(hit);
     } else if (Math.hypot(member.x - x, member.z - z) < 1.8) hitTarget({ m: member, kind: kind || 'gazelle' });
-    else toast('Mis!');
+    else note('throw', 'Mis');
     dropAtPos('stone', x, z, true, rock);
   }, heldMesh('stone', rock), dur);
 }
@@ -972,7 +972,7 @@ function update(dt) {
 
   const sick = state.sick > 0;
   player.update(dt, dir, { speed: sick ? 0.6 : state.food < 15 || state.water < 12 ? 0.8 : 1, sick }); cloakTick();
-  if (player.tooDeep) { player.tooDeep = false; if (!deepTold) { deepTold = true; toast('Hier wordt het te diep. Je kunt niet zwemmen.', 4); } }
+  if (player.tooDeep) { player.tooDeep = false; if (!deepTold) { deepTold = true; note('water', 'Te diep', 3); } }
   // de dag
   if (state.started && !devFlags.noTime) dayP = (dayP + dt / DAY_LEN) % 1;
   if (state.sleeping > 0) { state.sleeping -= dt; if (state.sleeping <= 0) wake(); }
@@ -1071,9 +1071,7 @@ function update(dt) {
       toast('Je komt langzaam weer bij. Je bent zwak. Zoek eten en neem het rustig aan.', 6);
     }
   }
-  $('food').style.width = state.food + '%'; $('water').style.width = state.water + '%';
-  $('health').style.width = Math.max(0, state.health) + '%';
-  $('group').style.width = state.group + '%'; $('dayLbl').textContent = 'Dag ' + state.day;
+  $('dayLbl').textContent = state.day;
   // een pijltje naar de slaapboom als je ver weg bent
   const hdx = HOME.x - player.pos.x, hdz = HOME.z - player.pos.z, hd = Math.hypot(hdx, hdz);
   bodySignals(dt, sick, hd);
@@ -1092,7 +1090,6 @@ function update(dt) {
       $('homeEdgeDir').style.transform = `rotate(${ang}rad)`; $('homeEdgeDist').textContent = Math.round(hd) + ' m';
     }
   }
-  $('sick').style.display = sick ? 'inline' : 'none';
   $('veil').style.opacity = sick ? 1 : 0;
 
   // de pak-knop licht op als er iets binnen bereik is
@@ -1175,7 +1172,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { eat, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
+window.__game = { scene, giveHand, eat, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, setSneak, still: () => stillT,
   setCam: (y, p, d) => { cam.yaw = y; cam.pitch = p; if (d) cam.dist = d; }, setZoom: C.setZoom, zoom: () => cam.dist, C, jump, sound, world, weather, menu, closeCard, clockT: () => clock.elapsedTime, actionContext, actionOptions, heard, tasteAt, bodyTap, prim: () => prim, alts: () => alts,
   lookFrom: (pos, look) => { cam.override = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },

@@ -1,5 +1,5 @@
 import { ROCKS } from '../items.js';
-import { toast } from '../engine/ui.js';
+import { toast, note } from '../engine/ui.js';
 
 // Maken met je handen: een afslag, een vuistbijl, een graafstok.
 export function initCraft(G) {
@@ -14,7 +14,7 @@ export function initCraft(G) {
     const again = () => knapAgain(i, r);
     if (R.crumble) {
       sound.crack();
-      if (r.hits < R.crumble) { toast('Dof. Er springen korrels af, maar geen scherpe rand…', 3); again(); return; }
+      if (r.hits < R.crumble) { note('stone', 'Dof'); again(); return; }
       state.hands[i] = null; renderHands(); state.rockKnown.add(r.type);
       toast('De kei valt in gruis uit elkaar. Deze soort is te zacht. Zoek een gladde, harde kei.', 6); discover('rock');
       return;
@@ -37,7 +37,7 @@ export function initCraft(G) {
     const again = () => knapAgain(i, r, knapAxe);
     if (R.crumble) {
       sound.crack();
-      if (r.shape < R.crumble) { toast('Dof. Er springen korrels af, maar geen scherpe rand…', 3); again(); return; }
+      if (r.shape < R.crumble) { note('stone', 'Dof'); again(); return; }
       state.hands[i] = null; renderHands(); state.rockKnown.add(r.type);
       toast('De kei valt in gruis uit elkaar. Deze soort is te zacht. Zoek een gladde, harde kei.', 6); discover('rock');
       return;

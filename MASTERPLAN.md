@@ -119,7 +119,7 @@ waar het opviel. Volgorde van bouwen = volgorde van de tabel.
 | # | Wat | Waarom | Stand |
 |---|---|---|---|
 | 1 | **Tekst uit de weg van het stuur.** Geen tekst of balk die een aanraking opvangt op de linkerhelft; streepjes korter | de missieregel blokkeerde het sturen | **klaar** (regel bovenaan midden, vangt niets op) |
-| 2 | **Missies duidelijker.** Meerdere missies tegelijk; een subtiel missieoverzicht in plaats van een groot tekstblok | zie ANALYSE §12 | **deels**: meerdere tegelijk, overzicht achter het teken rechtsboven (spel staat stil), vinkje + geluid bij een stap. Nog: gezicht/icoon per missie (stap 9), de wereld wijst de weg (stap 3) |
+| 2 | **Missies duidelijker.** Meerdere missies tegelijk; een subtiel missieoverzicht in plaats van een groot tekstblok | zie ANALYSE §12 | **deels**: meerdere tegelijk, overzicht achter het teken rechtsboven (spel staat stil), vinkje + geluid bij een stap, per missie het gezicht van wie het vroeg (plaatje van het echte model) en een teken van wat hij wil. Nog: de wereld wijst de weg (stap 3) |
 | 3 | **Vinden wat een missie vraagt.** Losse takken onder bomen, dode bomen herkenbaar, iemand uit de groep wijst de kant op | "Pak een tak" terwijl er nergens een tak ligt | |
 | 4 | **Meer eten in het land.** Botten met merg bij oude karkassen (gieren), vruchten onder bomen, noten kraken, knollen, meer eieren en honing; bessenstruik weg bij de slaapboom | alleen bessen is te mager | |
 | 5 | **De groep doet zelf mee.** Volwassenen zoeken overdag zelf eten; bij een karkas draagt iemand mee | de groep stond te wachten naast een struik | |
@@ -127,7 +127,7 @@ waar het opviel. Volgorde van bouwen = volgorde van de tabel.
 | 7 | **Moe zonder donker.** Moe merk je aan je lijf (trager, hijgen, niet rennen); donker is alleen de nacht | het beeld werd zwart tijdens het lopen | |
 | 8 | **Minder zwaar begin.** Voeding en water zakken de eerste dagen langzamer | het spel is te zwaar | |
 
-| 9 | **Vormgeving uit de wereld.** Vensters van materiaal uit de tijd, iconen uit één gedownloade set (game-icons.net, CC BY 3.0), zo min mogelijk tekst, knoppen alleen als er iets kan, streepjes als kleine tekens | zie ANALYSE §13; keuze E: het materiaal groeit mee (habilis de grond, erectus de binnenkant van een huid) | bezig |
+| 9 | **Vormgeving uit de wereld.** Vensters van materiaal uit de tijd, iconen uit één gedownloade set (game-icons.net, CC BY 3.0), zo min mogelijk tekst, knoppen alleen als er iets kan, streepjes als kleine tekens | zie ANALYSE §13; keuze E: het materiaal groeit mee (habilis de grond, erectus de binnenkant van een huid) | **klaar** (18-11): alle iconen uit game-icons.net, vensters van grond of huid, koppen in Cabin Sketch, vier ronde tekens met leeglopende rand in plaats van balken, korte meldingen met teken + woord voor wat vaak gebeurt. De lange verhalende meldingen blijven tekst |
 
 Vaste regels die hieruit volgen (gelden ook voor alles wat later komt):
 - Wat een missie vraagt, is in dat gebied te vinden zonder zoeken naar een speld.

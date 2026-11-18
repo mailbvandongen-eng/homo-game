@@ -43,8 +43,79 @@ Aanpassingen: vereenvoudigd en texturen verkleind (gltf-transform). Bij de mensa
 
 # Iconen
 
-De iconen op de knoppen komen uit de set van [game-icons.net](https://game-icons.net) ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)). De vormen staan als SVG-pad in `src/icons.js`; de kleur volgt de knop.
+Alle tekens in het spel (knoppen, voorwerpen in je hand en je tas, de tekens voor voeding, water, gezondheid en groep) komen uit de set van [game-icons.net](https://game-icons.net) ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)). De vormen staan als SVG-pad in `src/iconshapes.js`; de kleur geven wij ze in `src/icons.js`. Makers: Lorc, Delapouite, Sbed, SeregaCthtuf, Caro Asercion en anderen (zie de tabel).
 
-| Icoon | Naam in de set | Maker |
+| Waarvoor | Naam in de set | Maker |
 |---|---|---|
-| missies | stone-pile | [Delapouite](https://delapouite.com) |
+| missies | stone-pile | Delapouite |
+| oppakken | hand | Sbed |
+| proeven en eten | eating | Delapouite |
+| bekijken | semi-closed-eye | Lorc |
+| drinken | drinking | Delapouite |
+| waterzak vullen | waterskin | Delapouite |
+| openslaan | broken-bone | Lorc |
+| opletten | awareness | Lorc |
+| sluipen | half-body-crawling | Delapouite |
+| gooien | throwing-ball | Delapouite |
+| draagvel | swap-bag | Lorc |
+| opbergen | pouch-with-beads | SeregaCthtuf |
+| vel omdoen | animal-hide | Delapouite |
+| steen slaan | flint-spark | Delapouite |
+| snijden | bone-knife | Lorc |
+| omdraaien | clockwise-rotation | Delapouite |
+| slaan | punch | Lorc |
+| springen | jump-across | Delapouite |
+| opstaan | person | Delapouite |
+| punt aan een stok | stone-spear | Lorc |
+| handen wisselen | cycle | Lorc |
+| wat je weet | brain | Lorc |
+| geluid | speaker | Delapouite |
+| geluid uit | speaker-off | Delapouite |
+| geven | shaking-hands | Delapouite |
+| slapen | night-sleep | Delapouite |
+| graven | dig-hole | Delapouite |
+| vuur | campfire | Lorc |
+| vuistbijl | spotted-arrowhead | Lorc |
+| hakken | stick-splitting | Lorc |
+| opnieuw | anticlockwise-rotation | Delapouite |
+| menu | hamburger-menu | Delapouite |
+| sluiten | cancel | Sbed |
+| gelukt | check-mark | Delapouite |
+| voeding | meat | Lorc |
+| water | drop | Lorc |
+| gezondheid | heart-organ | Lorc |
+| de groep | three-friends | Delapouite |
+| moe | lungs | Delapouite |
+| ziek | stomach | Delapouite |
+| neerleggen | fall-down | Sbed |
+| de slaapboom | baobab | Delapouite |
+| de dag | sun | Lorc |
+| hardlopen | run | Lorc |
+| kei | rock | Lorc |
+| bessen | elderberry | Lorc |
+| rode bessen | raspberry | Delapouite |
+| blad | linden-leaf | Lorc |
+| afslag | stone-tablet | Lorc |
+| bot | crossed-bones | Lorc |
+| ei | big-egg | Sbed |
+| tak | tree-branch | Lorc |
+| stok | wood-stick | Delapouite |
+| knol | beet | Delapouite |
+| vis | salmon | various artists |
+| fakkel | primitive-torch | Delapouite |
+| gebraden vlees | steak | Delapouite |
+| honing | honeycomb | Lorc |
+| vijg | kiwi-fruit | Delapouite |
+| noot | acorn | Lorc |
+| marula | plum | Delapouite |
+| gieren | vulture | Lorc |
+| hyena | hyena-head | Caro Asercion |
+| karkas | ribcage | Lorc |
+
+# Lettertype
+
+`fonts/CabinSketch-Bold.woff2`: [Cabin Sketch](https://fonts.google.com/specimen/Cabin+Sketch) van Pablo Impallari / Impallari Type ([SIL Open Font License 1.1](https://openfontlicense.org)). Alleen de tekens die het spel gebruikt. Voor de koppen: het lijkt op houtskool.
+
+# Vensters
+
+`tex/hide_inner.webp`: de binnenkant van een huid, gemaakt uit de textuur [Leather White](https://polyhaven.com/a/leather_white) van Poly Haven (CC0): de nerf belicht en in de kleur van een gedroogde huid gezet. De grond achter de vensters van *Homo habilis* is `tex/dry_ground_01_diff.webp`, dezelfde grond als in het spel.

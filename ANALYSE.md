@@ -279,7 +279,9 @@ Vraag van Bob: meerdere missies tegelijk, in een subtiel overzicht in plaats van
 4. **De wereld wijst de weg.** Wie de missie gaf, wijst of kijkt de goede kant op; het doel zelf valt op (rook, gieren, een kale boom). Geen pijlen of kaartpunten.
 5. Een stap die klaar is geeft een kort geluid en een vinkje, geen scherm.
 
-## 13. Vormgeving van vensters, knoppen en iconen (17-11-2026, ontwerp, nog niet gebouwd)
+## 13. Vormgeving van vensters, knoppen en iconen (17-11-2026 ontwerp; gebouwd 18-11-2026, keuze E)
+
+**Stand 18-11:** gebouwd en live. Afwijkingen van het ontwerp: de naam van de vrager staat niet meer in het missieoverzicht (het gezicht is genoeg); alleen meldingen die vaak terugkomen zijn teken + woord geworden (handen vol, mis, geen kei, dof, heet, genoeg hout, te diep, honger, alleen botten, niet in de tas), verhalende meldingen blijven een zin.
 
 **Uitgangspunten** (akkoord van Bob): vensters passen bij de wereld; knoppen staan niet in de weg en verschijnen
 alleen als er iets kan; zo min mogelijk tekst; iconen uit één gedownloade set (voorkeur game-icons.net, CC BY 3.0,

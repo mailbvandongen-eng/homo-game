@@ -1,4 +1,4 @@
-import { toast } from '../engine/ui.js';
+import { toast, note } from '../engine/ui.js';
 
 // Eten: wat het je geeft, hoe het smaakt, en wat je ervan leert.
 export function initFood(G) {
@@ -41,7 +41,7 @@ export function initFood(G) {
   }
   // met een afslag de laatste reepjes vlees van het karkas snijden
   function cutMeat() {
-    if (state.carcassMeat <= 0) { toast('Er zit echt niets meer aan. Alleen de botten nog.'); return; }
+    if (state.carcassMeat <= 0) { note('bone', 'Alleen botten'); return; }
     state.carcassMeat = 0; player.action = 0.5; sound.eat();
     state.food = Math.min(100, state.food + 25);
     discover('cut');

@@ -2,6 +2,7 @@ import * as THREE from '../lib/three.module.js';
 import { height, blockers } from './world.js';
 import { ICON } from './icons.js';
 import { variantsOf } from './assets.js';
+import { note } from './engine/ui.js';
 
 // Vuur. Je kunt het niet maken: je vindt het waar de bliksem insloeg, draagt het op een tak naar het kamp
 // en houdt het daar in leven met hout. Dit bestand kent drie plekken:
@@ -342,7 +343,7 @@ export class Fire {
   // een tak in de gloed houden
   kindle(game) {
     const s = game.state, i = s.hands.indexOf('branch') >= 0 ? s.hands.indexOf('branch') : s.hands.indexOf('stick');
-    if (i < 0) { game.toast('Au, heet! Met je hand kun je geen vuur pakken.', 4); game.sound.bad(); return; }
+    if (i < 0) { note('fire', 'Heet!'); game.sound.bad(); return; }
     s.hands[i] = 'torch'; this.torchT = TORCH; this.told.low = false; game.renderHands(); game.sound.whoosh();
     game.toast(this.carried ? 'De tak vat vlam.' : s.found.has('torch') ? 'De tak vat vlam. Lopen!' : 'De tak rookt… en dan brandt hij! Snel terug naar het kamp, voor hij op is.', 6);
     s.known.add('torch'); game.discover('torch');
@@ -363,7 +364,7 @@ export class Fire {
     const s = game.state, i = s.hands.indexOf('branch') >= 0 ? s.hands.indexOf('branch') : s.hands.indexOf('stick');
     if (i < 0) return;
     if (this.state === 'cold') { game.toast('De as is koud. Er gebeurt niets. Je moet eerst vuur halen.', 5); return; }
-    if (this.fuel >= MAX - 20) { game.toast('Er ligt genoeg hout op.', 4); return; }
+    if (this.fuel >= MAX - 20) { note('fire', 'Genoeg hout'); return; }
     const revive = this.fuel <= 0;
     s.hands[i] = null; game.renderHands(); game.sound.crack();
     this.fuel = Math.min(MAX, this.fuel + BRANCH); this.ember = 0; this.told.small = false;

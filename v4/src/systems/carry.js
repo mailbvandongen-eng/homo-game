@@ -1,7 +1,7 @@
 import * as THREE from '../../lib/three.module.js';
 import { ROCKS, heldMesh } from '../items.js';
 import { ICON, ITEM_ICON } from '../icons.js';
-import { $, toast } from '../engine/ui.js';
+import { $, toast, note } from '../engine/ui.js';
 
 // Wat je draagt: twee handen, het draagvel en de huid om je schouders.
 export function initCarry(G) {
@@ -25,7 +25,7 @@ export function initCarry(G) {
   }
   function freeHand() { return state.hands[1] === null ? 1 : state.hands[0] === null ? 0 : -1; }
   function handsFull() {
-    toast('Je handen zijn vol. Leg eerst iets neer: tik op een hand.');
+    note('hand', 'Handen vol');
     for (const i of [0, 1]) { const h = $('hand' + i); h.classList.remove('shake'); void h.offsetWidth; h.classList.add('shake'); }
   }
   for (const i of [0, 1]) $('hand' + i).onclick = () => { if (C.bagOpen) stow(i); else if (state.hands[i]) { G.hints.did.hand = true; G.openRadial({ hand: i }); } };
@@ -45,7 +45,7 @@ export function initCarry(G) {
   }
   function stow(i) {
     const it = state.hands[i]; if (!it) return;
-    if (it === 'torch') { toast('Een brandende tak stop je niet weg.', 3); return; }
+    if (it === 'torch') { note('torch', 'Niet in de tas'); return; }
     const k = state.bag.indexOf(null);
     if (k < 0) { const el = $('bag'); el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); return; }
     state.bag[k] = { it, rock: state.rock[i] }; state.hands[i] = null; renderHands(); renderBag();

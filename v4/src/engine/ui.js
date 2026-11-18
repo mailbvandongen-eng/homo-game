@@ -1,12 +1,16 @@
 // De schermlaag: meldingen, de grote titel en de kaart. Weet niets van het spel zelf.
 import { ERA } from '../eras/index.js';
+import { ICON } from '../icons.js';
 export const $ = (id) => document.getElementById(id);
+document.body.classList.add('era-' + ERA.id);   // de vensters volgen het tijdperk (zie index.html)
 // Een later tijdperk heeft een andere groep: namen uit oudere teksten worden hier vervangen (zie 'words' in het tijdperkbestand)
 const WORDS = (ERA.words || []).map(([a, b]) => [new RegExp('\\b' + a + '\\b', 'g'), b]);
 export const say = (s) => (s ? WORDS.reduce((t, [a, b]) => t.replace(a, b), s) : s);
 
 let toastTimer = 0, titleT = 0;
-export function toast(text, sec = 4) { $('toast').textContent = say(text); $('toast').classList.add('on'); toastTimer = sec; }
+export function toast(text, sec = 4) { $('toast').textContent = say(text); $('toast').classList.remove('note'); $('toast').classList.add('on'); toastTimer = sec; }
+// Een korte melding voor iets dat vaak gebeurt: een teken en één of twee woorden.
+export function note(icon, word, sec = 2.2) { $('toast').innerHTML = ICON[icon] + '<span></span>'; $('toast').lastChild.textContent = say(word); $('toast').classList.add('on', 'note'); toastTimer = sec; }
 export function title(eyebrow, text, sub, sec = 3.4) {
   $('titleE').textContent = eyebrow; $('titleH').textContent = say(text); $('titleS').textContent = say(sub) || '';
   const el = $('title'); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); titleT = sec;
