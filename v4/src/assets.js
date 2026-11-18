@@ -6,7 +6,7 @@ import { GLTFLoader, HDRLoader } from '../lib/three-addons.js';
 // dieren met botten en animaties (Sketchfab, CC BY 4.0, zie assets/CREDITS.md)
 const ANIMALS = ['hyena', 'leopard', 'gazelle', 'hominin', 'sabre', 'zebra', 'elephant', 'cobra', 'vulture'];
 export const ANIMAL_MODELS = ANIMALS;
-export const MODELS = [...ANIMALS, 'acacia', 'namaqualand_boulder_02', 'namaqualand_boulder_05', 'namaqualand_rocks_01', 'wild_rooibos_bush', 'shrub_03', 'dead_tree_trunk', 'dry_branches_medium_01'];
+export const MODELS = [...ANIMALS, 'acacia', 'namaqualand_boulder_02', 'namaqualand_boulder_05', 'namaqualand_rocks_01', 'wild_rooibos_bush', 'shrub_03', 'dead_tree_trunk', 'dry_branches_medium_01', 'fig', 'baobab'];
 export const TEXTURES = [
   ['dry_ground_01_diff', true], ['dry_ground_01_nor', false], ['withered_grass_diff', true], ['withered_grass_nor', false],
   ['sparse_grass_diff', true], ['dry_ground_rocks_diff', true], ['grass_atlas', true],

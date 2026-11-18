@@ -14,7 +14,7 @@ import { loadAssets } from './assets.js';
 import { ICON, ITEM_ICON } from './icons.js';
 import { Encounters } from './encounters.js';
 import { Giant } from './giant.js';
-import { Shore } from './shore.js';
+import { Shore, digTuber } from './shore.js';
 import { Fire } from './fire.js';
 import { $, toast, note, title, showCard, closeCard, uiTick } from './engine/ui.js';
 import { initControls } from './engine/controls.js';
@@ -27,14 +27,15 @@ import { initHints } from './systems/hints.js';
 import { initBody } from './systems/body.js';
 import { initPersist } from './systems/persist.js';
 import { initCarry } from './systems/carry.js';
+import { Forage } from './forage.js';
 import { initFood } from './systems/food.js';
 import { initCraft } from './systems/craft.js';
 import { initThirst } from './systems/thirst.js';
 import { initKnowledge } from './systems/knowledge.js';
 
 const GIVE_BACK = { waterbag: 'pouch' };   // wat je terugkrijgt als de groep het leeg heeft
-const EDIBLE = new Set(['roast', 'berry', 'redberry', 'leaf', 'meat', 'egg', 'honey', 'tuber', 'fish']);
-const GIVE = ['roast', 'meat', 'honey', 'fish', 'waterbag', 'hide', 'bone', 'egg', 'tuber', 'berry', 'leaf', 'redberry'];   // wat je aan de groep kunt geven, het beste eerst
+const EDIBLE = new Set(['roast', 'berry', 'redberry', 'leaf', 'meat', 'egg', 'honey', 'tuber', 'fish', 'fig']);
+const GIVE = ['roast', 'meat', 'honey', 'fish', 'waterbag', 'hide', 'bone', 'egg', 'baobab', 'tuber', 'fig', 'berry', 'leaf', 'redberry'];   // wat je aan de groep kunt geven, het beste eerst
 const DAY_LEN = 14 * 60;   // één dag en nacht duurt 14 minuten
 
 // ---------- scène ----------
@@ -66,6 +67,7 @@ const CARCASS = AREA.carcass;
 const vultures = new Vultures(scene, CARCASS.x, CARCASS.z, A);
 carcass(scene, CARCASS.x, CARCASS.z);
 const things = placeItems(scene, A, AREA);
+const forage = new Forage(scene, A, things);   // vruchtbomen, takken onder de bomen, oude karkassen, knollen
 const glints = new Glints(scene, things);
 const motes = new Motes(scene);
 const bushes = things.filter((t) => t.bush).map((t) => [t.x, t.z]);
@@ -120,14 +122,14 @@ function discover(id) {
 // ---------- wat de onderdelen van elkaar mogen weten ----------
 // Systemen (systems/) krijgen dit ene object mee. Wat pas verderop in dit bestand ontstaat, wordt op het moment van gebruik opgehaald.
 const G = {
-  state, player, scene, renderer, things, hyenas, sabres, group, giant, shore, fire, herd, sound, closeRadial, openRadial, dropAt, act, sharp, discover, carcassNear, hiveNear,
+  state, player, scene, renderer, things, hyenas, sabres, group, giant, shore, forage, fire, herd, sound, closeRadial, openRadial, dropAt, act, sharp, discover, carcassNear, hiveNear, spotOf,
   get predGame() { return predGame; }, get dayP() { return dayP; }, set dayP(v) { dayP = v; }, get danger() { return danger; }, get aim() { return aim; },
   get camYaw() { return cam.yaw; }, set camTurn(v) { cam.turnTo = v; }, get clock() { return clock; }, stopWalk() { walkTo = null; }, get walking() { return !!walkTo; },
 };
 let homeShown = false;
 const carry = initCarry(G), { renderHands, freeHand, handsFull, giveHand, renderBag, stow, unstow, makeBag, wearHide, putCloak, cloakTick } = carry;
 Object.assign(G, carry);
-const { eat, crack, cutMeat, heard, tasteAt } = initFood(G);
+const { eat, crack, crackFruit, cutMeat, heard, tasteAt } = initFood(G);
 const { knap, knapAxe, knapTick, makeStick } = initCraft(G);
 const thirst = G.thirst = initThirst(G);
 const { journal, knowledge } = initKnowledge(G, DISC);
@@ -250,7 +252,7 @@ function groupTakes(dt) {
   layT -= dt; if (layT > 0) return;
   layT = 1.5;
   if (state.sleeping > 0 || state.lost) return;
-  const t = things.find((x) => x.kind === 'pick' && !x.gone && ['meat', 'honey', 'hide', 'bone', 'egg', 'berry', 'fish', 'tuber'].includes(x.item) && Math.hypot(x.x - HOME.x, x.z - HOME.z) < 6);
+  const t = things.find((x) => x.kind === 'pick' && !x.gone && ['meat', 'honey', 'hide', 'bone', 'egg', 'berry', 'fish', 'tuber', 'fig', 'baobab'].includes(x.item) && Math.hypot(x.x - HOME.x, x.z - HOME.z) < 6);
   if (t && share(t.item)) removeThing(t);
 }
 // bij de groep gaan slapen: de nacht gaat voorbij
@@ -316,6 +318,25 @@ function turnStone(t) {
     showCard(`<div class="eyebrow">Vondst</div><h2>${f.name}</h2><p>${f.text}</p><p class="know">Je vondst staat in je boekje.</p>`);
   }
 }
+// De wereld wijst de weg: waar is het dichtstbijzijnde van wat een missiestap vraagt? Wie de missie gaf wijst erheen,
+// en het ding zelf schittert van verder weg. Geen pijl, geen streep op de grond.
+let wanted = null;
+function spotOf(kind) {
+  if (wanted) wanted.wanted = false;
+  wanted = null;
+  const p = player.pos, pts = (l) => l.map((q) => ({ x: q[0], z: q[1] }));
+  const near = (list) => { let b = null, bd = 1e9; for (const o of list) { const d = Math.hypot(o.x - p.x, o.z - p.z); if (d < bd) { bd = d; b = o; } } return b; };
+  if (['stone', 'branch', 'bone'].includes(kind)) { wanted = near(things.filter((t) => t.kind === 'pick' && t.item === kind && !t.gone)); if (wanted) wanted.wanted = true; return wanted; }
+  if (kind === 'leaf') return near(things.filter((t) => t.bush && t.item === 'leaf' && t.bush.left > 0));
+  if (kind === 'plant') return near([...forage.plants, ...(shore ? shore.plants : [])].filter((q) => q.left > 0));
+  if (kind === 'deadwood') return fire ? near(fire.wood) : null;
+  if (kind === 'smoke') return fire ? fire.S : null;
+  if (kind === 'kill') return near([sabres.kill, herd.kill].filter((k) => k && k.meat > 0));
+  if (kind === 'pool') return near(pts(AREA.pools || []));
+  if (kind === 'herd') return near(herd.members);
+  if (kind === 'outcrop') return AREA.outcrop ? { x: AREA.outcrop.at[0], z: AREA.outcrop.at[1] } : null;
+  return null;
+}
 // iets uit de wereld nemen (een kei oppakken, of één keer plukken van een struik)
 function take(t) {
   if (t.kind === 'pick') { t.gone = true; scene.remove(t.mesh); return; }
@@ -346,6 +367,7 @@ function crafts(i) {
   const out = [], it = state.hands[i], other = state.hands[1 - i];
   if (!it) return out;
     if ((it === 'bone' && other === 'stone') || (it === 'stone' && other === 'bone')) out.push({ t: 'Kraak het bot', icon: ICON.crack, fn: () => act('Interact', crack) });
+    if ((it === 'baobab' && other === 'stone') || (it === 'stone' && other === 'baobab')) out.push({ t: 'Kraak de vrucht', icon: ICON.crack, fn: () => act('Interact', crackFruit) });
     if (it === 'stone' && other === 'stone') out.push({ t: 'Sla een scherf', icon: ICON.knap, fn: () => act('Interact', () => knap(i)) });
     if (it === 'stone' && other === 'stone' && ERA.tech && ERA.tech.includes('axe')) out.push({ t: 'Maak een vuistbijl', icon: ICON.axe, q: !state.known.has('axe'), fn: () => act('Interact', () => knapAxe(i)) });
     const edge = other === 'flake' || other === 'axe';
@@ -388,7 +410,7 @@ function openRadial(target) {
     if (target.look === 'prey' && target.enc.meat > 0) opts.push({ t: 'Snijd vlees', icon: ICON.cut, fn: () => goAndDo(target, cut(() => enc.cutPrey(target.enc, predGame)), 2.4) });
     if (target.look === 'giantdead' && giant.meat > 0) opts.push({ t: 'Snijd vlees', icon: ICON.cut, fn: () => goAndDo(target, cut(() => giant.cut(predGame)), 3.2) });
     if (target.look === 'catfish') opts.push({ t: 'Grijp', icon: ICON.hand, fn: () => goAndDo(target, () => act('Interact', () => shore.grab(target, predGame)), 1.6) });
-    if (target.look === 'tuberplant') opts.push({ t: 'Graaf', icon: ICON.dig, fn: () => goAndDo(target, () => act('Interact', () => shore.dig(target, predGame)), 1.5) });
+    if (target.look === 'tuberplant') opts.push({ t: 'Graaf', icon: ICON.dig, fn: () => goAndDo(target, () => act('Interact', () => digTuber(target, predGame)), 1.5) });
     if (target.fire) { const ic = fire.canUse(target, state); if (ic) opts.push({ t: fire.verb(target, state), icon: ic, fn: () => goAndDo(target, () => act('Interact', () => fire.use(target, predGame), target.fire === 'wood' ? 1.3 : 1.6), 2.4) }); }
     if (target.look === 'bees' && target.enc.honey > 0) opts.push({ t: 'Pak honing', icon: ICON.hand, fn: () => goAndDo(target, () => act('Interact', () => enc.takeHoney(target.enc, predGame)), 2.6) });
   } else {
@@ -434,7 +456,7 @@ function dropAt(it, rock = carry.lastRock) {
   if (t) t.byPlayer = true;
 }
 function dropAtPos(it, x, z, thrown = false, rock = null) {
-  if (!['stone', 'bone', 'flake', 'meat', 'egg', 'honey', 'hide', 'berry', 'branch', 'stick', 'tuber', 'fish', 'axe', 'roast', 'pouch', 'waterbag'].includes(it)) return null;
+  if (!['stone', 'bone', 'flake', 'meat', 'egg', 'honey', 'hide', 'berry', 'branch', 'stick', 'tuber', 'fish', 'axe', 'roast', 'pouch', 'waterbag', 'fig', 'baobab'].includes(it)) return null;
   if (it === 'stone' && !rock) rock = { type: 'lava', hits: 0 };
   const m = heldMesh(it, rock); m.position.set(x, height(x, z) + 0.08, z); if (it === 'bone' || it === 'branch' || it === 'stick') m.rotation.set(0, 0, Math.PI / 2);
   m.traverse((o) => { o.castShadow = true; }); scene.add(m);
@@ -600,7 +622,7 @@ function tapAt(sx, sy, reach = 56) {
   const wasOpen = !!radial;
   const cands = [...things.filter(available), ...LOOK_TARGETS, ...herd.members.map((m) => ({ look: 'gazelle', member: m })),
     ...hyenas.list.map((h) => ({ look: 'hyena', member: h })), { look: 'leopard', member: leopard },
-    ...zebras.alive.map((m) => ({ look: 'zebra', member: m })), ...sabres.list.map((m) => ({ look: 'sabre', member: m })), ...group.list.map((m) => ({ look: m.id, member: m })), ...enc.lookTargets(), ...giant.lookTargets(player.pos), ...(shore ? shore.lookTargets() : []), ...(fire ? fire.lookTargets() : [])];
+    ...zebras.alive.map((m) => ({ look: 'zebra', member: m })), ...sabres.list.map((m) => ({ look: 'sabre', member: m })), ...group.list.map((m) => ({ look: m.id, member: m })), ...enc.lookTargets(), ...giant.lookTargets(player.pos), ...(shore ? shore.lookTargets() : []), ...forage.lookTargets(), ...(fire ? fire.lookTargets() : [])];
   let best = null, bd = reach;
   for (const c of cands) {
     const p = targetPos(c);
@@ -828,7 +850,7 @@ function actionOptions() {
   const hive = hiveNear(3.6);
   if (hive && H.includes(null)) out.push({ mode: 'take', run: () => goAndDo(hive, () => act('Interact', () => enc.takeHoney(hive.enc, predGame)), 2.6) });
   // aan de oever: graven met de stok, of een vis grijpen
-  const sh = shore && shore.action(predGame);
+  const sh = (shore && shore.action(predGame)) || forage.action(predGame);
   if (sh) out.push(sh);
   // aan het water: drinken, of de waterzak vullen
   const dr = thirst.option();
@@ -989,6 +1011,7 @@ function update(dt) {
   enc.update(dt, predGame);
   giant.update(dt, predGame, t);
   if (shore) shore.update(dt, predGame);
+  forage.update(dt, t, camera.position);
   if (fire) fire.update(dt, predGame, dayP);
   groupTakes(dt);
   atHome(dt);
@@ -1172,7 +1195,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { scene, giveHand, eat, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
+window.__game = { scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, setSneak, still: () => stillT,
   setCam: (y, p, d) => { cam.yaw = y; cam.pitch = p; if (d) cam.dist = d; }, setZoom: C.setZoom, zoom: () => cam.dist, C, jump, sound, world, weather, menu, closeCard, clockT: () => clock.elapsedTime, actionContext, actionOptions, heard, tasteAt, bodyTap, prim: () => prim, alts: () => alts,
   lookFrom: (pos, look) => { cam.override = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },

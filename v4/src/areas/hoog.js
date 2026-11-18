@@ -17,7 +17,7 @@ export const hoog = {
   cold: 2.2,                               // hoe hard een nacht zonder vuur of huid aan je vreet (laagland: 1,5)
   // hoe het land eruitziet: groener gras, koelere grond en meer nevel dan in het laagland
   look: { ground: [0.74, 0.98, 0.56], green: 0.7, dry: 0.25, lush: 0.27, fog: [34, 185], mist: [0xcfd8d4, 0.4] },
-  trees: [[-100, -26, 1.75], [-128, 4, 1.2], [-62, -64, 1.1], [-20, -10, 1.3], [24, 34, 1.2], [70, -30, 1.1], [112, 30, 1.3], [-140, -90, 1], [40, -120, 1.1], [130, -90, 1], [-70, 60, 1.1]],
+  trees: [[-100, -26, 1.75], [-128, -14, 1.2], [-62, -64, 1.1], [-20, -10, 1.3], [24, 34, 1.2], [70, -30, 1.1], [112, 30, 1.3], [-140, -90, 1], [40, -120, 1.1], [130, -90, 1], [-70, 60, 1.1]],
   tallGrass: [[22, 36, 11], [-56, -4, 9], [74, -34, 10], [-130, -60, 9], [100, 6, 9], [-10, -150, 10], [140, -60, 9]],
   carcass: { x: 96, z: -122 },
   fauna: ['gazelle', 'zebra', 'hyena', 'sabre', 'leopard', 'puffadder', 'giant', 'vulture', 'hominin'],
@@ -27,7 +27,7 @@ export const hoog = {
   leopard: { tree: [70, -30], branchY: 2.8 },
   birds: [[-98, -30], [-60, -66], [-18, -12], [26, 30], [72, -28], [110, 28]],
   giant: {
-    route: [[-150, -130, 'eat'], [-140, -90, 'eat'], [-128, 4, 'eat'], [-140, { river: -13 }, 'drink'], [-62, -64, 'eat'], [40, -120, 'eat'], [130, -90, 'eat'], [60, -155, 'pass']],
+    route: [[-150, -130, 'eat'], [-140, -90, 'eat'], [-128, -14, 'eat'], [-140, { river: -13 }, 'drink'], [-62, -64, 'eat'], [40, -120, 'eat'], [130, -90, 'eat'], [60, -155, 'pass']],
     grave: [-136, { river: -15 }],
   },
   models: ['oldtree', 'lengai', 'handaxe'],
@@ -42,9 +42,13 @@ export const hoog = {
   riverRock: ['sand'],
   flatStones: [[-90, -38, 'grubs'], [-70, -12, 'scorpion'], [-120, -40, 'grubs'], [-30, -60, 'grubs'], [20, -20, 'scorpion'], [80, -60, 'grubs']],
   bones: [[95.5, -121], [98, -123.5]],
-  branches: [[-98.5, -23], [-126, 6], [-60, -62], [-22, -8]],
+  branches: [[-98.5, -23], [-126, -12], [-60, -62], [-22, -8]],
   redBerries: [[-80, -8], [-40, -40], [50, -10]],
-  berries: [[-108, -40], [-84, -44], [-66, 2, 4], [-130, -20], [-10, -70, 5], [44, 16, 6], [90, -40]],
+  // wat het land zelf geeft: vruchtbomen [x, z, soort], oude karkassen met merg in de botten, knolplanten (graven met een stok)
+  fruitTrees: [[-150, -10, 'fig'], [-60, 1, 'fig'], [-70, -90, 'baobab'], [-136, -52, 'baobab'], [10, -50, 'baobab']],
+  oldCarcasses: [[-55, -16], [-150, -60], [30, -80]],
+  tubers: [[-80, -52], [-124, -30], [-60, -30], [-94, 26], [-130, -10], [-20, -40]],
+  berries: [[-122, -58], [-72, -58], [-66, 2, 4], [-130, -20], [-10, -70, 5], [44, 16, 6], [90, -40]],
   leaves: [-120, -40, 30],
   looks: {
     gazelle: { name: 'Gazellen', look: 'Slanke antilopen met gebogen hoorns. Ze rennen veel harder dan jij. Maar na een stuk rennen staan ze stil en hijgen.', hint: 'Zij raken hun warmte kwijt door te hijgen. Jij zweet, en loopt gewoon door.' },
@@ -64,19 +68,19 @@ export const hoog = {
     return [
       { id: 'camp', who: 'tor', shiver: true, ask: 'Oru zet het gloeiende hout neer. Hij rilt. Hier is nog geen plek voor het vuur.', end: 'Het vuur brandt in de nieuwe kring. Oru gaat er dicht bij zitten. Dit is nu het kamp.', title: 'Bouw een vuurplaats',
         why: 'De groep heeft het vuur de hele tocht gedragen. Het gloeit nog. Maar op de kale grond waait het uit. Tussen stenen blijft het branden.', done: () => found('camp'), steps: [
-          { t: 'Pak een kei', ok: () => found('camp') || F().ring > 0 || g.has('stone') },
+          { t: 'Pak een kei', find: 'stone', ok: () => found('camp') || F().ring > 0 || g.has('stone') },
           { t: 'Leg zes keien in een kring op de kale plek', ok: () => found('camp') || F().built },
-          { t: 'Steek een tak aan bij het gloeiende hout', ok: () => found('camp') || g.has('torch') },
+          { t: 'Steek een tak aan bij het gloeiende hout', find: 'smoke', ok: () => found('camp') || g.has('torch') },
           { t: 'Leg de brandende tak in de kring', ok: () => found('camp') }] },
       { id: 'glass', who: 'kem', ask: 'Dak slaat op een kei. De kei valt in gruis. Hij gooit hem boos weg.', end: 'Dak voelt aan de rand en trekt snel zijn vinger terug. Zo scherp was nog geen steen.', title: 'Haal zwarte steen',
         why: 'De keien hier zijn te zacht. Ver naar het oosten, langs de rivier, liggen zwarte rotsen. Die steen breekt als geen andere. Kijk onderweg uit bij het hoge gras.', done: () => found('glass'), steps: [
-          { t: 'Volg de rivier naar het oosten, tot de zwarte rotsen', ok: () => found('glass') || black() || near([132, 58], 16) },
+          { t: 'Volg de rivier naar het oosten, tot de zwarte rotsen', find: 'outcrop', ok: () => found('glass') || black() || near([132, 58], 16) },
           { t: 'Pak een zwarte steen', ok: () => found('glass') || black() },
           { t: 'Sla er een scherf of een vuistbijl van', ok: () => found('glass') }] },
       { id: 'run', who: 'bala', ask: 'Bala wijst naar de gazellen. Dan naar de zon. Ze lacht en strekt haar benen.', end: 'Bala draagt het vlees het kamp in. Vandaag eet iedereen, en niemand hoefde te wachten op de katten.', title: 'Loop een gazelle moe',
         why: 'Een gazelle is sneller dan jij. Maar in de hitte moet ze steeds stilstaan om te hijgen. Jij zweet en loopt door. Geef haar geen rust.', done: () => found('runcut'), steps: [
           { t: 'Wacht tot de zon hoog staat', ok: () => found('run') || hot() || H().heat > 0.3 },
-          { t: 'Jaag de gazellen op en blijf erachteraan', ok: () => found('run') || H().heat > 0.3 || !!H().spent },
+          { t: 'Jaag de gazellen op en blijf erachteraan', find: 'herd', ok: () => found('run') || H().heat > 0.3 || !!H().spent },
           { t: 'Geef ze geen rust, tot er één niet meer kan', ok: () => found('run') || !!H().spent },
           { t: 'Sla toe met een kei of je vuistbijl', ok: () => found('run') },
           { t: 'Snijd het vlees los', ok: () => found('runcut') }] },

@@ -41,6 +41,9 @@ export const water = {
   bones: [[-90.5, -69], [-88, -71.5]],
   branches: [[-3, 17.5], [32, -8], [-48, -17], [72, -47], [-88, 33], [108, 12], [12, -78]],   // rechte takken onder de acacia's
   redBerries: [[40, 12]],
+  // wat het land zelf geeft: vruchtbomen [x, z, soort], oude karkassen met merg in de botten, knolplanten (graven met een stok)
+  fruitTrees: [[-34, 27, 'fig'], [40, 50, 'fig'], [20, -44, 'baobab'], [-70, -44, 'baobab'], [96, -58, 'baobab']],
+  oldCarcasses: [[52, -64], [-112, -34]],
   berries: [[-62, -30, 4], [92, -92, 5], [22, -84, 4]],   // het land is droog: struiken alleen nog ver weg
   leaves: [[68, { river: 24 }], [73, { river: 28 }]],     // bitterblad groeit alleen nog op de zandbank
   outro: {
@@ -57,12 +60,12 @@ export const water = {
     return [
       { id: 'stick', who: 'kem', ask: 'Kem krabt in de harde grond. Zijn nagels breken.', end: 'Kem weegt de graafstok in zijn hand en loopt meteen weg, de vlakte op.', title: 'Maak een graafstok',
         why: 'Onder de grond zit eten dat niet verdort. Maar de korst is te hard voor vingers.', done: () => g.state.found.has('tuber'), steps: [
-          { t: 'Zoek een rechte tak onder een acacia', ok: () => g.carries('branch') || g.state.found.has('stick') },
+          { t: 'Zoek een rechte tak onder een acacia', find: 'branch', ok: () => g.carries('branch') || g.state.found.has('stick') },
           { t: 'Houd tak en snijsteen vast, tik op de tak en schraap er een punt aan', ok: () => g.state.found.has('stick') },
-          { t: 'Zoek een plant met brede bladeren en wrik met de stok de knol los', ok: () => g.state.found.has('tuber') }] },
+          { t: 'Zoek een plant met brede bladeren en wrik met de stok de knol los', find: 'plant', ok: () => g.state.found.has('tuber') }] },
       { id: 'fish', who: 'ibo', ask: 'Ibo plonst door een poel. Alles schiet weg.', end: 'Ibo houdt de vis met twee handen vast en wil hem niet meer loslaten.', title: 'Grijp een meerval',
         why: 'Het zakkende meer laat poelen achter. De vissen daarin kunnen nergens heen.', done: () => g.state.found.has('fish'), steps: [
-          { t: 'Loop naar een poel op het strand', ok: () => g.state.found.has('fish') || POOLS.some(([x, z, r]) => near(g.player, x, z, r + 9)) },
+          { t: 'Loop naar een poel op het strand', find: 'pool', ok: () => g.state.found.has('fish') || POOLS.some(([x, z, r]) => near(g.player, x, z, r + 9)) },
           { t: 'Buk voor je het water in gaat: wie plonst, jaagt ze weg', ok: () => g.state.found.has('fish') || (g.player.sneaking && inPool()) },
           { t: 'Tik op de vis en grijp hem', ok: () => g.state.found.has('fish') }] },
       // het noodgeval: de zon is de klok. Niemand sterft; ben je te laat, dan wordt het een zware nacht en ga je morgen weer.
@@ -73,7 +76,7 @@ export const water = {
         done: () => tor().sick <= 0, steps: [
           { t: 'Neem een kei mee en loop naar de zandbank in het meer', ok: () => g.carries('leaf') || near(g.player, 70, 60, 26) },
           { t: 'Waad erheen tussen het riet, waar het ondiep is. Let op wat drijft', ok: () => g.carries('leaf') || near(g.player, 70, 93, 9) },
-          { t: 'Pluk bitterblad', ok: () => g.carries('leaf') },
+          { t: 'Pluk bitterblad', find: 'leaf', ok: () => g.carries('leaf') },
           { t: 'Breng het blad naar de slaapboom', ok: () => tor().sick <= 0 }] },
     ];
   },

@@ -214,10 +214,10 @@ export class Herd {
 
 // ---------- gieren die boven een karkas cirkelen ----------
 export class Vultures {
-  constructor(scene, x, z, A) {
+  constructor(scene, x, z, A, n = 4) {
     this.center = new THREE.Vector3(x, height(x, z), z);
     this.birds = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < n; i++) {
       const rig = new Rig(A, 'vulture', { scale: 1.1, facing: Math.PI }), g = rig.root;
       rig.model.traverse((o) => { if (o.isMesh) { o.receiveShadow = false; o.castShadow = false; } });   // ze cirkelen hoog: hun schaduw valt nergens in beeld
       rig.play('Armature', { speed: 0 });

@@ -36,9 +36,11 @@ export class Glints {
       const y = height(th.x, th.z) + (th.bush ? 0.9 : 0.35);
       // af en toe een korte schittering, alleen als je in de buurt bent
       const tw = Math.pow(Math.max(0, Math.sin(t * 1.3 + g.phase)), 14);
-      g.glint.visible = !gone && d < 16 && !senses;
+      // wat je missie nu vraagt, zie je van veel verder schitteren
+      const far = th.wanted ? 60 : 16;
+      g.glint.visible = !gone && d < far && !senses;
       g.glint.position.set(th.x, y, th.z);
-      g.glint.scale.setScalar(0.25 + tw * 0.7);
+      g.glint.scale.setScalar((0.25 + tw * 0.7) * (th.wanted ? 1 + Math.min(2.2, d / 14) : 1));
       g.glint.material.opacity = 0.2 + tw * 0.8;
       // zintuigen: alles in de buurt licht op; wat je al kent in zijn eigen kleur
       g.halo.visible = !gone && senses && d < 45;

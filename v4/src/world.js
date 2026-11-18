@@ -175,6 +175,21 @@ export const blockers = [];
 export const cover = [];
 
 
+// blad: uitgeknipt uit een foto, met licht van boven op beide kanten
+export function leafMat(map, tint) {
+  const m = new THREE.MeshStandardMaterial({ map, color: tint, alphaTest: 0.35, alphaToCoverage: true, side: THREE.DoubleSide, roughness: 0.9, metalness: 0, emissive: 0x1a2408 });
+  // bladeren laten licht door: beide kanten krijgen licht van boven, anders is de onderkant zwart
+  m.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace('#include <beginnormal_vertex>', 'vec3 objectNormal = vec3(0.0, 1.0, 0.0);');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', 'float faceDirection = 1.0;\nvec3 normal = normalize(vNormal);\nvec3 nonPerturbedNormal = normal;');
+    // fijne blaadjes verdwijnen op afstand uit de verkleinde textuur: dekking versterken
+    sh.fragmentShader = sh.fragmentShader.replace('#include <alphatest_fragment>', 'diffuseColor.a = min(1.0, diffuseColor.a * 2.5);\n#include <alphatest_fragment>');
+  };
+  return m;
+}
+// waar de acacia's staan: [x, z, maat] (onder een boom ligt wel eens een tak)
+export const TREES = [];
+
 export function buildWorld(scene, A) {
   const R = rng(7), STEEP = 0.8;
 
@@ -310,21 +325,11 @@ export function buildWorld(scene, A) {
     R(); const nb = 3 + Math.floor(R() * 2); for (let i = 0; i < nb * 35 + 10; i++) R();
     if (steep(x, z) > STEEP) return;   // op een wand staat niets
     acaciaSpots.push([x, z, s * 0.85, (x * 12.9898 + z * 78.233) % 6.28]);
+    TREES.push([x, z, s]);
     blockers.push({ x, z, r: Math.max(0.3, 0.3 * s) });   // iets ruimer dan de dunne stam: de reus en de dekking rekenen ermee
   }
   for (let i = 0; i < 70; i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 10)) acacia(x, z, 0.8 + R() * 0.6); }
   AREA.trees.forEach(([x, z, s]) => acacia(x, z, s));
-  const leafMat = (map, tint) => {
-    const m = new THREE.MeshStandardMaterial({ map, color: tint, alphaTest: 0.35, alphaToCoverage: true, side: THREE.DoubleSide, roughness: 0.9, metalness: 0, emissive: 0x1a2408 });
-    // bladeren laten licht door: beide kanten krijgen licht van boven, anders is de onderkant zwart
-    m.onBeforeCompile = (sh) => {
-      sh.vertexShader = sh.vertexShader.replace('#include <beginnormal_vertex>', 'vec3 objectNormal = vec3(0.0, 1.0, 0.0);');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', 'float faceDirection = 1.0;\nvec3 normal = normalize(vNormal);\nvec3 nonPerturbedNormal = normal;');
-      // fijne blaadjes verdwijnen op afstand uit de verkleinde textuur: dekking versterken
-      sh.fragmentShader = sh.fragmentShader.replace('#include <alphatest_fragment>', 'diffuseColor.a = min(1.0, diffuseColor.a * 2.5);\n#include <alphatest_fragment>');
-    };
-    return m;
-  };
   const am = new THREE.Object3D();
   A.models.acacia.updateMatrixWorld(true);
   A.models.acacia.traverse((o) => {

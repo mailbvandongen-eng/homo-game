@@ -12,7 +12,7 @@ import { AREA } from './eras/index.js';
 const SNAKE = 0.012, UP = new THREE.Vector3(0, 1, 0);   // de pofadder is in zijn bestand zo'n 95 eenheden lang: hier ruim een meter
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
-const ORDER = ['gazelle', 'snake', 'nest', 'bees', 'strangers'];
+const ORDER = ['gazelle', 'nest', 'snake', 'bees', 'nest', 'strangers', 'bees'];   // nesten en bijen komen het vaakst langs
 const FOOD = ['meat', 'honey', 'egg', 'bone'];   // wat vreemden van de grond willen oprapen
 const AVOID = [[HOME.x, HOME.z, 38], [...AREA.sabres.lair, 30], [...AREA.leopard.tree, 25], [AREA.carcass.x, AREA.carcass.z, 22]];   // slaapboom, katten, luipaard, karkas
 
@@ -85,7 +85,7 @@ export class Encounters {
           const at = this.place(kind, game);
           if (at) { this.spawn(kind, at.x, at.z, game, at.tree); this.n += k + 1; break; }
         }
-        this.cool = 70 + Math.random() * 50;
+        this.cool = 55 + Math.random() * 40;
       }
     }
     for (const e of this.list) {
@@ -327,7 +327,7 @@ export class Encounters {
     hive.add(comb, hole, drip); hive.position.set(hx, y, hz); this.scene.add(hive);
     const N = 16, pos = new Float32Array(N * 3), geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const bees = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffd040, size: 0.07, sizeAttenuation: true })); bees.frustumCulled = false; this.scene.add(bees);
-    return { x: hx + 0.5, z: hz + 0.5, hx, hz, hy: y, hive, drip, bees, pos, honey: 3, angry: 0, stingT: 0, buzzT: 0, halo: halo(this.scene, 0xffb030, 1.4) };
+    return { x: hx + 0.5, z: hz + 0.5, hx, hz, hy: y, hive, drip, bees, pos, honey: 4, angry: 0, stingT: 0, buzzT: 0, halo: halo(this.scene, 0xffb030, 1.4) };
   }
   up_bees(e, dt, game) {
     const p = game.player.pos, s = game.state, d = dist(e, p), awake = game.night < 0.45;

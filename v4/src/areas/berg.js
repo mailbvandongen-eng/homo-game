@@ -36,7 +36,11 @@ export const berg = {
   bones: [[79.5, -69], [82, -71.5]],
   branches: [[11.5, -23], [-32, -4], [56, -38]],
   redBerries: [[23, -12], [-30, 20], [64, -50]],
-  berries: [[4, -37], [30, -41], [76, 6, 4], [-46, -44], [100, -66, 5], [-96, -6, 6]],
+  // wat het land zelf geeft: vruchtbomen [x, z, soort], oude karkassen met merg in de botten, knolplanten (graven met een stok)
+  fruitTrees: [[-4, 44, 'fig'], [70, 59, 'fig'], [43, -63, 'baobab'], [-24, -58, 'baobab'], [96, -34, 'baobab']],
+  oldCarcasses: [[-33, -11], [22, -110], [120, 10]],
+  tubers: [[28, -6], [-10, -48], [52, -26], [-30, 10], [80, -30]],
+  berries: [[-8, -52], [37, -55], [76, 6, 4], [-46, -44], [100, -66, 5], [-96, -6, 6]],
   leaves: [-10, 36, -60],
   outro: {
     title: 'Het vuur gaat mee',
@@ -52,23 +56,23 @@ export const berg = {
     return [
       { id: 'axe', who: 'kem', ask: 'Dak wil een dikke tak doorhakken. Zijn scherf breekt in tweeën.', end: 'Dak hakt de tak in één klap door. Hij lacht en houdt de bijl stevig vast.', title: 'Maak een vuistbijl',
         why: 'Een scherf is te klein voor zwaar werk. Dak heeft een steen nodig die zijn hele hand vult en aan alle kanten snijdt.', done: () => g.state.found.has('axe'), steps: [
-          { t: 'Pak twee keien', ok: () => g.state.found.has('axe') || (g.state.hands[0] === 'stone' && g.state.hands[1] === 'stone') },
+          { t: 'Pak twee keien', find: 'stone', ok: () => g.state.found.has('axe') || (g.state.hands[0] === 'stone' && g.state.hands[1] === 'stone') },
           { t: 'Tik op een kei in je hand en kies de vuistbijl', ok: () => g.state.found.has('axe') || g.state.rock.some((r) => r && r.shape > 0) },
           { t: 'Blijf slaan tot de bijl klaar is', ok: () => g.state.found.has('axe') }] },
       { id: 'fire', who: 'tor', shiver: true, ask: 'Oru rilt van de kou. Hij wijst naar de rook in de verte.', end: 'Het vuur brandt. Oru warmt zijn handen en iedereen komt erbij zitten.', title: 'Haal vuur',
         why: 'De bliksem heeft een boom geraakt. Daar gloeit het nog. Breng het vuur naar het kamp, dan heeft iedereen het warm.', done: () => g.state.found.has('hearth'), steps: [
-          { t: 'Pak een tak', ok: () => g.state.found.has('hearth') || g.carries('branch') || g.has('torch') },
-          { t: 'Loop naar de rook', ok: () => g.state.found.has('hearth') || g.has('torch') || (g.carries('branch') && near(F().source, 9)) },
+          { t: 'Pak een tak', find: 'branch', ok: () => g.state.found.has('hearth') || g.carries('branch') || g.has('torch') },
+          { t: 'Loop naar de rook', find: 'smoke', ok: () => g.state.found.has('hearth') || g.has('torch') || (g.carries('branch') && near(F().source, 9)) },
           { t: 'Steek je tak aan in de gloed', ok: () => g.state.found.has('hearth') || g.has('torch') },
           { t: 'Breng de brandende tak snel naar de stenen in het kamp', ok: () => g.state.found.has('hearth') }] },
       { id: 'keep', who: 'ibo', needs: 'fire', ask: 'Het vuur wordt klein. Mio kijkt bang naar het donker.', end: 'De zon komt op en het vuur brandt nog. Mio legt er zelf een takje op.', title: 'Houd het vuur aan',
         why: 'Zonder hout gaat het vuur uit. Dan is het weer koud en donker, en moet je helemaal terug naar de rook.', done: () => g.state.found.has('keep'), steps: [
-          { t: 'Hak takken van een dode boom met je vuistbijl', ok: () => g.state.found.has('keep') || g.carries('branch') || F().fuel > 500 },
+          { t: 'Hak takken van een dode boom met je vuistbijl', find: 'deadwood', ok: () => g.state.found.has('keep') || g.carries('branch') || F().fuel > 500 },
           { t: 'Leg hout op het vuur tot de vlammen hoog zijn', ok: () => g.state.found.has('keep') || F().fuel > 500 },
           { t: 'Ga slapen bij het vuur', ok: () => g.state.found.has('keep') }] },
       { id: 'roast', who: 'sen', needs: 'fire', ask: 'Sen kauwt en kauwt op een stuk rauw vlees. Ze kijkt naar het vuur.', end: 'Sen deelt het warme vlees uit. Zelfs de oude Oru kan het eten.', title: 'Braad vlees',
         why: 'Rauw vlees is taai. Boven het vuur wordt het zacht en lekker, en je hebt er langer genoeg aan.', done: () => g.state.found.has('roast'), steps: [
-          { t: 'Haal vlees van een dood dier', ok: () => g.state.found.has('roast') || g.carries('meat') },
+          { t: 'Haal vlees van een dood dier', find: 'kill', ok: () => g.state.found.has('roast') || g.carries('meat') },
           { t: 'Houd het vlees bij het vuur', ok: () => g.state.found.has('roast') }] },
     ];
   },

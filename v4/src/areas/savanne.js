@@ -33,7 +33,11 @@ export const savanne = {
   bones: [[-70.5, -77], [-68, -79.5]],
   // planten: [x, z, aantal trossen]
   redBerries: [[9, 1], [-25, 30], [55, -40]],
-  berries: [[-14, -22], [24, -32], [70, 15, 4], [-50, -40], [95, -60, 5], [-92, 2, 6]],   // dichtbij klein, ver weg rijk
+  berries: [[-25, -43], [24, -32], [70, 15, 4], [-50, -40], [95, -60, 5], [-92, 2, 6]],   // dichtbij klein, ver weg rijk
+  // wat het land zelf geeft: vruchtbomen [x, z, soort], oude karkassen met merg in de botten, knolplanten (graven met een stok)
+  fruitTrees: [[-19, 32, 'fig'], [62, 60, 'fig'], [30, -58, 'baobab'], [-31, -50, 'baobab'], [86, -18, 'baobab']],
+  oldCarcasses: [[50, -74], [-46, 62], [104, 34]],
+  tubers: [[20, 6], [-21, -36], [50, -26], [-52, -15], [8, 30]],
   leaves: [-6, 40, -55],                   // bitterblad groeit alleen bij het water, op deze x
   outro: {
     title: 'De groep trekt verder',
@@ -43,25 +47,25 @@ export const savanne = {
   // g: de spelcontext (state, has, carries, player, hyenas, sabres)
   missions: (g) => [
   { id: 'flake', who: 'kem', ask: 'Kem rukt met zijn tanden aan een pees. Het lukt niet.', end: 'Kem voelt aan de scherpe rand en grijnst.', title: 'Maak een snijsteen', why: 'Met tanden en nagels krijg je geen huid open. Een scherpe rand wel.', done: () => !!g.state.knapped, steps: [
-    { t: 'Pak twee keien: in elke hand één', ok: () => g.state.hands[0] === 'stone' && g.state.hands[1] === 'stone' },
+    { t: 'Pak twee keien: in elke hand één', find: 'stone', ok: () => g.state.hands[0] === 'stone' && g.state.hands[1] === 'stone' },
     { t: 'Tik op een hand en sla de keien tegen elkaar tot er een scherf afspringt', ok: () => !!g.state.knapped }] },
   { id: 'hyena', who: 'ibo', ask: 'Ibo wijst naar de vlakte en kruipt weg. De hyena\'s!', end: 'Ibo durft weer onder de boom vandaan.', title: 'Verjaag een hyena', why: 'Elke avond komen ze dichter bij de slaapboom.', done: () => g.state.found.has('hyena'), steps: [
-    { t: 'Pak een kei', ok: () => g.has('stone') },
+    { t: 'Pak een kei', find: 'stone', ok: () => g.has('stone') },
     { t: 'Wacht op de hyena\'s: ze komen in de schemering', ok: () => g.has('stone') && g.hyenas.list.some((h) => Math.hypot(h.x - g.player.pos.x, h.z - g.player.pos.z) < 30) },
     { t: 'Houd de knop vast, mik en laat los', ok: () => g.state.found.has('hyena') }] },
   { id: 'bag', who: 'kem', ask: 'Kem heeft zijn armen vol. Alles valt.', end: 'Kem trekt aan het draagvel. Hij wil er ook een.', tag: 'hide', title: 'Maak een draagvel', why: 'Met twee handen draag je twee dingen. In een geknoopte huid past veel meer.', needs: 'flake', done: () => !!g.state.bag, steps: [
     { t: 'Neem een snijsteen mee', ok: () => g.carries('flake') || g.carries('hide') },
-    { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', ok: () => g.carries('hide') || (g.carries('flake') && g.sabres.kill && Math.hypot(g.sabres.kill.x - g.player.pos.x, g.sabres.kill.z - g.player.pos.z) < 14) },
+    { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', find: 'kill', ok: () => g.carries('hide') || (g.carries('flake') && g.sabres.kill && Math.hypot(g.sabres.kill.x - g.player.pos.x, g.sabres.kill.z - g.player.pos.z) < 14) },
     { t: 'Wacht tot de roofdieren weg zijn en snijd: eerst vlees, dan de huid', ok: () => g.carries('hide') },
     { t: 'Houd huid en snijsteen vast, tik op de huid en kies het draagvel', ok: () => !!g.state.bag }] },
   { id: 'cloak', who: 'tor', shiver: true, ask: 'Tor zit ineengedoken. Hij rilt.', end: 'Tor voelt aan het vel om je schouders en knikt.', tag: 'hide', title: 'Een vel om je schouders', why: 'De nachten worden koud, en kou vreet energie.', needs: 'flake', done: () => g.state.cloak, steps: [
     { t: 'Neem een snijsteen mee', ok: () => g.carries('flake') || g.carries('hide') },
-    { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', ok: () => g.carries('hide') || (g.carries('flake') && g.sabres.kill && Math.hypot(g.sabres.kill.x - g.player.pos.x, g.sabres.kill.z - g.player.pos.z) < 14) },
+    { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', find: 'kill', ok: () => g.carries('hide') || (g.carries('flake') && g.sabres.kill && Math.hypot(g.sabres.kill.x - g.player.pos.x, g.sabres.kill.z - g.player.pos.z) < 14) },
     { t: 'Wacht tot de roofdieren weg zijn en snijd: eerst vlees, dan de huid', ok: () => g.carries('hide') },
     { t: 'Houd huid en snijsteen vast, tik op de huid en kies de omslag', ok: () => g.state.cloak }] },
   { id: 'water', who: 'tor', ask: 'Tor likt langs zijn droge lippen. Naar de rivier lopen kan hij niet meer.', end: 'Tor drinkt en geeft de zak door. Hij legt even zijn hand op je arm.', tag: 'waterbag', title: 'Water voor Tor', why: 'Water kun je niet in je handen dragen. In de maag van een dier wel.', needs: 'flake', done: () => g.state.given.has('waterbag'), steps: [
     { t: 'Neem een snijsteen mee', ok: () => g.carries('flake') || g.carries('pouch') || g.carries('waterbag') },
-    { t: 'Zoek een vers gedood dier en snijd de maag eruit', ok: () => g.carries('pouch') || g.carries('waterbag') },
+    { t: 'Zoek een vers gedood dier en snijd de maag eruit', find: 'kill', ok: () => g.carries('pouch') || g.carries('waterbag') },
     { t: 'Houd de lege maag bij de rivier onder water', ok: () => g.carries('waterbag') || g.state.given.has('waterbag') }] },
 ],
 };

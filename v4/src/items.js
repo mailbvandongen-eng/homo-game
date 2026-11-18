@@ -121,6 +121,18 @@ export const ITEMS = {
     unknown: 'Zou je dit kunnen eten?',
     known: 'Taai en melig, maar het vult. En hij zit er ook als alles boven de grond verdord is.',
   },
+  fig: {
+    name: 'Wilde vijg', color: '#7a4a6a',
+    look: 'Een zachte, paarsbruine vrucht, zo groot als een duim. Hij ruikt zoet en er zitten mieren op.',
+    unknown: 'De apen eten ze. Jij ook?',
+    known: 'Zoet en zacht. Onder een vijgenboom ligt elke ochtend nieuw fruit.',
+  },
+  baobab: {
+    name: 'Baobabvrucht', color: '#9a9068',
+    look: 'Een vrucht zo lang als je hand, met een harde schil vol korte haartjes. Als je schudt, rammelt het binnenin.',
+    unknown: 'Je tanden komen er niet doorheen. Hoe krijg je dit open?',
+    known: 'Sla hem open met een kei. Het witte vruchtvlees is droog en zuur, en het vult goed.',
+  },
   fish: {
     name: 'Meerval', color: '#5a5a52',
     look: 'Een gladde, donkere vis met voelsprieten. Hij kronkelt nog.',
@@ -186,6 +198,8 @@ export const DISCOVERIES = [
   { id: 'fruit', text: 'Waar de reus aan een boom heeft geschud, liggen vruchten op de grond.' },
   { id: 'shield', text: 'Dicht bij de reus durven hyena\'s en luipaarden niet te komen.' },
   { id: 'stick', text: 'Met een afslag schraap je een punt aan een tak: een graafstok.' },
+  { id: 'fig', text: 'Onder een vijgenboom liggen rijpe vijgen. Elke ochtend zijn er nieuwe.' },
+  { id: 'baobab', text: 'De vrucht van de baobab heeft een harde schil. Met een kei sla je hem open.' },
   { id: 'tuber', text: 'Onder planten met brede bladeren zitten knollen. Met een graafstok wrik je ze los.' },
   { id: 'fish', text: 'In ondiepe poelen zitten meervallen gevangen. Wie plonst, jaagt ze weg; wie sluipt, grijpt er een.' },
   { id: 'croc', text: 'Wat op een drijvende boomstam lijkt, kan een krokodil zijn. Een steen jaagt hem onder water.' },
@@ -243,6 +257,9 @@ export const LOOKS = {
   outcrop: { name: 'De zwarte rotsen', look: 'Zwarte, glimmende rotsen, als gestold water. Eromheen liggen losse brokken met randen zo dun dat het licht erdoor valt.', hint: 'Dit is glas uit een berg die vuur spuwde. Geen steen breekt scherper.' },
   herdkill: { name: 'De gazelle', look: 'Ze ligt stil in het gras. Jij hebt haar moe gelopen, zonder klauwen en zonder tanden.', hint: 'Met iets scherps snijd je het vlees los.' },
   deadwood: { name: 'Dode boom', look: 'Een omgevallen acacia, grijs en kurkdroog. De takken zijn zo dik als je pols.', hint: 'Met je handen breek je er niets af. Dit hout is taai.' },
+  figtree: { name: 'Vijgenboom', look: 'Een lage, brede boom met grote bladeren. Tussen de takken hangen vijgen, en op de grond liggen de rijpe.', hint: 'Vijgenbomen staan waar water in de grond zit.' },
+  baobab: { name: 'Baobab', look: 'Een reus met een stam zo dik als een hut. De bast is glad en grijs. In de droge tijd is hij kaal en hangen de vruchten aan lange stelen.', hint: 'Wat rijp is, valt vanzelf.' },
+  oldcarcass: { name: 'Oud karkas', look: 'Verbleekte ribben in het gras. Alles wat zacht was, is allang opgegeten.', hint: 'Alleen de dikke botten heeft niemand open gekregen.' },
   tree: { name: 'De slaapboom', look: 'Een oude acacia met een brede kroon. Hier slaapt je groep, al zolang je je kunt herinneren.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
   tor: { name: 'Tor', look: 'De oudste van de groep. Zijn haar is grijs en hij loopt moeilijk, maar hij weet waar het water blijft staan als het droog is.', hint: 'Hij kan zelf niet meer ver lopen om eten te zoeken.' },
   kem: { name: 'Kem', look: 'Jong en nieuwsgierig. Kem slaat graag stenen tegen elkaar en eet alles wat je meebrengt.', hint: 'Echt alles. Ook wat je zelf nog niet kent.' },
@@ -250,7 +267,7 @@ export const LOOKS = {
 };
 
 // Wat je ervan weet, als kleur bij de zintuigen: goed, slecht of nog onbekend
-export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good', meat: 'good', egg: 'good', honey: 'good', hide: 'good', pouch: 'good', waterbag: 'good', branch: 'good', stick: 'good', tuber: 'good', fish: 'good', axe: 'good', torch: 'good', roast: 'good' };
+export const VERDICT = { berry: 'good', redberry: 'bad', leaf: 'good', bone: 'good', stone: 'good', flake: 'good', meat: 'good', egg: 'good', honey: 'good', hide: 'good', pouch: 'good', waterbag: 'good', branch: 'good', stick: 'good', tuber: 'good', fish: 'good', fig: 'good', baobab: 'good', axe: 'good', torch: 'good', roast: 'good' };
 
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 // Een tak: krom en knoestig, met bast. burn = zwartgeblakerd aan de top.
@@ -302,6 +319,14 @@ function bush(scene, x, z, berryColor, leafColor = 0xffffff, n = 3) {
   return { g, berries, left: n, max: n, mats, green: new THREE.Color(leafColor), dry: 0 };
 }
 
+// een groot bot zoals het in het gras ligt
+export function boneMesh() {
+  const m = new THREE.Group(), boneMat = lam(0xe8dcc0);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.6, 6), boneMat); shaft.rotation.z = Math.PI / 2; m.add(shaft);
+  for (const s of [-1, 1]) { const k = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 4), boneMat); k.position.x = s * 0.32; m.add(k); }
+  m.traverse((o) => { o.castShadow = true; });
+  return m;
+}
 export function placeItems(scene, A, area) {
   SHRUBS = variantsOf(A.models.shrub_03);
   const things = [];
@@ -357,18 +382,14 @@ export function placeItems(scene, A, area) {
   // takken onder de bomen
   for (const [x, z] of area.branches || []) {
     const m = heldMesh('branch'); m.scale.setScalar(1.5); m.position.set(x, height(x, z) + 0.05, z); m.rotation.set(0, x * 2.3, Math.PI / 2); m.traverse((o) => { o.castShadow = true; }); scene.add(m);
-    add({ kind: 'pick', item: 'branch', x, z, mesh: m, label: 'Pak de tak' });
+    add({ kind: 'pick', item: 'branch', x, z, mesh: m, label: 'Pak de tak', lies: true });
   }
 
   // botten bij het karkas
-  const boneMat = lam(0xe8dcc0);
   for (const [x, z] of area.bones) {
-    const m = new THREE.Group();
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.6, 6), boneMat); shaft.rotation.z = Math.PI / 2; m.add(shaft);
-    for (const s of [-1, 1]) { const k = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 4), boneMat); k.position.x = s * 0.32; m.add(k); }
-    m.position.set(x, height(x, z) + 0.08, z); m.rotation.y = x; m.traverse((o) => { o.castShadow = true; });
+    const m = boneMesh(); m.position.set(x, height(x, z) + 0.08, z); m.rotation.y = x;
     scene.add(m);
-    add({ kind: 'pick', item: 'bone', x, z, mesh: m, label: 'Pak het bot' });
+    add({ kind: 'pick', item: 'bone', x, z, mesh: m, label: 'Pak het bot', lies: true });
   }
 
   // platte stenen: eronder zitten larven, soms een schorpioen, en één keer de hamersteen
@@ -432,6 +453,19 @@ export function heldMesh(item, rock) {
     else { const side = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.011, 0.16, 6), new THREE.MeshStandardMaterial({ color: 0x74563a, roughness: 0.95 })); side.position.set(0.05, 0.2, 0); side.rotation.z = -0.7; g.add(side); }
     g.position.y = 0.12;
     return new THREE.Group().add(g);
+  }
+  if (item === 'fig') {
+    // een vijg: peervormig, met een kort steeltje
+    const g = new THREE.Group(), f = new THREE.Mesh(new THREE.SphereGeometry(0.05, 9, 7), lam(c)); f.scale.set(1, 1.2, 1); g.add(f);
+    const top = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.07, 7), lam(new THREE.Color('#6a7a3a'))); top.position.y = 0.065; g.add(top);
+    return g;
+  }
+  if (item === 'baobab') {
+    // een langwerpige, fluwelige vrucht aan een steel
+    const g = new THREE.Group(), f = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.1, 4, 9), lam(c)); g.add(f);
+    const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.1, 5), lam(new THREE.Color('#5a4a34'))); stalk.position.y = 0.15; g.add(stalk);
+    g.rotation.z = Math.PI / 2;
+    return g;
   }
   if (item === 'tuber') { const m = new THREE.Mesh(new THREE.SphereGeometry(0.08, 7, 5), lam(c)); m.scale.set(0.8, 0.75, 1.5); return m; }
   if (item === 'axe' && AXEV) { const m = new THREE.Mesh(AXEV.geo, AXEV.mat); m.castShadow = true; return m; }

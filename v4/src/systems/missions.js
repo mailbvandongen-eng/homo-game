@@ -22,7 +22,7 @@ export function initMissions(G) {
   // Niemand duwt je een keuzescherm onder je neus: wie iets nodig heeft roept en wenkt bij de slaapboom.
   // Aantikken is aannemen. Daarna terug naar diegene, en het is volbracht.
   // Je kunt meer missies tegelijk hebben (active). Eén ervan volg je (cur): daarvan zie je de stap in beeld.
-  const mission = { active: [], cur: null, giver: null, done: new Set(), over: false, callT: 12, calls: 0, endT: 0, shown: -1, lineT: 0, tickT: 0, viewing: false };
+  const mission = { active: [], cur: null, giver: null, done: new Set(), over: false, callT: 12, calls: 0, endT: 0, shown: -1, lineT: 0, tickT: 0, viewing: false, pointT: 0 };
   const stepOf = (m) => { let n = 0; while (n < m.steps.length - 1 && m.steps[n].ok()) n++; return n; };
   const entryOf = (m) => mission.active.find((e) => e.m === m);
   const offerOf = (g) => (mission.over || g.sick > 0 ? null : MISSIONS.find((m) => m.who === g.id && !mission.done.has(m.id) && !entryOf(m) && (!m.needs || mission.done.has(m.needs)) && (!m.when || m.when())) || null);
@@ -126,6 +126,7 @@ export function initMissions(G) {
     const night = G.predGame.night > 0.6, dHome = Math.hypot(player.pos.x - HOME.x, player.pos.z - HOME.z);
     if (mission.endT > 0) {
       mission.endT -= dt;
+      group.point = null;
       if (mission.endT <= 0 && !calm) mission.endT = 1;
       else if (mission.endT <= 0) {
         mission.over = true; clear(); showLine(); for (const g of group.list) { g.calling = null; g.mark.visible = false; }
@@ -145,6 +146,7 @@ export function initMissions(G) {
       markTick(g, (o || back) && d < 34 ? Math.min(1, (34 - d) / 8) : 0, dt);
     }
     if (!mission.active.length) {
+      group.point = null; G.spotOf(null);
       showLine();
       mission.callT -= dt;
       if (mission.callT <= 0 && asking.length && calm && dHome < 48) {
@@ -161,6 +163,13 @@ export function initMissions(G) {
     }
     if (!mission.cur) follow(mission.active[0].m);
     const n = stepOf(mission.cur);
+    // wie het vroeg, wijst naar waar je het vindt (zolang je bij hem staat); het ding zelf valt van verder op
+    mission.pointT -= dt;
+    if (mission.pointT <= 0) {
+      mission.pointT = 0.5;
+      const spot = G.spotOf(mission.cur.steps[n].find || null);
+      group.point = spot && mission.giver && !night ? { m: mission.giver, x: spot.x, z: spot.z } : null;
+    }
     // een stap gelukt: een kort geluid en een vinkje voor de regel, geen scherm
     if (n !== mission.shown) { if (mission.shown >= 0) { sound.good(); mission.tickT = 2.5; } mission.shown = n; mission.lineT = 7; }
     mission.tickT -= dt; $('quest').classList.toggle('tick', mission.tickT > 0);

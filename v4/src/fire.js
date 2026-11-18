@@ -229,10 +229,13 @@ export class Fire {
     this.torchLight = new THREE.PointLight(0xff9a48, 0, 20, 1.6); scene.add(this.torchLight);
     this.torchFlame = flames(0.3); this.torchFlame.visible = false; scene.add(this.torchFlame);
 
-    // dode bomen: kaal, grijs en droog. Hier hak je hout.
+    // dode bomen: kaal, hoog en zilvergrijs gebleekt door de zon. Je ziet ze van ver tussen het groen. Hier hak je hout.
     this.wood = [];
+    const seen = new Map(), bleach = (m) => { if (!seen.has(m)) { const c = m.clone(); c.color.setRGB(2.3, 2.2, 2.05); c.roughness = 1; seen.set(m, c); } return seen.get(m); };
     cfg.wood.forEach(([x, z], i) => {
-      if (treeV) { const t = make(treeV, (5.6 + (i % 3) * 0.9) / treeV.size.y); t.position.set(x, height(x, z) - 0.15, z); t.rotation.y = x * 0.37; scene.add(t); }
+      if (treeV) { const t = make(treeV, (8.2 + (i % 3) * 0.8) / treeV.size.y, bleach); t.position.set(x, height(x, z) - 0.15, z); t.rotation.y = x * 0.37; scene.add(t); }
+      // aan de voet ligt wat er al afgebroken is
+      twigV.forEach((v, j) => { const a = j * 2.1 + i, r = 1.5 + (j % 2) * 0.9, bx = x + Math.cos(a) * r, bz = z + Math.sin(a) * r, l = make(v, 1.5 / Math.max(v.size.x, v.size.z), bleach); l.position.set(bx, height(bx, bz), bz); l.rotation.y = a * 1.7; scene.add(l); });
       blockers.push({ x, z, r: 0.5 });
       this.wood.push({ x, z, cool: 0 });
     });

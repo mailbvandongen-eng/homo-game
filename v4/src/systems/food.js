@@ -5,7 +5,7 @@ export function initFood(G) {
   const { state, player, sound, discover, renderHands, freeHand } = G;
   // Hoe iets smaakt lees je niet, dat hoor je aan jezelf: een tevreden 'hm' of een vies 'ugh'. Geen woorden, en niet bij
   // elke hap: na een reactie blijft het een tijd stil. Gewoon eten (rauw vlees, een knol) kauw je zonder iets te zeggen.
-  const TASTE = { berry: 'hm', honey: 'hm', roast: 'hm', egg: 'hm', fish: 'hm', marrow: 'hm', redberry: 'ugh', leaf: 'ugh' };
+  const TASTE = { berry: 'hm', fig: 'hm', baobab: 'hm', honey: 'hm', roast: 'hm', egg: 'hm', fish: 'hm', marrow: 'hm', redberry: 'ugh', leaf: 'ugh' };
   const TASTE_WAIT = { hm: 20, ugh: 8 }, tasteAt = { hm: -1e9, ugh: -1e9 }, heard = [];
   function taste(it) {
     const k = TASTE[it], now = performance.now() / 1000;
@@ -13,7 +13,7 @@ export function initFood(G) {
     tasteAt[k] = now; heard.push(k); if (heard.length > 20) heard.shift();
     setTimeout(() => sound.voice(k), 650);
   }
-  const FOOD = { berry: 15, redberry: 5, roast: 55, meat: 35, egg: 20, honey: 30, tuber: 18, fish: 30 };
+  const FOOD = { berry: 15, redberry: 5, roast: 55, meat: 35, egg: 20, honey: 30, tuber: 18, fish: 30, fig: 12 };
   function eat(it) {
     player.action = 0.5; sound.eat(); taste(it);
     state.food = Math.min(100, state.food + (FOOD[it] || 0));
@@ -22,7 +22,7 @@ export function initFood(G) {
     if (it === 'redberry') state.sick = 75;
     if (it === 'leaf') { if (state.sick <= 0) return; state.sick = 0; }
     state.known.add(it);
-    if (['berry', 'redberry', 'meat', 'egg', 'honey', 'leaf'].includes(it)) discover(it);
+    if (['berry', 'redberry', 'meat', 'egg', 'honey', 'leaf', 'fig'].includes(it)) discover(it);
   }
   function crack() {
     const b = state.hands.indexOf('bone');
@@ -39,6 +39,13 @@ export function initFood(G) {
       state.known.add('flake'); discover('flake');
     }, 5200);
   }
+  // een baobabvrucht openslaan met een kei: in de harde schil zit droog, zuur vruchtvlees
+  function crackFruit() {
+    const b = state.hands.indexOf('baobab'); if (b < 0) return;
+    state.hands[b] = null; renderHands(); player.action = 0.5; sound.crack();
+    state.food = Math.min(100, state.food + 26); state.water = Math.min(100, state.water + 4);
+    state.known.add('baobab'); taste('baobab'); discover('baobab');
+  }
   // met een afslag de laatste reepjes vlees van het karkas snijden
   function cutMeat() {
     if (state.carcassMeat <= 0) { note('bone', 'Alleen botten'); return; }
@@ -46,5 +53,5 @@ export function initFood(G) {
     state.food = Math.min(100, state.food + 25);
     discover('cut');
   }
-  return { eat, taste, crack, cutMeat, FOOD, heard, tasteAt };
+  return { eat, taste, crack, crackFruit, cutMeat, FOOD, heard, tasteAt };
 }

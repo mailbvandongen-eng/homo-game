@@ -6,7 +6,7 @@ import { DRY_DAYS } from './weather.js';
 
 // Het droge seizoen en de nieuwe dag.
 export function initSeason(G) {
-  const { state, things, sabres, shore, giant, group, sound, discover, freeHand, renderHands } = G;
+  const { state, things, sabres, shore, forage, giant, group, sound, discover, freeHand, renderHands } = G;
   // Elke dag droogt het land verder uit, vanaf de slaapboom gezien: je moet steeds verder weg voor eten.
   // Na een paar droge dagen komt de regen en groeit alles weer.
   const DRY_COLOR = new THREE.Color(0x8a6a3a);
@@ -27,6 +27,7 @@ export function initSeason(G) {
       else if (d < R + 15) setBush(t, Math.ceil(t.bush.max / 2), 0.5);
       else setBush(t, t.bush.max, 0);
     }
+    forage.dress(rain ? 0 : dry);
     return rain;
   }
   // Een nieuwe dag: de struiken groeien bij (of verdorren), en je hoort hoe de groep erbij zit.
@@ -40,8 +41,9 @@ export function initSeason(G) {
     else if (dry === DRY_DAYS - 1) hint = 'Tor ruikt aan de wind en wijst naar zware wolken in de verte. Nog één dag volhouden.';
     else if (sabres.kill && sabres.kill.meat > 0) hint = 'Tor wijst naar de gieren die in de verte cirkelen. Daar ligt vlees.';
     else if (dry >= 2) hint = 'De struiken rond de boom zijn verdord. Hoe verder je gaat, hoe meer er nog hangt. Het meeste vlees ligt waar de katten jagen.';
-    else hint = 'Het wordt droger. De struik bij de boom is verdord. Verderop hangt nog fruit.';
+    else hint = 'Het wordt droger. De struiken dicht bij de boom zijn verdord. Verderop hangt nog fruit.';
     if (shore) shore.newDay();
+    forage.newDay(dry, rain);
     const gh = giant.newDay(dry, rain, G.predGame);   // de reus heeft zijn eigen nieuws
     if (gh && rain) hint += ' ' + gh; else if (gh && dry !== DRY_DAYS - 1) hint = gh;
     if (rain) { sound.home(); discover('rain'); } else if (dry >= 1) discover('drought');

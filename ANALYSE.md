@@ -303,3 +303,27 @@ Krassen met een steen past pas vanaf *Homo erectus* (de gekraste schelp van Trin
 **Missieoverzicht zonder tekstblok:** per missie het gezicht van wie het vroeg, daarnaast het icoon van wat hij wil, en kerfjes voor de stappen. Eén regel tekst alleen bij de missie die je aantikt.
 
 **Letters:** koppen in een gedownload lettertype dat op houtskool lijkt (vrije licentie); gewone tekst blijft een rustige, goed leesbare letter. Echt gekraste letters lezen slecht op een telefoon.
+
+## 14. Wat in fase 5b stap 3 is gebouwd (vinden en eten, 18-11-2026)
+
+**De wereld wijst de weg.** Elke missiestap die om een ding of plek vraagt heeft `find` (kei, tak, bot, blad, plant,
+dood hout, rook, prooi, poel, kudde, zwarte rots). `spotOf()` in `main.js` zoekt het dichtstbijzijnde. Wie de missie gaf
+draait zich ernaartoe en strekt zijn arm (`group.js`, `pointArm`), als je bij hem staat en het ding niet al voor je
+voeten ligt. Het ding zelf schittert tot 60 m ver. Geen pijlen, geen tekst.
+
+**Takken en dode bomen.** Onder elke vaste acacia en onder één op de drie andere ligt een tak; na de regen liggen er
+nieuwe. Dode bomen zijn hoger, kaal en gebleekt, met afgebroken takken aan de voet.
+
+**Meer eten** (`forage.js`; de plekken staan in het gebiedsbestand: `fruitTrees`, `oldCarcasses`, `tubers`):
+- vijgenbosjes: elke ochtend drie vijgen op vaste plekken;
+- baobabs: één vrucht per dag, in de droogte staat de boom kaal en liggen er drie; kraken met een kei;
+- oude karkassen met twee gieren erboven: het vlees is op, in de botten zit merg; na drie droge dagen of na de regen ligt er weer een bot;
+- knolplanten ook op het droge land (graven met de stok);
+- vaker een nest met eieren of een bijennest, en meer honing;
+- geen bessenstruik meer bij de slaapboom.
+
+**Eerlijk:** de vijg is een gewone vijg (model) als vervanger voor de wilde vijg. Marula en losse noten zijn niet
+gebouwd: er is geen bruikbaar model gevonden. In het hoogland stonden een boom, een tak en een graasplek van de kudde
+in de rivier; die zijn verplaatst.
+
+**Controle:** `v4forage.js` (alle vier gebieden).

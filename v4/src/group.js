@@ -13,10 +13,24 @@ const WHO = ERA.group || [
   { id: 'ibo', name: 'Ibo', k: 0.6, spot: [0.9, -2.8], child: true, tint: 0xfff0e0 },
 ];
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+// Wijzen: de rechterarm strekt zich naar een plek in de verte. w (0..1) is hoe ver de arm al omhoog is.
+const pA = new THREE.Vector3(), pB = new THREE.Vector3(), pC = new THREE.Vector3(), pU = new THREE.Vector3(), pV = new THREE.Vector3(), pQ = new THREE.Quaternion(), pI = new THREE.Quaternion();
+function pointArm(R, at, w) {
+  const up = R.bone('upperarm_r'), lo = R.bone('lowerarm_r'), hand = R.bone('hand_r');
+  if (!up || !lo || !hand) return;
+  up.getWorldPosition(pA); hand.getWorldPosition(pC);
+  pU.subVectors(pC, pA).normalize(); pV.set(at.x - pA.x, 0, at.z - pA.z); pV.y = pV.length() * 0.1; pV.normalize();
+  R.bendQ(up, pQ.setFromUnitVectors(pU, pV).slerp(pI.identity(), 1 - w));
+  // en de elleboog recht
+  up.getWorldPosition(pA); lo.getWorldPosition(pB); hand.getWorldPosition(pC);
+  pU.subVectors(pC, pB).normalize(); pV.subVectors(pB, pA).normalize();
+  R.bendQ(lo, pQ.setFromUnitVectors(pU, pV).slerp(pI.identity(), 1 - w * 0.85));
+}
 
 export class Group {
   constructor(scene, A) {
     this.list = []; this.away = false; this.t = 0;
+    this.point = null;   // { m, x, z }: dit groepslid wijst naar die plek (zie systems/missions.js)
     for (const w of WHO) {
       // hetzelfde model als de hoofdpersoon, met een eigen lijf: een kind heeft een groot hoofd en korte benen,
       // een vrouw smallere schouders en geen baard
@@ -31,7 +45,7 @@ export class Group {
         else if (!hair && w.tint) o.material.color.multiply(new THREE.Color(w.tint));
         else if (!hair && w.grey) o.material.color.multiplyScalar(0.86);
       });
-      const m = { ...w, kind: 'member', rig, g: rig.root, x: HOME.x + w.spot[0], z: HOME.z + w.spot[1], yaw: Math.atan2(-w.spot[0], -w.spot[1]) + Math.PI, speed: 0, state: 'idle', t: 2 + this.list.length * 3, sick: 0, busy: 0 };
+      const m = { ...w, kind: 'member', rig, g: rig.root, x: HOME.x + w.spot[0], z: HOME.z + w.spot[1], yaw: Math.atan2(-w.spot[0], -w.spot[1]) + Math.PI, speed: 0, state: 'idle', t: 2 + this.list.length * 3, sick: 0, busy: 0, pointW: 0 };
       scene.add(rig.root); this.list.push(m);
     }
   }
@@ -54,6 +68,8 @@ export class Group {
     if (it === 'bone') return { gain: 18, text: 'Tor legt het bot op een steen en kraakt het open. Het merg wordt eerlijk gedeeld.' };
     if (it === 'fish') return { gain: 28, text: 'Een vis! Kem ruikt eraan, Ibo steekt zijn vinger in de bek. Dan trekt Tor hem open: zacht, vet vlees voor iedereen.' };
     if (it === 'tuber') return { gain: 14, text: 'Tor kauwt de knol voor en geeft Ibo de helft. Taai, maar het vult.' };
+    if (it === 'baobab') return { gain: 20, text: 'Tor slaat de harde schil stuk op een steen. Ibo zuigt op de witte brokken en trekt een zuur gezicht. Dan wil hij meer.' };
+    if (it === 'fig') return { gain: 10, text: 'Een vijg! Ibo bijt hem doormidden en geeft de andere helft aan Kem.' };
     if (it === 'berry') return { gain: 8, text: 'Ibo propt de bessen in zijn mond en grijnst paars.' };
     if (it === 'leaf') {
       if (!sick) return { gain: null, text: 'Tor ruikt aan het blad en trekt een vies gezicht. Niemand heeft het nu nodig.' };
@@ -79,6 +95,8 @@ export class Group {
       m.t -= dt; m.busy = Math.max(0, m.busy - dt);
       if (m.sick > 0) { m.sick -= dt; if (m.sick <= 0) game.murmur(`${m.name} is weer opgeknapt. Maar het duurde lang…`, 5); }
       let tx = 0, tz = 0, spd = 0, face = null;
+      // wijzen doet hij als je bij hem staat, en alleen naar iets dat niet al voor je voeten ligt
+      const P = this.point, pt = P && P.m === m && m.state === 'idle' && m.busy <= 0 && m.sick <= 0 && d < 8 && Math.hypot(P.x - p.x, P.z - p.z) > 3 ? P : null;
       const sleepy = night > 0.6;
       if (m.carry && dist(m, HOME) < 11) { game.event('kemgift', m.carry); m.carry = null; }
       if (greet && m.child && m.sick <= 0) { m.state = 'greet'; m.t = 8; }
@@ -86,11 +104,12 @@ export class Group {
         case 'idle':
           if (sleepy || m.sick > 0) { m.state = 'toSpot'; break; }
           if (d < 6 || (m.calling && d < 30)) face = p;
+          if (pt) { face = pt; m.t = Math.max(m.t, 1.5); }   // hij wijst: daar moet je zijn
           if (m.t < 0 && m.busy <= 0 && d > 3 && !m.calling) { const a = Math.random() * 6.28, r = 2.5 + Math.random() * 4; m.goal = { x: HOME.x + Math.cos(a) * r, z: HOME.z + Math.sin(a) * r }; m.state = 'wander'; m.t = 9; }
           break;
         case 'wander': {
           const gd = dist(m, m.goal);
-          if (gd < 0.5 || m.t < 0 || sleepy || m.calling) { m.state = 'idle'; m.t = 4 + Math.random() * 9; m.fuss = Math.random() < 0.4; } else { tx = (m.goal.x - m.x) / gd; tz = (m.goal.z - m.z) / gd; spd = 1.1 * m.k; }
+          if (gd < 0.5 || m.t < 0 || sleepy || m.calling || (P && P.m === m && d < 8)) { m.state = 'idle'; m.t = 4 + Math.random() * 9; m.fuss = Math.random() < 0.4; } else { tx = (m.goal.x - m.x) / gd; tz = (m.goal.z - m.z) / gd; spd = 1.1 * m.k; }
           break;
         }
         case 'greet':
@@ -125,8 +144,11 @@ export class Group {
       else if (m.busy > 0) R.play('Interact', { fade: 0.25 });
       else if (m.calling === 'shiver') R.play('Crouch_Idle_Loop', { fade: 0.6 });   // ineengedoken van de kou
       else if (game.state.group < 15) R.play('Crouch_Idle_Loop', { fade: 0.6 });   // hongerig en slap
-      else R.play(m.fuss ? 'Interact' : 'Idle_Loop', { fade: 0.5, speed: m.fuss ? 0.5 : 1 });
+      else R.play(m.fuss && !pt ? 'Interact' : 'Idle_Loop', { fade: 0.5, speed: m.fuss && !pt ? 0.5 : 1 });
       R.update(dt);
+      const aimed = pt && Math.abs(Math.atan2(Math.sin(Math.atan2(pt.x - m.x, pt.z - m.z) - m.yaw), Math.cos(Math.atan2(pt.x - m.x, pt.z - m.z) - m.yaw))) < 0.5;
+      m.pointW += ((aimed ? 1 : 0) - m.pointW) * (1 - Math.exp(-dt * 4));
+      if (m.pointW > 0.02 && (pt || m.pointAt)) { if (pt) m.pointAt = { x: pt.x, z: pt.z }; pointArm(R, m.pointAt, m.pointW); }
     }
   }
 }
