@@ -13,7 +13,8 @@ import { Sound } from './audio.js';
 import { loadAssets } from './assets.js';
 import { ICON, ITEM_ICON } from './icons.js';
 import { Encounters } from './encounters.js';
-import { Giant } from './giant.js';
+import { Beast } from './beast.js';
+import { BEASTS } from './beasts.js';
 import { Shore, digTuber } from './shore.js';
 import { Fire } from './fire.js';
 import { $, toast, note, title, showCard, closeCard, uiTick } from './engine/ui.js';
@@ -51,7 +52,7 @@ document.body.prepend(renderer.domElement);
 
 // eerst de gescande natuur laden; daarna begint het spel vanzelf
 const loading = document.getElementById('loading');
-const A = await loadAssets(renderer, (f) => { loading.textContent = `Laden… ${Math.round(f * 100)}%`; }, AREA.models, AREA.textures).catch((e) => {
+const A = await loadAssets(renderer, (f) => { loading.textContent = `Laden… ${Math.round(f * 100)}%`; }, [...(AREA.models || []), BEASTS[AREA.beast.kind].model], AREA.textures).catch((e) => {
   // nooit stil blijven hangen op 'Laden…': zeg wat er mis is
   loading.textContent = e.message + '. Controleer je verbinding en laad de pagina opnieuw.'; loading.style.maxWidth = '80vw';
   throw e;
@@ -82,11 +83,11 @@ const zebras = new Zebras(scene, AREA.zebras.at[0], AREA.zebras.at[1], A);
 const sabres = new Sabres(scene, { x: AREA.sabres.lair[0], z: AREA.sabres.lair[1] }, zebras, A);
 const group = new Group(scene, A);
 const enc = new Encounters(scene, A);   // wat je onderweg tegenkomt
-const giant = new Giant(scene, A, AREA.giant);      // de reuzenolifant die zijn ronde loopt
+const beast = new Beast(scene, A, AREA.beast);      // het grote dier van dit gebied (zie beasts.js)
 const shore = AREA.shore ? new Shore(scene, A) : null;   // de oever: krokodillen, meervallen, knollen
 const fire = AREA.fire ? new Fire(scene, AREA.fire, DAY_LEN, A) : null;   // vuur: vinden, dragen, brandend houden
 // wat er in dit tijdperk te ontdekken valt, en of je iets scherps in je hand hebt (een afslag of een vuistbijl)
-const ERA_IX = ERAS.indexOf(ERA), DISC = DISCOVERIES.filter((d) => !d.era || ERAS.findIndex((e) => e.id === d.era) <= ERA_IX);
+const ERA_IX = ERAS.indexOf(ERA), DISC = DISCOVERIES.filter((d) => (!d.era || ERAS.findIndex((e) => e.id === d.era) <= ERA_IX) && (!d.beast || d.beast === beast.kind));
 const sharp = () => state.hands.includes('flake') || state.hands.includes('axe');
 
 // De maat van het beeld volgt het scherm. Een telefoon meldt na draaien of volledig scherm niet altijd (op tijd) een
@@ -122,7 +123,7 @@ function discover(id) {
 // ---------- wat de onderdelen van elkaar mogen weten ----------
 // Systemen (systems/) krijgen dit ene object mee. Wat pas verderop in dit bestand ontstaat, wordt op het moment van gebruik opgehaald.
 const G = {
-  state, player, scene, renderer, things, hyenas, sabres, group, giant, shore, forage, fire, herd, sound, closeRadial, openRadial, dropAt, act, sharp, discover, carcassNear, hiveNear, spotOf,
+  state, player, scene, renderer, things, hyenas, sabres, group, beast, shore, forage, fire, herd, sound, closeRadial, openRadial, dropAt, act, sharp, discover, carcassNear, hiveNear, spotOf,
   get predGame() { return predGame; }, get dayP() { return dayP; }, set dayP(v) { dayP = v; }, get danger() { return danger; }, get aim() { return aim; },
   get camYaw() { return cam.yaw; }, set camTurn(v) { cam.turnTo = v; }, get clock() { return clock; }, stopWalk() { walkTo = null; }, get walking() { return !!walkTo; },
 };
@@ -423,7 +424,7 @@ function openRadial(target) {
     if (target.look === 'prey' && !target.enc.noPouch) opts.push({ t: 'Snijd de maag eruit', icon: ICON.fill, q: !state.known.has('pouch'), fn: () => goAndDo(target, cut(() => thirst.cutPouch(target.enc)), 2.4) });
     if (target.look === 'herdkill' && herd.kill.meat > 0) opts.push({ t: 'Snijd vlees', icon: ICON.cut, fn: () => goAndDo(target, cut(cutHerd), 2.2) });
     if (target.look === 'prey' && target.enc.meat > 0) opts.push({ t: 'Snijd vlees', icon: ICON.cut, fn: () => goAndDo(target, cut(() => enc.cutPrey(target.enc, predGame)), 2.4) });
-    if (target.look === 'giantdead' && giant.meat > 0) opts.push({ t: 'Snijd vlees', icon: ICON.cut, fn: () => goAndDo(target, cut(() => giant.cut(predGame)), 3.2) });
+    if (target.carcass && beast.meat > 0) opts.push({ t: 'Snijd vlees', icon: ICON.cut, fn: () => goAndDo(target, cut(() => beast.cut(predGame)), 3.2) });
     if (target.look === 'catfish') opts.push({ t: 'Grijp', icon: ICON.hand, fn: () => goAndDo(target, () => act('Interact', () => shore.grab(target, predGame)), 1.6) });
     if (target.look === 'tuberplant') opts.push({ t: 'Graaf', icon: ICON.dig, fn: () => goAndDo(target, () => act('Interact', () => digTuber(target, predGame)), 1.5) });
     if (target.fire) { const ic = fire.canUse(target, state); if (ic) opts.push({ t: fire.verb(target, state), icon: ic, fn: () => goAndDo(target, () => act('Interact', () => fire.use(target, predGame), target.fire === 'wood' ? 1.3 : 1.6), 2.4) }); }
@@ -499,7 +500,7 @@ function bite(attacker, dmg, big) {
     state.hands.forEach((it, i) => { if (it) { dropAt(it, state.rock[i]); state.hands[i] = null; } }); renderHands();
     if (attacker.kind === 'sabre') { toast('De sabeltandkat slaat je tegen de grond! Je laat alles vallen. Weg hier!', 5); discover('sabre'); }
     else if (attacker.kind === 'croc') toast('De krokodil schiet uit het water en klapt zijn kaken om je been! Je rukt je los. Weg van het water!', 6);
-    else if (attacker.kind === 'giant') toast('De reus schept je op en smijt je door de lucht! Je laat alles vallen. Blijf uit zijn buurt!', 6);
+    else if (attacker.hitText) toast(attacker.hitText, 6);
     else toast('Het luipaard springt je vanuit het niets aan! Je laat alles vallen.', 5);
   } else toast('Au! De hyena bijt je in je been.', 3);
   return stolen;
@@ -643,14 +644,14 @@ function tapAt(sx, sy, reach = 56) {
   const wasOpen = !!radial;
   const cands = [...things.filter(available), ...LOOK_TARGETS, ...herd.members.map((m) => ({ look: 'gazelle', member: m })),
     ...hyenas.list.map((h) => ({ look: 'hyena', member: h })), { look: 'leopard', member: leopard },
-    ...zebras.alive.map((m) => ({ look: 'zebra', member: m })), ...sabres.list.map((m) => ({ look: 'sabre', member: m })), ...group.list.map((m) => ({ look: m.id, member: m })), ...enc.lookTargets(), ...giant.lookTargets(player.pos), ...(shore ? shore.lookTargets() : []), ...forage.lookTargets(), ...(fire ? fire.lookTargets() : [])];
+    ...zebras.alive.map((m) => ({ look: 'zebra', member: m })), ...sabres.list.map((m) => ({ look: 'sabre', member: m })), ...group.list.map((m) => ({ look: m.id, member: m })), ...enc.lookTargets(), ...beast.lookTargets(player.pos), ...(shore ? shore.lookTargets() : []), ...forage.lookTargets(), ...(fire ? fire.lookTargets() : [])];
   let best = null, bd = reach;
   for (const c of cands) {
     const p = targetPos(c);
     if (Math.hypot(p.x - player.pos.x, p.z - player.pos.z) > (c.look ? 90 : 35)) continue;
     v3.set(p.x, p.y, p.z).project(camera); if (v3.z > 1) continue;
     const d = Math.hypot((v3.x + 1) / 2 * innerWidth - sx, (1 - v3.y) / 2 * innerHeight - sy);
-    if (d < bd || (reach > 50 && d < 150 && !best && ['kill', 'prey', 'giantdead', 'carcass', 'herdkill'].includes(c.look) && Math.hypot(p.x - player.pos.x, p.z - player.pos.z) < 5)) { bd = Math.min(bd, d); best = c; }
+    if (d < bd || (reach > 50 && d < 150 && !best && (c.carcass || ['kill', 'prey', 'carcass', 'herdkill'].includes(c.look)) && Math.hypot(p.x - player.pos.x, p.z - player.pos.z) < 5)) { bd = Math.min(bd, d); best = c; }
   }
   // dubbeltik op een platte steen: meteen omdraaien
   const now = performance.now();
@@ -847,8 +848,8 @@ function carcassNear() {
   if (herd.kill && herd.kill.meat > 0 && near(herd.kill, 3)) return { run: cut(cutHerd) };
   const prey = enc.lookTargets().find((t) => t.look === 'prey' && t.enc.meat > 0 && near(t, 3));
   if (prey) return { run: cut(() => enc.cutPrey(prey.enc, predGame)) };
-  const gd = giant.lookTargets(player).find((t) => t.look === 'giantdead' && giant.meat > 0 && near(t, 5));
-  if (gd) return { run: cut(() => giant.cut(predGame)) };
+  const gd = beast.lookTargets(player.pos).find((t) => t.carcass && beast.meat > 0 && near(t, 5));
+  if (gd) return { run: cut(() => beast.cut(predGame)) };
   if (state.carcassMeat > 0 && sharp() && near(CARCASS, 3)) return { run: cut(cutMeat) };
   return null;
 }
@@ -1027,7 +1028,7 @@ function update(dt) {
   if (state.sleeping > 0) { state.sleeping -= dt; if (state.sleeping <= 0) wake(); }
   const night = nightAmount(dayP);
   herd.update(dt, player, ui);
-  predGame.night = night; predGame.danger = danger;
+  predGame.night = night; predGame.dayP = dayP; predGame.danger = danger;
   predGame.lit = !!(fire && fire.lit); predGame.campSafe = predGame.lit ? 26 : 11; predGame.campMeat = Math.max(0, predGame.campMeat - dt);
   const pred = !devFlags.noPred;
   if (pred) hyenas.update(dt, predGame);
@@ -1037,7 +1038,7 @@ function update(dt) {
   if (pred) sabres.update(dt, predGame);
   group.update(dt, predGame);
   enc.update(dt, predGame);
-  giant.update(dt, predGame, t);
+  beast.update(dt, predGame, t);
   if (shore) shore.update(dt, predGame);
   forage.update(dt, t, camera.position);
   if (fire) fire.update(dt, predGame, dayP);
@@ -1053,7 +1054,7 @@ function update(dt) {
   // hoe spannend is het nu? Dat hoor je aan het geluid
   let dg = sabres.danger(player.pos);
   for (const h of hyenas.list) dg = Math.max(dg, h.state === 'windup' || h.state === 'rush' ? 0.8 : h.state === 'curious' ? 0.4 : (h.state === 'prowl' || h.state === 'sneak') && Math.hypot(h.x - player.pos.x, h.z - player.pos.z) < 25 ? 0.2 : 0);
-  dg = Math.max(dg, { stalk: 0.5, freeze: 0.65, pounce: 1 }[leopard.state] || 0, enc.danger(), giant.danger(), shore ? shore.danger() : 0);
+  dg = Math.max(dg, { stalk: 0.5, freeze: 0.65, pounce: 1 }[leopard.state] || 0, enc.danger(), beast.danger(), shore ? shore.danger() : 0);
   if (state.collapsed > 0 || state.sleeping > 0) dg = 0;
   danger += (dg - danger) * (1 - Math.exp(-dt * (dg > danger ? 3 : 0.6)));
   herd.members.forEach((m, i) => senses.track(i, m.x, m.z, m.yaw));
@@ -1225,7 +1226,7 @@ begin();
 
 // voor testen
 window.__game = { scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
-  state, player, herd, hyenas, leopard, zebras, sabres, group, enc, giant, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, setSneak, still: () => stillT,
+  state, player, herd, hyenas, leopard, zebras, sabres, group, enc, beast, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, setSneak, still: () => stillT,
   setCam: (y, p, d) => { cam.yaw = y; cam.pitch = p; if (d) cam.dist = d; }, setZoom: C.setZoom, zoom: () => cam.dist, C, jump, sound, world, weather, menu, closeCard, clockT: () => clock.elapsedTime, actionContext, actionOptions, heard, tasteAt, bodyTap, prim: () => prim, alts: () => alts,
   lookFrom: (pos, look) => { cam.override = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },
   // als lookFrom, maar met hoogtes ten opzichte van de grond op de plek waar je naar kijkt

@@ -6,7 +6,7 @@ import { DRY_DAYS } from './weather.js';
 
 // Het droge seizoen en de nieuwe dag.
 export function initSeason(G) {
-  const { state, things, sabres, shore, forage, giant, group, sound, discover, freeHand, renderHands } = G;
+  const { state, things, sabres, shore, forage, beast, group, sound, discover, freeHand, renderHands } = G;
   // Elke dag droogt het land verder uit, vanaf de slaapboom gezien: je moet steeds verder weg voor eten.
   // Na een paar droge dagen komt de regen en groeit alles weer.
   const DRY_COLOR = new THREE.Color(0x8a6a3a);
@@ -44,7 +44,7 @@ export function initSeason(G) {
     else hint = 'Het wordt droger. De struiken dicht bij de boom zijn verdord. Verderop hangt nog fruit.';
     if (shore) shore.newDay();
     forage.newDay(dry, rain);
-    const gh = giant.newDay(dry, rain, G.predGame);   // de reus heeft zijn eigen nieuws
+    const gh = beast.newDay(dry, rain, G.predGame);   // het grote dier heeft zijn eigen nieuws
     if (gh && rain) hint += ' ' + gh; else if (gh && dry !== DRY_DAYS - 1) hint = gh;
     if (rain) { sound.home(); discover('rain'); } else if (dry >= 1) discover('drought');
     if (how === 'alone') { toast(`Dag ${state.day}. Je hebt de nacht alleen doorgebracht. ` + hint, 8); return; }

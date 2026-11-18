@@ -21,7 +21,8 @@ Stand: november 2026. Het spel staat in `v4/` en draait op GitHub Pages.
 | `predators.js` | 249 | Hyena's bij het karkas |
 | `hunt.js` | 241 | Sabeltandkatten en hun jacht, de verse prooi |
 | `encounters.js` | 473 | Luipaard, pofadder, vreemden, gewonde gazelle |
-| `giant.js` | 257 | De reuzenolifant en zijn dagelijkse ronde |
+| `beast.js` | 510 | Het grote dier van een gebied: ronde, kudde, zintuigen, aanval, sterven |
+| `beasts.js` | 119 | Per soort wat anders is: reuzenolifant, nijlpaard, neushoorn, giraf |
 | `shore.js` | 169 | De oever: krokodillen, meervallen in de poelen, knollen onder de korst |
 | `life.js`, `actors.js` | 438 | Kuddes, vogels, gieren, klein leven |
 | `animal.js` | 40 | **Nieuw:** de gedeelde basis voor alle dieren: opmerken (zien, sluipen, dekking, wind) en de loopstap |
@@ -148,7 +149,7 @@ Twee uitgangspunten, die voor alles gelden wat nog komt:
 
 | # | Wat | Stand |
 |---|---|---|
-| 1 | **Elk gebied een eigen land.** Eigen vorm van het terrein, eigen kampplek (niet steeds een slaapboom), eigen bomen en planten, eigen grond, licht en lucht, eigen dieren en eigen blikvanger. Op één schermfoto bij het kamp zie je welk gebied het is | **land klaar** (18-11): elk gebied heeft een eigen terrein, rivierloop, kampplek, planten, keien, grond en licht (zie hieronder). **Dieren nog niet**: de reus loopt nog overal |
+| 1 | **Elk gebied een eigen land.** Eigen vorm van het terrein, eigen kampplek (niet steeds een slaapboom), eigen bomen en planten, eigen grond, licht en lucht, eigen dieren en eigen blikvanger. Op één schermfoto bij het kamp zie je welk gebied het is | **land klaar** (18-11): elk gebied heeft een eigen terrein, rivierloop, kampplek, planten, keien, grond en licht (zie hieronder). **Dieren klaar** (18-11): elk gebied heeft zijn eigen grote dier met een eigen les (zie hieronder) |
 | 2 | **Trekken binnen een gebied.** De groep blijft niet het hele seizoen op één plek: als het eten of het water opraakt, breekt ze op naar een volgende kampplek verderop | |
 | 3 | **Missies sturen je het land in.** Al in de eerste minuten weg van het kamp, naar wat dit gebied bijzonder maakt | |
 
@@ -160,6 +161,17 @@ Hoe de vier gebieden nu van elkaar verschillen (stap 1, land):
 | Bij het water | een lage zandrug tussen hoge palmen, het meer in zicht | vlak, zand, gebarsten modder langs het water, veel riet | waaierpalmen, palmbosjes aan de oever, lichte keien |
 | Onder de rokende berg | tegen een donkere rotswand | ruw, donkere lavagrond, grijze lucht, kort geel gras | kandelaarbomen, boomaloë's, dode stammen, zwartgrijze keien |
 | De hoge vlakte | een bult in het gras, een rij keien tegen de wind, een bosje jeneverbes | steile ruggen, groen, nevel, koel licht | jeneverbessen in bosjes, rozetten op een stam, graspollen, keien met mos, vijgen (geen baobabs) |
+
+Het grote dier per gebied (stap 1, dieren; `beast` in het gebiedsbestand, gedrag in `v4/src/beast.js`, soorten in `beasts.js`):
+
+| Gebied | Dier | Wat het doet | Wat je ervan leert |
+|---|---|---|---|
+| De savanne | de reuzenolifant (één oude stier) | loopt zijn ronde van boom naar boom, schudt vruchten los, houdt roofdieren op afstand | volg hem op afstand |
+| Bij het water | drie nijlpaarden (*Hippopotamus gorgops*) | liggen overdag in het meer, grazen van de late middag tot de ochtend op het land langs een vast pad | blijf uit hun water en ga nooit tussen hen en het water staan |
+| Onder de rokende berg | een neushoorn (*Ceratotherium*) | graast alleen; ziet slecht, ruikt scherp, rent rechtuit | let op de wind; spring opzij |
+| De hoge vlakte | drie giraffen (*Giraffa jumae*) | eten van de boomkruinen, zien je van ver en gaan ervandoor | waar zij alle drie naar kijken, loopt een roofdier |
+
+Alleen de reus en het oude nijlpaard sterven in de droogte (vlees, daarna een kies of een kromme tand als vondst).
 
 Een gebied beschrijft zijn land in het eigen bestand onder `land` (zie ANALYSE §18). De savanne heeft geen `land` en is niet veranderd.
 
@@ -215,7 +227,7 @@ Dit werkt en wordt niet weggehaald; elke verbouwing wordt hieraan getoetst.
 - Zintuigen: stilstaan laat zien en horen wat er in de buurt is.
 - De groep bij de slaapboom: eten delen, slapen, dag en nacht, seizoen en kou.
 - Missies via roepende groepsgenoten, met markering, titel en stappen; nooit een keuzescherm.
-- Dieren met eigen gedrag: hyena's, sabeltandkatten met jacht, luipaard, pofadder, vreemden, gazellen, zebra's, de reuzenolifant.
+- Dieren met eigen gedrag: hyena's, sabeltandkatten met jacht, luipaard, pofadder, vreemden, gazellen, zebra's, en per gebied een groot dier (reuzenolifant, nijlpaarden, neushoorn, giraffen).
 - Het boekje met ontdekkingen en missies.
 - Gesynthetiseerd geluid, weinig tekst.
 - De versiecontrole en uitrol via GitHub Pages.

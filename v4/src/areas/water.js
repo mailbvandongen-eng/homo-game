@@ -39,15 +39,17 @@ export const water = {
   pools: POOLS,                             // poelen op het strand: [x, z, straal]
   island: { x: 70, river: 26, r: 9 },      // de zandbank in het meer; je kunt er op één plek heen waden
   carcass: { x: -90, z: -70 },
-  fauna: ['impala', 'zebra', 'hyena', 'sabre', 'leopard', 'puffadder', 'giant', 'vulture', 'hominin', 'croc', 'catfish'],
+  fauna: ['impala', 'zebra', 'hyena', 'sabre', 'leopard', 'puffadder', 'hippo', 'vulture', 'hominin', 'croc', 'catfish'],
   herd: { species: 'impala', at: [50, -20], n: 8 },
   zebras: { at: [-50, -60] },
   sabres: { lair: [-100, -10] },
   leopard: { tree: [70, -50], branchY: 2.8 },
   birds: [[-4, 33], [28, -8], [-48, -18], [60, 40], [-30, 36], [100, 20]],
-  giant: {
-    route: [[100, -120, 'eat'], [140, -60, 'pass'], [125, 0, 'eat'], [112, { river: -13 }, 'drink'], [44, -34, 'eat'], [-20, -105, 'eat'], [60, -150, 'eat']],
-    grave: [-75, { river: -15 }],
+  // De nijlpaarden: overdag in het meer (de eerste plek), van de late middag tot de ochtend grazen ze op het land in het oosten.
+  beast: {
+    kind: 'hippo',
+    route: [[104, { river: 21 }, 'soak'], [106, { river: -7 }, 'pass'], [121, 30, 'eat'], [136, -6, 'eat'], [112, -30, 'eat'], [98, 16, 'eat']],
+    grave: [92, { river: -6 }],
   },
   // de oever: [x, afstand het meer in] voor krokodillen, [x, z] voor planten met een knol
   shore: {

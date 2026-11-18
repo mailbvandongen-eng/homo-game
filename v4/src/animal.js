@@ -20,6 +20,9 @@ export const SENSES = {
   zebra: { see: 14, sneak: 7, smell: 20 },             // sluip je met de wind in je rug, dan ruiken ze je toch
   gazelle: { see: 16, sneak: 7, smell: 20 },                       // het gewonde dier dat alleen loopt
   giant: { see: 20, sneak: 8, hid: 4, close: { see: 11, sneak: 4.5, hid: 3 } },
+  hippo: { see: 18, sneak: 10, hid: 5, close: { see: 12, sneak: 5.5, hid: 3 } },
+  rhino: { see: 10, sneak: 5, hid: 2, smell: 34, close: { see: 6, sneak: 3, hid: 2 } },   // ziet slecht, ruikt scherp
+  giraffe: { see: 38, sneak: 22, hid: 12 },            // hoog boven het gras: sluipen helpt maar half
 };
 const reach = (S, player, hid) => (hid ? S.hid || 0 : S.notice ? S.see * player.noticeable : player.sneaking ? S.sneak : S.see);
 

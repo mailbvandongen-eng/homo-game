@@ -23,7 +23,8 @@ export const savanne = {
   sabres: { lair: [-60, 10] },             // hun leger ligt in het hoge gras
   leopard: { tree: [40, 50], branchY: 2.8 },   // zijn boom staat bij de rivier
   birds: [[6, -14], [-20, 8], [30, -40], [60, 20], [-50, -50], [15, 35]],
-  giant: {                                 // de ronde van de reuzenolifant: [x, z, wat hij er doet]
+  beast: {                                 // de ronde van de reuzenolifant: [x, z, wat hij er doet]
+    kind: 'giant',
     route: [[95, -125, 'eat'], [142, -72, 'pass'], [128, -12, 'eat'], [105, { river: -13 }, 'drink'], [66, -30, 'eat'], [44, -92, 'eat'], [-8, -132, 'pass'], [58, -152, 'eat']],
     grave: [96, { river: -15 }],           // hier valt hij aan het eind van de droogte
   },

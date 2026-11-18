@@ -41,7 +41,7 @@ Ontwikkelen gebeurt op de branch `ontwikkel`; alleen geteste fasen gaan naar `ma
 | **De mens** | Eén model voor alles: een neanderthaler van Sketchfab, verkleind. Voor *Homo habilis* klopt dat niet (te groot brein, te korte armen, verkeerd gezicht), voor *Homo erectus* ook niet (te breed). Het model bestaat uit ~20 losse delen (duur om te tekenen). Kinderen en ouderen zijn hetzelfde model, geschaald. Bewegingen komen uit een algemene bibliotheek; voeten volgen het terrein niet. | 3 |
 | **Reuzenolifant** | Afrikaanse olifant × 2. *Palaeoloxodon recki* had een andere schedel en andere slagtanden. | 3 |
 | **Pofadder, impala, krokodil, meerval** | Cobra-model, gazelle-model en twee dieren uit losse vormen. | 3 |
-| **Dieren algemeen** | Eén model per soort: geen jong/volwassen, geen man/vrouw. Gedrag is per soort apart geschreven (`predators.js`, `hunt.js`, `giant.js`, `actors.js`) in plaats van één gedeelde basis (zien, horen, ruiken, vluchten, kudde). | 3 |
+| **Dieren algemeen** | Eén model per soort: geen jong/volwassen, geen man/vrouw. Gedrag is per soort apart geschreven (`predators.js`, `hunt.js`, `beast.js`, `actors.js`) in plaats van één gedeelde basis (zien, horen, ruiken, vluchten, kudde). | 3 |
 | **Terrein** | Eén hoogteveld van 440 m met 200 × 200 vakken: glooiend, maar geen kloven, richels of overhangen. Gebieden verschillen vooral in kleur en inrichting. | 4 |
 | **Camera** | Zoom (knijpen, muiswiel) en botsing met grond en rotsen bestonden al, maar zaten verweven in `main.js`; gevoeligheid niet instelbaar. *(Eerdere versie van deze analyse zei ten onrechte "geen zoom, geen botsing".)* | 2 (klaar, zie 7) |
 
@@ -442,8 +442,29 @@ De tabel hierboven was het ontwerp. Dit is wat er staat:
 - **Niets schuift over vaste plekken.** Alles wat gestrooid wordt, blijft weg van de vaste plekken uit het gebiedsbestand (`clear()`).
 - **Afwijkingen van het ontwerp.** Geen wilde olijf (geen goed model): op de hoge vlakte staan jeneverbessen en rozetten op een stam.
   De wand bij de berg hangt niet over; het zijn drie rotsblokken naast elkaar. De rotspunt en "het verre uitzicht" op de hoge vlakte zijn niet gebouwd.
-  Nijlpaarden en andere eigen dieren horen bij de volgende stap; de reuzenolifant loopt nog in alle gebieden.
+  De eigen dieren staan in §19.
 - **Vervangers** (staan zo in CREDITS.md): Europese en Californische waaierpalm voor de doumpalm, Canarische dadelpalm voor de wilde dadelpalm,
   westelijke jeneverbes voor de Afrikaanse, kokerboom-rozet voor de reuzenlobelia.
 - **Prestaties.** Driehoeken bij de start: savanne 692 duizend (was gelijk), water 694, berg rond 860, hoog 811. De controle waarschuwt vanaf 450 en keurt af boven 900: berg zit daar dicht tegenaan.
 - **Controleren:** `node /root/tools/pw/v4land.js <gebied> [abcdef]` maakt schermfoto's van het kamp van zes kanten.
+
+## 19. Fase 5c — elk gebied een eigen groot dier (18-11-2026)
+
+**Wat er mis was.** De reuzenolifant liep in alle vier de gebieden bijna dezelfde ronde. Wie een ander gebied koos, zag hetzelfde dier.
+
+**Wat er nu is.** `giant.js` is vervangen door `beast.js` (gedeeld: ronde, afdrukken, kudde, zintuigen, raken, sterven) en `beasts.js`
+(per soort: model, maat, snelheid, bewegingen, teksten). Elke soort heeft één eigen regel die je moet leren:
+- **Nijlpaarden (water)**: de plek en het uur. Overdag is het water van hen, 's avonds het pad naar het gras. De gevaarlijkste plek is tussen het dier en het water.
+- **Neushoorn (berg)**: de wind. Onder de wind kom je tot op een paar meter; boven de wind ruikt hij je op 34 m. Zijn aanval is recht: opzij springen werkt, wegrennen niet.
+- **Giraffen (hoog)**: zij zijn de uitkijk. Ze doen jou niets (behalve een trap van dichtbij), maar hun blik wijst een roofdier aan dat jij nog niet ziet.
+- **Reuzenolifant (savanne)**: ongewijzigd.
+
+**Modellen** (Sketchfab, CC BY, zie CREDITS.md): nijlpaard, witte neushoorn en giraf van nu als vervanger voor *Hippopotamus gorgops*, *Ceratotherium* en *Giraffa jumae*.
+Eerlijk gelabeld in `species.js`. Het nijlpaard is groter gemaakt (schofthoogte 1,75 m). Het neushoornmodel kan alleen lopen en rennen: het grazen
+(kop naar de grond, oren, staart) beweegt het spel zelf.
+
+**Volgers.** Dieren die meelopen houden een plek naast en achter de voorste. Blijft er een achter een rots haken, dan loopt het er met een boog omheen
+(gevonden in de test: een giraf stond op de hoge vlakte een hele ronde lang achter een kei).
+
+**Nog niet goed.** De ogen van het nijlpaard staan zoals bij het dier van nu (bij *gorgops* stonden ze hoger). De vlekken van de giraf zijn die van nu.
+De hyena's reageren niet op de nijlpaarden, de neushoorn of de giraffen; alleen de reuzenolifant houdt ze op afstand.

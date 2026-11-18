@@ -37,15 +37,16 @@ export const hoog = {
   trees: [[-128, -14, 1.2], [-62, -64, 1.1], [-20, -10, 1.3], [24, 24, 1.2], [70, -30, 1.1], [112, 30, 1.3], [-140, -90, 1], [40, -120, 1.1], [130, -90, 1], [-70, 60, 1.1]],
   tallGrass: [[22, 24, 11], [-56, -4, 9], [74, -34, 10], [-130, -60, 9], [100, 6, 9], [-10, -150, 10], [140, -60, 9]],
   carcass: { x: 96, z: -122 },
-  fauna: ['gazelle', 'zebra', 'hyena', 'sabre', 'leopard', 'puffadder', 'giant', 'vulture', 'hominin'],
+  fauna: ['gazelle', 'zebra', 'hyena', 'sabre', 'leopard', 'puffadder', 'giraffe', 'vulture', 'hominin'],
   herd: { species: 'gazelle', at: [-34, -80], n: 9, persist: true },   // deze kudde kun je moe lopen
   zebras: { at: [60, -80] },
   sabres: { lair: [22, 24] },              // precies langs de weg naar de zwarte rotsen
   leopard: { tree: [70, -30], branchY: 2.8 },
   birds: [[-98, -30], [-60, -66], [-18, -12], [26, 20], [72, -28], [110, 28]],
-  giant: {
-    route: [[-150, -130, 'eat'], [-140, -90, 'eat'], [-128, -14, 'eat'], [-140, { river: -13 }, 'drink'], [-62, -64, 'eat'], [40, -120, 'eat'], [130, -90, 'eat'], [60, -155, 'pass']],
-    grave: [-136, { river: -15 }],
+  // De giraffen trekken van vijgenboom naar vijgenboom. Ze zien elk roofdier van ver.
+  beast: {
+    kind: 'giraffe',
+    route: [[-62, -64, 'eat'], [-20, -10, 'eat'], [40, -120, 'eat'], [130, -90, 'eat'], [60, -155, 'pass'], [-140, -90, 'eat'], [-128, -14, 'eat']],
   },
   models: ['oldtree', 'lengai', 'handaxe', 'juniper_w', 'quiver_tree_02', 'grass_medium_02', 'rock_moss_set_01'],
   // het vuur is meegedragen: het gloeit in een stuk hout bij het kamp. De kring van stenen moet je zelf leggen.

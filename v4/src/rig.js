@@ -107,6 +107,10 @@ export class Rig {
     if (this.current) a.crossFadeFrom(this.current, fade, false); else a.fadeIn(fade);
     a.play(); this.current = a;
   }
+  // geen beweging meer: het dier zakt terug in de stand waarin het model gemaakt is
+  rest(fade = 0.5) { if (this.current) { this.current.fadeOut(fade); this.current = null; } }
+  // een bot dat we later zelf draaien alvast vastleggen in zijn ruststand
+  hold(b) { if (b && !this.bent.has(b)) { this.bent.set(b, b.quaternion.clone()); this.pose.set(b, b.quaternion.clone()); } return b; }
   // zet de animatie stil op een bepaald moment (0..1)
   freeze(part, at) { const a = this.action(part); if (!a) return; this.play(part, { fade: 0.2 }); a.time = a.getClip().duration * at; a.timeScale = 0; }
   update(dt) {

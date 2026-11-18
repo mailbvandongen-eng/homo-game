@@ -1,6 +1,6 @@
 // Gebied 1 van Homo erectus: de vlakte onder een rokende berg, Oost-Afrika, ruwweg 1,5 miljoen jaar geleden.
 // Dezelfde Riftvallei als die van Homo habilis, honderdduizenden jaren later. De krokodil van toen is er niet meer,
-// de sabeltandkat en de reuzenolifant nog wel. Nieuw: een plek waar het na een blikseminslag blijft smeulen,
+// de sabeltandkat nog wel. Nieuw: een plek waar het na een blikseminslag blijft smeulen,
 // dode bomen om hout van te hakken en een kring van stenen bij het kamp waar het vuur moet komen.
 export const berg = {
   id: 'berg', name: 'Onder de rokende berg', terrain: 'rift', ma: 1.5, region: 'Oost-Afrika', playable: true,
@@ -42,15 +42,16 @@ export const berg = {
   trees: [[36, 44, 1.3], [-34, -6, 1.1], [58, -40, 1], [-84, 36, 1.2], [-10, -96, 1], [110, -20, 1.1]],
   tallGrass: [[26, -2, 10], [-64, 14, 12], [60, -36, 9], [-22, -58, 10], [-14, 22, 8], [92, 24, 10], [-100, -50, 10]],
   carcass: { x: 80, z: -70 },
-  fauna: ['impala', 'zebra', 'gazelle', 'hyena', 'sabre', 'leopard', 'puffadder', 'giant', 'vulture', 'hominin'],
+  fauna: ['impala', 'zebra', 'gazelle', 'hyena', 'sabre', 'leopard', 'puffadder', 'rhino', 'vulture', 'hominin'],
   herd: { species: 'impala', at: [46, -4], n: 9 },
   zebras: { at: [-44, -24] },
   sabres: { lair: [-64, 14] },
   leopard: { tree: [36, 44], branchY: 2.8 },
   birds: [[14, -28], [-30, -4], [40, -44], [70, 16], [-56, -60], [20, 30]],
-  giant: {
-    route: [[95, -125, 'eat'], [142, -72, 'pass'], [128, -12, 'eat'], [105, { river: -13 }, 'drink'], [110, -20, 'eat'], [58, -40, 'eat'], [-8, -132, 'pass'], [58, -152, 'eat']],
-    grave: [96, { river: -15 }],
+  // De neushoorn graast alleen, tussen de kale bomen. Hij ziet slecht en ruikt scherp: de wind komt hier uit het oosten.
+  beast: {
+    kind: 'rhino',
+    route: [[-24, -62, 'eat'], [-10, -100, 'eat'], [30, -110, 'eat'], [60, -70, 'eat'], [70, -20, 'pass'], [105, { river: -13 }, 'drink'], [110, -20, 'eat'], [40, -60, 'pass']],
   },
   // vuur: waar het smeult, waar het moet branden, waar dood hout ligt en de berg aan de horizon
   models: ['oldtree', 'lengai', 'handaxe', 'cand1', 'cand21', 'cand6', 'quiver_tree_01', 'dead_quiver_trunk', 'namaqualand_cliff_02', 'rock_face_01', 'mountainside'],   // dode boom, de vulkaan aan de horizon, een echte vuistbijl uit Olduvai

@@ -6,6 +6,7 @@ import { ITEMS, DISCOVERIES } from '../items.js';
 import { ITEM_ICON } from '../icons.js';
 import { MODELS, TEXTURES } from '../assets.js';
 import { MISSING } from '../rig.js';
+import { BEASTS } from '../beasts.js';
 import { nearRelief } from '../relief.js';
 import { settings, qualityNow } from '../engine/settings.js';
 
@@ -13,6 +14,8 @@ import { settings, qualityNow } from '../engine/settings.js';
 export const CLIPS = {
   hyena: ['Lunge', 'Run', 'Walk', 'Eat', 'Idle'],
   elephant: ['01_Idle', '02_Walk', '03_Run', '04_Eating', '05_Attack'],
+  hippo: ['Iddle', 'Iddle1', 'Iddle2', '|Walk', 'Walk1'], rhino: ['Walk', 'Run'],
+  giraffe: ['01_Idle', '02_Walk', '03_Run', '04_Eat', '05_Attack'],
   zebra: ['Gallop', 'Trot', 'Idle01', 'Eating'],
   sabre: ['Layout', 'Run', 'Trot', 'Stalker', 'Eating', 'Roaring', 'Growling'],
   leopard: ['Principal'], cobra: ['lie'], catfish: ['Animation'], gazelle: ['Animation'], vulture: ['Armature'],
@@ -38,7 +41,7 @@ function checkConfig(out) {
     if (!(area.ma <= era.ma[0] && area.ma >= era.ma[1])) add('fout', w + `${area.ma} miljoen jaar valt buiten ${era.species} (${era.ma.join('–')})`);
     for (const [k, ok] of [['home', area.home && Number.isFinite(area.home.x) && Number.isFinite(area.home.z)], ['start', pair(area.start)], ['carcass', area.carcass && Number.isFinite(area.carcass.x)],
       ['herd.at', area.herd && pair(area.herd.at)], ['zebras.at', area.zebras && pair(area.zebras.at)], ['sabres.lair', area.sabres && pair(area.sabres.lair)], ['leopard.tree', area.leopard && pair(area.leopard.tree)],
-      ['giant.route', area.giant && Array.isArray(area.giant.route) && area.giant.route.length > 1], ['birds', Array.isArray(area.birds)], ['outro', area.outro && area.outro.title && Array.isArray(area.outro.text)], ['missions', typeof area.missions === 'function']]) {
+      ['beast', area.beast && !!BEASTS[area.beast.kind] && Array.isArray(area.beast.route) && area.beast.route.length > 1 && (!BEASTS[area.beast.kind].dies || (Array.isArray(area.beast.grave) && Number.isFinite(area.beast.grave[0]))) && (area.fauna || []).includes(area.beast.kind)], ['birds', Array.isArray(area.birds)], ['outro', area.outro && area.outro.title && Array.isArray(area.outro.text)], ['missions', typeof area.missions === 'function']]) {
       if (!ok) add('fout', w + `'${k}' ontbreekt of klopt niet`);
     }
     for (const id of area.fauna || []) {
@@ -73,7 +76,7 @@ function checkConfig(out) {
 async function checkFiles(out) {
   const add = (lvl, tekst) => out.push({ lvl, groep: 'Bestanden', tekst });
   const files = new Set([...MODELS.map((n) => `assets/models/${n}.glb`), ...TEXTURES.map(([n]) => `assets/tex/${n}.webp`), 'assets/anims/hominin.json', 'assets/mpumalanga_veld_1k.hdr', 'assets/CREDITS.md']);
-  for (const { area } of allAreas()) { for (const n of area.models || []) files.add(`assets/models/${n}.glb`); for (const n of area.textures || []) files.add(`assets/tex/${n}.webp`); }
+  for (const { area } of allAreas()) { for (const n of [...(area.models || []), ...(area.beast ? [BEASTS[area.beast.kind].model] : [])]) files.add(`assets/models/${n}.glb`); for (const n of area.textures || []) files.add(`assets/tex/${n}.webp`); }
   let bad = 0;
   await Promise.all([...files].map((f) => fetch('./' + f, { method: 'HEAD' }).then((r) => { if (!r.ok) { bad++; add('fout', `${f} ontbreekt (${r.status})`); } }).catch(() => { bad++; add('fout', `${f} is niet op te halen`); })));
   if (!bad) add('ok', `${files.size} bestanden van alle gebieden zijn aanwezig`);
@@ -92,7 +95,7 @@ function checkLoaded(out, A, scene) {
     if (noTex) { bad++; add('fout', `model '${n}': ${noTex} textuur(en) zonder beeld`); }
   }
   for (const [n, need] of Object.entries(CLIPS)) {
-    if (!A.models[n]) { if (MODELS.includes(n) || (AREA.models || []).includes(n)) { bad++; add('fout', `model '${n}' is niet geladen`); } continue; }   // een model van een ander gebied hoeft hier niet geladen te zijn
+    if (!A.models[n]) { if (MODELS.includes(n) || (AREA.models || []).includes(n) || BEASTS[AREA.beast.kind].model === n) { bad++; add('fout', `model '${n}' is niet geladen`); } continue; }   // een model van een ander gebied hoeft hier niet geladen te zijn
     const have = (A.anims[n] || []).map((c) => c.name);
     for (const c of need) if (!have.some((h) => h === c || h.includes(c))) { bad++; add('fout', `'${n}' mist de beweging '${c}' (aanwezig: ${have.join(', ') || 'geen'})`); }
   }
