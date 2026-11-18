@@ -242,7 +242,7 @@ function share(it) {
   toast(r.text, 6);
   if (r.gain === null) return false;
   state.group = THREE.MathUtils.clamp(state.group + r.gain, 0, 100);
-  if (r.gain > 0) { state.brought[it] = (state.brought[it] || 0) + 1; state.given.add(it); }
+  if (r.gain > 0) { state.brought[it] = (state.brought[it] || 0) + 1; state.given.add(it); if (it === 'meat' || it === 'roast') predGame.campMeat = 120; }
   if (r.bad) sound.bad(); else { sound.eat(); setTimeout(() => sound.good(), 600); discover('share'); }
   return true;
 }
@@ -594,11 +594,11 @@ function event(name, k) {
   // iemand uit de groep komt terug met wat hij zelf vond, of met vlees van het dier waar jij sneed
   if (name === 'gift') {
     state.group = Math.min(100, state.group + (k === 'meat' ? 30 : k === 'fig' ? 3 : 2.5));
-    if (k === 'meat') { state.brought.meat = (state.brought.meat || 0) + 1; if (Math.hypot(HOME.x - player.pos.x, HOME.z - player.pos.z) < 25) sound.good(); }
+    if (k === 'meat') { predGame.campMeat = 120; state.brought.meat = (state.brought.meat || 0) + 1; if (Math.hypot(HOME.x - player.pos.x, HOME.z - player.pos.z) < 25) sound.good(); }
     return;
   }
   if (name === 'kemgift') {
-    state.group = Math.min(100, state.group + (k === 'meat' ? 30 : 8)); state.brought[k] = (state.brought[k] || 0) + 1;
+    state.group = Math.min(100, state.group + (k === 'meat' ? 30 : 8)); state.brought[k] = (state.brought[k] || 0) + 1; if (k === 'meat') predGame.campMeat = 120;
     murmur(k === 'meat' ? 'Kem legt zijn lap vlees bij de boom. Ibo zit er al naast.' : 'Kem deelt zijn bessen uit bij de boom.', 4); sound.good();
     return;
   }
@@ -625,7 +625,7 @@ function event(name, k) {
     murmur(loot ? 'Kleine Ibo rent je tegemoet: hij heeft gezien dat je iets bij je hebt!' : 'Kleine Ibo rent je tegemoet. Je bent weer bij de groep.', 4);
   }
 }
-const predGame = { player, state, sound, toast, murmur, carries, discover, bite, event, hyenas, night: 0, things, throws, group, leopard, sabres, carcass: CARCASS, drop: dropAtPos, removeThing, giveHand, renderHands, hurt, kemHelps, foodSpot, groupTake, dryPath, shield: false, quake: (v) => { cam.shake = Math.max(cam.shake, v); } };
+const predGame = { camp: HOME, campSafe: 11, campMeat: 0, lit: false, player, state, sound, toast, murmur, carries, discover, bite, event, hyenas, night: 0, things, throws, group, leopard, sabres, carcass: CARCASS, drop: dropAtPos, removeThing, giveHand, renderHands, hurt, kemHelps, foodSpot, groupTake, dryPath, shield: false, quake: (v) => { cam.shake = Math.max(cam.shake, v); } };
 
 // ---------- wat kun je aantikken? ----------
 const LOOK_TARGETS = [{ look: 'carcass', x: CARCASS.x, z: CARCASS.z }, { look: 'tree', x: HOME.x, z: HOME.z }];
@@ -1023,6 +1023,7 @@ function update(dt) {
   const night = nightAmount(dayP);
   herd.update(dt, player, ui);
   predGame.night = night; predGame.danger = danger;
+  predGame.lit = !!(fire && fire.lit); predGame.campSafe = predGame.lit ? 26 : 11; predGame.campMeat = Math.max(0, predGame.campMeat - dt);
   const pred = !devFlags.noPred;
   if (pred) hyenas.update(dt, predGame);
   if (pred) leopard.update(dt, predGame, camera);
@@ -1039,14 +1040,14 @@ function update(dt) {
   atHome(dt);
   // bij de slaapboom durven de hyena's niet: de groep schreeuwt en gooit stenen
   for (const h of hyenas.list) {
-    if (Math.hypot(h.x - HOME.x, h.z - HOME.z) < (fire && fire.lit ? 26 : 11) && ['curious', 'windup', 'rush'].includes(h.state)) {
+    if (Math.hypot(h.x - HOME.x, h.z - HOME.z) < predGame.campSafe && ['curious', 'windup', 'rush', 'sneak'].includes(h.state)) {
       h.state = 'retreat'; h.t = 6; sound.from(h).yelp();
       if (!chased) { chased = true; murmur('De groep schreeuwt en gooit stenen: de hyena\'s durven niet dichterbij.', 5); }
     }
   }
   // hoe spannend is het nu? Dat hoor je aan het geluid
   let dg = sabres.danger(player.pos);
-  for (const h of hyenas.list) dg = Math.max(dg, h.state === 'windup' || h.state === 'rush' ? 0.8 : h.state === 'curious' ? 0.4 : 0);
+  for (const h of hyenas.list) dg = Math.max(dg, h.state === 'windup' || h.state === 'rush' ? 0.8 : h.state === 'curious' ? 0.4 : (h.state === 'prowl' || h.state === 'sneak') && Math.hypot(h.x - player.pos.x, h.z - player.pos.z) < 25 ? 0.2 : 0);
   dg = Math.max(dg, { stalk: 0.5, freeze: 0.65, pounce: 1 }[leopard.state] || 0, enc.danger(), giant.danger(), shore ? shore.danger() : 0);
   if (state.collapsed > 0 || state.sleeping > 0) dg = 0;
   danger += (dg - danger) * (1 - Math.exp(-dt * (dg > danger ? 3 : 0.6)));

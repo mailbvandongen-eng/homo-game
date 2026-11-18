@@ -2,25 +2,31 @@ import * as THREE from '../lib/three.module.js';
 import { height, WALK, riverDist, awayZ, rng } from './world.js';
 import { turn, step } from './animal.js';
 import { Rig } from './rig.js';
+import { heldMesh } from './items.js';
 
 const R = rng(55);
 
 // ---------- hyena's ----------
-// Een groepje bij het karkas. Overdag lui, 's nachts brutaal. Ze komen nieuwsgierig dichterbij,
-// giechelen, en dan waagt er één een uitval. Een steen laat ze terugdeinzen.
+// Een groepje bij het karkas. Ze komen alleen ergens op af als er iets te halen valt: vlees of een bot dat je draagt,
+// vlees dat ergens los ligt, een verse prooi, de geur van vlees in het kamp, of een kamp zonder vuur in de nacht.
+// Bij de groep durven ze niet. Ze bijten alleen wie alleen is, wie gewond is of wie bij hun prooi staat,
+// en altijd dreigen ze eerst: kop omlaag, grommen, om je heen draaien. Een steen laat ze terugdeinzen.
+const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z), headAt = new THREE.Vector3();
 export class Hyenas {
   constructor(scene, home, A) {
-    this.home = home; this.list = []; this.mood = 0; this.rushT = 4;
+    this.scene = scene; this.home = home; this.list = []; this.rushT = 4; this.scanT = 0; this.lure = null;
     for (let i = 0; i < 3; i++) {
       // echt model met animaties (Animal Animator, CC BY 4.0); het kijkt naar +x, dus een kwartslag draaien
       const rig = new Rig(A, 'hyena', { scale: 0.5 + i * 0.03, facing: -Math.PI / 2 });
       const m = { g: rig.root, rig };
       const a = i * 2.1;
-      const h = { ...m, kind: 'hyena', x: home.x + Math.cos(a) * 6, z: home.z + Math.sin(a) * 6, yaw: R() * 6, speed: 0, phase: R() * 6, state: 'rest', t: R() * 5, carry: null };
+      const h = { ...m, kind: 'hyena', i, x: home.x + Math.cos(a) * 6, z: home.z + Math.sin(a) * 6, yaw: R() * 6, speed: 0, phase: R() * 6, state: 'rest', t: R() * 5, carry: null, warn: 0, warnT: 0, bore: 0, bored: 0, stay: 0, dir: i ? 1 : -1, head: rig.bone('head') };
       scene.add(m.g); this.list.push(h);
     }
   }
   get threats() { return this.list.filter((h) => h.state === 'curious' || h.state === 'windup' || h.state === 'rush'); }
+  // de waarschuwing: hij blijft staan, kop omlaag, en gromt. Pas daarna draait hij om je heen
+  warnFrom(h, game) { h.state = 'curious'; h.t = 0; h.warn = 0; h.warnT = 1.4; h.bore = 0; game.sound.from(h).growl(); }
 
   // Meestal schrikt een geraakte hyena en druipt af. Maar met de troep om zich heen, of in het donker, wordt er soms een kwaad.
   hit(h, game) {
@@ -32,36 +38,83 @@ export class Hyenas {
       return;
     }
     h.angry = false; game.toast('Raak! De hyena jankt en maakt zich uit de voeten.', 4);
-    h.state = 'flee'; h.t = 12; game.sound.from(h).yelp();
-    for (const o of this.list) if (o !== h && o.state !== 'flee') { o.state = 'retreat'; o.t = 6; }
+    h.state = 'flee'; h.t = 12; h.lure = null; game.sound.from(h).yelp();
+    for (const o of this.list) if (o !== h && o.state !== 'flee') { o.state = 'retreat'; o.t = 6; o.lure = null; }
     game.discover('hyena');
   }
 
   update(dt, game) {
-    const p = game.player.pos, night = game.night;
-    const range = 14 + night * 22 + (game.carries('meat') ? 16 : 0);
-    const nearHome = Math.hypot(p.x - this.home.x, p.z - this.home.z);
-    // vlees ruiken ze van ver: wie buit draagt, wordt gevolgd
-    const holdsMeat = game.carries('meat');   // ook in je draagvel ruikt vlees
-    const holdsBone = holdsMeat || game.state.hands.includes('bone');
+    const p = game.player.pos, night = game.night, st = game.state, camp = game.camp, safe = game.campSafe;
+    // vlees ruiken ze van ver: wie buit draagt, wordt gevolgd (ook in je draagvel ruikt vlees)
+    const holdsMeat = game.carries('meat'), holdsBone = holdsMeat || st.hands.includes('bone');
+    const range = 14 + night * 22 + (holdsMeat ? 16 : 0);
+    const nearHome = dist(p, this.home), inCamp = dist(p, camp) < safe, hurt = st.health < 40;
+    // vlees dat ergens los ligt, buiten het kamp: daar sluipt er één op af
+    if ((this.scanT -= dt) < 0) {
+      this.scanT = 1; this.lure = null; let best = 70;
+      for (const t of game.things) {
+        if (t.item !== 'meat' || t.gone || t.kind !== 'pick' || dist(t, camp) < safe + 2) continue;
+        const dl = Math.min(...this.list.map((h) => dist(h, t)));
+        if (dl < best) { best = dl; this.lure = t; }
+      }
+      if (this.lure && !this.list.some((h) => h.state === 'sneak')) {
+        const h = this.list.filter((o) => ['rest', 'roam', 'prowl'].includes(o.state)).sort((a, b) => dist(a, this.lure) - dist(b, this.lure))[0];
+        if (h) { h.state = 'sneak'; h.lure = this.lure; }
+      }
+    }
+    const atLure = !!this.lure && dist(p, this.lure) < 6;
+    // wie durven ze aan? Niet wie bij de groep staat, tenzij hij gewond is of bij hun prooi komt
+    const company = inCamp || game.group.list.some((m) => m.sick <= 0 && dist(m, p) < 9);
+    const dare = !company || hurt || nearHome < 12 || atLure;
+    // is er iets te halen bij jou?
+    const reason = holdsBone || nearHome < 16 || atLure || (night > 0.5 && !company) || (hurt && !inCamp);
+    // de geur van vlees in het kamp, of een nacht zonder vuur: dan komen er twee om het kamp heen draaien
+    const campLure = game.campMeat > 0 || (night > 0.45 && !game.lit);
     for (const h of this.list) {
-      const d = Math.hypot(p.x - h.x, p.z - h.z) || 0.01;
-      h.t -= dt;
-      let tx = 0, tz = 0, spd = 0, run = false;
-      const interested = d < range && (nearHome < 30 || holdsBone || night > 0.5) && game.state.collapsed <= 0 && !game.shield && !(h.state !== 'rush' && h.state !== 'windup' && game.player.hiddenFrom(h.x, h.z));
+      const d = dist(p, h) || 0.01;
+      h.t -= dt; h.bored -= dt;
+      let tx = 0, tz = 0, spd = 0, run = false, face = null;
+      const interested = reason && d < range && h.bored <= 0 && !inCamp && st.collapsed <= 0 && !(st.sleeping > 0) && !game.shield && !(h.state !== 'rush' && h.state !== 'windup' && game.player.hiddenFrom(h.x, h.z));
       switch (h.state) {
         case 'rest': case 'roam':
-          if (h.t < 0 || !h.goal) { if (h.t < 0) { h.state = h.state === 'rest' && R() < 0.6 ? 'roam' : 'rest'; h.t = 3 + R() * 6; } h.goal = { x: this.home.x + (R() - 0.5) * (20 + night * 50), z: this.home.z + (R() - 0.5) * (20 + night * 50) }; }
-          if (h.state === 'roam') { const gx = h.goal.x - h.x, gz = h.goal.z - h.z, gd = Math.hypot(gx, gz); if (gd > 1) { tx = gx / gd; tz = gz / gd; spd = 1.6; } }
-          if (interested) { h.state = 'curious'; h.t = 0; if (!this.warned) { this.warned = true; game.toast('Hyena\'s! Ze giechelen en komen dichterbij. Heb je een steen?', 5); } game.sound.giggle(); }
+          if (h.t < 0 || !h.goal) { if (h.t < 0) { h.state = h.state === 'rest' && R() < 0.6 ? 'roam' : 'rest'; h.t = 3 + R() * 6; } h.goal = { x: this.home.x + (R() - 0.5) * (20 + night * 8), z: this.home.z + (R() - 0.5) * (20 + night * 8) }; }
+          if (h.state === 'roam') { const gx = h.goal.x - h.x, gz = h.goal.z - h.z, gd = Math.hypot(gx, gz); if (gd > 1) { tx = gx / gd; tz = gz / gd; spd = gd > 30 ? 3.2 : 1.6; } }
+          if (interested) { this.warnFrom(h, game); if (!this.warned) { this.warned = true; game.toast('Hyena\'s! Ze giechelen en komen dichterbij. Heb je een steen?', 5); } }
+          else if (campLure && h.i < 2 && h.bored <= 0) { h.state = 'prowl'; h.stay = 20; h.t = 6; }
           break;
+        case 'prowl': {
+          // om het kamp heen, net buiten bereik van de groep: lopen, stilstaan en kijken, weer lopen
+          const ring = safe + 5 + h.i * 2.5, a = Math.atan2(h.x - camp.x, h.z - camp.z) + h.dir * 0.4;
+          const gx = camp.x + Math.sin(a) * ring - h.x, gz = camp.z + Math.cos(a) * ring - h.z, gd = Math.hypot(gx, gz), off = Math.abs(dist(h, camp) - ring);
+          h.stay -= dt;
+          if (h.t < 0) { h.look = !h.look && off < 4; h.t = h.look ? 2.5 + R() * 3 : 6 + R() * 6; if (h.look && R() < 0.5) game.sound.from(h).giggle(); if (!h.look && R() < 0.3) h.dir = -h.dir; }
+          if (h.look && off < 4) face = camp; else { tx = gx / gd; tz = gz / gd; spd = off > 8 ? 3.4 : 1.5; }
+          if (interested) this.warnFrom(h, game);
+          else if (!campLure && h.stay < 0) { h.state = 'roam'; h.t = 4; h.goal = null; }
+          break;
+        }
+        case 'sneak': {
+          // laag en stil naar het vlees; pakken en wegwezen
+          const L = h.lure;
+          if (!L || L.gone || dist(L, camp) < safe) { h.state = 'roam'; h.t = 2; h.lure = null; break; }
+          const gd = dist(h, L);
+          if (atLure && L === this.lure && d < 11 && interested) { this.warnFrom(h, game); break; }   // jij staat erbij: eerst dreigen
+          if (gd > 0.9) { tx = (L.x - h.x) / gd; tz = (L.z - h.z) / gd; spd = gd > 16 ? 3.2 : 1.5; }
+          else { game.removeThing(L); h.carry = 'meat'; h.quiet = !L.byPlayer; h.lure = null; this.lure = null; h.state = 'flee'; h.t = 10; game.sound.from(h).giggle(); }
+          break;
+        }
         case 'curious': {
-          // in een boog om je heen, op een paar meter afstand
-          const want = 6.5, ang = Math.atan2(h.x - p.x, h.z - p.z) + dt * 0.5;
+          h.warn += dt;
+          if (h.warnT > 0) { h.warnT -= dt; face = p; break; }
+          // in een boog om je heen: dichtbij als ze durven, anders op afstand
+          const want = dare ? 6.5 : 9.5, ang = Math.atan2(h.x - p.x, h.z - p.z) + h.dir * 0.3;
           const gx = p.x + Math.sin(ang) * want - h.x, gz = p.z + Math.cos(ang) * want - h.z, gd = Math.hypot(gx, gz);
-          if (gd > 0.3) { tx = gx / gd; tz = gz / gd; spd = Math.min(3.5, gd * 1.5); }
+          tx = gx / gd; tz = gz / gd; spd = gd > 3 ? Math.min(3.5, gd * 1.2) : 1.5;
           if (R() < dt * 0.4) game.sound.from(h).giggle();
+          if (inCamp) { h.state = 'prowl'; h.stay = 20; h.t = 3; break; }   // bij de groep durven ze niet: ze blijven om het kamp hangen
           if (!interested && d > range + 6) { h.state = 'roam'; h.t = 2; }
+          // er valt niets te halen en bijten durven ze niet: na een tijdje druipen ze af
+          if (!dare && !holdsBone && (h.bore += dt) > 12) { h.state = 'roam'; h.t = 4; h.bored = 25; }
           break;
         }
         case 'windup':   // kop omlaag: hij gaat zo aanvallen
@@ -73,29 +126,30 @@ export class Hyenas {
           if (d < 1.3) {
             h.state = 'retreat'; h.t = 8; h.angry = false;
             const stole = game.bite(h, 12);
-            if (stole) { h.carry = stole; h.state = 'flee'; h.t = 14; }
+            if (stole) { h.carry = stole; h.quiet = false; h.state = 'flee'; h.t = 14; }
           } else if (h.t < 0) { h.state = 'retreat'; h.t = 4; h.angry = false; }
           break;
         case 'retreat': case 'flee':
           tx = (h.x - p.x) / d; tz = (h.z - p.z) / d; spd = h.state === 'flee' ? 8 : 5; run = true;
-          if (h.t < 0) { h.state = 'roam'; h.t = 3; if (h.carry) { game.toast(h.carry === 'meat' ? 'De hyena is er met je vlees vandoor.' : 'De hyena heeft het bot meegenomen. Er liggen er meer bij het karkas.'); h.carry = null; } }
+          if (h.t < 0) { h.state = 'roam'; h.t = 3; if (h.carry) { if (!h.quiet) game.toast(h.carry === 'meat' ? 'De hyena is er met je vlees vandoor.' : 'De hyena heeft het bot meegenomen. Er liggen er meer bij het karkas.'); h.carry = null; } }
           break;
       }
-      step(h, tx, tz, spd, dt, 5, run ? 7 : 3, h.state === 'curious' ? p : null);
+      if (face) h.yaw = turn(h.yaw, Math.atan2(face.x - h.x, face.z - h.z), dt * 5);
+      step(h, tx, tz, spd, dt, 5, run ? 7 : 3, h.state === 'curious' && h.warnT <= 0 ? p : null);
       const lim = WALK - 8; h.x = THREE.MathUtils.clamp(h.x, -lim, lim); h.z = THREE.MathUtils.clamp(h.z, -lim, lim);
       if (riverDist(h.x, h.z) < 7) h.z += awayZ(h.x, h.z) * dt * 4;
       this.pose(h, dt, run);
     }
-    // af en toe waagt de brutaalste een uitval
-    const curious = this.list.filter((h) => h.state === 'curious');
-    if (curious.length) {
+    // wie al een tijd dreigt, waagt een uitval. Maar alleen als ze je aandurven
+    const ready = this.list.filter((h) => h.state === 'curious' && h.warn > 3.5);
+    if (ready.length && dare) {
       this.rushT -= dt * (0.6 + night);
       if (this.rushT < 0) {
-        const h = curious[Math.floor(R() * curious.length)];
+        const h = ready[Math.floor(R() * ready.length)];
         h.state = 'windup'; h.t = 0.9; game.sound.from(h).whoop();
         this.rushT = 5 + R() * 4;
       }
-    } else this.rushT = 3;
+    } else if (!this.list.some((h) => h.state === 'curious')) this.rushT = 3;
   }
 
   pose(h, dt, run) {
@@ -104,11 +158,18 @@ export class Hyenas {
     // welke animatie past bij wat hij doet?
     const near = Math.hypot(h.x - this.home.x, h.z - this.home.z) < 5;
     if (h.state === 'windup') h.rig.play('Lunge', { fade: 0.15, speed: 1.6, once: true });
+    else if (h.state === 'curious' && h.warnT > 0) h.rig.play('Lunge', { fade: 0.25, speed: 0.9, once: true });   // dreigen
     else if (run || h.speed > 3.5) h.rig.play('Run', { fade: 0.2, speed: Math.max(0.6, h.speed / 7) });
     else if (h.speed > 0.25) h.rig.play('Walk', { fade: 0.3, speed: Math.max(0.5, h.speed / 1.5) });
     else if (h.state === 'rest' && near) h.rig.play('Eat', { fade: 0.5 });   // knagen op een bot bij het karkas
     else h.rig.play('Idle', { fade: 0.4 });
     h.rig.update(dt);
+    // wat hij gepakt heeft, draagt hij in zijn bek
+    if (h.carry !== (h.loot ? h.loot.userData.item : null)) {
+      if (h.loot) { this.scene.remove(h.loot); h.loot = null; }
+      if (h.carry) { h.loot = heldMesh(h.carry); h.loot.userData.item = h.carry; h.loot.traverse((o) => { o.castShadow = true; }); this.scene.add(h.loot); }
+    }
+    if (h.loot && h.head) { h.head.getWorldPosition(headAt); h.loot.position.set(headAt.x + Math.sin(h.yaw) * 0.22, headAt.y - 0.1, headAt.z + Math.cos(h.yaw) * 0.22); h.loot.rotation.y = h.yaw + 1.57; }
   }
 }
 

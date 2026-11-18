@@ -345,3 +345,26 @@ langzamer, maar jij blijft nodig.
 
 **Controle:** `v4groep.js` (alle vier gebieden).
 
+## 16. Wat in fase 5b stap 5 is gebouwd (hyena's met een reden, 18-11-2026)
+
+**Wanneer ze komen.** Hyena's liggen en zwerven bij hun karkas. Ze komen alleen op je af als er een reden is: je
+staat bij hun prooi (binnen 16 m), je draagt een bot, je staat bij vlees dat los ligt, het is nacht en je bent alleen,
+of je bent gewond (gezondheid onder 40) en buiten het kamp. Is er geen reden, dan laten ze je met rust, ook op 25 m.
+
+**Eerst waarschuwen.** Wie hun aandacht trekt, krijgt eerst een hyena die stilstaat en gromt. Daarna draaien ze om je
+heen. Pas een hyena die je ruim drie seconden heeft gewaarschuwd, waagt een uitval. Zonder waarschuwing wordt er niet
+gebeten.
+
+**Durf.** Staat er iemand van de groep binnen 9 m, of ben je in het kamp, dan blijven ze op 9,5 m en bijten ze niet;
+na twaalf seconden druipen ze af. Uitzondering: je bent gewond, of je staat bij hun prooi of bij het vlees dat ze
+willen. Alleen ben je dus kwetsbaar, samen niet.
+
+**Vlees stelen.** Ligt er vlees los op de grond (buiten het kamp, binnen 70 m), dan sluipt de dichtstbijzijnde hyena
+erheen, pakt het en rent weg met het vlees zichtbaar in de bek. Sta je erbij, dan dreigt hij eerst.
+
+**Om het kamp.** Na vlees voor de groep ruiken ze het twee minuten lang: twee hyena's komen op een ring buiten het
+veilige gebied om het kamp draaien en giechelen. Hetzelfde in een nacht zonder vuur. Brandt het vuur, dan is het
+veilige gebied 26 m in plaats van 11 m. Loop je alleen met een bot het kamp uit, dan dreigen ze.
+
+**Eerlijk:** dicht bij de oerolifant komen ze niet (dat was al zo). De luipaard en de sabeltandkatten zijn niet
+veranderd; die hadden al een reden (nacht bij de bomen, hun eigen prooi).
