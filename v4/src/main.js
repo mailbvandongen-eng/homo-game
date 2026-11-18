@@ -130,7 +130,7 @@ const G = {
 let homeShown = false;
 const carry = initCarry(G), { renderHands, freeHand, handsFull, giveHand, renderBag, stow, unstow, makeBag, wearHide, putCloak, cloakTick } = carry;
 Object.assign(G, carry);
-const { eat, crack, crackFruit, cutMeat, heard, tasteAt } = initFood(G);
+const { eat, crack, crackFruit, cutMeat, heal, heard, tasteAt } = initFood(G);
 const { knap, knapAxe, knapTick, makeStick } = initCraft(G);
 const thirst = G.thirst = initThirst(G);
 const { journal, knowledge } = initKnowledge(G, DISC);
@@ -306,11 +306,11 @@ function turnStone(t) {
   t.gone = true; player.action = 0.5; sound.pick();
   turning.push({ m: t.mesh, x: t.mesh.position.x, z: t.mesh.position.z, t: 0 });
   if (t.under === 'grubs') {
-    state.food = Math.min(100, state.food + 10); sound.eat();
+    state.food = Math.min(100, state.food + 10); heal('grubs'); sound.eat();
     toast('Larven! Dikke witte larven onder de steen. Je eet ze op: knapperig en voedzaam.', 5);
     discover('grubs');
   } else if (t.under === 'scorpion') {
-    state.health -= 10; hurtFlash(); sound.bad();
+    hurt(6); sound.bad();
     toast('Au! Een schorpioen steekt je in je hand. Dat doet pijn, maar het zakt weer.', 5);
   } else if (FINDS[t.under]) {
     state.finds.add(t.under); sound.discover();
@@ -385,7 +385,7 @@ function openRadial(target) {
   if (target.more) opts.push(...target.more);
   else if (target.hand !== undefined) {
     const i = target.hand, it = state.hands[i];
-    if (EDIBLE.has(it)) opts.push({ t: state.known.has(it) ? 'Eet' : 'Proef', icon: ICON.mouth, q: !state.known.has(it), fn: () => { state.hands[i] = null; renderHands(); eat(it); } });
+    if (EDIBLE.has(it)) opts.push({ t: state.known.has(it) ? 'Eet' : 'Proef', icon: it === 'leaf' && state.known.has(it) ? ICON.wound : ICON.mouth, q: !state.known.has(it), fn: () => { state.hands[i] = null; renderHands(); eat(it); } });
     if (it === 'waterbag') opts.push({ t: 'Drink', icon: ICON.drink, fn: () => thirst.drinkBag(i) });
     if (it === 'pouch' && thirst.waterAt() === 'river') opts.push({ t: 'Vul met water', icon: ICON.fill, fn: () => act('PickUp_Table', () => thirst.fill(i), 1.4) });
     opts.push(...crafts(i));
@@ -463,13 +463,16 @@ function dropAtPos(it, x, z, thrown = false, rock = null) {
 }
 function removeThing(t) { t.gone = true; scene.remove(t.mesh); }
 // pijn die niet van een roofdier komt: een steek, een pik, een steen
-function hurt(dmg) { if (state.collapsed > 0 || state.sleeping > 0) return; state.health -= dmg; hurtFlash(); sound.bite(); }
+// Na een treffer ben je drie tellen niet te raken: tijd om weg te komen, en nooit twee beten achter elkaar.
+let guard = 0, sinceHit = 99;
+function hurt(dmg) { if (state.collapsed > 0 || state.sleeping > 0 || guard > 0) return; guard = 3; sinceHit = 0; state.health -= dmg; hurtFlash(); sound.bite(); }
 
 // ---------- gevaar ----------
 function hurtFlash() { const h = $('hurt'); h.style.transition = 'none'; h.style.opacity = 1; void h.offsetWidth; h.style.transition = 'opacity .9s'; h.style.opacity = 0; cam.shake = 0.5; }
 // een roofdier bijt: gezondheid omlaag; een hyena pakt je bot af, een luipaard laat je alles vallen
 function bite(attacker, dmg, big) {
-  if (state.collapsed > 0 || state.sleeping > 0) return null;
+  if (state.collapsed > 0 || state.sleeping > 0 || guard > 0) return null;
+  guard = 3; sinceHit = 0;
   state.health -= dmg; hurtFlash(); sound.bite(); walkTo = null;
   player.playOnce('Hit_Chest', { speed: 1, slow: 0.5 });
   let stolen = null;
@@ -966,7 +969,7 @@ const ui = {
 // eigen klok: tijd in seconden sinds de start
 const dir = new THREE.Vector3();
 let deepTold = false;
-let weary = 0, pantT = 0;
+let weary = 0, pantT = 0, breath = 100, winded = false;
 let hintStage = 0, sneakNear = 0, playTime = 0, dayP = 0.12, lastPart = '', stepPhase = 0, danger = 0, groupWarn = 0, chased = false;
 
 function partOfDay(p) { return p < 0.06 ? 'dawn' : p < 0.7 ? 'day' : p < 0.8 ? 'evening' : p < 0.97 ? 'night' : 'dawn'; }
@@ -998,9 +1001,12 @@ function update(dt) {
   else { stillT += dt; if (stillT > 3.5) setSense(true); }
 
   const sick = state.sick > 0;
-  // moe: honger, dorst of een zwak lijf. Dat merk je aan je lijf (trager, hijgen, niet rennen), niet aan het beeld
-  const tire = !state.started ? 0 : Math.min(1, Math.max(0, (22 - state.food) / 22, (18 - state.water) / 18, (40 - state.health) / 40));
-  weary += (tire - weary) * Math.min(1, dt * 0.8);
+  // Adem: lopen en draven kun je de hele dag, alleen voluit rennen kost adem. Is die op, dan draaf je even tot je weer kunt.
+  // Honger en dorst maken je niet traag.
+  const sprinting = state.started && player.speed > 4.3;
+  breath = Math.max(0, Math.min(100, breath + dt * (sprinting ? -100 / 28 : player.speed > 2.8 ? 100 / 12 : 100 / 6)));
+  if (breath <= 0) winded = true; else if (breath > 45) winded = false;
+  weary += ((winded ? 0.42 : 0) - weary) * Math.min(1, dt * 2);
   player.update(dt, dir, { speed: sick ? 0.6 : 1 - weary * 0.3, sick, weary }); cloakTick();
   if (weary > 0.25 && state.collapsed <= 0 && state.sleeping <= 0 && (pantT -= dt * (1 + player.speed * 0.3)) <= 0) { pantT = 1.9 - weary * 0.6; sound.pant(0.5 + weary * 0.5); }
   if (player.tooDeep) { player.tooDeep = false; if (!deepTold) { deepTold = true; note('water', 'Te diep', 3); } }
@@ -1071,7 +1077,7 @@ function update(dt) {
     if (player.speed > 0.5 && player.onGround) sound.step(tall ? 'hoog' : groundAt(player.pos.x, player.pos.z), player.sneaking ? 0.4 : 0.7 + Math.min(0.6, player.speed / 9));
   }
   // neerkomen: een bons; van hoog vallen doet pijn
-  if (player.landed) { sound.thud(); if (player.fell > 3) hurt(Math.min(45, 10 + (player.fell - 3) * 12)); }
+  if (player.landed) { sound.thud(); if (player.fell > 3) hurt(Math.min(25, 6 + (player.fell - 3) * 8)); }
 
   C.place(dt, t, sick);
 
@@ -1091,25 +1097,29 @@ function update(dt) {
   if (state.started && state.collapsed <= 0 && state.sleeping <= 0) {
     const ease = state.day <= 1 ? 0.55 : state.day === 2 ? 0.75 : 1;   // de eerste dagen heb je de tijd om het land te leren kennen
     thirst.tick(dt * ease, { heat: Math.max(0, 1 - Math.abs(dayP - 0.4) / 0.22) * (1 - sky.cloud * 0.5), rain: sky.rain, running: player.speed > 4.5, off: devFlags.noHunger });
-    if (!devFlags.noHunger) state.food = Math.max(0, state.food - dt * 0.07 * ease * (predGame.night > 0.6 && !state.cloak && !(fire && fire.warm(player.pos)) ? AREA.cold || 1.5 : 1));   // kou vreet energie
-    // Honger, dorst en buikpijn maken je zwak en traag, maar je gaat er niet aan dood: daar zorgen de dieren wel voor.
-    if (sick) { state.sick -= dt; if (state.health > 20) state.health -= dt * 0.9; if (state.sick <= 0) toast('De pijn is vanzelf gezakt. Dat duurde lang…'); }
-    else if (state.food < 12 || state.water <= 0) { if (state.health > 30) state.health -= dt * 0.2; }
-    else if (state.food > 40 && state.water > 25) state.health = Math.min(100, state.health + dt * 0.6);
+    if (!devFlags.noHunger) state.food = Math.max(0, state.food - dt * 0.06 * ease * (predGame.night > 0.6 && !state.cloak && !(fire && fire.warm(player.pos)) ? AREA.cold || 1.5 : 1));   // kou vreet energie
+    // Honger, dorst en gif doden je niet. Gif vreet aan je tot een kwart; met een lege maag of een droge keel herstel je niet.
+    // Vanzelf kom je terug tot de helft, langzaam en alleen als het rustig is. De rest geneest eten; bitterblad geneest alles.
+    guard -= dt; sinceHit += dt;
+    if (sick) { state.sick -= dt; if (state.health > 25) state.health = Math.max(25, state.health - dt * 0.5); }
+    else if (state.health < 50 && state.food > 0 && state.water > 0 && danger < 0.3 && sinceHit > 10) state.health = Math.min(50, state.health + dt * 0.3);
     if (state.health <= 0) collapse();
   }
   if (state.collapsed > 0) {
     state.collapsed -= dt;
+    if (state.collapsed < 3.2) $('fade').style.opacity = 1;
     if (state.collapsed <= 0) {
-      state.health = 35; state.food = Math.max(state.food, 30); state.sick = 0;
-      player.rise();
-      toast('Je komt langzaam weer bij. Je bent zwak. Zoek eten en neem het rustig aan.', 6);
+      // de groep heeft je gevonden en naar de slaapplek gedragen: je wordt daar zwak wakker
+      state.health = 30; state.food = Math.max(state.food, 20); state.water = Math.max(state.water, 20); state.sick = 0; guard = 3; breath = 100; winded = false;
+      player.pos.set(HOME.x + 2, 0, HOME.z + 4); player.vel.set(0, 0, 0);
+      $('fade').style.opacity = 0; player.rise();
+      toast('Je komt langzaam weer bij, bij de groep. Je bent zwak.', 6);
     }
   }
   $('dayLbl').textContent = state.day;
   // een pijltje naar de slaapboom als je ver weg bent
   const hdx = HOME.x - player.pos.x, hdz = HOME.z - player.pos.z, hd = Math.hypot(hdx, hdz);
-  bodySignals(dt, sick, hd, weary);
+  bodySignals(dt, sick, hd, weary, breath);
   if (player.sneaking && !coverTold && player.nearCover) { coverTold = true; murmur('Gebukt achter een rots of struik ben je onzichtbaar voor wie aan de andere kant staat.', 6); }
   // moet je naar huis (avond, nacht, of eten voor de groep in je handen), dan wijst een pijl aan de schermrand de weg
   const homeward = ['evening', 'night'].includes(partOfDay(dayP)) || !!handOver() || state.sensing;
@@ -1152,10 +1162,13 @@ function update(dt) {
   uiTick(dt);
 }
 
+// Neervallen: je raakt kwijt wat je in je handen had (het blijft daar liggen) en wordt zwak wakker bij de groep.
+// Wat je weet, wat je gemaakt hebt en wat in je tas zit, blijft.
 function collapse() {
-  state.collapsed = 4; state.health = 0; walkTo = null;
+  state.collapsed = 5; state.health = 0; walkTo = null;
+  state.hands.forEach((it, i) => { if (it) { dropAt(it, state.rock[i]); state.hands[i] = null; } }); renderHands();
   player.fall();
-  toast('Je bent te zwak en zakt in elkaar…', 4);
+  toast('Je zakt in elkaar…', 4);
 }
 
 // de testmodus (?dev=1) kan dingen stilzetten; in het gewone spel staat alles hier uit
@@ -1207,7 +1220,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
+window.__game = { body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, beast, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, setSneak, still: () => stillT,
   setCam: (y, p, d) => { cam.yaw = y; cam.pitch = p; if (d) cam.dist = d; }, setZoom: C.setZoom, zoom: () => cam.dist, C, jump, sound, world, weather, menu, closeCard, clockT: () => clock.elapsedTime, actionContext, actionOptions, heard, tasteAt, bodyTap, prim: () => prim, alts: () => alts,
   lookFrom: (pos, look) => { cam.override = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },

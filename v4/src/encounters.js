@@ -220,7 +220,7 @@ export class Encounters {
       if (!e.heard && !e.shown) { e.heard = true; game.toast('Ssss… Vlak voor je sist iets. Sta stil en gebruik je zintuigen.', 5); }
     }
     if (d < 1.05 && game.player.onGround && s.collapsed <= 0 && s.sleeping <= 0) {
-      game.hurt(18); s.sick = Math.max(s.sick, 70); game.discover('snake');
+      game.hurt(12); s.sick = Math.max(s.sick, 70); game.discover('snake');
       game.toast(e.shown ? 'Te dichtbij! De slang bijt in je enkel. Het gif brandt. Bitterblad helpt.' : 'Au! Een slang! Je trapte er bijna op en hij bijt in je enkel. Het gif brandt. Bitterblad helpt.', 7);
       this.strike(e, p);
     }
@@ -230,7 +230,7 @@ export class Encounters {
   flee(e, from) { e.state = 'flee'; e.t = 5; e.g.rotation.y = Math.atan2(e.x - from.x, e.z - from.z); e.halo.visible = false; }
   hit_snake(e, how, game) {
     if (e.state !== 'lie') return;
-    if (how === 'fist') { game.hurt(18); game.state.sick = Math.max(game.state.sick, 70); game.toast('Met je blote hand? De slang is sneller en bijt. Het gif brandt. Bitterblad helpt.', 6); game.discover('snake'); this.strike(e, game.player.pos); return; }
+    if (how === 'fist') { game.hurt(12); game.state.sick = Math.max(game.state.sick, 70); game.toast('Met je blote hand? De slang is sneller en bijt. Het gif brandt. Bitterblad helpt.', 6); game.discover('snake'); this.strike(e, game.player.pos); return; }
     game.toast('Raak! De slang schiet weg in het gras.', 4);
     game.discover('snake'); this.flee(e, game.player.pos);
   }

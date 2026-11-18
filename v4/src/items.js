@@ -163,7 +163,7 @@ export const ITEMS = {
 export const DISCOVERIES = [
   { id: 'berry', text: 'Paarse bessen zijn zoet en goed om te eten.' },
   { id: 'redberry', text: 'Van rode bessen word je ziek.' },
-  { id: 'leaf', text: 'Bitterblad helpt als je ziek bent.' },
+  { id: 'leaf', text: 'Bitterblad geneest je wonden en stopt gif.' },
   { id: 'drink', text: 'Stromend water lest je dorst.' },
   { id: 'pool', text: 'Van stilstaand water in een poel word je ziek.' },
   { id: 'waterbag', text: 'In de maag van een dier kun je water meedragen.' },

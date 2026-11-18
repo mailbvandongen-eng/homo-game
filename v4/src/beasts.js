@@ -11,7 +11,7 @@
 export const BEASTS = {
   giant: {
     model: 'elephant', rig: { shape: 'recki', tall: 4.3 }, ai: 'bull', sense: 'giant',
-    walkV: 1.3, chargeV: 7, chargeTurn: 1.3, chargeT: 7, hurry: 2.6, r: 1.5, hitR: 2.9, dmg: 38, fling: 15, warnT: 2.4, chargeD: 27,
+    walkV: 1.3, chargeV: 7, chargeTurn: 1.3, chargeT: 7, hurry: 2.6, r: 1.5, hitR: 2.9, dmg: 30, fling: 15, warnT: 2.4, chargeD: 27,
     print: { r: 0.4, side: 0.75, step: 1.7, n: 230 },
     anim: { idle: '01_Idle', walk: ['02_Walk', 1.36], run: ['03_Run', 4.1], eat: '04_Eating', warn: ['05_Attack', 1.5] },
     shield: 34, fruit: true, dies: { meat: 12, lift: 1.05, side: 2, relic: 'molar', pose: '01_Idle', feast: 'feast' },
@@ -42,7 +42,7 @@ export const BEASTS = {
   // Hippopotamus gorgops: groter dan het nijlpaard van nu. Overdag in het water, van de late middag tot de vroege ochtend op het land.
   hippo: {
     model: 'hippo', rig: { scale: 1.75 / 413 }, tint: 0xb9a79d, ai: 'bull', sense: 'hippo',
-    walkV: 1.15, chargeV: 6.6, chargeTurn: 1.5, chargeT: 6, hurry: 2.4, r: 1.25, hitR: 2.3, dmg: 40, fling: 9, warnT: 2.7, chargeD: 24,
+    walkV: 1.15, chargeV: 6.6, chargeTurn: 1.5, chargeT: 6, hurry: 2.4, r: 1.25, hitR: 2.3, dmg: 30, fling: 9, warnT: 2.7, chargeD: 24,
     print: { r: 0.25, side: 0.5, step: 1.1, n: 520 },
     anim: { idle: 'Iddle2', walk: ['|Walk', 1.0], run: ['Walk1', 2.3], eat: 'Iddle', warn: ['Iddle1', 1.2] },
     wade: 27, out: [0.52, 0.03], leash: 46,
@@ -75,7 +75,7 @@ export const BEASTS = {
   // Ceratotherium, de voorouder van de witte neushoorn: een grazer met een brede bek. Slechte ogen, een scherpe neus.
   rhino: {
     model: 'rhino', rig: { scale: 1.75 / 1.113 }, tint: 0xa6abb4, ai: 'rhino', sense: 'rhino',
-    walkV: 1.1, chargeV: 9, chargeTurn: 0.22, chargeT: 3.6, hurry: 2.6, r: 1.3, hitR: 2.3, dmg: 34, fling: 12, warnT: 1.7, chargeD: 34,
+    walkV: 1.1, chargeV: 9, chargeTurn: 0.22, chargeT: 3.6, hurry: 2.6, r: 1.3, hitR: 2.3, dmg: 30, fling: 12, warnT: 1.7, chargeD: 34,
     print: { r: 0.22, side: 0.45, step: 1.2, n: 230 },
     anim: { idle: null, walk: ['Walk', 1.25], run: ['Run', 5.6], eat: null, warn: [null, 1] },
     graze: { neck: 'Neck9', head: 'Head10', tail: 'Tail178', ears: ['L_Ear130', 'R_Ear132'] },

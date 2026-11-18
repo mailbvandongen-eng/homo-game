@@ -207,7 +207,7 @@ export class Sabres {
         case 'attack':
           tx = (p.x - c.x) / d; tz = (p.z - c.z) / d; spd = 10.5; anim = 'Run'; aspeed = 0.9;
           if (d < 1.9) {
-            game.bite(c, 45, true); c.cool = 14; c.state = k && !k.open ? 'feed' : 'leave';
+            game.bite(c, 30, true); c.cool = 14; c.state = k && !k.open ? 'feed' : 'leave';
           } else if (c.t < 0 || !canSee) { c.cool = 6; c.state = k && !k.open ? 'feed' : 'leave'; }
           break;
         case 'leave': {

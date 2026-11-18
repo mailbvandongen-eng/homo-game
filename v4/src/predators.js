@@ -125,7 +125,7 @@ export class Hyenas {
           tx = (p.x - h.x) / d; tz = (p.z - h.z) / d; spd = 7.5; run = true;
           if (d < 1.3) {
             h.state = 'retreat'; h.t = 8; h.angry = false;
-            const stole = game.bite(h, 12);
+            const stole = game.bite(h, 8);
             if (stole) { h.carry = stole; h.quiet = false; h.state = 'flee'; h.t = 14; }
           } else if (h.t < 0) { h.state = 'retreat'; h.t = 4; h.angry = false; }
           break;
@@ -241,7 +241,7 @@ export class Leopard {
         break;
       case 'pounce':
         tx = (p.x - this.x) / d; tz = (p.z - this.z) / d; spd = 11; run = true;
-        if (d < 1.4) { game.bite(this, 35, true); this.state = 'home'; this.cool = 30; }
+        if (d < 1.4) { game.bite(this, 22, true); this.state = 'home'; this.cool = 30; }
         else if (this.t < 0) this.state = 'stalk';
         break;
       case 'flee': case 'home': {

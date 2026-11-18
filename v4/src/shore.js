@@ -144,7 +144,7 @@ export class Shore {
         else if (d < 3.4) { c.state = 'lunge'; c.t = 0.45; c.yaw = want; game.sound.from(c).thud(); }
       } else if (c.state === 'lunge') {
         want = Math.atan2(p.x - c.x, p.z - c.z); spd = 9; dip = -0.16;
-        if (d < 1.5 && awake) { game.bite(c, 28, true); this.sink(c, 18); }
+        if (d < 1.5 && awake) { game.bite(c, 22, true); this.sink(c, 18); }
         else if (c.t <= 0) this.sink(c, 6);
       } else {
         // onder water: halverwege duikt hij ergens anders weer op

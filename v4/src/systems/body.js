@@ -7,7 +7,7 @@ export function initBody(G) {
   const statShow = { food: 0, water: 0, health: 0, group: 0 }, statPrev = { food: 70, water: 85, health: 100, group: 50 };
   let bellyT = 8, cryT = 5, hungerTold = false;
   for (const [id, k] of [['statFood', 'food'], ['statWater', 'water'], ['statHealth', 'health'], ['statGroup', 'group'], ['statSick', 'sick'], ['statTired', 'tired'], ['dayIcon', 'day'], ['homeIcon', 'home']]) $(id).innerHTML = ICON[k];
-  function bodySignals(dt, sick, hd, weary = 0) {
+  function bodySignals(dt, sick, hd, weary = 0, breath = 100) {
     // de tekens zie je alleen als er iets verandert, als het slecht gaat, of als je stilstaat en voelt hoe het met je is
     for (const [k, id, low] of [['food', 'statFood', 20], ['water', 'statWater', 30], ['health', 'statHealth', 35], ['group', 'statGroup', 20]]) {
       const v = state[k];
@@ -19,9 +19,9 @@ export function initBody(G) {
       el.classList.toggle('low', v < low);
     }
     $('statSick').classList.toggle('on', !!sick); $('statSick').classList.toggle('low', !!sick);
-    // moe: het teken knippert, en de rand laat zien hoe moe
-    const tired = weary > 0.25 && state.started && state.sleeping <= 0;
-    $('statTired').classList.toggle('on', tired); $('statTired').classList.toggle('blink', tired); $('statTired').style.setProperty('--v', Math.round(weary * 100));
+    // adem: het teken komt als je over de helft bent, de rand laat zien hoeveel je nog hebt; buiten adem knippert het
+    const puff = (breath < 55 || weary > 0.25) && state.started && state.sleeping <= 0;
+    $('statTired').classList.toggle('on', puff); $('statTired').classList.toggle('blink', weary > 0.25); $('statTired').style.setProperty('--v', Math.round(breath));
     $('dayRow').classList.toggle('on', state.sensing);
     $('homeRow').classList.toggle('on', state.sensing && hd > 22);
     if (!state.started || state.sleeping > 0 || state.collapsed > 0) return;
