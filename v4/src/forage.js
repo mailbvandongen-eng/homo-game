@@ -4,7 +4,8 @@ import { AREA } from './eras/index.js';
 import { ICON } from './icons.js';
 import { heldMesh, boneMesh } from './items.js';
 import { plantMesh, digTuber } from './shore.js';
-import { Vultures, carcass } from './actors.js';
+import { carcass } from './actors.js';
+import { Vultures } from './vultures.js';
 
 // Wat het land zelf te eten en te rapen geeft, buiten de bessenstruiken om:
 // - vruchtbomen: onder een bosje vijgen liggen elke ochtend rijpe vijgen; de baobab laat zijn vruchten vallen als hij kaal staat
@@ -41,6 +42,7 @@ function treeParts(A, K) {
 export class Forage {
   constructor(scene, A, things) {
     this.scene = scene; this.things = things; this.trees = []; this.plants = []; this.vultures = []; this.old = []; this.laid = []; this.cullT = 0;
+    for (const q of things) if (q.cull) this.laid.push(q);   // de losse keien in het land teken je ook niet van ver
     const free = (x, z, r) => height(x, z) > 0.3 && steep(x, z) < 0.3 && !blockers.some((b) => Math.hypot(b.x - x, b.z - z) < b.r + r);
     const lay = (item, x, z, mesh, label, extra) => {
       mesh.position.set(x, height(x, z) + 0.06, z); mesh.traverse((o) => { o.castShadow = item === 'fig' || item === 'baobab'; }); scene.add(mesh);

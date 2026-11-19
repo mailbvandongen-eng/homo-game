@@ -1,5 +1,5 @@
 import * as THREE from '../lib/three.module.js';
-import { height, riverZ, blockers } from './world.js';
+import { height, riverZ, blockers, steep, rng, WALK } from './world.js';
 import { variantsOf } from './assets.js';
 
 let SHRUBS = [];   // gescande struiken (Poly Haven, CC0)
@@ -370,9 +370,16 @@ export function placeItems(scene, A, area) {
     });
     for (let i = 0; i < area.outcrop.n; i++) { const a = i * 2.4 + 0.6, d = 6.5 + (i % 3) * 1.6; stones.push([ox + Math.cos(a) * d, oz + Math.sin(a) * d, type]); }
   }
-  for (const [x, z, type] of stones) {
+  // en overal in het land ligt hier en daar een losse kei: je hoeft er nooit ver voor te lopen
+  const fixed = stones.length, SR = rng(431), kinds = area.riverRock || ['lava', 'sand', 'quartz', 'sand'];
+  for (let n = 0, tries = 0; n < 64 && tries < 4000; tries++) {
+    const x = (SR() - 0.5) * 2 * (WALK - 6), z = (SR() - 0.5) * 2 * (WALK - 6);
+    if (height(x, z) < 0.3 || steep(x, z) > 0.3 || blockers.some((b) => Math.hypot(b.x - x, b.z - z) < b.r + 0.8) || stones.some((q) => Math.hypot(q[0] - x, q[1] - z) < 15)) continue;
+    stones.push([x, z, kinds[n++ % kinds.length]]);
+  }
+  for (const [i, [x, z, type]] of stones.entries()) {
     const m = stoneMesh(type, 0.32); m.position.set(x, height(x, z) - 0.02, z); m.rotation.y = x * 1.7; scene.add(m);
-    add({ kind: 'pick', item: 'stone', x, z, mesh: m, label: 'Pak de kei', rock: { type, hits: 0 } });
+    add({ kind: 'pick', item: 'stone', x, z, mesh: m, label: 'Pak de kei', rock: { type, hits: 0 }, cull: i >= fixed });
   }
 
   // bessenstruiken

@@ -1,6 +1,6 @@
 import * as THREE from '../lib/three.module.js';
 import { height, WALK, riverZ, blockers } from './world.js';
-import { Vultures } from './actors.js';
+import { Vultures } from './vultures.js';
 import { Rig } from './rig.js';
 import { turn, sense } from './animal.js';
 import { HOME } from './group.js';
@@ -69,7 +69,7 @@ export class Beast {
     this.prints.count = 0; this.prints.frustumCulled = false; this.prints.renderOrder = 2; scene.add(this.prints);
     this.spots = []; this.pn = 0; this.dummy = new THREE.Object3D();
     if (P.dies) {
-      this.vultures = new Vultures(scene, this.grave.x, this.grave.z, A);
+      this.vultures = new Vultures(scene, this.grave.x, this.grave.z, A, 4, { bones: false, on: false });
       this.relic = relic(P.dies.relic); this.relic.visible = false; scene.add(this.relic);
     }
     this.fruit = []; this.seen = false; this.said = {}; this.shieldT = 0; this.stepT = 0; this.checkT = 0; this.homeT = 0; this.dayP = 0.3; this.threatAt = null; this.nearT = 0;
@@ -83,7 +83,7 @@ export class Beast {
     this.g.rotation.set(0, 0, 0); this.g.visible = true; this.block.r = P.r;
     this.herd.forEach((f, i) => { f.x = x + 3 + i * 3; f.z = z - 3 - i * 2; f.speed = 0; });
     this.prints.count = 0; this.spots = []; this.pn = 0;
-    if (this.vultures) for (const b of this.vultures.birds) b.g.visible = false;
+    if (this.vultures) { this.vultures.source = null; this.vultures.show(false); }
     if (first && this.relic) this.relic.visible = false;
     // ruim acht minuten vooruit lopen; wie overdag in het water ligt, maakt eerst zijn avondronde en loopt dan terug
     const day = this.dayP;
@@ -471,7 +471,7 @@ export class Beast {
     this.body = { x: this.x - Math.cos(this.yaw) * D.side, z: this.z + Math.sin(this.yaw) * D.side };
     this.block.x = this.body.x; this.block.z = this.body.z; this.block.r = this.P.r * 0.87;
     this.vultures.center.set(this.body.x, height(this.body.x, this.body.z), this.body.z);
-    this.vultures.birds.forEach((b, i) => { b.g.visible = true; b.h = 24 + i * 3; b.r = 10 + i * 2.5; });
+    this.vultures.source = this; this.vultures.show(true, { h: 24, r: 10 });
   }
   updateDead(dt, game, t, d) {
     game.shield = false;

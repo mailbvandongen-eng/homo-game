@@ -1,7 +1,8 @@
 import * as THREE from '../lib/three.module.js';
 import { rigDetail } from './rig.js';
-import { buildWorld, height, tallGrassAt, blockers, cover, surface, steep, groundAt, riverDist, WIND } from './world.js';
-import { Hominin, Herd, Vultures, carcass } from './actors.js';
+import { buildWorld, height, tallGrassAt, blockers, cover, surface, steep, groundAt, riverDist, WIND, PERCHES } from './world.js';
+import { Hominin, Herd, carcass } from './actors.js';
+import { Vultures, SKY, FLOCKS, groundBirds, scareBirds } from './vultures.js';
 import { DISCOVERIES, LOOKS, VERDICT, FINDS, placeItems, heldMesh } from './items.js';
 import { Hyenas, Leopard, Throws } from './predators.js';
 import { Zebras, Sabres } from './hunt.js';
@@ -505,6 +506,7 @@ function throwAt(member, kind = member.kind, dur) {
       if (hit) hitTarget(hit);
     } else if (Math.hypot(member.x - x, member.z - z) < 1.8) hitTarget({ m: member, kind: kind || 'gazelle' });
     else note('throw', 'Mis');
+    scareBirds(x, z);
     dropAtPos('stone', x, z, true, rock);
   }, heldMesh('stone', rock), dur);
 }
@@ -590,7 +592,7 @@ function event(name, k) {
   const far = k ? Math.hypot(k.x - player.pos.x, k.z - player.pos.z) : 0;
   if (name === 'hunt') { sound.sting(); murmur(far < 60 ? 'De zebra\'s stuiven uit elkaar. Iets jaagt op ze!' : 'In de verte stuiven zebra\'s weg in een stofwolk. Iets jaagt daar…', 5, 'hide'); }
   if (name === 'kill') {
-    vultures.center.set(k.x, height(k.x, k.z), k.z); LOOK_TARGETS.push({ look: 'kill', x: k.x, z: k.z, kill: k }); killLook(k);
+    vultures.center.set(k.x, height(k.x, k.z), k.z); vultures.source = k; LOOK_TARGETS.push({ look: 'kill', x: k.x, z: k.z, kill: k }); killLook(k);
     setTimeout(() => murmur('De gieren draaien al boven een nieuwe plek. Daar ligt vers vlees. Maar van wie is het nu nog?', 6, 'hide'), 9000);
   }
   if (name === 'open') {
@@ -600,7 +602,7 @@ function event(name, k) {
   if (name === 'hyenas') { hyenas.home = k; sound.whoop(); if (far < 70) murmur('Gegiechel in de verte: de hyena\'s hebben het vlees geroken.', 5, 'hide'); }
   if (name === 'gone' && far < 40) murmur('De hyena\'s hebben het laatste vlees verslonden.', 4, 'hide');
   if (name === 'cleared') {
-    hyenas.home = CARCASS; vultures.center.set(CARCASS.x, height(CARCASS.x, CARCASS.z), CARCASS.z);
+    hyenas.home = CARCASS; vultures.source = null; vultures.center.set(CARCASS.x, height(CARCASS.x, CARCASS.z), CARCASS.z);
     const i = LOOK_TARGETS.findIndex((t) => t.look === 'kill'); if (i >= 0) LOOK_TARGETS.splice(i, 1);
     killLook(null);
   }
@@ -755,6 +757,7 @@ function targets() {
   for (const z of zebras.alive) list.push({ m: z, kind: 'zebra', threat: false });
   for (const c of sabres.list) list.push({ m: c, kind: 'sabre', threat: sabres.threats.includes(c) });
   list.push(...enc.targets());
+  for (const b of groundBirds()) list.push({ m: b, kind: 'vulture', threat: false });
   if (shore) list.push(...shore.targets());
   return list;
 }
@@ -783,6 +786,7 @@ function hitTarget(t, how = 'throw') {
   else if (shore && shore.owns(t.kind)) shore.hit(t, how, predGame);
   else if (t.kind === 'hyena') hyenas.hit(t.m, predGame);
   else if (t.kind === 'leopard') leopard.hit(predGame);
+  else if (t.kind === 'vulture') t.m.flock.hit(t.m);
   else if (t.kind === 'sabre') sabres.hit(t.m, predGame);
   else if (t.kind === 'zebra') { if (zebras.alarm <= 0) { zebras.scare(player.pos, 8); sound.flee(); sound.bray(); toast('Raak! De zebra\'s galopperen weg. Zo vang je er nooit een.'); } }
   else if (t.m === herd.spent) strikeSpent(t.m, how);
@@ -793,7 +797,7 @@ function strikeSpent(m, how) {
   if (how === 'fist') { need('stone', 'Met je vuist lukt het niet. Je hebt een kei of je vuistbijl nodig.'); return; }
   if (!herd.strike(m)) return;
   const k = herd.kill;
-  LOOK_TARGETS.push({ look: 'herdkill', x: k.x, z: k.z }); vultures.center.set(k.x, height(k.x, k.z), k.z);
+  LOOK_TARGETS.push({ look: 'herdkill', x: k.x, z: k.z }); vultures.center.set(k.x, height(k.x, k.z), k.z); vultures.source = k;
   sound.sting(); setTimeout(() => sound.good(), 900);
   toast('Eén klap en het is voorbij. Je hebt een gazelle gevangen, alleen met je benen en je adem.', 8);
   state.group = Math.min(100, state.group + 10);
@@ -1045,6 +1049,7 @@ function update(dt) {
   if (state.collapsed > 0 || state.sleeping > 0) dg = 0;
   danger += (dg - danger) * (1 - Math.exp(-dt * (dg > danger ? 3 : 0.6)));
   herd.members.forEach((m, i) => senses.track(i, m.x, m.z, m.yaw));
+  SKY.dayP = dayP; SKY.x = player.pos.x; SKY.z = player.pos.z; SKY.sneak = player.sneaking; SKY.sound = sound;
   vultures.update(dt, t);
 
   const sky = weather.update(dt, t, { day: state.day, rainDay: state.rainDay, p: dayP, night, cam: camera.position, wind: WIND });
@@ -1220,12 +1225,12 @@ frame();
 begin();
 
 // voor testen
-window.__game = { body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
+window.__game = { vultures, FLOCKS, body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, beast, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, setSneak, still: () => stillT,
   setCam: (y, p, d) => { cam.yaw = y; cam.pitch = p; if (d) cam.dist = d; }, setZoom: C.setZoom, zoom: () => cam.dist, C, jump, sound, world, weather, menu, closeCard, clockT: () => clock.elapsedTime, actionContext, actionOptions, heard, tasteAt, bodyTap, prim: () => prim, alts: () => alts,
   lookFrom: (pos, look) => { cam.override = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },
   // als lookFrom, maar met hoogtes ten opzichte van de grond op de plek waar je naar kijkt
   lookRel: (pos, look) => { const h = height(look[0], look[2]); cam.override = { pos: new THREE.Vector3(pos[0], pos[1] + h, pos[2]), look: new THREE.Vector3(look[0], look[1] + h, look[2]) }; }, setDay: (p) => { dayP = p; }, setSense,
   screenOf: (t) => { const a = anchorOf(t); return a && [a.x, a.y]; },
-  land: { height, surface, steep, blockers, groundAt },
+  land: { height, surface, steep, blockers, groundAt, PERCHES },
 };

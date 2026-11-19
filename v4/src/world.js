@@ -204,6 +204,8 @@ export function leafMat(map, tint) {
 }
 // waar de acacia's staan: [x, z, maat] (onder een boom ligt wel eens een tak)
 export const TREES = [];
+// boomtoppen waar een gier kan zitten: plek, hoogte, en of er twee naast elkaar passen
+export const PERCHES = [];
 
 export function buildWorld(scene, A) {
   const R = rng(LAND.seed || 7), STEEP = 0.8, OWN = !!LAND.seed;   // een gebied met een eigen land strooit anders
@@ -353,6 +355,7 @@ export function buildWorld(scene, A) {
     if (steep(x, z) > STEEP) return;   // op een wand staat niets
     acaciaSpots.push([x, z, s * 0.85, (x * 12.9898 + z * 78.233) % 6.28]);
     TREES.push([x, z, s]);
+    PERCHES.push({ x, z, y: height(x, z) - 0.1 + 6.45 * s * 0.85, wide: true, n: 0 });
     blockers.push({ x, z, r: Math.max(0.3, 0.3 * s) });   // iets ruimer dan de dunne stam: de reus en de dekking rekenen ermee
   }
   for (let i = 0; i < (LAND.acacias ?? 70); i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 10) && (!OWN || clear(x, z, 5))) acacia(x, z, 0.8 + R() * 0.6); }
@@ -487,7 +490,7 @@ export function buildWorld(scene, A) {
       spots[vi].push([x, z, k, FR() * 6.28, F.sink ?? 0.02]); mine.push([x, z]);
       if (block) blockers.push({ x, z, r: block * tall / t1 });
       if (F.cover) cover.push({ x, z, r: F.cover * tall / t1 });
-      if (F.twigs) TREES.push([x, z, 1]);
+      if (F.twigs) { TREES.push([x, z, 1]); PERCHES.push({ x, z, y: height(x, z) + tall * 0.9, wide: false, n: 0 }); }
     };
     const free = (x, z, g = gap) => height(x, z) > 0.25 && steep(x, z) < (F.steep ?? 0.5) && Math.max(Math.abs(x), Math.abs(z)) < WALK - 4 && clear(x, z, F.clear ?? 4.5) && Math.hypot(x - HOME.x, z - HOME.z) > (F.home ?? 9)
       && !POOLS.some((q) => Math.hypot(x - q[0], z - q[1]) < q[2] * 1.5 + 1) && !mine.some((q) => Math.hypot(q[0] - x, q[1] - z) < g) && (!block || !blockers.some((b) => Math.hypot(b.x - x, b.z - z) < b.r + block + 0.8));

@@ -5,7 +5,7 @@ import { GLTFLoader, HDRLoader } from '../lib/three-addons.js';
 // Alles wordt geladen voordat het spel begint; onProgress krijgt een getal van 0 tot 1.
 // (het grote dier van een gebied wordt per gebied geladen: zie beasts.js)
 // dieren met botten en animaties (Sketchfab, CC BY 4.0, zie assets/CREDITS.md)
-const ANIMALS = ['hyena', 'leopard', 'gazelle', 'hominin', 'sabre', 'zebra', 'cobra', 'vulture'];
+const ANIMALS = ['hyena', 'leopard', 'gazelle', 'hominin', 'sabre', 'zebra', 'cobra', 'vulture', 'griffon'];
 export const ANIMAL_MODELS = ANIMALS;
 export const MODELS = [...ANIMALS, 'acacia', 'namaqualand_boulder_02', 'namaqualand_boulder_05', 'namaqualand_rocks_01', 'wild_rooibos_bush', 'shrub_03', 'dead_tree_trunk', 'dry_branches_medium_01', 'fig', 'baobab'];
 export const TEXTURES = [

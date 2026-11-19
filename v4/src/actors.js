@@ -212,32 +212,6 @@ export class Herd {
 }
 
 
-// ---------- gieren die boven een karkas cirkelen ----------
-export class Vultures {
-  constructor(scene, x, z, A, n = 4) {
-    this.center = new THREE.Vector3(x, height(x, z), z);
-    this.birds = [];
-    for (let i = 0; i < n; i++) {
-      const rig = new Rig(A, 'vulture', { scale: 1.1, facing: Math.PI }), g = rig.root;
-      rig.model.traverse((o) => { if (o.isMesh) { o.receiveShadow = false; o.castShadow = false; } });   // ze cirkelen hoog: hun schaduw valt nergens in beeld
-      rig.play('Armature', { speed: 0 });
-      scene.add(g);
-      this.birds.push({ g, rig, a: i / 4 * 6.28, r: 7 + i * 2.5, h: 18 + i * 3, sp: 0.25 + i * 0.04, flap: 3 + i * 3.1 });
-    }
-  }
-  update(dt, t) {
-    for (const b of this.birds) {
-      b.a += dt * b.sp;
-      b.g.position.set(this.center.x + Math.cos(b.a) * b.r, this.center.y + b.h + Math.sin(t * 0.5 + b.a) * 1.2, this.center.z + Math.sin(b.a) * b.r);
-      b.g.rotation.set(0, -b.a, 0.35 + Math.sin(t * 0.7 + b.a) * 0.06);
-      // meestal zweven ze op de warme lucht; af en toe twee trage vleugelslagen
-      b.flap -= dt; if (b.flap < -5) b.flap = 6 + Math.random() * 9;
-      b.rig.current.time = b.flap < 0 ? -b.flap % 2.5 : 0;
-      if (b.g.visible) b.rig.update(0);
-    }
-  }
-}
-
 // Een karkas van een zebra: alleen nog botten en wat vel
 export function carcass(scene, x, z) {
   const g = new THREE.Group(), bone = lam(0xe8dcc0), hide = lam(0x6a4a34);
