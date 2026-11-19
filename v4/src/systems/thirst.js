@@ -21,7 +21,7 @@ export function initThirst(G) {
   }
 
   // heat: 0..1 hoe heet het is · rain: 0..1 · running: ren je?
-  function tick(dt, { heat, rain, running, off }) {
+  function tick(dt, { heat, rain, running, off, ease = 1 }) {
     if (off) return;
     // Sta je in stromend water, dan drink je vanzelf: je hoeft er geen knop voor te zoeken. (Een poel is anders: daar kies je zelf.)
     const p = player.pos;
@@ -31,7 +31,7 @@ export function initThirst(G) {
       return;
     }
     const k = (1 + heat * 0.4) * (running ? 1.3 : 1) * (1 - Math.min(1, rain * 1.5) * 0.8);
-    state.water = Math.max(0, state.water - dt * 100 / FULL_DAY * k);
+    state.water = Math.max(0, state.water - dt * ease * 100 / FULL_DAY * k);   // ease: de eerste dagen zakt het langzamer; drinken gaat altijd even snel
     if (state.water >= 30) { told = false; return; }
     dryT -= dt;
     if (dryT <= 0) {

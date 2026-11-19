@@ -317,7 +317,7 @@ nieuwe. Dode bomen zijn hoger, kaal en gebleekt, met afgebroken takken aan de vo
 **Meer eten** (`forage.js`; de plekken staan in het gebiedsbestand: `fruitTrees`, `oldCarcasses`, `tubers`):
 - vijgenbosjes: elke ochtend drie vijgen op vaste plekken;
 - baobabs: één vrucht per dag, in de droogte staat de boom kaal en liggen er drie; kraken met een kei;
-- oude karkassen met twee gieren erboven: het vlees is op, in de botten zit merg; na drie droge dagen of na de regen ligt er weer een bot;
+- oude karkassen met gieren erboven (sinds fase 5d zitten ze 's nachts in een boom en landt er overdag één bij de botten; zie `vultures.js`): het vlees is op, in de botten zit merg; na drie droge dagen of na de regen ligt er weer een bot;
 - knolplanten ook op het droge land (graven met de stok);
 - vaker een nest met eieren of een bijennest, en meer honing;
 - geen bessenstruik meer bij de slaapboom.

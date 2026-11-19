@@ -207,6 +207,93 @@ Volgorde van bouwen = volgorde van de tabel. Elke stap wordt eerst getest en dan
 - **Gif** vreet langzaam door tot je blaadjes gebruikt, maar stopt bij een kwart leven.
 - **Neervallen is niet dood**: je wordt zwak wakker bij de groep en bent kwijt wat je droeg. Je voortgang blijft.
 
+**Stand (19-11-2026):** stap 1 tot en met 4 zijn gebouwd en getest in alle vier de gebieden. Stap 5, 6 en 7 volgen.
+
+- Stap 3, wat er nog niet is: er ligt geen nest in de boom; *Homo habilis* slaapt bij de stam.
+- Stap 4, eerlijk over het beeld: in de lucht is het een vliegend model met vleugelslag, op de grond en in de boom
+  een staande vale gier (een echt model, maar zonder eigen bewegingen). Pikken, stappen, hippen en de kop draaien
+  maken we zelf met de botten. De vleugels van het staande model kunnen maar half open; bij opstijgen en landen
+  wisselt het spel van model. Testen: `v4gier.js [gebied]` en `v4gierreus.js`.
+
+Het werk aan trekken (fase 5c stap 2) staat geparkeerd op de branch `trek` en wordt daarna tekstloos afgemaakt.
+
+Vaste regels die hieruit volgen (gelden ook voor alles wat later komt):
+- Wat een missie vraagt, is in dat gebied te vinden zonder zoeken naar een speld.
+- Geen gevolg zonder zichtbare oorzaak: een dier valt niet aan zonder waarschuwing, het beeld verandert niet zonder reden die je ziet.
+- De groep is geen publiek: wie kan lopen, doet iets.
+- Geen tekst op de plek van een duim.
+- Geen zelfgetekende iconen: alles uit dezelfde set, een ontbrekend icoon wordt uit die set afgeleid.
+- Een venster is van iets uit de wereld van dat tijdperk gemaakt.
+
+### Fase 5c — de groep trekt, elk gebied een eigen land (opdracht van Bob, 18-11-2026)
+
+Bob zag dat alle beelden op elkaar leken: vier gebieden op dezelfde kaart, met dezelfde boom, dezelfde olifant
+en dezelfde heuvel, en het kamp bijna op dezelfde plek. "Jagers-verzamelaars trekken toch rond? Nu zijn ze altijd daar. Dodelijk saai."
+
+Twee uitgangspunten, die voor alles gelden wat nog komt:
+- **Bij elke keuze over de omgeving en het spel: de beste, mooiste en meest uitgebreide optie.** Hoeveel werk het kost, telt niet mee.
+- **Deze mensen trekken rond.** Een gebied is een andere plek, geen andere opdracht op dezelfde plek.
+
+| # | Wat | Stand |
+|---|---|---|
+| 1 | **Elk gebied een eigen land.** Eigen vorm van het terrein, eigen kampplek (niet steeds een slaapboom), eigen bomen en planten, eigen grond, licht en lucht, eigen dieren en eigen blikvanger. Op één schermfoto bij het kamp zie je welk gebied het is | **land klaar** (18-11): elk gebied heeft een eigen terrein, rivierloop, kampplek, planten, keien, grond en licht (zie hieronder). **Dieren klaar** (18-11): elk gebied heeft zijn eigen grote dier met een eigen les (zie hieronder) |
+| 2 | **Trekken binnen een gebied.** De groep blijft niet het hele seizoen op één plek: als het eten of het water opraakt, breekt ze op naar een volgende kampplek verderop | |
+| 3 | **Missies sturen je het land in.** Al in de eerste minuten weg van het kamp, naar wat dit gebied bijzonder maakt | |
+
+Hoe de vier gebieden nu van elkaar verschillen (stap 1, land):
+
+| Gebied | Kamp | Land | Planten en keien |
+|---|---|---|---|
+| De savanne | de slaapboom, een oude acacia bij de heuvel | droge, vlakke grasvlakte | schermacacia's, baobabs, granieten keien |
+| Bij het water | een lage zandrug tussen hoge palmen, het meer in zicht | vlak, zand, gebarsten modder langs het water, veel riet | waaierpalmen, palmbosjes aan de oever, lichte keien |
+| Onder de rokende berg | tegen een donkere rotswand | ruw, donkere lavagrond, grijze lucht, kort geel gras | kandelaarbomen, boomaloë's, dode stammen, zwartgrijze keien |
+| De hoge vlakte | een bult in het gras, een rij keien tegen de wind, een bosje jeneverbes | steile ruggen, groen, nevel, koel licht | jeneverbessen in bosjes, rozetten op een stam, graspollen, keien met mos, vijgen (geen baobabs) |
+
+Het grote dier per gebied (stap 1, dieren; `beast` in het gebiedsbestand, gedrag in `v4/src/beast.js`, soorten in `beasts.js`):
+
+| Gebied | Dier | Wat het doet | Wat je ervan leert |
+|---|---|---|---|
+| De savanne | de reuzenolifant (één oude stier) | loopt zijn ronde van boom naar boom, schudt vruchten los, houdt roofdieren op afstand | volg hem op afstand |
+| Bij het water | drie nijlpaarden (*Hippopotamus gorgops*) | liggen overdag in het meer, grazen van de late middag tot de ochtend op het land langs een vast pad | blijf uit hun water en ga nooit tussen hen en het water staan |
+| Onder de rokende berg | een neushoorn (*Ceratotherium*) | graast alleen; ziet slecht, ruikt scherp, rent rechtuit | let op de wind; spring opzij |
+| De hoge vlakte | drie giraffen (*Giraffa jumae*) | eten van de boomkruinen, zien je van ver en gaan ervandoor | waar zij alle drie naar kijken, loopt een roofdier |
+
+Alleen de reus en het oude nijlpaard sterven in de droogte (vlees, daarna een kies of een kromme tand als vondst).
+
+Een gebied beschrijft zijn land in het eigen bestand onder `land` (zie ANALYSE §18). De savanne heeft geen `land` en is niet veranderd.
+
+Vaste regel erbij: twee gebieden delen nooit dezelfde blikvanger (boom, dier, heuvel) op dezelfde plek.
+
+### Fase 5d — herstelronde (opdracht van Bob, 18-11-2026) — gaat vóór stap 2 en 3 van fase 5c
+
+Na proefspelen: mensen lagen in doodshouding ín de grond bij de slaapboom, het scherm stond vol tekst,
+je ging te snel dood en gieren en vlinders waren zelfgemaakte flappen. Bob: "Maak het niet te moeilijk.
+Maar maak je er zeker niet makkelijk vanaf."
+
+Volgorde van bouwen = volgorde van de tabel. Elke stap wordt eerst getest en dan pas uitgerold.
+
+| # | Wat | Hoe | Klaar als |
+|---|---|---|---|
+| 1 | **Een tekstloos spel.** Alle tekst uit het spelbeeld | Weg: meldingen (`toast`, `murmur`), woorden bij tekens (`note`), titels, dagkaart, missiekaarten en missieregel, uitlegbalk (`#hint`), kijkteksten, woorden bij knoppen. In de plaats: wat je ziet en hoort. Besturing leer je door een bewegend duimteken; een missie krijg je doordat iemand uit de groep wijst of het voordoet; het missieoverzicht toont gezicht + teken + vinkjes; een nieuwe dag en een nieuw seizoen zie je aan licht, lucht en land. Tekst blijft alleen buiten het spel: menu, instellingen en het kennisblad | een controle telt nul zichtbare letters tijdens het spelen, in elk gebied en beide tijdperken; elke missie is zonder tekst te halen |
+| 2 | **Minder snel dood** (het midden tussen World of Warcraft en een overlevingsspel) | Zie *Regels voor leven en dood* hieronder | drie fouten achter elkaar overleef je altijd; twee speldagen zonder eten of drinken overleef je; de rivier lest je dorst |
+| 3 | **De slaapplek.** Niemand meer in doodshouding of in de grond | Echte slaapanimaties uit een echte bron: op de zij met opgetrokken knieën, en zittend tegen de stam. De groep ligt dicht bij elkaar, het kind tegen een volwassene; één volwassene zit rechtop en waakt. *Homo habilis* slaapt in de boom (nest op een dikke tak of in een vork), *Homo erectus* op de grond bij het vuur. Elke slaper heeft een vaste plek die vooraf op de grond of de tak ligt; het optillen achteraf en de doodsanimatie gaan eruit. Wie eten krijgt, komt overeind, pakt het aan en eet zichtbaar. Geldt voor elke kampplek in elk gebied | foto bij nacht in elk gebied en beide tijdperken: niemand door de grond of zwevend, geen gespreide armen en benen; een bot brengen laat iemand opstaan en eten |
+| 4 | **Gieren.** Echt model, juist gedrag | Een echt giermodel met vliegen, lopen en eten. 's Nachts zijn ze uit de lucht (ze zitten in een boom); ze stijgen op halverwege de ochtend en landen voor de schemer. Bij een kadaver zitten en lopen gieren op de grond en eten het leeg als je wacht. Een steen jaagt ze weg: ze hippen een paar meter weg en komen terug. **Losse stenen liggen overal** in elk gebied om op te rapen en te gooien | 's nachts geen gier in de lucht; een worp jaagt de gieren van het kadaver; in elk gebied ligt binnen korte afstand een steen |
+| 5 | **Een echt kind en echte vlinders** | Het kind krijgt eigen verhoudingen (groter hoofd, korter been, ronder lijf) in plaats van een verkleinde volwassene, bij beide soorten. Vlinders krijgen echte vleugels (model of foto-textuur uit een echte bron), anders gaan ze eruit | kind naast volwassene op de foto klopt met de verhoudingen van een kind; geen zelfgemaakte vormen meer in de controles |
+| 6 | **Steen slaan met twee handen** | Zoals de Oldowan-techniek: gehurkt, de kern in de ene hand op het bovenbeen, een klopsteen in de andere, een schampende slag op de rand; de scherf springt zichtbaar weg. Dat vraagt dus twee stenen. De vuistbijl van *Homo erectus* kost meer slagen en hij draait de steen tussendoor. Echte animatie zoeken; lukt dat niet, dan een bestaande slagbeweging omgevormd en eerlijk gelabeld | op de foto twee handen, twee stenen, gehurkt; scherf valt op de grond |
+| 7 | **Diep water is een grens** | Overal dezelfde regel, ook in de rivieren: tot de knie loop je gewoon, tot het middel waad je traag met een waadbeweging, dieper ga je niet (zwemmen kan niemand). Zonder tekst: diep water is donkerder en je personage stapt zelf terug. Oversteken doe je op een ondiepe plek, en daar liggen de krokodillen | in elk gebied kom je nergens kopje-onder; elke rivier heeft een doorwaadbare plek |
+
+**Regels voor leven en dood** (stap 2):
+
+- **Uithoudingsvermogen.** Lopen en draven kost niets: *Homo* kon de hele dag door. Alleen sprinten kost adem, en die is in een paar tellen terug.
+- **Honger en dorst** zakken over ongeveer twee speldagen, maken je niet traag en doden nooit. Leeg zijn zet alleen het herstel vanzelf stil. In stromend water drink je vanzelf; sappig eten lest ook dorst.
+- **Vanzelf herstellen** doe je tot de helft, langzaam en alleen uit gevaar.
+- **Eten geneest de rest**, direct bij elke hap: vlees en merg veel, knollen en vijgen gemiddeld, bessen weinig.
+- **Groene blaadjes zijn voor wonden**: ze genezen je volledig en stoppen gif. Bewaar ze in je tas.
+- **Schade per treffer** (van 100): hyena 8 · slang 12 plus gif · luipaard en krokodil 22 · sabeltandkat en grote dieren 30.
+- **Drie tellen onkwetsbaar** na een treffer.
+- **Gif** vreet langzaam door tot je blaadjes gebruikt, maar stopt bij een kwart leven.
+- **Neervallen is niet dood**: je wordt zwak wakker bij de groep en bent kwijt wat je droeg. Je voortgang blijft.
+
 Stand bij het schrijven van dit plan: van stap 1 en 2 staat een begin in de werkmap (meldingen onzichtbaar,
 honger en dorst trager en niet dodelijk); het is niet getest en niet uitgerold. Het werk aan trekken
 (fase 5c stap 2) staat geparkeerd op de branch `trek` en wordt daarna tekstloos afgemaakt.

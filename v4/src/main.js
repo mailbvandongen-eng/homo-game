@@ -1101,7 +1101,7 @@ function update(dt) {
   }
   if (state.started && state.collapsed <= 0 && state.sleeping <= 0) {
     const ease = state.day <= 1 ? 0.55 : state.day === 2 ? 0.75 : 1;   // de eerste dagen heb je de tijd om het land te leren kennen
-    thirst.tick(dt * ease, { heat: Math.max(0, 1 - Math.abs(dayP - 0.4) / 0.22) * (1 - sky.cloud * 0.5), rain: sky.rain, running: player.speed > 4.5, off: devFlags.noHunger });
+    thirst.tick(dt, { ease, heat: Math.max(0, 1 - Math.abs(dayP - 0.4) / 0.22) * (1 - sky.cloud * 0.5), rain: sky.rain, running: player.speed > 4.5, off: devFlags.noHunger });
     if (!devFlags.noHunger) state.food = Math.max(0, state.food - dt * 0.06 * ease * (predGame.night > 0.6 && !state.cloak && !(fire && fire.warm(player.pos)) ? AREA.cold || 1.5 : 1));   // kou vreet energie
     // Honger, dorst en gif doden je niet. Gif vreet aan je tot een kwart; met een lege maag of een droge keel herstel je niet.
     // Vanzelf kom je terug tot de helft, langzaam en alleen als het rustig is. De rest geneest eten; bitterblad geneest alles.
