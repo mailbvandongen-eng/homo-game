@@ -7,6 +7,7 @@ export const berg = {
   intro: 'Veel later. Een andere groep, met langere benen.',
   home: { x: 10, z: -26 },                 // het kamp: de groep slaapt op de grond, in de luwte van een donkere rotswand
   start: [14, -20],
+  ford: -60,                               // op deze x kun je de rivier doorwaden; overal elders is hij te diep
   // Dit land: ruw en donker. Zwarte lavagrond met as, kandelaarbomen en kokerbomen, kale stammen en overal donkere keien.
   land: {
     seed: 23, shift: [140, 33], amp: 17, fine: 1.3, river: [48, 42, 0.012, 0.5, 9, 0.033, 2.0], acacias: 10, logs: 22, twigs: 60,

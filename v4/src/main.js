@@ -1,6 +1,6 @@
 import * as THREE from '../lib/three.module.js';
 import { rigDetail } from './rig.js';
-import { buildWorld, height, tallGrassAt, blockers, cover, surface, steep, groundAt, riverDist, WIND, PERCHES } from './world.js';
+import { buildWorld, height, tallGrassAt, blockers, cover, surface, steep, groundAt, riverDist, WIND, PERCHES, FORD, LAKE, depth, riverZ } from './world.js';
 import { Hominin, Herd, carcass } from './actors.js';
 import { KNAP } from './hominin.js';
 import { Vultures, SKY, FLOCKS, groundBirds, scareBirds } from './vultures.js';
@@ -55,7 +55,7 @@ document.body.prepend(renderer.domElement);
 
 // eerst de gescande natuur laden; daarna begint het spel vanzelf
 const loading = document.getElementById('loading'); loading.className = 'hud stat on'; loading.style.setProperty('--c', '#f3e6cb'); loading.style.setProperty('--v', 0);
-const A = await loadAssets(renderer, (f) => { loading.style.setProperty('--v', Math.round(f * 100)); }, [...(AREA.models || []), BEASTS[AREA.beast.kind].model], AREA.textures).catch((e) => {
+const A = await loadAssets(renderer, (f) => { loading.style.setProperty('--v', Math.round(f * 100)); }, [...new Set([...(AREA.models || []), BEASTS[AREA.beast.kind].model, ...(FORD ? ['croc'] : [])])], AREA.textures).catch((e) => {
   // nooit stil blijven hangen op 'Laden…': zeg wat er mis is
   loading.textContent = e.message + '. Controleer je verbinding en laad de pagina opnieuw.'; loading.style.maxWidth = '80vw';
   throw e;
@@ -88,7 +88,7 @@ const sabres = new Sabres(scene, { x: AREA.sabres.lair[0], z: AREA.sabres.lair[1
 const group = new Group(scene, A);
 const enc = new Encounters(scene, A);   // wat je onderweg tegenkomt
 const beast = new Beast(scene, A, AREA.beast);      // het grote dier van dit gebied (zie beasts.js)
-const shore = AREA.shore ? new Shore(scene, A) : null;   // de oever: krokodillen, meervallen, knollen
+const shore = AREA.shore || FORD ? new Shore(scene, A) : null;   // de oever: krokodillen, meervallen, knollen
 const fire = AREA.fire ? new Fire(scene, AREA.fire, DAY_LEN, A) : null;   // vuur: vinden, dragen, brandend houden
 // wat er in dit tijdperk te ontdekken valt, en of je iets scherps in je hand hebt (een afslag of een vuistbijl)
 const ERA_IX = ERAS.indexOf(ERA), DISC = DISCOVERIES.filter((d) => (!d.era || ERAS.findIndex((e) => e.id === d.era) <= ERA_IX) && (!d.beast || d.beast === beast.kind));
@@ -1229,7 +1229,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { KNAP, chips, knapStart, axeStart, vultures, FLOCKS, butterflies, body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
+window.__game = { W: { FORD, LAKE, depth, riverZ }, walk: (x, z) => { walkTo = { x, z, fn() {}, reach: 0.8 }; }, stopWalk: () => { walkTo = null; }, get walking() { return !!walkTo; }, KNAP, chips, knapStart, axeStart, vultures, FLOCKS, butterflies, body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, beast, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, setSneak, still: () => stillT,
   setCam: (y, p, d) => { cam.yaw = y; cam.pitch = p; if (d) cam.dist = d; }, setZoom: C.setZoom, zoom: () => cam.dist, C, jump, sound, world, weather, menu, closeCard, clockT: () => clock.elapsedTime, actionContext, actionOptions, heard, tasteAt, bodyTap, prim: () => prim, alts: () => alts,
   lookFrom: (pos, look) => { cam.override = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },

@@ -485,3 +485,26 @@ Zit de kern in je rechterhand, dan wisselen je handen eerst. De vuistbijl kost m
 
 **Bekend.** `v4erectus.js` loopt vast bij "kaarten": die test zoekt nog de kijkkaarten die in stap 1 zijn verdwenen. De delen ervoor (vuistbijl, vuur, braden) kloppen.
 
+## 21. Fase 5d stap 7 — diep water is een grens (19-11-2026)
+
+**Wat er mis was.** De rivier was overal even ondiep: je liep er dwars doorheen. In het meer hield het op bij een onzichtbare lijn, met het woord "Te diep".
+
+**De regel** (overal dezelfde, `hominin.js`): `depth(x, z)` in `world.js` zegt hoe diep het water staat.
+- tot je knie: je loopt bijna gewoon (hooguit een vijfde trager);
+- tot je middel: je waadt, steeds trager (tot ruim een derde van je loopsnelheid), armen omhoog;
+- dieper: je komt niet verder en stapt zelf terug naar ondieper water (`retreat`, ruim een seconde, langs de helling van de bodem).
+De maten hangen aan je lengte: *Homo erectus* komt dus iets verder dan *Homo habilis*.
+
+**De rivier.** De bedding is in het midden verdiept tot ongeveer twee meter water. De oevers zijn gelijk gebleven: drinken en water halen gaat als altijd.
+Op één plek per gebied (`ford`: savanne x −70, berg x −60, hoog x 20) ligt de bodem hoog: daar is het 0,6 m diep en kun je naar de overkant.
+Die plek ligt bewust niet recht voor het kamp: bij het kamp drink je veilig.
+
+**Zien zonder woorden.** Het water krijgt zijn kleur uit een kaart van de diepte (512 × 512 punten, kost geen driehoeken): diep is donker en ondoorzichtig, ondiep licht.
+De doorwaadbare plek zie je als een lichte band tussen twee donkere stukken.
+
+**Krokodillen.** `shore.js` werkt nu ook in een rivier: aan weerskanten van de doorwaadbare plek ligt er één in het diepe. Hetzelfde gedrag als in het meer
+(loeren, sluipen, uitvallen, wegzakken na een worp). Het krokodilmodel wordt daarom in elk gebied geladen (0,7 MB).
+
+**Eerlijk.** Waden is geen opname maar de loopbeweging, trager, met zelf gestuurde armen. Het water spat niet op en maakt geen kringen om je benen.
+Dieren en groepsgenoten kennen de regel niet; zij komen niet in het diepe omdat hun routes aan de zuidoever blijven.
+

@@ -7,6 +7,7 @@ export const hoog = {
   intro: 'Dagen lopen, steeds hoger. Het vuur ging mee.',
   home: { x: -100, z: -26 },               // het nieuwe kamp: een bult in het gras, met een rij keien tegen de wind en een oude jeneverbes
   start: [-96, -20],
+  ford: 20,                               // op deze x kun je de rivier doorwaden; overal elders is hij te diep
   // Dit land: hoog en groen. Steile ruggen, bosjes jeneverbes, pollen gras en keien met mos. De rozetten op een stam staan voor de reuzenlobelia.
   land: {
     seed: 31, shift: [71, 190], amp: 20, freq: 0.007, river: [44, 24, 0.016, -0.4, 8, 0.041, 2], acacias: 0, logs: 8,

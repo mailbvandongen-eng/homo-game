@@ -1,5 +1,5 @@
 import * as THREE from '../lib/three.module.js';
-import { height, surface, CLIMB, blockers, cover, WALK, riverDist, tallGrassAt, mergeStatic, deep } from './world.js';
+import { height, surface, CLIMB, blockers, cover, WALK, tallGrassAt, mergeStatic, depth } from './world.js';
 
 // zo hoog kun je nog ergens op springen (meters boven je voeten)
 const LEDGE = 1.6;
@@ -229,6 +229,7 @@ export class Hominin {
     this.y = 0; this.vy = 0; this.onGround = true; this.jumpReq = false; this.landed = false; this.fell = 0; this.top = 0; this.lastX = 1e9; this.lastZ = 1e9; this.blocked = false;
     this.vel = new THREE.Vector3();
     this.yaw = 0;
+    this.tall = BODY.height; this.wadeKnee = 0.28 * BODY.height; this.wadeMax = 0.55 * BODY.height; this.wade = 0; this.retreat = null;
     this.phase = 0;
     this.crouch = 0;          // 0 = staan, 1 = gebukt
     this.sneaking = false;
@@ -240,6 +241,10 @@ export class Hominin {
   // dir: gewenste looprichting in de wereld (lengte 0..1)
   update(dt, dir, mods) {
     // traploos: hoe verder je de stick duwt, hoe sneller (lopen tot 2,6 m/s, daarna rennen tot 5,4 m/s)
+    if (this.retreat) {
+      if ((this.retreat.t -= dt) <= 0) this.retreat = null;
+      else dir = (this._back || (this._back = new THREE.Vector3())).set(this.retreat.x, 0, this.retreat.z).multiplyScalar(0.6);
+    }
     const mag = Math.min(1, dir.length());
     let want = this.sneaking ? 1.6 * mag : mag < 0.7 ? 2.6 * mag / 0.7 : 2.6 + (mag - 0.7) / 0.3 * 2.8;
     if (this.once) want *= this.once.slow;   // tijdens slaan loop je bijna niet
@@ -247,14 +252,24 @@ export class Hominin {
     if (this.toss) want *= 0.3;              // en tijdens mikken en gooien ook niet
     // moe: rennen lukt steeds minder, tot je alleen nog kunt lopen
     if (mods.weary > 0) want = Math.min(want, 5.4 - 2.8 * THREE.MathUtils.smoothstep(mods.weary, 0.2, 0.6));
-    const max = want * mods.speed * BODY.speed * (riverDist(this.pos.x, this.pos.z) < 6 || height(this.pos.x, this.pos.z) < -0.45 ? 0.45 : 1);
+    // water: tot je knie loop je gewoon door, tot je middel waad je traag, dieper ga je niet (zwemmen kan niemand)
+    const wet = depth(this.pos.x, this.pos.z), sm = THREE.MathUtils.smoothstep, wading = sm(wet, this.wadeKnee, this.wadeMax);
+    let max = want * mods.speed * BODY.speed * (1 - 0.2 * sm(wet, 0.05, this.wadeKnee));
+    if (wading > 0) max = Math.min(max * (1 - 0.5 * wading), 2.4 - 1.5 * wading);
+    this.wade += (sm(wet, this.wadeKnee * 0.8, this.wadeKnee * 1.5) - this.wade) * Math.min(1, dt * 5);
     const target = mag > 0.001 ? dir.clone().normalize().multiplyScalar(max) : dir.clone().set(0, 0, 0);
     this.vel.lerp(target, 1 - Math.exp(-dt * (this.onGround ? 6 : 1.5)));
     // ergens anders neergezet (een nieuw gebied, wakker worden, een test)? Dan sta je daar meteen op de grond.
     if (Math.hypot(this.pos.x - this.lastX, this.pos.z - this.lastZ) > 3) { this.y = Math.max(surface(this.pos.x, this.pos.z), -0.9); this.vy = 0; this.onGround = true; }
     const px = this.pos.x, pz = this.pos.z;
     this.pos.addScaledVector(this.vel, dt);
-    if (deep(this.pos.x, this.pos.z) && !deep(px, pz)) { this.pos.x = px; this.pos.z = pz; this.vel.multiplyScalar(0.3); this.tooDeep = true; }   // verder kun je niet staan
+    // te diep: je gaat niet verder, en je stapt zelf een stukje terug naar waar het ondieper is
+    const dNew = depth(this.pos.x, this.pos.z);
+    if (dNew > this.wadeMax && dNew >= depth(px, pz)) {
+      this.pos.x = px; this.pos.z = pz; this.vel.multiplyScalar(0.3); this.tooDeep = true;
+      const gx = height(px + 0.8, pz) - height(px - 0.8, pz), gz = height(px, pz + 0.8) - height(px, pz - 0.8), gl = Math.hypot(gx, gz);
+      if (gl > 1e-4 && !this.retreat) this.retreat = { t: 1.1, x: gx / gl, z: gz / gl };
+    }
     for (const b of blockers) {
       if (b.rock) continue;   // op een kei kun je staan: dat regelt de ondergrond hieronder
       if (b.top && this.y > b.top - 0.15) continue;
@@ -426,6 +441,13 @@ export class Hominin {
     // ziek: wat voorovergebogen; stilstaand rondkijken
     const side = r.side(this._side || (this._side = new THREE.Vector3()));
     if (this.feet) this.feet.update(dt, this.onGround && kw < 0.05, side);
+    // waden: je armen gaan omhoog en uit elkaar, je lijf leunt tegen het water in (de stappen zijn de gewone loopbeweging, trager)
+    if (this.wade > 0.02 && !this.once && !kw) {
+      const wd = this.wade * (1 - o), fwd = (this._fwd || (this._fwd = new THREE.Vector3())).set(Math.sin(this.yaw), 0, Math.cos(this.yaw)), sw = Math.sin(this.locoPhase * Math.PI * 2) * 0.12 * wd;
+      r.bend(r.bone('spine_01'), side, 0.1 * wd);
+      r.bend(r.bone('upperarm_l'), fwd, 0.55 * wd + sw); r.bend(r.bone('upperarm_r'), fwd, -0.55 * wd + sw);
+      r.bend(r.bone('lowerarm_l'), side, -0.75 * wd); r.bend(r.bone('lowerarm_r'), side, -0.75 * wd);
+    }
     if (kw > 0 && this.knapS) this.knapPose(r, side, this.knapS.w * (1 - o), this.knapS.g * kw);
     if (sick) r.bend(r.bone('spine_02'), side, 0.35);
     // moe: schouders naar voren, hoofd omlaag, en je borst gaat zwaar op en neer

@@ -1,11 +1,12 @@
 import * as THREE from '../lib/three.module.js';
-import { height, riverZ } from './world.js';
+import { height, riverZ, riverDist, depth, LAKE, FORD } from './world.js';
 import { AREA } from './eras/index.js';
 import { ICON } from './icons.js';
 import { turn } from './animal.js';
 import { Rig } from './rig.js';
 
-// De oever van het meer: krokodillen in het water, meervallen in de poelen en knollen onder de korst.
+// De oever: krokodillen in het water (in het meer, en in de rivier aan weerskanten van de doorwaadbare plek),
+// meervallen in de poelen en knollen onder de korst.
 // Elk van de drie vraagt iets anders van je: afstand houden, stil zijn, of het goede gereedschap.
 const SURF = -0.35;   // het wateroppervlak
 const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
@@ -60,17 +61,19 @@ export function digTuber(p, game) {
 
 export class Shore {
   constructor(scene, A) {
-    const S = AREA.shore;
-    this.crocs = S.crocs.map(([x, s]) => {
+    const S = AREA.shore || {};
+    // in de rivier liggen ze in het diepe, vlak naast de plek waar je over kunt steken
+    const lairs = [...(S.crocs || []), ...(FORD ? [[FORD.x - FORD.w - 5, 0], [FORD.x + FORD.w + 5, 0]] : [])];
+    this.crocs = lairs.map(([x, s]) => {
       const z = riverZ(x) + s, { g, sway, amp } = crocMesh(A); scene.add(g);
-      return { kind: 'croc', g, sway, amp, x, z, home: { x, z }, yaw: Math.PI, state: 'lurk', t: Math.random() * 6, dip: 0.07, a: Math.random() * 6 };
+      return { kind: 'croc', g, sway, amp, x, z, home: { x, z }, yaw: LAKE ? Math.PI : Math.PI / 2, state: 'lurk', t: Math.random() * 6, dip: 0.07, a: Math.random() * 6 };
     });
     this.fish = [];
-    for (const [px, pz, r] of AREA.pools) for (let i = 0; i < 2; i++) {
+    for (const [px, pz, r] of AREA.pools || []) for (let i = 0; i < 2; i++) {
       const rig = fishRig(A), g = rig.root; scene.add(g);
       this.fish.push({ look: 'catfish', g, rig, pool: [px, pz, r], a: i * 3.3 + px, dir: i ? -1 : 1, x: px, z: pz, hide: 0 });
     }
-    this.plants = S.tubers.map(([x, z]) => {
+    this.plants = (S.tubers || []).map(([x, z]) => {
       const g = plantMesh(); g.position.set(x, height(x, z), z); g.rotation.y = x * 1.3; scene.add(g);
       return { look: 'tuberplant', g, x, z, left: 1 };
     });
@@ -128,8 +131,8 @@ export class Shore {
 
   update(dt, game) {
     const P = game.player, p = P.pos, s = game.state, awake = s.started && s.sleeping <= 0 && s.collapsed <= 0;
-    const atWater = p.z - riverZ(p.x) > -3.5;   // in het meer, of op de rand ervan
-    const wet = (x, z, min) => z - riverZ(x) >= min && height(x, z) < -0.42;
+    const atWater = LAKE ? p.z - riverZ(p.x) > -3.5 : riverDist(p.x, p.z) < 12.5;   // in het water, of op de rand ervan
+    const wet = (x, z, min) => LAKE ? z - riverZ(x) >= min && height(x, z) < -0.42 : depth(x, z) > 0.3;
     for (const c of this.crocs) {
       const d = dist(c, p); c.t -= dt;
       let dip = 0.07, spd = 0, want = c.yaw;
@@ -154,7 +157,7 @@ export class Shore {
       }
       c.yaw = turn(c.yaw, want, dt * (c.state === 'lurk' ? 0.5 : 4));
       const nx = c.x + Math.sin(c.yaw) * spd * dt, nz = c.z + Math.cos(c.yaw) * spd * dt;
-      if (c.state === 'lunge' ? nz - riverZ(nx) > -2.5 : wet(nx, nz, 0.8)) { c.x = nx; c.z = nz; }
+      if (c.state === 'lunge' ? (LAKE ? nz - riverZ(nx) > -2.5 : riverDist(nx, nz) < 11.5) : wet(nx, nz, 0.8)) { c.x = nx; c.z = nz; }
       c.dip += (dip - c.dip) * Math.min(1, dt * (c.state === 'sink' ? 2.5 : 6));
       c.g.visible = c.dip < 0.8;
       c.g.position.set(c.x, Math.max(SURF, height(c.x, c.z) + 0.25) - c.dip, c.z);

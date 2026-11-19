@@ -62,8 +62,10 @@ export function riverDist(x, z) { return LAKE ? Math.max(0, riverZ(x) - z) : Mat
 // welke kant op is het droge? (voor dieren die te dicht bij het water komen)
 export function awayZ(x, z) { return LAKE || z < riverZ(x) ? -1 : 1; }
 export function poolAt(x, z) { for (const p of POOLS) if (Math.hypot(x - p[0], z - p[1]) < p[2]) return p; return null; }
-// te diep om te waden
-export function deep(x, z) { return LAKE && height(x, z) < -1.0; }
+// Zwemmen kan niemand: water is een grens. depth() is hoe diep het water staat (0 = droog).
+export function depth(x, z) { return Math.max(0, WATER - 0.35 - height(x, z)); }
+// De doorwaadbare plek van de rivier: alleen hier ligt de bodem hoog genoeg om over te steken (het meer heeft er geen).
+export const FORD = LAKE ? null : { x: AREA.ford ?? 30, w: 7 };
 
 function lakeHeight(x, z) {
   let h = 2.2 + (fbm(x * FREQ + 10 + NS[0], z * FREQ + 3 + NS[1]) - 0.5) * AMP;
@@ -103,6 +105,9 @@ function baseHeight(x, z) {
   const bed = d < 7 ? -1.6 : d < 18 ? -1.6 + (d - 7) / 11 * 1.6 : 0;
   const bank = THREE.MathUtils.smoothstep(d, 4, 26);
   h = h * bank + bed + (1 - bank) * 0.6;
+  // het midden is te diep om te staan; alleen bij de doorwaadbare plek ligt de bodem hoger
+  const off = THREE.MathUtils.smoothstep(Math.abs(x - FORD.x), FORD.w, FORD.w + 10);
+  h += (1 - THREE.MathUtils.smoothstep(d, 2.5, 8.5)) * (0.05 - off * 1.45);
   // de wanden van de Riftvallei aan de rand
   const r = Math.max(Math.abs(x), Math.abs(z));
   if (r > WALK - 25) h += Math.pow((r - (WALK - 25)) / 30, 2) * 14 * (0.7 + fbm(x * 0.02, z * 0.02) * 0.6);
@@ -327,7 +332,14 @@ export function buildWorld(scene, A) {
   scene.add(ground);
 
   // ---------- water ----------
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(SIZE, SIZE), new THREE.MeshStandardMaterial({ color: 0x3a5a50, transparent: true, opacity: 0.88, roughness: 0.08, metalness: 0.1, normalMap: A.tex.withered_grass_nor, normalScale: new THREE.Vector2(0.15, 0.15) }));
+  // diep water is donkerder en je ziet de bodem niet meer: zo zie je zonder woorden waar je niet verder kunt
+  const WN = 512, wpix = new Uint8Array(WN * WN * 4);
+  for (let j = 0; j < WN; j++) for (let i = 0; i < WN; i++) {
+    const k = THREE.MathUtils.smoothstep(depth((i + 0.5) / WN * SIZE - SIZE / 2, SIZE / 2 - (j + 0.5) / WN * SIZE), 0.4, 1.15), c = 255 * (1 - k * 0.62);
+    wpix.set([c, c, Math.min(255, c * 1.04), 255 * (0.86 + k * 0.14)], (j * WN + i) * 4);
+  }
+  const wmap = new THREE.DataTexture(wpix, WN, WN); wmap.magFilter = wmap.minFilter = THREE.LinearFilter; wmap.needsUpdate = true;
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(SIZE, SIZE), new THREE.MeshStandardMaterial({ color: 0x3a5a50, transparent: true, opacity: 1, map: wmap, roughness: 0.08, metalness: 0.1, normalMap: A.tex.withered_grass_nor, normalScale: new THREE.Vector2(0.15, 0.15) }));
   water.material.normalMap = A.tex.withered_grass_nor.clone(); water.material.normalMap.repeat.set(SIZE / 6, SIZE / 6);
   water.rotation.x = -Math.PI / 2; water.position.y = WATER - 0.35;
   scene.add(water);

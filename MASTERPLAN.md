@@ -207,7 +207,7 @@ Volgorde van bouwen = volgorde van de tabel. Elke stap wordt eerst getest en dan
 - **Gif** vreet langzaam door tot je blaadjes gebruikt, maar stopt bij een kwart leven.
 - **Neervallen is niet dood**: je wordt zwak wakker bij de groep en bent kwijt wat je droeg. Je voortgang blijft.
 
-**Stand (19-11-2026):** stap 1 tot en met 6 zijn gebouwd en getest. Stap 7 volgt.
+**Stand (19-11-2026):** alle zeven stappen zijn gebouwd en getest in alle vier de gebieden. Fase 5d is klaar; daarna volgt fase 5c stap 2 (trekken).
 
 - Stap 3, wat er nog niet is: er ligt geen nest in de boom; *Homo habilis* slaapt bij de stam.
 - Stap 4, eerlijk over het beeld: in de lucht is het een vliegend model met vleugelslag, op de grond en in de boom
@@ -227,6 +227,12 @@ Volgorde van bouwen = volgorde van de tabel. Elke stap wordt eerst getest en dan
   langs de rand; splinters springen weg en blijven even liggen (`chips.js`). Bij de vuistbijl draait de linkerhand
   de kern vóór elke slag een stuk door. Lopen breekt het slaan af: je maakt de klap af en staat op.
   Testen: `v4knap.js [gebied] [bijl] [foto]`.
+- Stap 7, de regel: tot je knie (0,28 × je lengte) loop je bijna gewoon, tot je middel (0,55 × je lengte) waad je steeds
+  trager, dieper kom je niet: je personage stopt en stapt zelf een stuk terug. Diep water is donker en je ziet de bodem
+  niet. Elke rivier is in het midden twee meter diep, behalve op één plek (`ford` in het gebiedsbestand): daar ligt de
+  bodem hoog en is het water licht. Aan weerskanten van die plek ligt een krokodil in het diepe. Eerlijk over het
+  beeld: er is geen opname van waden. Het is de gewone loopbeweging, trager, met de armen omhoog en uit elkaar
+  (zelf gestuurd). Testen: `v4wade.js [gebied] [foto]`.
 
 Het werk aan trekken (fase 5c stap 2) staat geparkeerd op de branch `trek` en wordt daarna tekstloos afgemaakt.
 
