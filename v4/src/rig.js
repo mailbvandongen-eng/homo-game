@@ -44,7 +44,7 @@ export class Rig {
     if (skin) {
       if (!A.tex[skin]) throw new Error('huid ontbreekt: ' + skin);
       this.model.traverse((o) => {
-        if (!o.isMesh) return;
+        if (!o.isMesh || (SHAPES[shape].skinOn && !SHAPES[shape].skinOn.test(o.material.name))) return;
         const id = o.material.uuid + '|' + skin; let m = SKINS.get(id);
         if (!m) { m = o.material.clone(); m.map = A.tex[skin]; if (SHAPES[shape].flat) m.normalScale.setScalar(SHAPES[shape].flat); SKINS.set(id, m); }
         o.material = m;

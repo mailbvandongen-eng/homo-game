@@ -7,11 +7,12 @@ import { GLTFLoader, HDRLoader } from '../lib/three-addons.js';
 // dieren met botten en animaties (Sketchfab, CC BY 4.0, zie assets/CREDITS.md)
 const ANIMALS = ['hyena', 'leopard', 'gazelle', 'hominin', 'sabre', 'zebra', 'cobra', 'vulture', 'griffon'];
 export const ANIMAL_MODELS = ANIMALS;
-export const MODELS = [...ANIMALS, 'acacia', 'namaqualand_boulder_02', 'namaqualand_boulder_05', 'namaqualand_rocks_01', 'wild_rooibos_bush', 'shrub_03', 'dead_tree_trunk', 'dry_branches_medium_01', 'fig', 'baobab'];
+export const MODELS = [...ANIMALS, 'acacia', 'namaqualand_boulder_02', 'namaqualand_boulder_05', 'namaqualand_rocks_01', 'wild_rooibos_bush', 'shrub_03', 'butterfly', 'dead_tree_trunk', 'dry_branches_medium_01', 'fig', 'baobab'];
 export const TEXTURES = [
   ['dry_ground_01_diff', true], ['dry_ground_01_nor', false], ['withered_grass_diff', true], ['withered_grass_nor', false],
   ['sparse_grass_diff', true], ['dry_ground_rocks_diff', true], ['grass_atlas', true],
-  ['puffadder', true, 'skin'],   // een andere huid voor een model (zie shapes.js); ligt zoals in het model, zonder herhaling
+  ['puffadder', true, 'skin'],
+  ['hominin_child', true, 'skin'],   // de huid van het kind: die van het volwassen model zonder lichaamshaar; een andere huid voor een model (zie shapes.js); ligt zoals in het model, zonder herhaling
 ];
 
 // online krijgt elk bestand de versie van de map assets mee, zodat een vervangen model ook echt opnieuw wordt opgehaald

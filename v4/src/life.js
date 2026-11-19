@@ -141,29 +141,64 @@ export class Birds {
 }
 
 // ---------- vlinders bij de struiken ----------
+// Een echt vlindermodel (monarchvlinder, zie assets/CREDITS.md): lijf en twee vleugelparen, voor alle vlinders samen in drie keer getekend.
+// Ze fladderen om hun struik, gaan er af en toe op zitten en vouwen dan hun vleugels boven hun rug. Kom je dichtbij, dan vliegen ze op.
+const SPAN = 0.15 / 0.276;   // spanwijdte 15 cm (het model is 27,6 cm)
 export class Butterflies {
-  constructor(scene, spots) {
+  // spots: [x, z, struik]: de vlinder zoekt een echt takje of blad van die struik om op te zitten; vindt hij niets, dan zit hij op de grond ernaast
+  constructor(scene, spots, A) {
     this.list = [];
-    const cols = [0xf2b030, 0xffffff, 0x4aa0e0, 0xf07a30];
-    for (const [i, [x, z]] of spots.entries()) {
+    const ray = new THREE.Raycaster(), down = new THREE.Vector3(0, -1, 0), from = new THREE.Vector3();
+    for (const [x, z, g] of spots) {
+      if (g) g.updateMatrixWorld(true);
       for (let k = 0; k < 2; k++) {
-        const m = new THREE.MeshBasicMaterial({ color: cols[(i + k) % cols.length], side: THREE.DoubleSide });
-        const g = new THREE.Group(), wings = [];
-        for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.CircleGeometry(0.07, 5), m); w.position.x = s * 0.07; const p = new THREE.Group(); p.add(w); g.add(p); wings.push(p); }
-        scene.add(g);
-        this.list.push({ g, wings, x, z, ph: R() * 10, sp: 0.6 + R() * 0.5 });
+        const a = R() * 6.28, ground = { x: x + Math.cos(a) * 0.7, z: z + Math.sin(a) * 0.7 };
+        let perch = { ...ground, y: height(ground.x, ground.z) + 0.02 };
+        for (let i = 0; g && i < 8; i++) {
+          const px = x + (R() - 0.5) * 0.7, pz = z + (R() - 0.5) * 0.7;
+          ray.set(from.set(px, height(x, z) + 4, pz), down);
+          const hit = ray.intersectObject(g, true)[0];
+          if (hit && hit.point.y > height(px, pz) + 0.25) { perch = { x: px, y: hit.point.y + 0.015, z: pz }; break; }
+        }
+        this.list.push({ x, z, perch, ph: R() * 10, sp: 0.6 + R() * 0.5, sit: 0, t: 4 + R() * 14, px: x, py: 0, pz: z, yaw: R() * 6.28 });
       }
     }
+    const part = (n) => A.models.butterfly.getObjectByName(n);
+    // de onderkant van een vleugel krijgt geen zonlicht; een beetje eigen licht houdt de tekening zichtbaar als hij ze dichtvouwt
+    const wing = part('wingL').material; wing.emissive = new THREE.Color(0x4a4a4a); wing.emissiveMap = wing.map;
+    this.parts = ['body', 'wingL', 'wingR'].map((n) => { const m = new THREE.InstancedMesh(part(n).geometry, part(n).material, Math.max(1, this.list.length)); m.frustumCulled = false; m.count = 0; scene.add(m); return m; });
+    this.d = new THREE.Object3D(); this.w = new THREE.Object3D(); this.d.add(this.w); this.lastT = 0;
   }
   update(t, night, focus) {
-    for (const b of this.list) {
-      const s = t * b.sp + b.ph, x = b.x + Math.sin(s * 0.9) * 1.6 + Math.sin(s * 2.3) * 0.4, z = b.z + Math.cos(s * 0.7) * 1.6;
-      b.g.visible = night < 0.5 && Math.abs(b.x - focus.x) + Math.abs(b.z - focus.z) < 40;
-      if (!b.g.visible) continue;
-      b.g.position.set(x, height(x, z) + 0.8 + Math.sin(s * 3.1) * 0.35, z);
-      b.g.rotation.y = s;
-      b.wings.forEach((w, k) => { w.rotation.y = (k ? 1 : -1) * Math.abs(Math.sin(t * 18 + b.ph)) * 1.2; });
+    const dt = Math.min(0.1, Math.max(0, t - this.lastT)); this.lastT = t;
+    const [body, wl, wr] = this.parts, d = this.d, w = this.w;
+    let n = 0;
+    if (night < 0.5) for (const b of this.list) {
+      const far = Math.abs(b.x - focus.x) + Math.abs(b.z - focus.z);
+      if (far > 40) continue;
+      // vliegen en zitten wisselen elkaar af; wie te dichtbij komt, jaagt de vlinder op
+      b.t -= dt;
+      const near = Math.hypot(b.px - focus.x, b.pz - focus.z) < 1.6;
+      if (b.sit > 0 && (b.t <= 0 || near)) { b.sit = 0; b.t = 9 + R() * 14; }
+      else if (b.sit === 0 && b.t <= 0 && !near) { b.sit = 0.01; b.t = 6 + R() * 9; }
+      const s = t * b.sp + b.ph;
+      const fx = b.x + Math.sin(s * 0.9) * 1.6 + Math.sin(s * 2.3) * 0.4, fz = b.z + Math.cos(s * 0.7) * 1.6, fy = height(fx, fz) + 0.8 + Math.sin(s * 3.1) * 0.35;
+      const sx = b.perch.x, sz = b.perch.z, sy = b.perch.y;
+      b.sit = b.sit > 0 ? Math.min(1, b.sit + dt / 1.6) : 0;
+      const landed = b.sit >= 1, k = b.sit * b.sit * (3 - 2 * b.sit);
+      const x = fx + (sx - fx) * k, y = fy + (sy - fy) * k, z = fz + (sz - fz) * k;
+      if (!landed && dt > 0 && Math.hypot(x - b.px, z - b.pz) > 0.001) b.yaw = Math.atan2(b.px - x, b.pz - z);   // de kop van het model wijst naar -z
+      b.px = x; b.py = y; b.pz = z;
+      // vleugelslag: in de vlucht snel van schuin omlaag tot hoog boven de rug; zittend dicht, en af en toe traag open
+      const beat = Math.sin(t * 34 * (0.8 + b.sp * 0.3) + b.ph * 7);
+      const a = landed ? 1.42 - Math.max(0, Math.sin(t * 1.1 + b.ph)) * 1.0 : 0.45 + beat * 0.85;
+      d.position.set(x, y, z); d.rotation.set(landed ? 0 : 0.3, b.yaw, 0, 'YXZ'); d.scale.setScalar(SPAN); d.updateMatrixWorld(true);
+      body.setMatrixAt(n, d.matrixWorld);
+      w.rotation.z = a; w.updateMatrixWorld(true); wl.setMatrixAt(n, w.matrixWorld);
+      w.rotation.z = -a; w.updateMatrixWorld(true); wr.setMatrixAt(n, w.matrixWorld);
+      n++;
     }
+    for (const m of this.parts) { m.count = n; m.instanceMatrix.needsUpdate = true; }
   }
 }
 

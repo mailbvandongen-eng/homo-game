@@ -54,7 +54,7 @@ export class Group {
     this.forT = 25;      // tot de volgende zelf eten gaat zoeken
     this.point = null;   // { m, x, z }: dit groepslid wijst naar die plek (zie systems/missions.js)
     for (const w of WHO) {
-      // hetzelfde model als de hoofdpersoon, met een eigen lijf: een kind heeft een groot hoofd en korte benen,
+      // hetzelfde model als de hoofdpersoon, met een eigen lijf: een kind heeft een groot hoofd, korte benen en een gladde huid,
       // een vrouw smallere schouders en geen baard
       const shape = BODY.shape && BODY.shape + (w.child ? '_child' : w.woman ? '_woman' : '');
       const rig = new Rig(A, 'hominin', { scale: BODY.height / 162 * w.k, shape, tall: BODY.height * w.k });
@@ -62,8 +62,10 @@ export class Group {
         if (!o.isMesh) return;
         const hair = /beard|hair|transparency/i.test(o.material.name);
         o.material = o.material.clone();
-        if (hair && (w.child || (w.woman && /beard/i.test(o.material.name)))) o.visible = false;
+        // een kind heeft geen baard en geen zware wenkbrauwen, wel haar
+        if (hair && ((w.child && /beard|Male_Flat/i.test(o.material.name)) || (w.woman && /beard/i.test(o.material.name)))) o.visible = false;
         else if (hair && w.grey) o.material.color.setRGB(2.4, 2.4, 2.5);
+        else if (hair && w.child) o.material.color.multiplyScalar(0.7);   // kinderhaar is dun: iets donkerder, anders schijnt de huid erdoor
         else if (!hair && w.tint) o.material.color.multiply(new THREE.Color(w.tint));
         else if (!hair && w.grey) o.material.color.multiplyScalar(0.86);
       });

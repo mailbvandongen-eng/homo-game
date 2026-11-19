@@ -72,9 +72,9 @@ const things = placeItems(scene, A, AREA);
 const forage = new Forage(scene, A, things);   // vruchtbomen, takken onder de bomen, oude karkassen, knollen
 const glints = new Glints(scene, things);
 const motes = new Motes(scene);
-const bushes = things.filter((t) => t.bush).map((t) => [t.x, t.z]);
+const bushes = things.filter((t) => t.bush).map((t) => [t.x, t.z, t.bush.g]);
 const birds = new Birds(scene, AREA.birds);
-const butterflies = new Butterflies(scene, bushes);
+const butterflies = new Butterflies(scene, bushes, A);
 const senses = new Senses(scene);
 const sound = new Sound();
 const hyenas = new Hyenas(scene, CARCASS, A);
@@ -1225,7 +1225,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { vultures, FLOCKS, body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
+window.__game = { vultures, FLOCKS, butterflies, body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, beast, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, setSneak, still: () => stillT,
   setCam: (y, p, d) => { cam.yaw = y; cam.pitch = p; if (d) cam.dist = d; }, setZoom: C.setZoom, zoom: () => cam.dist, C, jump, sound, world, weather, menu, closeCard, clockT: () => clock.elapsedTime, actionContext, actionOptions, heard, tasteAt, bodyTap, prim: () => prim, alts: () => alts,
   lookFrom: (pos, look) => { cam.override = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },

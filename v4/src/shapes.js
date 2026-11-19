@@ -2,8 +2,22 @@
 // Assen: x = opzij, y = omhoog, z = naar voren, in de maten van het model zelf.
 const HEAD = /^head|^CC_Base|^neck_02/;
 const LEG = { hip: /^pelvis/, foot: /^ball_l/ };
-// Een kind: groot hoofd, korte benen en armen, smal lijf. Een vrouw: smallere schouders, bredere heupen.
-const CHILD = [[/^(thigh|calf)/, [0.9, 0.86, 0.9]], [/^(upperarm|lowerarm)/, [0.9, 0.9, 0.9]], [/^spine|^clavicle/, [0.9, 0.96, 0.92]], [HEAD, [1.3, 1.3, 1.3]]];
+// Een kind: een groot rond hoofd op een korte nek, korte benen en armen, smalle schouders, een bol buikje en een
+// gladde huid zonder lichaamshaar (assets/tex/hominin_child.webp). Een vrouw: smallere schouders, bredere heupen.
+const CHILD = [
+  [/^thigh/, [0.88, 0.8, 0.9]], [/^calf/, [0.9, 0.79, 0.9]], [/^foot|^ball/, [0.92, 0.92, 0.88]],
+  [/^upperarm/, [0.84, 0.92, 0.92]], [/^lowerarm/, [0.86, 0.94, 0.94]],
+  [/^spine/, [0.9, 0.95, 1.0]], [/^clavicle/, [0.8, 1, 0.96]], [/^pelvis/, [0.94, 0.96, 1.0]],
+  [/^neck_01/, [1.05, 0.72, 1.05]], [HEAD, [1.38, 1.38, 1.38]],
+];
+// het hoofd van een kind: een hoge ronde hersenpan, een kleine kaak, nog geen wenkbrauwboog; en een rond lijf
+const CHILD_SCULPT = [
+  { bone: /^head/, at: [0, 13, -1], r: 15, scale: [1.05, 1.06, 1.06] },
+  { bone: /^head/, at: [0, 2.5, 7], r: 8, scale: [0.88, 0.86, 0.9] },
+  { bone: /^head/, at: [0, 3.5, 9], r: 7, move: [0, 0, 0.7] },
+  { bone: /^spine_01/, at: [0, 3, 9], r: 15, move: [0, 0, 3.2] },
+  { bone: /^spine_03/, at: [9, 12, 13], r: 12, move: [0, -0.5, -3] }, { bone: /^spine_03/, at: [-9, 12, 13], r: 12, move: [0, -0.5, -3] },
+];
 const WOMAN = [[/^clavicle/, [0.9, 1, 1]], [/^spine_03/, [0.93, 1, 0.95]], [/^spine_01|^pelvis/, [1.05, 1, 1.03]]];
 
 // Homo habilis: klein, korte benen, lange armen, een kleine hersenpan en een gezicht dat naar voren steekt.
@@ -32,6 +46,8 @@ const ERECTUS = {
   ],
 };
 const kind = (key, base, ...extra) => ({ key, bones: [...base.bones, ...extra.flat()], sculpt: base.sculpt, ground: LEG });
+// het kind draagt alleen op zijn huid (niet op ogen, tanden of haar) de kinderhuid
+const child = (key, base) => ({ ...kind(key, base, CHILD), sculpt: CHILD_SCULPT, skin: 'hominin_child', skinOn: /Skin_Body/, flat: 0.45 });
 
 // De reuzenolifant Palaeoloxodon recki, omgevormd uit een Afrikaanse olifant: hogere poten, een hoge schedel
 // met een wal over het voorhoofd, kleinere oren en lange, vrijwel rechte slagtanden.
@@ -68,6 +84,6 @@ export const SHAPES = {
   puffadder: PUFFADDER,
   impala: IMPALA, hornless: HORNLESS,
   recki: RECKI,
-  habilis: kind('habilis', HABILIS), habilis_woman: kind('habilis_woman', HABILIS, WOMAN), habilis_child: kind('habilis_child', HABILIS, CHILD),
-  erectus: kind('erectus', ERECTUS), erectus_woman: kind('erectus_woman', ERECTUS, WOMAN), erectus_child: kind('erectus_child', ERECTUS, CHILD),
+  habilis: kind('habilis', HABILIS), habilis_woman: kind('habilis_woman', HABILIS, WOMAN), habilis_child: child('habilis_child', HABILIS),
+  erectus: kind('erectus', ERECTUS), erectus_woman: kind('erectus_woman', ERECTUS, WOMAN), erectus_child: child('erectus_child', ERECTUS),
 };

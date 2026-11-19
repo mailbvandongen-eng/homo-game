@@ -207,13 +207,20 @@ Volgorde van bouwen = volgorde van de tabel. Elke stap wordt eerst getest en dan
 - **Gif** vreet langzaam door tot je blaadjes gebruikt, maar stopt bij een kwart leven.
 - **Neervallen is niet dood**: je wordt zwak wakker bij de groep en bent kwijt wat je droeg. Je voortgang blijft.
 
-**Stand (19-11-2026):** stap 1 tot en met 4 zijn gebouwd en getest in alle vier de gebieden. Stap 5, 6 en 7 volgen.
+**Stand (19-11-2026):** stap 1 tot en met 5 zijn gebouwd en getest in alle vier de gebieden. Stap 6 en 7 volgen.
 
 - Stap 3, wat er nog niet is: er ligt geen nest in de boom; *Homo habilis* slaapt bij de stam.
 - Stap 4, eerlijk over het beeld: in de lucht is het een vliegend model met vleugelslag, op de grond en in de boom
   een staande vale gier (een echt model, maar zonder eigen bewegingen). Pikken, stappen, hippen en de kop draaien
   maken we zelf met de botten. De vleugels van het staande model kunnen maar half open; bij opstijgen en landen
   wisselt het spel van model. Testen: `v4gier.js [gebied]` en `v4gierreus.js`.
+- Stap 5, eerlijk over het beeld: er is geen vrij model van een kind met hetzelfde skelet. Het kind is daarom het
+  volwassen model, sterker omgevormd (hoofd 1,4 keer zo groot, korte nek, benen een vijfde korter, smalle schouders,
+  bol buikje, vlakke borst, kleinere kaak) met een eigen huid zonder lichaamshaar, baard en zware wenkbrauwen
+  (`assets/tex/hominin_child.webp`, gemaakt uit de huid van het model met `kidskin.py`). Het gezicht blijft dat van
+  het model. De vlinder is een echt model met een foto van een monarchvlinder op de vleugels (verwant aan de
+  Afrikaanse monarch); er is één soort, en de vleugelslag maken we zelf. Hij gaat op een struik zitten en vliegt op
+  als je dichtbij komt. Testen: `v4kind.js` en `v4vlinder.js [gebied]`.
 
 Het werk aan trekken (fase 5c stap 2) staat geparkeerd op de branch `trek` en wordt daarna tekstloos afgemaakt.
 
