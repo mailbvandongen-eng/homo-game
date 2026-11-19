@@ -13,13 +13,13 @@ export function initCraft(G) {
     const R = ROCKS[r.type]; r.hits++; r.at = player.pos.clone(); player.action = 0.5;
     const again = () => knapAgain(i, r);
     if (R.crumble) {
-      sound.crack();
+      sound.crack(); G.chips(r.type, true, true);
       if (r.hits < R.crumble) { note('stone', 'Dof'); again(); return; }
       state.hands[i] = null; renderHands(); state.rockKnown.add(r.type);
       toast('De kei valt in gruis uit elkaar. Deze soort is te zacht. Zoek een gladde, harde kei.', 6); discover('rock');
       return;
     }
-    sound.knap();
+    sound.knap(); G.chips(r.type, r.hits >= R.hits);
     if (r.hits < R.hits) { toast(r.hits === 1 ? 'Tik! Een splinter, te klein om vast te houden. Nog eens.' : 'Tak! Er loopt een barst langs de rand. Bijna…', 3); again(); return; }
     state.hands[i] = 'flake'; renderHands(); state.rockKnown.add(r.type); state.knapped = true;
     if (r.type === 'obsidian' && !state.found.has('glass')) toast('Tik! Een scherf zo dun dat je erdoorheen kijkt. De rand snijdt al als je hem aanraakt.', 7);
@@ -36,13 +36,13 @@ export function initCraft(G) {
     const R = ROCKS[r.type]; r.shape = (r.shape || 0) + 1; r.at = player.pos.clone(); player.action = 0.5;
     const again = () => knapAgain(i, r, knapAxe);
     if (R.crumble) {
-      sound.crack();
+      sound.crack(); G.chips(r.type, true, true);
       if (r.shape < R.crumble) { note('stone', 'Dof'); again(); return; }
       state.hands[i] = null; renderHands(); state.rockKnown.add(r.type);
       toast('De kei valt in gruis uit elkaar. Deze soort is te zacht. Zoek een gladde, harde kei.', 6); discover('rock');
       return;
     }
-    sound.knap();
+    sound.knap(); G.chips(r.type, false);
     const need = R.axe || 6;
     if (r.shape < need) { toast(AXE_SAY[r.shape - 1 + 6 - need], 3); again(); return; }
     state.hands[i] = 'axe'; state.rock[i] = null; renderHands(); state.rockKnown.add(r.type); state.knapped = true;
@@ -50,15 +50,23 @@ export function initCraft(G) {
     toast(r.type === 'obsidian' ? 'Een vuistbijl van zwart glas. De randen glimmen. Zo scherp was er nog geen.' : state.found.has('axe') ? 'Weer een vuistbijl. Zwaar en scherp.' : 'Klaar! Een punt, twee scherpe kanten, en hij past precies in je hand. Je hebt een vuistbijl.', 7);
     state.known.add('axe'); discover('axe');
   }
+  // Beginnen met slaan: de kern gaat naar je linkerhand, de klopsteen naar rechts. Je knielt, en dan pas valt de eerste klap.
+  function start(i, fn) {
+    if (state.hands[0] !== 'stone' || state.hands[1] !== 'stone') return;
+    renderHands();
+    if (i === 1) { state.hands.reverse(); state.rock.reverse(); renderHands(); }
+    blow(fn);
+  }
+  const blow = (fn) => player.strike(() => fn(0), { turn: fn === knapAxe ? 1.9 : 0 });
   // doorslaan zolang je stil blijft staan met beide keien in je handen
   let knapQ = null;
-  function knapAgain(i, r, fn = knap) { knapQ = { i, r, t: 0.35, fn }; }
+  function knapAgain(i, r, fn = knap) { knapQ = { i, r, t: 0.12, fn }; }
   function knapTick(dt) {
     const q = knapQ; if (!q) return;
-    if (state.rock[q.i] !== q.r || state.hands[1 - q.i] !== 'stone' || G.walking || q.r.at.distanceTo(player.pos) > 0.4 || state.collapsed > 0) { knapQ = null; return; }
-    if (player.once) return;
+    if (state.rock[q.i] !== q.r || state.hands[1 - q.i] !== 'stone' || G.walking || player.leaving || q.r.at.distanceTo(player.pos) > 0.4 || state.collapsed > 0) { knapQ = null; return; }
+    if (player.once || player.striking) return;
     q.t -= dt;
-    if (q.t <= 0) { knapQ = null; G.act('Interact', () => q.fn(q.i)); }
+    if (q.t <= 0) { knapQ = null; blow(q.fn); }
   }
   // met een afslag een punt aan een tak schrapen: de graafstok
   function makeStick(i) {
@@ -67,5 +75,5 @@ export function initCraft(G) {
     toast(state.found.has('stick') ? 'Je schraapt weer een punt aan een tak.' : 'Je schraapt de bast weg en snijdt het uiteinde schuin af. Een stok met een punt!', 6);
     state.known.add('branch'); state.known.add('stick'); discover('stick');
   }
-  return { knap, knapAxe, knapTick, makeStick };
+  return { knap, knapAxe, knapTick, makeStick, knapStart: (i) => start(i, knap), axeStart: (i) => start(i, knapAxe) };
 }

@@ -207,7 +207,7 @@ Volgorde van bouwen = volgorde van de tabel. Elke stap wordt eerst getest en dan
 - **Gif** vreet langzaam door tot je blaadjes gebruikt, maar stopt bij een kwart leven.
 - **Neervallen is niet dood**: je wordt zwak wakker bij de groep en bent kwijt wat je droeg. Je voortgang blijft.
 
-**Stand (19-11-2026):** stap 1 tot en met 5 zijn gebouwd en getest in alle vier de gebieden. Stap 6 en 7 volgen.
+**Stand (19-11-2026):** stap 1 tot en met 6 zijn gebouwd en getest. Stap 7 volgt.
 
 - Stap 3, wat er nog niet is: er ligt geen nest in de boom; *Homo habilis* slaapt bij de stam.
 - Stap 4, eerlijk over het beeld: in de lucht is het een vliegend model met vleugelslag, op de grond en in de boom
@@ -221,6 +221,12 @@ Volgorde van bouwen = volgorde van de tabel. Elke stap wordt eerst getest en dan
   het model. De vlinder is een echt model met een foto van een monarchvlinder op de vleugels (verwant aan de
   Afrikaanse monarch); er is één soort, en de vleugelslag maken we zelf. Hij gaat op een struik zitten en vliegt op
   als je dichtbij komt. Testen: `v4kind.js` en `v4vlinder.js [gebied]`.
+- Stap 6, eerlijk over het beeld: het knielen, zitten op één knie en opstaan is een opgenomen beweging
+  (`Fixing_Kneeling`). Een opname van steen slaan bestaat niet in een vrije bron: de armen stuurt het spel daarom
+  zelf (`armik.js`). De linkerhand houdt de kern op het linkerbovenbeen, de rechterhand haalt uit en slaat schuin
+  langs de rand; splinters springen weg en blijven even liggen (`chips.js`). Bij de vuistbijl draait de linkerhand
+  de kern vóór elke slag een stuk door. Lopen breekt het slaan af: je maakt de klap af en staat op.
+  Testen: `v4knap.js [gebied] [bijl] [foto]`.
 
 Het werk aan trekken (fase 5c stap 2) staat geparkeerd op de branch `trek` en wordt daarna tekstloos afgemaakt.
 

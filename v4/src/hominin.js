@@ -9,6 +9,7 @@ import { ERA, AREA } from './eras/index.js';
 export const BODY = { height: 1.35, speed: 1, ...ERA.body };
 import { Rig } from './rig.js';
 import { FootIK } from './footik.js';
+import { ArmIK } from './armik.js';
 
 // ---------- materialen ----------
 // Een vachtje: korte streepjes in een textuur, gebruikt als kleur én als reliëf
@@ -77,6 +78,15 @@ const TOSS = [
   ['lowerarm_r', [rot(), rot([0, 0, 1, -1.5]), rot()]],
   ['upperarm_l', [rot(), rot([1, 0, 0, -1.1]), rot([1, 0, 0, 0.5])]],
 ];
+// Steen slaan. Plekken zijn [naar links, omhoog, naar voren] vanaf de kern, in meters bij een bovenbeen van 34 cm.
+export const KNAP = {
+  speed: 1.25, rest: 0.9, lift: 0.36, hit: 0.11, off: 0.34,   // tempo van knielen en opstaan; seconden: wachten, uithalen, slaan, doorzwaaien
+  raise: 9, back: -0.65, nod: 0.3,                                      // model omhoog (cm), rug rechter, hoofd omlaag
+  core: [0.88, 0.11, -0.06],                                            // langs het bovenbeen (0 = heup, 1 = knie), erboven, opzij
+  poleL: [0.7, -0.5, -0.4], faceL: [-0.35, 0.9, 0], poleR: [-0.8, -0.3, -0.5],
+  ready: [-0.1, 0.11, 0], high: [-0.16, 0.27, -0.02], touch: [-0.085, 0.085, 0], past: [-0.12, 0.0, 0.04],
+};
+const KV = { a: new THREE.Vector3(), b: new THREE.Vector3(), up: new THREE.Vector3(), fwd: new THREE.Vector3(), core: new THREE.Vector3(), t: new THREE.Vector3(), p: new THREE.Vector3(), f: new THREE.Vector3(), h: new THREE.Vector3(), h2: new THREE.Vector3() };
 const TQ = { root: new THREE.Quaternion(), inv: new THREE.Quaternion(), q: new THREE.Quaternion(), w: new THREE.Quaternion() };   // hoe ver een ding uit de handpalm steekt (m)
 export class Hominin {
   constructor(scene, A) {
@@ -189,9 +199,13 @@ export class Hominin {
       const idx = loc('index_01'), pk = loc('pinky_01'), mid = loc('middle_01'), tip = loc('middle_03');
       const n = idx.clone().cross(pk).normalize(); if (n.dot(loc('thumb_03').sub(idx)) < 0) n.negate();
       g.position.copy(mid).lerp(tip, 0.25).addScaledVector(n, HOLD / ws);
-      bone.add(g); return g;
+      g.userData.palm = n; bone.add(g); return g;
     };
     this.held = hold(this.rig.bone('hand_r'), -1); this.heldL = hold(this.rig.bone('hand_l'), 1);
+    // steen slaan: een knielhouding, en twee armen die we zelf naar de stenen sturen
+    this.kneel = act('Fixing_Kneeling'); this.knapS = null;
+    this.arms = { l: new ArmIK(this.rig, 'l', this.heldL, this.heldL.userData.palm), r: new ArmIK(this.rig, 'r', this.held, this.held.userData.palm) };
+    this.legL = [this.rig.bone('thigh_l'), this.rig.bone('calf_l')];
     scene.add(this.rig.root);
     this.obj = this.rig.root;
   }
@@ -229,6 +243,7 @@ export class Hominin {
     const mag = Math.min(1, dir.length());
     let want = this.sneaking ? 1.6 * mag : mag < 0.7 ? 2.6 * mag / 0.7 : 2.6 + (mag - 0.7) / 0.3 * 2.8;
     if (this.once) want *= this.once.slow;   // tijdens slaan loop je bijna niet
+    if (this.knapS) { if (mag > 0.25) this.knapS.leave = true; if (this.knapS.leave && this.knapS.ph === 'ready') this.standUp(); want *= 1 - this.knapS.g; }   // geknield loop je niet
     if (this.toss) want *= 0.3;              // en tijdens mikken en gooien ook niet
     // moe: rennen lukt steeds minder, tot je alleen nog kunt lopen
     if (mods.weary > 0) want = Math.min(want, 5.4 - 2.8 * THREE.MathUtils.smoothstep(mods.weary, 0.2, 0.6));
@@ -404,19 +419,98 @@ export class Hominin {
       if (O.hold ? O.back && t <= 0.03 : t >= O.len - 0.001) { O.a.setEffectiveWeight(0); O.a.stop(); this.once = null; o = 0; }
       else O.a.setEffectiveWeight(Math.max(0, o));
     }
-    for (const n in L) L[n].a.setEffectiveWeight(L[n].w * (1 - o));
+    const K = this.knapS, kw = K ? this.knapStep(dt) * (1 - o) : 0;
+    for (const n in L) L[n].a.setEffectiveWeight(L[n].w * (1 - o) * (1 - kw));
+    if (this.kneel) this.kneel.setEffectiveWeight(kw);
     r.update(dt);
     // ziek: wat voorovergebogen; stilstaand rondkijken
     const side = r.side(this._side || (this._side = new THREE.Vector3()));
-    if (this.feet) this.feet.update(dt, this.onGround, side);
+    if (this.feet) this.feet.update(dt, this.onGround && kw < 0.05, side);
+    if (kw > 0 && this.knapS) this.knapPose(r, side, this.knapS.w * (1 - o), this.knapS.g * kw);
     if (sick) r.bend(r.bone('spine_02'), side, 0.35);
     // moe: schouders naar voren, hoofd omlaag, en je borst gaat zwaar op en neer
     else if (mods.weary > 0.05 && !this.once) {
       const w = mods.weary, breath = Math.sin(this.time * (3.2 + w * 2.4));
       r.bend(r.bone('spine_02'), side, w * (0.2 + 0.07 * breath)); r.bend(r.bone('head'), side, w * (0.16 - 0.05 * breath));
     }
-    if (this.lookYaw && !this.once) r.bend(r.bone('head'), this._up || (this._up = new THREE.Vector3(0, 1, 0)), this.lookYaw * 0.7);
+    if (this.lookYaw && !this.once && !kw) r.bend(r.bone('head'), this._up || (this._up = new THREE.Vector3(0, 1, 0)), this.lookYaw * 0.7);
     if (this.toss) this.tossPose(dt, r);
+  }
+
+  // ---- steen slaan: geknield, de kern op je bovenbeen, de klopsteen in je andere hand ----
+  // Je knielt op je rechterknie. Je linkerhand houdt de kern op je linkerbovenbeen, je rechterhand slaat met de klopsteen
+  // schuin langs de rand. De knielhouding is een opgenomen beweging; de armen sturen we zelf naar de stenen.
+  // fn loopt op het moment dat de stenen elkaar raken · turn: zo ver draait de linkerhand de kern vóór de slag (vuistbijl)
+  strike(fn, { turn = 0 } = {}) {
+    if (!this.rig || !this.arms.l.ok || !this.arms.r.ok) { this.action = 0.5; fn && fn(); return; }
+    if (!this.knapS) this.kneel.time = 0;
+    const K = this.knapS || (this.knapS = { st: 'down', body: 0, g: 0, w: 0, t: 0, ph: 'ready', turn: 0, from: 0, to: 0, rest: 0 });
+    if (K.st === 'up' || K.leave) return;   // je staat net op: de volgende klap begint opnieuw
+    K.on = true; K.rest = 0; K.q = { fn, turn };
+  }
+  get striking() { const K = this.knapS; return !!K && (!!K.q || K.ph !== 'ready'); }
+  get leaving() { const K = this.knapS; return !!K && (!!K.leave || K.st === 'up'); }   // je wilt weg: de klap van nu maak je af, een volgende komt er niet
+  get kneeling() { const K = this.knapS; return K && K.st === 'held' ? K.w : 0; }
+  standUp() { const K = this.knapS; if (K) { K.on = false; K.q = null; } }
+  // De opname knielt zelf (0 tot 0,9 s), blijft zitten (1 tot 3,9 s) en staat zelf weer op (4 tot 5,1 s): wij kiezen alleen het moment.
+  // Daaroverheen de tijd van de slag: klaar zitten → uithalen → slaan → doorzwaaien → klaar zitten.
+  knapStep(dt) {
+    const K = this.knapS, a = this.kneel, ss = THREE.MathUtils.smoothstep;
+    if (!this.onGround) this.standUp();
+    if (K.st === 'down') {
+      a.time += (K.on ? 1 : -1.2) * dt * KNAP.speed;
+      if (a.time >= 0.95) { K.st = 'held'; K.dir = 1; } else if (a.time <= 0) return this.knapEnd();
+      K.body = Math.min(1, a.time / 0.12); K.g = ss(a.time, 0.2, 0.7); K.w = ss(a.time, 0.35, 0.95);
+    } else if (K.st === 'held') {
+      a.time += K.dir * dt * 0.3; if (a.time > 3.9) K.dir = -1; else if (a.time < 1) K.dir = 1;
+      K.body = K.g = 1; K.w = Math.min(1, K.w + dt * 4);
+      if (!K.on) { K.st = 'up'; K.t0 = a.time; K.mix = 0; }
+    } else {
+      // opstaan: eerst terug naar de houding waarin de opname overeind komt, dan omhoog
+      K.w = Math.max(0, K.w - dt / 0.3);
+      if (K.mix < 1) { K.mix = Math.min(1, K.mix + dt / 0.25); a.time = K.t0 + (4 - K.t0) * K.mix; }
+      else a.time += dt * KNAP.speed;
+      if (a.time >= 5.1) return this.knapEnd();
+      K.g = 1 - ss(a.time, 4.3, 4.75); K.body = Math.min(1, (5.1 - a.time) / 0.15);
+    }
+    K.t += dt;
+    if (K.ph === 'ready') {
+      if (K.q && K.st === 'held' && K.w >= 1) { K.ph = 'lift'; K.t = 0; K.fn = K.q.fn; K.from = K.turn; K.to = K.turn + K.q.turn; K.q = null; }
+      else if (K.on && !K.q && K.st === 'held' && (K.rest += dt) > KNAP.rest) K.on = false;   // klaar: je staat weer op
+    } else if (K.ph === 'lift' && K.t >= KNAP.lift) { K.ph = 'hit'; K.t = 0; }
+    else if (K.ph === 'hit' && K.t >= KNAP.hit) { K.ph = 'off'; K.t = 0; const f = K.fn; K.fn = null; if (f) f(); }
+    else if (K.ph === 'off' && K.t >= KNAP.off) { K.ph = 'ready'; K.t = 0; K.rest = 0; }
+    return K.body;
+  }
+  knapEnd() { this.knapS = null; this.heldL.rotation.set(0, 0, 0); this.kneel.setEffectiveWeight(0); return 0; }
+  // waar de stenen elkaar raken (voor de splinters)
+  knapPoint(out = new THREE.Vector3()) { return out.copy(this.heldL.getWorldPosition(KV.a)).lerp(this.held.getWorldPosition(KV.b), 0.5); }
+  knapPose(r, side, kw, g) {
+    const K = this.knapS, P = KNAP, ease = (x) => x * x * (3 - 2 * x);
+    // de knie komt op de grond: het model is gemaakt met de knie iets onder nul
+    r.model.position.y += g * P.raise * this.S; r.model.updateMatrixWorld(true);
+    // de rug wat rechter dan in de opname, het hoofd blijft naar de stenen kijken
+    r.bend(r.bone('spine_01'), side, P.back * 0.6 * g); r.bend(r.bone('spine_02'), side, P.back * 0.4 * g); r.bend(r.bone('neck_01'), side, P.nod * g);
+    const up = KV.up.set(0, 1, 0), fwd = KV.fwd.crossVectors(side, up), A = this.legL[0].getWorldPosition(KV.a), B = this.legL[1].getWorldPosition(KV.b);
+    const s = A.distanceTo(B) / 0.343, at = (o, k = s) => KV.t.copy(KV.core).addScaledVector(side, o[0] * k).addScaledVector(up, o[1] * k).addScaledVector(fwd, o[2] * k);
+    const dir = (o, out) => out.set(0, 0, 0).addScaledVector(side, o[0]).addScaledVector(up, o[1]).addScaledVector(fwd, o[2]).normalize();
+    // de kern: op het bovenbeen, vlak achter de knie
+    KV.core.copy(A).lerp(B, P.core[0]).addScaledVector(up, P.core[1] * s).addScaledVector(side, P.core[2] * s);
+    // vuistbijl: de linkerhand draait de kern een stuk verder vóór elke slag
+    if (K.ph === 'lift') K.turn = K.from + (K.to - K.from) * ease(Math.min(1, K.t / (P.lift * 0.8)));
+    this.heldL.rotation.y = K.turn;
+    const tilt = K.ph === 'lift' ? Math.sin(Math.min(1, K.t / P.lift) * Math.PI) * Math.min(1, Math.abs(K.to - K.from)) * 0.25 : 0;
+    this.arms.l.reach(KV.t.copy(KV.core), dir(P.poleL, KV.p), dir([P.faceL[0] - tilt, P.faceL[1], P.faceL[2] + tilt], KV.f), kw);
+    // de klopsteen: uithalen, schuin op de rand slaan, doorzwaaien en terug
+    let h;
+    if (K.ph === 'lift') h = KV.h.copy(at(P.ready)).lerp(KV.h2.copy(at(P.high)), ease(Math.min(1, K.t / P.lift)));
+    else if (K.ph === 'hit') h = KV.h.copy(at(P.high)).lerp(KV.h2.copy(at(P.touch, 1)), Math.min(1, K.t / P.hit) ** 2);
+    else if (K.ph === 'off') {
+      const x = Math.min(1, K.t / P.off);
+      h = x < 0.3 ? KV.h.copy(at(P.touch, 1)).lerp(KV.h2.copy(at(P.past)), x / 0.3) : KV.h.copy(at(P.past)).lerp(KV.h2.copy(at(P.ready)), ease((x - 0.3) / 0.7));
+    } else h = KV.h.copy(at(P.ready));
+    KV.f.copy(KV.core).sub(h).normalize().addScaledVector(up, -0.6).normalize();
+    this.arms.r.reach(h, dir(P.poleR, KV.p), KV.f, kw);
   }
 
   // ---- gooien: bovenhands, met het hele lijf ----

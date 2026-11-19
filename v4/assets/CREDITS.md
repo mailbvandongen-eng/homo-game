@@ -67,6 +67,7 @@ In hetzelfde bestand staan bewegingen uit twee andere bronnen, overgezet met `/r
 
 - **Liggen, zitten en opstaan** (`Sleep_*`, `Sit_*`): opnamen van een echt mens uit de [CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu/), proefpersoon 140, opname 03 en 04 ("Get Up Laying on Side"). De data is vrij te gebruiken; de database is gemaakt met steun van NSF EIA-0196217. Het gaan liggen is dezelfde opname, achteruit afgespeeld.
 - **Eten** (`Consume`): uit de [Universal Animation Library 2](https://quaternius.itch.io/universal-animation-library-2) van **Quaternius** (CC0).
+- **Knielen bij het steen slaan** (`Fixing_Kneeling`): uit de Universal Animation Library van **Quaternius** (CC0). Het gaan knielen, het zitten op één knie en het opstaan zijn die opname. **De armen zijn niet opgenomen:** het spel stuurt de handen zelf naar de stenen (kern op het linkerbovenbeen, klopsteen in de rechterhand; `src/armik.js`). De splinters die wegspringen zijn kleine vormen van het spel zelf (`src/chips.js`), in de kleur van de steensoort.
 
 # Iconen
 

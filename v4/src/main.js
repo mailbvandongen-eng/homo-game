@@ -2,6 +2,7 @@ import * as THREE from '../lib/three.module.js';
 import { rigDetail } from './rig.js';
 import { buildWorld, height, tallGrassAt, blockers, cover, surface, steep, groundAt, riverDist, WIND, PERCHES } from './world.js';
 import { Hominin, Herd, carcass } from './actors.js';
+import { KNAP } from './hominin.js';
 import { Vultures, SKY, FLOCKS, groundBirds, scareBirds } from './vultures.js';
 import { DISCOVERIES, LOOKS, VERDICT, FINDS, placeItems, heldMesh } from './items.js';
 import { Hyenas, Leopard, Throws } from './predators.js';
@@ -32,6 +33,7 @@ import { initCarry } from './systems/carry.js';
 import { Forage } from './forage.js';
 import { initFood } from './systems/food.js';
 import { initCraft } from './systems/craft.js';
+import { Chips } from './chips.js';
 import { initThirst } from './systems/thirst.js';
 import { initKnowledge } from './systems/knowledge.js';
 
@@ -80,6 +82,7 @@ const sound = new Sound();
 const hyenas = new Hyenas(scene, CARCASS, A);
 const leopard = new Leopard(scene, { x: AREA.leopard.tree[0], z: AREA.leopard.tree[1], branchY: AREA.leopard.branchY }, A);
 const throws = new Throws(scene);
+const chips = new Chips(scene);
 const zebras = new Zebras(scene, AREA.zebras.at[0], AREA.zebras.at[1], A);
 const sabres = new Sabres(scene, { x: AREA.sabres.lair[0], z: AREA.sabres.lair[1] }, zebras, A);
 const group = new Group(scene, A);
@@ -126,13 +129,14 @@ function discover(id) {
 const G = {
   state, player, scene, renderer, things, hyenas, sabres, group, beast, shore, forage, fire, herd, sound, closeRadial, openRadial, dropAt, act, sharp, discover, carcassNear, hiveNear, spotOf,
   get predGame() { return predGame; }, get dayP() { return dayP; }, set dayP(v) { dayP = v; }, get danger() { return danger; }, get aim() { return aim; },
+  chips(type, big, dust) { const at = player.knapPoint(); chips.burst(at, new THREE.Vector3(-Math.cos(player.yaw), 0, Math.sin(player.yaw)), type, big, dust); },
   get camYaw() { return cam.yaw; }, get camera() { return camera; }, set camTurn(v) { cam.turnTo = v; }, get clock() { return clock; }, stopWalk() { walkTo = null; }, get walking() { return !!walkTo; },
 };
 let homeShown = false;
 const carry = initCarry(G), { renderHands, freeHand, handsFull, giveHand, renderBag, stow, unstow, makeBag, wearHide, putCloak, cloakTick } = carry;
 Object.assign(G, carry);
 const { eat, crack, crackFruit, cutMeat, heal, heard, tasteAt } = initFood(G);
-const { knap, knapAxe, knapTick, makeStick } = initCraft(G);
+const { knap, knapAxe, knapTick, makeStick, knapStart, axeStart } = initCraft(G);
 const thirst = G.thirst = initThirst(G);
 const { journal, knowledge } = initKnowledge(G, DISC);
 const hints = G.hints = initHints(G), { did, hintTick } = hints;
@@ -369,8 +373,8 @@ function crafts(i) {
   if (!it) return out;
     if ((it === 'bone' && other === 'stone') || (it === 'stone' && other === 'bone')) out.push({ t: 'Kraak het bot', icon: ICON.crack, fn: () => act('Interact', crack) });
     if ((it === 'baobab' && other === 'stone') || (it === 'stone' && other === 'baobab')) out.push({ t: 'Kraak de vrucht', icon: ICON.crack, fn: () => act('Interact', crackFruit) });
-    if (it === 'stone' && other === 'stone') out.push({ t: 'Sla een scherf', icon: ICON.knap, fn: () => act('Interact', () => knap(i)) });
-    if (it === 'stone' && other === 'stone' && ERA.tech && ERA.tech.includes('axe')) out.push({ t: 'Maak een vuistbijl', icon: ICON.axe, q: !state.known.has('axe'), fn: () => act('Interact', () => knapAxe(i)) });
+    if (it === 'stone' && other === 'stone') out.push({ t: 'Sla een scherf', icon: ICON.knap, fn: () => knapStart(i) });
+    if (it === 'stone' && other === 'stone' && ERA.tech && ERA.tech.includes('axe')) out.push({ t: 'Maak een vuistbijl', icon: ICON.axe, q: !state.known.has('axe'), fn: () => axeStart(i) });
     const edge = other === 'flake' || other === 'axe';
     if ((it === 'branch' && edge) || (it === 'flake' && other === 'branch')) out.push({ t: 'Schraap een punt', icon: ICON.point, fn: () => act('Interact', () => makeStick(it === 'branch' ? i : 1 - i)) });
     if (it === 'hide' && edge && !state.bag) out.push({ t: 'Maak een draagvel', icon: ICON.bag, fn: () => act('Interact', () => makeBag(i)) });
@@ -1024,7 +1028,7 @@ function update(dt) {
   const pred = !devFlags.noPred;
   if (pred) hyenas.update(dt, predGame);
   if (pred) leopard.update(dt, predGame, camera);
-  throws.update(dt); knapTick(dt); turnTick(dt); hintTick(dt); questTick(dt); saveTick(dt); trackTargets(dt); aimTick(dt);
+  throws.update(dt); chips.update(dt); knapTick(dt); turnTick(dt); hintTick(dt); questTick(dt); saveTick(dt); trackTargets(dt); aimTick(dt);
   zebras.update(dt, predGame);
   if (pred) sabres.update(dt, predGame);
   group.update(dt, predGame);
@@ -1225,7 +1229,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { vultures, FLOCKS, butterflies, body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
+window.__game = { KNAP, chips, knapStart, axeStart, vultures, FLOCKS, butterflies, body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, beast, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, setSneak, still: () => stillT,
   setCam: (y, p, d) => { cam.yaw = y; cam.pitch = p; if (d) cam.dist = d; }, setZoom: C.setZoom, zoom: () => cam.dist, C, jump, sound, world, weather, menu, closeCard, clockT: () => clock.elapsedTime, actionContext, actionOptions, heard, tasteAt, bodyTap, prim: () => prim, alts: () => alts,
   lookFrom: (pos, look) => { cam.override = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },

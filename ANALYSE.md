@@ -468,3 +468,20 @@ Eerlijk gelabeld in `species.js`. Het nijlpaard is groter gemaakt (schofthoogte 
 
 **Nog niet goed.** De ogen van het nijlpaard staan zoals bij het dier van nu (bij *gorgops* stonden ze hoger). De vlekken van de giraf zijn die van nu.
 De hyena's reageren niet op de nijlpaarden, de neushoorn of de giraffen; alleen de reuzenolifant houdt ze op afstand.
+
+## 20. Fase 5d stap 6 — steen slaan met twee handen (19-11-2026)
+
+**Wat er mis was.** Je sloeg staand, met één hand, in de lucht. Zo maakt niemand een snijsteen.
+
+**Wat er nu is.** Je knielt op je rechterknie. De kern ligt in je linkerhand op je linkerbovenbeen, de klopsteen zit in je rechterhand.
+Elke klap is: uithalen, schuin langs de rand slaan, doorzwaaien. Splinters in de kleur van de steen springen naar rechts weg.
+Zit de kern in je rechterhand, dan wisselen je handen eerst. De vuistbijl kost meer klappen en de kern draait tussendoor.
+
+**Hoe.** `hominin.js`: `strike()` start het knielen, `knapStep()` loopt door de opname (knielen, zitten, opstaan) en door de fasen van de slag,
+`knapPose()` zet de stenen op hun plek. `armik.js` rekent schouder en elleboog terug vanuit de hand. Alle maten staan bovenin in `KNAP`.
+`craft.js` vraagt alleen nog om een klap (`blow`) en krijgt een seintje op het moment dat de stenen elkaar raken.
+
+**Eerlijk.** Alleen het knielen is een opname. De slag met de armen is gestuurd door het spel. De vingers sluiten niet om de steen.
+
+**Bekend.** `v4erectus.js` loopt vast bij "kaarten": die test zoekt nog de kijkkaarten die in stap 1 zijn verdwenen. De delen ervoor (vuistbijl, vuur, braden) kloppen.
+
