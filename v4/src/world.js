@@ -211,6 +211,7 @@ export function leafMat(map, tint) {
 export const TREES = [];
 // boomtoppen waar een gier kan zitten: plek, hoogte, en of er twee naast elkaar passen
 export const PERCHES = [];
+export const NEST = { w: 2.1, y: -0.3 };   // het gierennest: breedte in meters, en hoe ver het in de kruin zakt
 
 export function buildWorld(scene, A) {
   const R = rng(LAND.seed || 7), STEEP = 0.8, OWN = !!LAND.seed;   // een gebied met een eigen land strooit anders
@@ -360,14 +361,17 @@ export function buildWorld(scene, A) {
 
   // ---------- acacia's ----------
   // een schermacacia als model (Sketchfab, zie assets/CREDITS.md), op elke plek herhaald met een eigen maat en draaiing
-  const acaciaSpots = [];
+  const acaciaSpots = [], nestSpots = [];
   function acacia(x, z, s) {
     // evenveel trekkingen als de oude, getekende boom: zo blijft de rest van de wereld op zijn plek
     R(); const nb = 3 + Math.floor(R() * 2); for (let i = 0; i < nb * 35 + 10; i++) R();
     if (steep(x, z) > STEEP) return;   // op een wand staat niets
     acaciaSpots.push([x, z, s * 0.85, (x * 12.9898 + z * 78.233) % 6.28]);
     TREES.push([x, z, s]);
-    PERCHES.push({ x, z, y: height(x, z) - 0.1 + 6.45 * s * 0.85, wide: true, n: 0 });
+    // in één op de vijf grote acacia's ligt een gierennest boven op de kruin
+    const h = Math.abs(Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1, nest = s >= 0.95 && h < 0.2;
+    PERCHES.push({ x, z, y: height(x, z) - 0.1 + 6.45 * s * 0.85, wide: true, n: 0, nest });
+    if (nest) nestSpots.push([x, height(x, z) - 0.1 + 6.45 * s * 0.85, z, h * 31.4]);
     blockers.push({ x, z, r: Math.max(0.3, 0.3 * s) });   // iets ruimer dan de dunne stam: de reus en de dekking rekenen ermee
   }
   for (let i = 0; i < (LAND.acacias ?? 70); i++) { const x = (R() - 0.5) * 2 * WALK, z = (R() - 0.5) * 2 * WALK; if (ok(x, z, 10) && (!OWN || clear(x, z, 5))) acacia(x, z, 0.8 + R() * 0.6); }
@@ -383,6 +387,15 @@ export function buildWorld(scene, A) {
       cell.forEach(([x, z, k, ry], i) => { am.position.set(x, height(x, z) - 0.1, z); am.rotation.set(0, ry, 0); am.scale.setScalar(k); am.updateMatrix(); im.setMatrixAt(i, am.matrix); });
       im.castShadow = true; im.receiveShadow = !leaf; im.computeBoundingSphere(); scene.add(casts(im));
     }
+  });
+  // het nest: een brede krans van takken (model, zie assets/CREDITS.md) met dezelfde krans kleiner erin als bodem
+  if (nestSpots.length) A.models.nest.traverse((o) => {
+    if (!o.isMesh) return;
+    const geo = o.geometry.clone().applyMatrix4(o.matrixWorld), im = new THREE.InstancedMesh(geo, o.material, nestSpots.length * 2);
+    nestSpots.forEach(([x, y, z, ry], i) => {
+      for (let k = 0; k < 2; k++) { am.position.set(x, y + NEST.y - k * 0.05, z); am.rotation.set(0, ry + k * 2, 0); am.scale.set(NEST.w * (k ? 0.5 : 1), NEST.w * (k ? 0.45 : 0.8), NEST.w * (k ? 0.5 : 1)); am.updateMatrix(); im.setMatrixAt(i * 2 + k, am.matrix); }
+    });
+    im.castShadow = true; im.computeBoundingSphere(); scene.add(casts(im));
   });
 
   // ---------- rotsen: gescande granieten keien uit Zuid-Afrika ----------

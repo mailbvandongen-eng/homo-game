@@ -214,13 +214,14 @@ Volgorde van bouwen = volgorde van de tabel. Elke stap wordt eerst getest en dan
   een staande vale gier (een echt model, maar zonder eigen bewegingen). Pikken, stappen, hippen en de kop draaien
   maken we zelf met de botten. De vleugels van het staande model kunnen maar half open; bij opstijgen en landen
   wisselt het spel van model. Testen: `v4gier.js [gebied]` en `v4gierreus.js`.
-- Stap 5, eerlijk over het beeld: er is geen vrij model van een kind met hetzelfde skelet. Het kind is daarom het
-  volwassen model, sterker omgevormd (hoofd 1,4 keer zo groot, korte nek, benen een vijfde korter, smalle schouders,
-  bol buikje, vlakke borst, kleinere kaak) met een eigen huid zonder lichaamshaar, baard en zware wenkbrauwen
-  (`assets/tex/hominin_child.webp`, gemaakt uit de huid van het model met `kidskin.py`). Het gezicht blijft dat van
-  het model. De vlinder is een echt model met een foto van een monarchvlinder op de vleugels (verwant aan de
-  Afrikaanse monarch); er is één soort, en de vleugelslag maken we zelf. Hij gaat op een struik zitten en vliegt op
-  als je dichtbij komt. Testen: `v4kind.js` en `v4vlinder.js [gebied]`.
+- Stap 5, eerlijk over het beeld (bijgewerkt 19-11): het kind is nu een eigen model, een mensenkind van ongeveer vijf
+  jaar uit de gegevens van MakeHuman (CC0), aan het skelet van de volwassene gehangen zodat het alles meedoet. Het is
+  het kind van een moderne mens ("aangepast"), geen kind van *Homo habilis*; het draagt een omslag van leer. Er zijn
+  drie vlinders: scans van echte vlinders (Afrikaanse monarch, een page en een witje; de laatste twee verwant) op het
+  skelet en met de bewegingen van een geanimeerde monarch. Testen: `v4kind.js`, `v4kind2.js` en `v4vlinder.js [gebied]`.
+- Bijgewerkt 19-11, gieren: de staande gier beweegt nu met bewegingen die zijn overgezet van een roodborst en een zwaan
+  (eten met de kop naar de grond, poetsen, roepen, lopen, rusten); de vleugels van dat model kunnen niet open. In één
+  op de vijf grote acacia's ligt een nest van takken (model van een visarendnest, vervanger) waar de gieren slapen.
 - Stap 6, eerlijk over het beeld: het knielen, zitten op één knie en opstaan is een opgenomen beweging
   (`Fixing_Kneeling`). Een opname van steen slaan bestaat niet in een vrije bron: de armen stuurt het spel daarom
   zelf (`armik.js`). De linkerhand houdt de kern op het linkerbovenbeen, de rechterhand haalt uit en slaat schuin

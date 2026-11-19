@@ -1,4 +1,5 @@
 import * as THREE from '../lib/three.module.js';
+import { SkeletonUtils } from '../lib/three-addons.js';
 import { height, WALK, WIND, rng, mergeStatic } from './world.js';
 
 const R = rng(99);
@@ -141,13 +142,17 @@ export class Birds {
 }
 
 // ---------- vlinders bij de struiken ----------
-// Een echt vlindermodel (monarchvlinder, zie assets/CREDITS.md): lijf en twee vleugelparen, voor alle vlinders samen in drie keer getekend.
-// Ze fladderen om hun struik, gaan er af en toe op zitten en vouwen dan hun vleugels boven hun rug. Kom je dichtbij, dan vliegen ze op.
-const SPAN = 0.15 / 0.276;   // spanwijdte 15 cm (het model is 27,6 cm)
+// Drie soorten. Elk is een scan van een echte, geprepareerde vlinder, vastgemaakt aan het skelet van een geanimeerde monarchvlinder
+// (zie assets/CREDITS.md): vliegen, landen, zitten en opvliegen zijn de bewegingen van dat model, niet van ons.
+// Ze fladderen om hun struik en gaan er af en toe op zitten. Kom je dichtbij, dan vliegen ze op.
+// Alleen de vlinders dicht bij je krijgen een model: verder weg zie je ze toch niet.
+const KINDS = [['bf_monarch', 0.15], ['bf_citrus', 0.19], ['bf_witje', 0.12]];   // model en spanwijdte (ruim twee keer echt: anders zie je ze niet)
+const BF_SPAN = 3.27, BF_MAX = 10;   // spanwijdte van het model zelf · zoveel vlinders tegelijk
+const BF_CLIPS = { fly: 'Flight_Loop', land: 'Landing_InPlace', sit: 'Perched_Idle', up: 'Takeoff_InPlace' };
 export class Butterflies {
   // spots: [x, z, struik]: de vlinder zoekt een echt takje of blad van die struik om op te zitten; vindt hij niets, dan zit hij op de grond ernaast
   constructor(scene, spots, A) {
-    this.list = [];
+    this.list = []; this.scene = scene; this.A = A; this.shown = 0; this.lastT = 0;
     const ray = new THREE.Raycaster(), down = new THREE.Vector3(0, -1, 0), from = new THREE.Vector3();
     for (const [x, z, g] of spots) {
       if (g) g.updateMatrixWorld(true);
@@ -160,45 +165,67 @@ export class Butterflies {
           const hit = ray.intersectObject(g, true)[0];
           if (hit && hit.point.y > height(px, pz) + 0.25) { perch = { x: px, y: hit.point.y + 0.015, z: pz }; break; }
         }
-        this.list.push({ x, z, perch, ph: R() * 10, sp: 0.6 + R() * 0.5, sit: 0, t: 4 + R() * 14, px: x, py: 0, pz: z, yaw: R() * 6.28 });
+        this.list.push({ x, z, perch, kind: this.list.length % KINDS.length, ph: R() * 10, sp: 0.6 + R() * 0.5, sit: 0, k: 0, t: 4 + R() * 14, px: x, py: 0, pz: z, yaw: R() * 6.28, e: null });
       }
     }
-    const part = (n) => A.models.butterfly.getObjectByName(n);
-    // de onderkant van een vleugel krijgt geen zonlicht; een beetje eigen licht houdt de tekening zichtbaar als hij ze dichtvouwt
-    const wing = part('wingL').material; wing.emissive = new THREE.Color(0x4a4a4a); wing.emissiveMap = wing.map;
-    this.parts = ['body', 'wingL', 'wingR'].map((n) => { const m = new THREE.InstancedMesh(part(n).geometry, part(n).material, Math.max(1, this.list.length)); m.frustumCulled = false; m.count = 0; scene.add(m); return m; });
-    this.d = new THREE.Object3D(); this.w = new THREE.Object3D(); this.d.add(this.w); this.lastT = 0;
+    // de bewegingen horen bij het skelet: alle soorten delen ze
+    const all = A.anims[KINDS[0][0]] || [];
+    this.clips = Object.fromEntries(Object.entries(BF_CLIPS).map(([k, n]) => [k, all.find((c) => c.name.includes(n))]));
+    for (const [name] of KINDS) A.models[name].traverse((o) => { if (o.isMesh) { o.material.side = THREE.DoubleSide; o.material.roughness = 1; o.material.metalness = 0; } });
+    this.free = KINDS.map(() => []); this.near = [];
+  }
+  // een model uit de voorraad, of een nieuw
+  take(kind) {
+    const e = this.free[kind].pop(); if (e) { e.g.visible = true; return e; }
+    const [name, span] = KINDS[kind], m = SkeletonUtils.clone(this.A.models[name]), g = new THREE.Group();
+    m.rotation.y = Math.PI / 2; m.scale.setScalar(span / BF_SPAN); g.add(m); this.scene.add(g);   // de kop van het model wijst naar +x, in het spel naar -z
+    m.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
+    const mixer = new THREE.AnimationMixer(m), acts = {};
+    for (const [k, c] of Object.entries(this.clips)) if (c) { acts[k] = mixer.clipAction(c); if (k === 'land' || k === 'up') { acts[k].setLoop(THREE.LoopOnce); acts[k].clampWhenFinished = true; } }
+    return { g, mixer, acts, cur: null, ct: 0 };
+  }
+  play(e, name, fade = 0.15) {
+    if (e.cur === name || !e.acts[name]) return;
+    const a = e.acts[name], old = e.acts[e.cur]; a.reset().play();
+    if (old && fade) a.crossFadeFrom(old, fade); else if (old) old.stop();
+    e.cur = name; e.ct = 0;
   }
   update(t, night, focus) {
     const dt = Math.min(0.1, Math.max(0, t - this.lastT)); this.lastT = t;
-    const [body, wl, wr] = this.parts, d = this.d, w = this.w;
-    let n = 0;
+    const near = this.near; near.length = 0;
     if (night < 0.5) for (const b of this.list) {
       const far = Math.abs(b.x - focus.x) + Math.abs(b.z - focus.z);
       if (far > 40) continue;
       // vliegen en zitten wisselen elkaar af; wie te dichtbij komt, jaagt de vlinder op
       b.t -= dt;
-      const near = Math.hypot(b.px - focus.x, b.pz - focus.z) < 1.6;
-      if (b.sit > 0 && (b.t <= 0 || near)) { b.sit = 0; b.t = 9 + R() * 14; }
-      else if (b.sit === 0 && b.t <= 0 && !near) { b.sit = 0.01; b.t = 6 + R() * 9; }
+      const close = Math.hypot(b.px - focus.x, b.pz - focus.z) < 1.6;
+      if (b.sit > 0 && (b.t <= 0 || close)) { b.sit = 0; b.t = 9 + R() * 14; }
+      else if (b.sit === 0 && b.t <= 0 && !close) { b.sit = 0.01; b.t = 6 + R() * 9; }
       const s = t * b.sp + b.ph;
       const fx = b.x + Math.sin(s * 0.9) * 1.6 + Math.sin(s * 2.3) * 0.4, fz = b.z + Math.cos(s * 0.7) * 1.6, fy = height(fx, fz) + 0.8 + Math.sin(s * 3.1) * 0.35;
-      const sx = b.perch.x, sz = b.perch.z, sy = b.perch.y;
-      b.sit = b.sit > 0 ? Math.min(1, b.sit + dt / 1.6) : 0;
-      const landed = b.sit >= 1, k = b.sit * b.sit * (3 - 2 * b.sit);
-      const x = fx + (sx - fx) * k, y = fy + (sy - fy) * k, z = fz + (sz - fz) * k;
-      if (!landed && dt > 0 && Math.hypot(x - b.px, z - b.pz) > 0.001) b.yaw = Math.atan2(b.px - x, b.pz - z);   // de kop van het model wijst naar -z
-      b.px = x; b.py = y; b.pz = z;
-      // vleugelslag: in de vlucht snel van schuin omlaag tot hoog boven de rug; zittend dicht, en af en toe traag open
-      const beat = Math.sin(t * 34 * (0.8 + b.sp * 0.3) + b.ph * 7);
-      const a = landed ? 1.42 - Math.max(0, Math.sin(t * 1.1 + b.ph)) * 1.0 : 0.45 + beat * 0.85;
-      d.position.set(x, y, z); d.rotation.set(landed ? 0 : 0.3, b.yaw, 0, 'YXZ'); d.scale.setScalar(SPAN); d.updateMatrixWorld(true);
-      body.setMatrixAt(n, d.matrixWorld);
-      w.rotation.z = a; w.updateMatrixWorld(true); wl.setMatrixAt(n, w.matrixWorld);
-      w.rotation.z = -a; w.updateMatrixWorld(true); wr.setMatrixAt(n, w.matrixWorld);
-      n++;
+      // k: 0 = op zijn vliegbaan, 1 = op zijn zitplek; hij glijdt ernaartoe en er weer vandaan
+      b.k = b.sit > 0 ? Math.min(1, b.k + dt / 1.6) : Math.max(0, b.k - dt / 1.1);
+      if (b.sit > 0) b.sit = Math.max(0.01, b.k);
+      const landed = b.sit >= 1, k = b.k * b.k * (3 - 2 * b.k);
+      const x = fx + (b.perch.x - fx) * k, y = fy + (b.perch.y - fy) * k, z = fz + (b.perch.z - fz) * k;
+      if (!landed && dt > 0 && Math.hypot(x - b.px, z - b.pz) > 0.001) b.yaw = Math.atan2(b.px - x, b.pz - z);
+      b.px = x; b.py = y; b.pz = z; b.d = Math.hypot(x - focus.x, z - focus.z);
+      if (b.d < 30) near.push(b);
     }
-    for (const m of this.parts) { m.count = n; m.instanceMatrix.needsUpdate = true; }
+    // de dichtstbijzijnde krijgen een model, de rest geeft het zijne terug
+    near.sort((p, q) => p.d - q.d); near.length = Math.min(near.length, BF_MAX);
+    for (const b of this.list) if (b.e && !near.includes(b)) { b.e.g.visible = false; b.e.mixer.stopAllAction(); b.e.cur = null; this.free[b.kind].push(b.e); b.e = null; }
+    for (const b of near) {
+      const landed = b.sit >= 1, fresh = !b.e, e = b.e || (b.e = this.take(b.kind));
+      if (fresh) this.play(e, landed ? 'sit' : 'fly', 0);
+      else if (b.sit === 0) { if (e.cur === 'sit' || e.cur === 'land') this.play(e, 'up', 0.08); else if (e.cur === 'up' && e.ct > 0.55) this.play(e, 'fly', 0.12); }
+      else if (b.k > 0.7 && e.cur === 'fly') this.play(e, 'land', 0.2);
+      else if (e.cur === 'land' && e.ct > 1.3) this.play(e, 'sit', 0.25);
+      else if (e.cur === 'up') this.play(e, 'fly', 0.12);
+      e.ct += dt; e.mixer.update(dt * (e.cur === 'fly' ? 0.8 + b.sp * 0.3 : 1));
+      e.g.position.set(b.px, b.py, b.pz); e.g.rotation.set(0.15 * (1 - b.k), b.yaw, 0, 'YXZ');
+    }
+    this.shown = near.length;
   }
 }
 

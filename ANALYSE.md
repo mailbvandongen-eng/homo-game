@@ -508,3 +508,28 @@ De doorwaadbare plek zie je als een lichte band tussen twee donkere stukken.
 **Eerlijk.** Waden is geen opname maar de loopbeweging, trager, met zelf gestuurde armen. Het water spat niet op en maakt geen kringen om je benen.
 Dieren en groepsgenoten kennen de regel niet; zij komen niet in het diepe omdat hun routes aan de zuidoever blijven.
 
+
+## 22. Vier oude punten opgeruimd: gier, nest, vlinders, kind (19-11-2026)
+
+Uit eerdere stappen stond nog open wat we zelf hadden gemaakt of omgevormd. Dat is vervangen door echte bronnen.
+
+- **De staande gier.** Het model heeft botten maar geen bewegingen. De eigen bewegingen (pikken, hippen, kop draaien)
+  zijn eruit. Er staan nu acht opgenomen bewegingen in `assets/anims/griffon.json`: staan, lopen, drie keer eten met
+  de kop naar de grond en roepen van een roodborst; poetsen en rusten van een zwaan. Ze zijn overgezet op de botten
+  van de gier (`/root/tools/homo-assets/scripts/rtb.js`). Gemeten in het spel: de kop gaat bij het eten van 0,69 naar
+  0,31 m. Eerlijk: het zijn bewegingen van andere vogels, en de vleugels van dit model kunnen niet open.
+- **Het nest.** In één op de vijf grote acacia's ligt een nest van takken boven op de kruin (`world.js`, `NEST`).
+  Het model is een nest van een visarend (vervanger). Gieren vliegen er voor de nacht twee keer zo ver voor om;
+  de eerste zit in het nest, de tweede ernaast.
+- **De vlinders.** Drie soorten in plaats van één: scans van een echte Afrikaanse monarch, een page en een witje
+  (de laatste twee verwant). Alle drie hangen aan het skelet van één geanimeerde monarch; vliegen, landen, zitten en
+  opvliegen zijn de bewegingen van dat model.
+- **Het kind.** Geen omgevormde volwassene meer. Het is een eigen model van een kind van ongeveer vijf jaar, gemaakt
+  met de gegevens van MakeHuman (CC0). Een script zet het in de rusthouding van de volwassene en hangt het aan
+  hetzelfde skelet (`kid_build.py`, `kid_bind.py`, daarna `glbrest.mjs`: Blender schuift bij het wegschrijven de
+  draaiing van enkele botten naar hun kind, en dan vallen de bewegingen om). Zo doet het kind alles wat de groten
+  doen: lopen, rennen, zitten, slapen, eten, wijzen. Eerlijk: het is het kind van een moderne mens. Een poging om het
+  hoofd ouder te maken (lager voorhoofd, mond naar voren) zag er onnatuurlijk uit en is niet gebruikt.
+  Het draagt een omslag van leer om de heupen.
+
+Testen: `v4gier.js`, `v4gier2.js`, `v4gier3.js`, `v4nest.js`, `v4vlinder.js`, `v4kind.js`, `v4kind2.js`.

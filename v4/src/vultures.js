@@ -1,14 +1,15 @@
 import * as THREE from '../lib/three.module.js';
-import { height, PERCHES } from './world.js';
+import { height, PERCHES, NEST } from './world.js';
 import { Rig } from './rig.js';
 
 // Gieren. Overdag cirkelen ze boven een karkas en landen ze erbij om te eten; 's nachts zitten ze in een boom.
 // - ze stijgen halverwege de ochtend op, als de lucht warm wordt, en zoeken voor de schemer een boom
 // - ligt er vlees en is er niemand in de buurt, dan landen ze allemaal en eten ze het langzaam op
 // - bij oude botten landt er maar één
-// - kom je dichtbij, dan hippen ze weg en wachten ze; een steen jaagt ze de lucht in. Daarna komen ze terug
-// In de lucht is het een vliegend model (met vleugelslag). Op de grond en in de boom is het een staande vale gier:
-// dat model heeft botten maar geen bewegingen, dus het pikken, stappen en hippen maken we hier zelf.
+// - kom je dichtbij, dan lopen ze weg en wachten ze; kom je nog dichterbij of gooi je een steen, dan vliegen ze op. Daarna komen ze terug
+// In de lucht is het een vliegend model (met vleugelslag). Op de grond en in de boom is het een staande vale gier.
+// Dat model heeft botten maar geen eigen bewegingen: het lopen, eten, rondkijken en poetsen is overgezet van
+// opgenomen bewegingen van een andere vogel (assets/anims/griffon.json, zie CREDITS.md).
 
 // wat de gieren van de wereld weten: het uur van de dag en waar jij bent (main.js vult dit elk beeld in)
 export const SKY = { dayP: 0.12, x: 0, z: 0, sneak: false, sound: null };
@@ -16,8 +17,9 @@ export const FLOCKS = [];
 const RISE = 0.2, ROOST = 0.62;          // tussen deze uren zijn ze in de lucht
 const TALL = 0.055, FOOT = 0.54;         // maat van de staande gier, en hoe ver zijn tenen onder zijn midden zitten
 const SPAN = [0.62, 1.1];                // maat van de vliegende gier: echt (bij de grond) en iets groter (hoog, zodat je ze van ver ziet)
-const BONES = { body: 'Bone_14', tail: 'Bone_007_18', back: 'Bone_001_7', neck: 'Bone_002_6', head: 'Bone_003_2', wl: 'Bone_030_10', wr: 'Bone_032_13', ll: 'Bone_012_30', lr: 'Bone_013_43' };
-const UP = new THREE.Vector3(0, 1, 0), SIDE = new THREE.Vector3(), FWD = new THREE.Vector3();
+const WALK = 0.45, FLEE = 0.8;           // zo snel loopt hij, en zo snel als hij voor je wegloopt (meter per tel)
+const STRIDE = 0.28;                     // zo ver komt hij met één rondje van de loopbeweging: zo glijden de poten niet
+const EATS = ['eat1', 'eat2', 'eat3'];
 const toward = (v, to, step) => (Math.abs(to - v) <= step ? to : v + Math.sign(to - v) * step);
 const turnTo = (yaw, to, step) => { const d = Math.atan2(Math.sin(to - yaw), Math.cos(to - yaw)); return yaw + Math.max(-step, Math.min(step, d)); };
 const hear = (b, r) => SKY.sound && Math.hypot(SKY.x - b.x, SKY.z - b.z) < r;
@@ -39,7 +41,7 @@ export class Vultures {
       rig.play('Armature', { speed: 0 }); g.rotation.order = 'YXZ'; g.visible = on;
       scene.add(g);
       const b = { flock: this, i, fr: rig, gr: null, state: 'fly', goal: 'soar', x, y: this.center.y, z, yaw: 0, a: i / n * 6.28, r: 7 + i * 2.5, r0: 7 + i * 2.5, h0: 18 + i * 3, v: 3 + i * 0.25,
-        cx: x, cz: z, flap: 3 + i * 3.1, burst: 0, wait: 0, anchor: null, final: null, e: 0, w: 0, hy: 0, step: 0, hopY: 0, sub: 'eat', ec: 1 + i, down: false, flare: 8 + i * 5, shy: 0, idle: 0, to: null, wing: 0 };
+        cx: x, cz: z, flap: 3 + i * 3.1, burst: 0, wait: 0, anchor: null, final: null, e: 0, sub: 'eat', ec: 1 + i, down: false, flare: 8 + i * 5, shy: 0, idle: 0, to: null, call: 0, clip: '', pick: i };
       b.y += b.h0;
       this.birds.push(b);
     }
@@ -64,11 +66,13 @@ export class Vultures {
   // de dichtstbijzijnde boomtop waar nog plaats is; staat er geen boom in de buurt, dan slapen ze op de grond
   perchFor(b) {
     let best = null, bd = 170;
-    for (const p of PERCHES) { if (p.n >= (p.wide ? 2 : 1)) continue; const d = Math.hypot(p.x - this.center.x, p.z - this.center.z); if (d < bd) { bd = d; best = p; } }
+    // een boom met een nest trekt meer dan een kale kruin: daarvoor vliegen ze twee keer zo ver
+    for (const p of PERCHES) { if (p.n >= (p.wide ? 2 : 1)) continue; const d = Math.hypot(p.x - this.center.x, p.z - this.center.z) * (p.nest ? 0.5 : 1); if (d < bd) { bd = d; best = p; } }
     if (!best) { const s = this.spot(b, 4); return s && { ...s, roost: true }; }
-    const off = best.wide ? (best.n ? -1 : 1) * 1.1 : 0, a = best.x * 1.3;
+    // de eerste gaat in het nest zitten, de tweede ernaast op de kruin
+    const off = best.nest ? (best.n ? 1.7 : 0) : best.wide ? (best.n ? -1 : 1) * 1.1 : 0, a = best.x * 1.3;
     best.n++;
-    return { x: best.x + Math.cos(a) * off, z: best.z + Math.sin(a) * off, y: best.y, perch: best, roost: true };
+    return { x: best.x + Math.cos(a) * off, z: best.z + Math.sin(a) * off, y: best.y + (best.nest && !off ? NEST.y + 0.12 : 0), perch: best, roost: true };
   }
   free(b) { if (b.anchor && b.anchor.perch) b.anchor.perch.n--; b.anchor = null; }
   // een plek op de grond rond het karkas (niet in het water)
@@ -88,37 +92,44 @@ export class Vultures {
   ground(b) {
     if (!b.gr) {
       const rig = b.gr = new Rig(this.A, 'griffon', { scale: TALL, facing: -2.62 });
-      rig.model.position.y = FOOT; rig.B = {};
-      for (const k in BONES) rig.B[k] = rig.hold(rig.bone(BONES[k]));
+      rig.model.position.y = FOOT;
       this.scene.add(rig.root);
     }
     return b.gr;
   }
   settle(b, state) {
     const A = b.anchor;
-    Object.assign(b, { state, x: A.x, y: A.y, z: A.z, final: null, hopY: 0, e: 0, w: 0.9, hy: 0, idle: 0, shy: 0 });
+    Object.assign(b, { state, x: A.x, y: A.y, z: A.z, final: null, e: 0, idle: 0, shy: 0, call: 0, ec: 1, down: false });
     b.fr.root.visible = false; this.ground(b).root.visible = this.on;
     if (state === 'ground') { b.sub = 'walk'; b.to = A.eat; b.home = A; }
   }
   takeoff(b, wait = 0) {
     if (hear(b, 45)) SKY.sound.flutter();
     this.free(b);
-    b.a = -b.yaw; b.r = 2; b.cx = b.x - Math.cos(b.a) * b.r; b.cz = b.z - Math.sin(b.a) * b.r; b.y += 0.3 + b.hopY;
-    Object.assign(b, { state: 'fly', goal: 'soar', burst: 7, final: null, wait, hopY: 0 });
+    b.a = -b.yaw; b.r = 2; b.cx = b.x - Math.cos(b.a) * b.r; b.cz = b.z - Math.sin(b.a) * b.r; b.y += 0.3;
+    Object.assign(b, { state: 'fly', goal: 'soar', burst: 7, final: null, wait });
     if (b.gr) b.gr.root.visible = false;
     b.fr.root.visible = this.on;
   }
   // een steen raakt deze gier: hij vliegt op, de anderen schrikken mee
   hit(b) { if (hear(b, 60)) SKY.sound.squawk(); this.takeoff(b, 25); this.scareAt(b.x, b.z, 7); }
-  scareAt(x, z, r) { for (const b of this.birds) if (b.state === 'ground' && Math.hypot(b.x - x, b.z - z) < r) this.hop(b, x, z, 6); }
-  // weghippen van een punt, met de vleugels half open
-  hop(b, fx, fz, shy) {
-    let a = Math.atan2(b.x - fx, b.z - fz);
+  // een steen vlakbij: wie er bovenop staat vliegt op, de rest loopt weg
+  scareAt(x, z, r) { for (const b of this.birds) if (b.state === 'ground') { const d = Math.hypot(b.x - x, b.z - z); if (d < 2.5) this.takeoff(b, 20); else if (d < r) this.flee(b, x, z, 6); } }
+  // weglopen van een punt
+  flee(b, fx, fz, shy) {
+    const a = Math.atan2(b.x - fx, b.z - fz);
     for (const da of [0, 0.9, -0.9]) {
-      const x = b.x + Math.sin(a + da) * 7, z = b.z + Math.cos(a + da) * 7;
-      if (height(x, z) > 0.2) { b.sub = 'hop'; b.to = { x, z }; b.shy = Math.max(b.shy, shy); b.idle = 0; return; }
+      const x = b.x + Math.sin(a + da) * 6, z = b.z + Math.cos(a + da) * 6;
+      if (height(x, z) > 0.2) { b.sub = 'flee'; b.to = { x, z }; b.shy = Math.max(b.shy, shy); b.idle = 0; return; }
     }
     this.takeoff(b, 15);
+  }
+  // een beweging starten (elke gier begint op een ander moment, zodat ze niet gelijk op bewegen)
+  act(b, name, speed = 1, fade = 0.4) {
+    const rig = b.gr;
+    if (b.clip !== name) { b.clip = name; rig.play(name, { fade, speed }); const a = rig.current; if (a) a.time = (b.i * 0.37 + b.pick * 0.61) % 1 * a.getClip().duration * (name === 'idle' || name === 'rest' ? 1 : 0); }
+    else if (rig.current) rig.current.timeScale = speed;
+    return rig.current ? rig.current.getClip().duration / speed : 1;
   }
 
   update(dt, t) {
@@ -131,7 +142,7 @@ export class Vultures {
     for (const b of this.birds) {
       const active = this.active(b.i);
       b.wait -= dt;
-      if (b.state === 'roost') { if (active) this.takeoff(b, 6); else this.roost(b, dt, t); }
+      if (b.state === 'roost') { if (active) this.takeoff(b, 6); else this.roost(b, dt); }
       else if (b.state === 'fly') this.fly(b, dt, t, active, canLand && b.i < want, src);
       else if (this.walk(b, dt, t, active && b.i < want, src) && src) eating++;
     }
@@ -182,60 +193,59 @@ export class Vultures {
     b.fr.update(0);
   }
 
-  // op de grond: lopen, eten, opkijken, weghippen. Geeft terug of hij nu eet
+  // op de grond: lopen, eten, opkijken, weglopen. Geeft terug of hij nu eet
   walk(b, dt, t, stay, src) {
     const C = this.center, px = SKY.x - b.x, pz = SKY.z - b.z, pd = Math.hypot(px, pz);
     if (!stay || Math.hypot(b.home.cx - C.x, b.home.cz - C.z) > 4) { this.takeoff(b, 4); return false; }
     if (pd < 4.5) { this.takeoff(b, 20); return false; }
-    if (pd < (SKY.sneak ? 5.5 : 9.5) && b.sub !== 'hop') this.hop(b, SKY.x, SKY.z, 3);
+    if (pd < (SKY.sneak ? 5.5 : 9.5) && b.sub !== 'flee') this.flee(b, SKY.x, SKY.z, 3);
     if (b.state !== 'ground') return false;
-    let eT = 0, wT = 0, hyT = 0, eats = false;
-    if (b.sub === 'walk' || b.sub === 'hop') {
-      const hop = b.sub === 'hop', dx = b.to.x - b.x, dz = b.to.z - b.z, d = Math.hypot(dx, dz), sp = hop ? 3.4 : 0.9;
-      b.yaw = turnTo(b.yaw, Math.atan2(dx, dz), dt * (hop ? 9 : 4));
-      if (d > 0.2) { const s = Math.min(d, sp * dt); b.x += dx / d * s; b.z += dz / d * s; b.step += dt * (hop ? 9 : 7); }
-      else if (hop) { b.sub = 'wait'; b.idle = 0; }
-      else { b.sub = b.to === b.home.eat ? 'eat' : 'wait'; b.idle = 0; }
-      b.hopY = hop ? Math.abs(Math.sin(b.step)) * 0.32 : 0; wT = hop ? 1 : 0;
+    let eats = false;
+    if (b.sub === 'walk' || b.sub === 'flee') {
+      const dx = b.to.x - b.x, dz = b.to.z - b.z, d = Math.hypot(dx, dz), sp = b.sub === 'flee' ? FLEE : WALK;
+      b.yaw = turnTo(b.yaw, Math.atan2(dx, dz), dt * 4);
+      if (d > 0.2) { const s = Math.min(d, sp * dt); b.x += dx / d * s; b.z += dz / d * s; this.act(b, 'walk', sp / STRIDE, 0.25); }
+      else { b.sub = b.sub === 'walk' && b.to === b.home.eat ? 'eat' : 'wait'; b.idle = 0; b.ec = 0.6; b.down = false; }
     } else if (b.sub === 'wait') {
-      // op afstand wachten tot je weg bent
-      b.yaw = turnTo(b.yaw, Math.atan2(px, pz), dt * 2); b.shy -= dt; b.idle += dt; b.hopY = 0; hyT = Math.sin(t * 0.7 + b.i) * 0.5;
+      // op afstand wachten tot je weg bent: rondkijken, en af en toe de veren poetsen
+      b.yaw = turnTo(b.yaw, Math.atan2(px, pz), dt * 2); b.shy -= dt; b.idle += dt;
+      if ((b.ec -= dt) < 0) { b.down = !b.down; b.ec = b.down ? this.act(b, 'groom', 0.9) : 5 + (b.pick++ * 3.7 + b.i) % 6; }
+      this.act(b, b.down ? 'groom' : 'idle', b.down ? 0.9 : 1);
       if (b.shy <= 0 && pd > 14 && Math.hypot(SKY.x - b.home.eat.x, SKY.z - b.home.eat.z) > 11) { b.sub = 'walk'; b.to = b.home.eat; }
       else if (b.idle > 45) { this.takeoff(b, 15); return false; }
     } else {
-      // eten: een paar tellen rukken met de kop omlaag, dan even opkijken
-      b.yaw = turnTo(b.yaw, Math.atan2(C.x - b.x, C.z - b.z), dt * 2); b.hopY = 0;
-      if ((b.ec -= dt) < 0) { b.down = !b.down; b.ec = b.down ? (src ? 2.5 + Math.random() * 3 : 1.5 + Math.random() * 1.5) : (src ? 0.8 + Math.random() * 1.6 : 2 + Math.random() * 4); }
-      eT = b.down ? 1 : 0; eats = b.down;
-      if (!b.down) hyT = Math.sin(t * 1.3 + b.i * 2) * 0.7;
-      // af en toe ruzie om het beste stuk: vleugels uit
-      if (src && (b.flare -= dt) < 0) { b.flare = 10 + Math.random() * 16; b.wing = 1.3; if (hear(b, 35)) SKY.sound.squawk(0.5); }
-      if (b.wing > 0) { b.wing -= dt; wT = 1; eT = 0.2; }
+      // eten: een hap (de kop omlaag, rukken, weer omhoog), dan even opkijken
+      b.yaw = turnTo(b.yaw, Math.atan2(C.x - b.x, C.z - b.z), dt * 2);
+      if (b.call > 0) { b.call -= dt; this.act(b, 'call', 1.1, 0.25); }
+      else {
+        if ((b.ec -= dt) < 0) {
+          b.down = !b.down;
+          if (b.down) { b.bite = EATS[b.pick++ % 3]; b.ec = this.act(b, b.bite, 1, 0.3) * (src ? 2 : 1); }
+          else b.ec = src ? 0.8 + Math.random() * 1.6 : 2 + Math.random() * 4;
+        }
+        this.act(b, b.down ? b.bite : 'idle', 1, 0.3); eats = b.down;
+        // af en toe ruzie om het beste stuk: hij strekt zijn nek en krijst
+        if (src && (b.flare -= dt) < 0) { b.flare = 10 + Math.random() * 16; b.call = this.act(b, 'call', 1.1, 0.25); b.down = false; b.ec = 0.5; if (hear(b, 35)) SKY.sound.squawk(0.5); }
+      }
     }
     b.y = height(b.x, b.z);
-    b.e += (eT - b.e) * Math.min(1, dt * 5); b.w += (wT - b.w) * Math.min(1, dt * 6); b.hy += (hyT - b.hy) * Math.min(1, dt * 4);
-    this.pose(b, dt, b.e + (b.e > 0.8 ? Math.sin(t * 9 + b.i) * 0.07 : 0), b.sub === 'walk' ? Math.sin(b.step) : 0, 0);
+    b.e += ((eats ? 1 : 0) - b.e) * Math.min(1, dt * 5);
+    this.place(b, dt);
     return eats;
   }
 
-  roost(b, dt, t) {
-    // in de boom: stil, de kop tussen de schouders. Ver weg hoeft dat niet elk beeld opnieuw
-    b.w += (0 - b.w) * Math.min(1, dt * 3);
+  roost(b, dt) {
+    // in de boom: rustig zitten en af en toe de veren poetsen. Ver weg hoeft dat niet elk beeld opnieuw
     if (b.idle > 3 && Math.hypot(SKY.x - b.x, SKY.z - b.z) > 90) return;
     b.idle += dt;
-    this.pose(b, dt, 0, 0, 0.5 + 0.5 * Math.sin(t * 0.21 + b.i * 2));
+    if ((b.ec -= dt) < 0) { b.down = !b.down; b.ec = b.down ? this.act(b, 'groom', 0.8) : 9 + (b.pick++ * 5.3 + b.i * 2) % 14; }
+    this.act(b, b.down ? 'groom' : 'rest', b.down ? 0.8 : 1, 0.6);
+    this.place(b, dt);
   }
 
-  // de stand van de staande gier: e = kop omlaag (eten), step = poten, sleep = kop ingetrokken
-  pose(b, dt, e, step, sleep) {
-    const rig = b.gr, B = rig.B, g = rig.root;
-    g.position.set(b.x, b.y + b.hopY, b.z); g.rotation.y = b.yaw; g.updateMatrixWorld(true);
+  place(b, dt) {
+    const rig = b.gr, g = rig.root;
+    g.position.set(b.x, b.y, b.z); g.rotation.y = b.yaw;
     rig.update(dt);
-    const side = rig.side(SIDE), fwd = FWD.set(Math.sin(b.yaw), 0, Math.cos(b.yaw));
-    rig.bend(B.body, side, 0.75 * e); rig.bend(B.tail, side, 0.75 * e);
-    rig.bend(B.back, side, 0.4 * e); rig.bend(B.neck, side, 0.4 * e + 0.4 * sleep);
-    rig.bend(B.head, UP, b.hy);
-    rig.bend(B.wl, fwd, 0.9 * b.w); rig.bend(B.wr, fwd, -0.9 * b.w);
-    rig.bend(B.ll, side, -0.6 * step); rig.bend(B.lr, side, 0.6 * step);
   }
 }

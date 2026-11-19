@@ -11,7 +11,7 @@ export const HOME = AREA.home;   // de slaapboom van dit gebied
 const WHO = ERA.group || [
   { id: 'tor', name: 'Tor', k: 0.99, spot: [2.6, 1.2], grey: true },
   { id: 'kem', name: 'Kem', k: 0.92, spot: [-2.2, 2.4], tint: 0xe8d2c0 },
-  { id: 'ibo', name: 'Ibo', k: 0.6, spot: [0.9, -2.8], child: true, tint: 0xfff0e0 },
+  { id: 'ibo', name: 'Ibo', k: 0.6, spot: [0.9, -2.8], child: true },
 ];
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const RAD = Math.PI / 180, UP = new THREE.Vector3(0, 1, 0), tQ = new THREE.Quaternion(), tN = new THREE.Vector3();
@@ -54,18 +54,17 @@ export class Group {
     this.forT = 25;      // tot de volgende zelf eten gaat zoeken
     this.point = null;   // { m, x, z }: dit groepslid wijst naar die plek (zie systems/missions.js)
     for (const w of WHO) {
-      // hetzelfde model als de hoofdpersoon, met een eigen lijf: een kind heeft een groot hoofd, korte benen en een gladde huid,
-      // een vrouw smallere schouders en geen baard
+      // hetzelfde model als de hoofdpersoon, met een eigen lijf: een vrouw heeft smallere schouders en geen baard.
+      // Het kind is een eigen model (een echt kinderlijf) aan hetzelfde skelet, zodat het alles kan wat de groten kunnen.
       const shape = BODY.shape && BODY.shape + (w.child ? '_child' : w.woman ? '_woman' : '');
-      const rig = new Rig(A, 'hominin', { scale: BODY.height / 162 * w.k, shape, tall: BODY.height * w.k });
+      const rig = new Rig(A, w.child ? 'child' : 'hominin', { scale: BODY.height / 162 * w.k, shape, tall: BODY.height * w.k });
       rig.model.traverse((o) => {
         if (!o.isMesh) return;
-        const hair = /beard|hair|transparency/i.test(o.material.name);
+        const hair = /beard|hair|transparency|short02|brow|lash/i.test(o.material.name);
         o.material = o.material.clone();
-        // een kind heeft geen baard en geen zware wenkbrauwen, wel haar
-        if (hair && ((w.child && /beard|Male_Flat/i.test(o.material.name)) || (w.woman && /beard/i.test(o.material.name)))) o.visible = false;
+        if (hair && w.woman && /beard/i.test(o.material.name)) o.visible = false;
+        else if (w.child) { if (/KidBody/.test(o.material.name)) o.material.color.setRGB(1.3, 1.22, 1.2); else if (/wrap/.test(o.material.name)) o.material.color.setRGB(0.72, 0.66, 0.6); }   // de huid van het kind bij die van de groten laten passen; de omslag is oud leer
         else if (hair && w.grey) o.material.color.setRGB(2.4, 2.4, 2.5);
-        else if (hair && w.child) o.material.color.multiplyScalar(0.7);   // kinderhaar is dun: iets donkerder, anders schijnt de huid erdoor
         else if (!hair && w.tint) o.material.color.multiply(new THREE.Color(w.tint));
         else if (!hair && w.grey) o.material.color.multiplyScalar(0.86);
       });
