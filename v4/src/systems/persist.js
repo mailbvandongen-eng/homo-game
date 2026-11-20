@@ -15,7 +15,7 @@ export function initPersist(G) {
       food: Math.round(state.food), water: Math.round(state.water), health: Math.round(state.health), group: Math.round(state.group),
       hands: state.hands, rock: state.rock, bag: state.bag, cloak: state.cloak, knapped: !!state.knapped,
       known: [...state.known], found: [...state.found], finds: [...state.finds], rockKnown: [...state.rockKnown], given: [...state.given],
-      fire: G.fire ? G.fire.snapshot() : undefined,
+      fire: G.fire ? G.fire.snapshot() : undefined, camp: state.camp, campDay: state.campDay, left: state.left,
       missions: [...mission.done], mission: mission.cur ? mission.cur.id : null, active: mission.active.map((e) => e.m.id), over: mission.over, past: state.past,
     };
   }
@@ -43,6 +43,10 @@ export function initPersist(G) {
     if (Array.isArray(d.past)) state.past = d.past.filter((x) => typeof x === 'string');
     if (d.arrived) title(ERA.species, AREA.name, AREA.intro || '', 6);   // net aangekomen in een nieuw gebied
     mission.over = !!d.over;
+    // waar het kamp nu ligt, en wat de groep kaal achterliet
+    state.campDay = Math.min(state.day, Math.max(1, num(d.campDay, 1)));
+    state.left = Array.isArray(d.left) ? d.left.filter((q) => Array.isArray(q) && q.length === 3 && q.every(Number.isFinite)).slice(-6) : [];
+    G.trek.jump(G.trek.CAMPS[d.camp] ? d.camp : 0);
     if (G.fire) G.fire.restore(d.fire);
     player.pos.set(HOME.x + 2, 0, HOME.z + 4); player.vel.set(0, 0, 0);
     season(); renderHands(); renderBag(); if (state.cloak) putCloak();

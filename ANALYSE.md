@@ -533,3 +533,35 @@ Uit eerdere stappen stond nog open wat we zelf hadden gemaakt of omgevormd. Dat 
   Het draagt een omslag van leer om de heupen.
 
 Testen: `v4gier.js`, `v4gier2.js`, `v4gier3.js`, `v4nest.js`, `v4vlinder.js`, `v4kind.js`, `v4kind2.js`.
+
+## 23. Fase 5c stap 2 — de groep trekt rond (19-11-2026)
+
+**Wat er was.** De groep zat het hele spel op één plek. Het land droogde in een kring om het kamp uit, maar niemand ging weg.
+
+**Wat er nu is.** Elk gebied heeft drie kampplekken (`camps` in het gebiedsbestand), elk met een eigen omgeving: eigen
+rotsen, bomen en keien (`site`, `stones`). `systems/trek.js` weet waar het kamp nu ligt en verhuist alles wat erbij hoort.
+
+- **Wanneer.** Na twee dagen op een plek (`STAY`), bij het wakker worden. Niet als het gaat regenen (dan groeit alles
+  terug), niet met een zieke, niet als een missie op deze plek moet gebeuren, en alleen als jij bij de groep sliep.
+- **Zonder woorden.** De voorste draait zich naar de nieuwe plek, wijst en roept. Dan loopt de groep in een rij: wie goed
+  kan lopen voorop, dan het kind, dan de oudste. De voorste houdt in als de rij uit elkaar valt. Blijf je achter, dan roept
+  hij opnieuw, uit de richting waar de rij loopt. De pijl aan de schermrand wijst naar het nieuwe kamp. Bij aankomst klinkt
+  het geluid van thuiskomen.
+- **Het vuur gaat mee.** Wat brandt of gloeit, draagt de voorste als brandend hout. Op de oude plek blijft een koude
+  kring van keien met as liggen. Op de nieuwe plek brandt het vuur klein verder.
+- **Het land.** Wat de groep achterlaat blijft kaal tot de regen komt (`state.left`); rond het nieuwe kamp hangt alles nog.
+- **Slapen.** De slaapplekken worden op de nieuwe plek opnieuw gekozen (`group.beds`): rond het vuur als dat er is,
+  anders op de vlakste vrije kant.
+- **Bewaren.** Kampplek, dag van aankomst en de kale plekken worden bewaard. Trekt de groep weg omdat ze honger heeft,
+  dan vind je haar terug op de volgende plek.
+- **De weg.** Rechtuit lopen ging mis: onder de rokende berg liep de voorste tegen de rotswand en bleef daar staan.
+  Nu zoekt het spel vooraf een route over een raster van het land (`systems/route.js`): om rotsen en stammen heen,
+  en door water alleen als het niet anders kan.
+- **Vangnet.** Komt de rij ergens niet doorheen, dan staat de groep na een ruime tijd vanzelf op de nieuwe plek.
+
+Het werk stond sinds 18-11 op een aparte branch, van vóór de tekstloze herstelronde. Het is op de huidige stand gezet;
+de opbreekkaart en de titel "Nieuw kamp" zijn vervallen. De namen en beschrijvingen van de plekken staan nog in de
+gebiedsbestanden (de controles in de testmodus gebruiken ze), maar het spel toont ze niet.
+
+Testen: `v4trek.js [gebied] [snel]` (opbreken, wijzen, lopen, aankomen, vuur, slaapplekken, nacht, bewaren, kwijtraken).
+

@@ -15,6 +15,25 @@ export const savanne = {
     { kind: 'kop', at: [140, 34], r: 13, h: 3, rocks: 7 },
     { kind: 'kop', at: [-60, 130], r: 16, h: 4.5, rocks: 9 },
   ],
+  // De groep trekt rond (zie systems/trek.js): is het land rond het kamp leeg, dan loopt ze naar de volgende plek en na de laatste weer naar de eerste.
+  // at: de slaapplek · say: hoe de plek heet in zinnen (de …, bij …, naar …, onder …, rond …) · go: wat je 's ochtends leest als de groep opbreekt
+  // via: punten waar de groep langs loopt · stones: keien bij het kamp · site: wat er alleen op deze plek staat (rocks, flora, props)
+  camps: [
+    { id: 'boom', name: 'De slaapboom', intro: 'De oude acacia midden op de vlakte. Na de regen hangen de struiken hier weer vol.',
+      go: 'Tussen de keien valt niets meer te halen. Tor wijst terug over de vlakte, naar de oude slaapboom. Sinds de regen groeit daar weer van alles.' },
+    { id: 'baobab', name: 'De oude baobab', at: [-118, -119], via: [[-40, -100]],
+      say: ['de oude baobab', 'bij de baobab', 'naar de baobab', 'onder de baobab', 'rond de baobab'],
+      look: { name: 'De oude baobab', look: 'Een boom zo dik dat je hele groep erachter past. Vlak erachter staat de rotswand, die de wind tegenhoudt. Hier slaapt je groep nu.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
+      intro: 'Een reus van een boom onder de rotswand. Hier heeft nog niemand geplukt.',
+      go: 'De struiken rond de slaapboom zijn kaal. Tor pakt zijn stok en wijst naar het westen, naar de rotswand. Daar staat een baobab, ouder dan iemand weet.',
+      stones: [[-112, -114, 'lava'], [-121, -111, 'quartz'], [-110, -124, 'sand']] },
+    { id: 'keien', name: 'De keienkop', at: [150, 40], via: [[-40, -100], [60, -10]],
+      say: ['de keienkop', 'bij de keien', 'naar de keien', 'tussen de keien', 'rond de keien'],
+      look: { name: 'De keienkop', look: 'Een bult met grijze keien, groter dan jij. Vanaf hier zie je de rivier en alles wat eruit komt drinken. Hier slaapt je groep nu.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
+      intro: 'Grote keien op een bult, met de rivier vlakbij. Wat komt drinken, zie je hier van ver.',
+      go: 'Ook bij de baobab raakt het eten op. De groep steekt de hele vlakte over, naar het oosten. Bij de rivier ligt een bult met keien zo groot als een olifant.',
+      stones: [[155, 36, 'sand'], [146, 46, 'lava'], [157, 44, 'quartz']] },
+  ],
   trees: [[-8, -14, 1.75], [14, -20, 1], [-30, 10, 1.1], [40, 50, 1.3]],   // vaste acacia's: [x, z, maat]
   tallGrass: [[20, -5, 11], [44, 10, 9], [60, -25, 12], [-15, 20, 8], [85, 30, 10], [-60, 15, 10], [10, -55, 9]],   // hier kun je je verstoppen: [x, z, straal]
   carcass: { x: -70, z: -78 },             // het oude karkas waar de hyena's op afkomen
@@ -38,7 +57,7 @@ export const savanne = {
   redBerries: [[9, 1], [-25, 30], [55, -40]],
   berries: [[-25, -43], [24, -32], [70, 15, 4], [-50, -40], [95, -60, 5], [-92, 2, 6]],   // dichtbij klein, ver weg rijk
   // wat het land zelf geeft: vruchtbomen [x, z, soort], oude karkassen met merg in de botten, knolplanten (graven met een stok)
-  fruitTrees: [[-19, 32, 'fig'], [62, 60, 'fig'], [30, -58, 'baobab'], [-31, -50, 'baobab'], [86, -18, 'baobab']],
+  fruitTrees: [[-19, 32, 'fig'], [62, 60, 'fig'], [30, -58, 'baobab'], [-31, -50, 'baobab'], [86, -18, 'baobab'], [-125, -120, 'baobab', 1.5], [157, 49, 'fig', 1.2]],
   oldCarcasses: [[50, -74], [-46, 62], [104, 34]],
   tubers: [[20, 6], [-21, -36], [50, -26], [-52, -15], [8, 30]],
   leaves: [-6, 40, -55],                   // bitterblad groeit alleen bij het water, op deze x

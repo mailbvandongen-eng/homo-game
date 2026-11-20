@@ -448,7 +448,9 @@ export function buildWorld(scene, A) {
     }
   }
   // keien die het gebied zelf op een vaste plek legt (een windscherm bij het kamp): [x, z, maat]
-  for (const [x, z, sz] of LAND.rocksAt || []) rock(x, z, sz, RK, FAM);
+  // Wat bij de andere kampplekken hoort (zie 'camps' in het gebiedsbestand) komt steeds als laatste: zo blijft de rest van de wereld op zijn plek.
+  const SITES = (AREA.camps || []).map((c) => c.site || {});
+  for (const [x, z, sz] of [...(LAND.rocksAt || []), ...SITES.flatMap((s) => s.rocks || [])]) rock(x, z, sz, RK, FAM);
   const dm = new THREE.Object3D();
   function instance(v, spots, shadow = true, CELL = 220) {
     for (const part of v.parts) for (const cell of perCell(spots, CELL)) {
@@ -506,7 +508,7 @@ export function buildWorld(scene, A) {
     return { parts, size };
   }
   const leafy = (v, tint) => ({ ...v, parts: v.parts.map((q) => (q.mat.transparent || q.mat.alphaTest > 0 ? { ...q, mat: leafMat(q.mat.map, tint || 0xd8e0c0), leaf: true } : q)) });
-  for (const F of LAND.flora || []) {
+  for (const F of [...(LAND.flora || []), ...SITES.flatMap((s) => s.flora || [])]) {
     const V = F.each ? variantsOf(A.models[F.model]).map((v) => leafy(v, F.tint)) : [whole(A.models[F.model], F.tint)];
     if (F.bark) for (const v of V) v.parts = v.parts.map((q) => (q.leaf ? q : tinted([q], F.bark)[0]));
     const spots = V.map(() => []), mine = [], [t0, t1] = F.tall, gap = F.gap ?? 3, block = F.block ?? 0;
@@ -544,7 +546,7 @@ export function buildWorld(scene, A) {
     V.forEach((v, i) => spots[i].length && instance(v, spots[i], F.shadow !== false, F.each ? 110 : 70));
   }
   // blikvangers: één groot stuk rots op een vaste plek (een wand achter het kamp). Je loopt er niet doorheen.
-  for (const P of LAND.props || []) {
+  for (const P of [...(LAND.props || []), ...SITES.flatMap((s) => s.props || [])]) {
     const v = variantsOf(A.models[P.model])[P.pick || 0], k = P.tall / v.size.y, ry = P.ry || 0, [x, z] = P.at, parts = tinted(v.parts, P.tint);
     for (const q of parts) {
       const m = new THREE.Mesh(q.geo, q.mat); m.position.set(x, height(x, z) - (P.sink || 0.08) * P.tall, z); m.rotation.y = ry; m.scale.setScalar(k);

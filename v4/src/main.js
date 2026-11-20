@@ -29,6 +29,7 @@ import { Weather } from './systems/weather.js';
 import { initHints } from './systems/hints.js';
 import { initBody } from './systems/body.js';
 import { initPersist } from './systems/persist.js';
+import { initTrek } from './systems/trek.js';
 import { initCarry } from './systems/carry.js';
 import { Forage } from './forage.js';
 import { initFood } from './systems/food.js';
@@ -111,6 +112,7 @@ const state = {
   food: 70, water: 85, health: 100, sick: 0, hands: [null, null], rock: [null, null], rockKnown: new Set(), known: new Set(), found: new Set(),
   started: false, collapsed: 0, sensing: false, finds: new Set(), carcassMeat: 1,
   past: [], group: 50, day: 1, sleeping: 0, slept: false, brought: {}, given: new Set(), bag: null, cloak: false, starve: 0, rainDay: 0, lost: false,
+  camp: 0, campDay: 1, left: [],   // op welke kampplek de groep zit, sinds welke dag, en wat ze kaal achterliet: [x, z, straal]
 };
 const verdict = { get: (it) => (state.known.has(it) ? VERDICT[it] : null) };
 
@@ -141,6 +143,7 @@ const thirst = G.thirst = initThirst(G);
 const { journal, knowledge } = initKnowledge(G, DISC);
 const hints = G.hints = initHints(G), { did, hintTick } = hints;
 const { has, carries, MISSIONS, NEXT, mission, offerOf, accept, complete, missionInfo, endCard, travel, questTick, murmur } = G.missions = initMissions(G);
+const trek = G.trek = initTrek(G);
 const { season, newDay, groupLeaves } = initSeason(G);
 player.rig.always = true;   // de speler beweegt elk beeld, ook als de camera even ver weg staat
 const weather = new Weather(scene, AREA.weather);   // wolken, wind en regen   // het droge seizoen en de nieuwe dag
@@ -241,7 +244,7 @@ let layT = 0;
 function groupTakes(dt) {
   layT -= dt; if (layT > 0) return;
   layT = 1.5;
-  if (state.sleeping > 0 || state.lost) return;
+  if (state.sleeping > 0 || state.lost || trek.active) return;
   const t = things.find((x) => x.kind === 'pick' && !x.gone && ['meat', 'honey', 'hide', 'bone', 'egg', 'berry', 'fish', 'tuber', 'fig', 'baobab'].includes(x.item) && Math.hypot(x.x - HOME.x, x.z - HOME.z) < 6);
   if (t && share(t.item)) removeThing(t);
 }
@@ -257,6 +260,7 @@ function wake() {
     // de groep was vertrokken: dagen later vind je ze terug, mager en met lege handen
     state.lost = false; state.day++; state.group = 30; state.hands = [null, null]; renderHands();
     state.health = Math.min(state.health, 45); state.food = 30; state.sick = 0;
+    trek.lost();
     player.pos.set(HOME.x + 2, 0, HOME.z + 4); player.vel.set(0, 0, 0);
     newDay('lost');
     return;
@@ -619,7 +623,7 @@ function event(name, k) {
 const predGame = { camp: HOME, campSafe: 11, campMeat: 0, lit: false, player, state, sound, toast, need, murmur, carries, discover, bite, event, hyenas, night: 0, things, throws, group, leopard, sabres, carcass: CARCASS, drop: dropAtPos, removeThing, giveHand, renderHands, hurt, kemHelps, foodSpot, groupTake, dryPath, shield: false, quake: (v) => { cam.shake = Math.max(cam.shake, v); } };
 
 // ---------- wat kun je aantikken? ----------
-const LOOK_TARGETS = [{ look: 'carcass', x: CARCASS.x, z: CARCASS.z }, { look: 'tree', x: HOME.x, z: HOME.z }];
+const LOOK_TARGETS = [{ look: 'carcass', x: CARCASS.x, z: CARCASS.z }, { look: 'tree', get x() { return HOME.x; }, get z() { return HOME.z; } }];   // het kamp, waar het nu ook ligt
 if (AREA.outcrop) LOOK_TARGETS.push({ look: 'outcrop', x: AREA.outcrop.at[0], z: AREA.outcrop.at[1], high: height(...AREA.outcrop.at) + 1.6 });
 Object.assign(LOOKS, AREA.looks);
 function targetPos(t) {
@@ -896,12 +900,12 @@ function atHome(dt) {
   if (!state.started || state.sleeping > 0 || state.collapsed > 0) return;
   const dHome = Math.hypot(player.pos.x - HOME.x, player.pos.z - HOME.z);
   giveT -= dt;
-  if (dHome < GIVE_R && giveT <= 0 && !player.once && !state.lost) {
+  if (dHome < GIVE_R && giveT <= 0 && !player.once && !state.lost && !trek.active) {
     const it = handOver();
     if (it) { giveT = 3.5; act('Interact', () => give(it)); return; }
   }
   // 's nachts stil bij de anderen staan: je kruipt erbij en slaapt
-  if (dHome < 9 && predGame.night > 0.5 && stillT > 4 && giveT <= 0) sleep();
+  if (dHome < 9 && predGame.night > 0.5 && stillT > 4 && giveT <= 0 && !trek.active) sleep();
 }
 const bodySignals = initBody(G);
 let ctx = null, btnMode = '';
@@ -1031,7 +1035,7 @@ function update(dt) {
   throws.update(dt); chips.update(dt); knapTick(dt); turnTick(dt); hintTick(dt); questTick(dt); saveTick(dt); trackTargets(dt); aimTick(dt);
   zebras.update(dt, predGame);
   if (pred) sabres.update(dt, predGame);
-  group.update(dt, predGame);
+  group.update(dt, predGame); trek.update(dt);
   enc.update(dt, predGame);
   beast.update(dt, predGame, t);
   if (shore) shore.update(dt, predGame);
@@ -1131,7 +1135,7 @@ function update(dt) {
   bodySignals(dt, sick, hd, weary, breath);
   if (player.sneaking && !coverTold && player.nearCover) { coverTold = true; murmur('Gebukt achter een rots of struik ben je onzichtbaar voor wie aan de andere kant staat.', 6); }
   // moet je naar huis (avond, nacht, of eten voor de groep in je handen), dan wijst een pijl aan de schermrand de weg
-  const homeward = ['evening', 'night'].includes(partOfDay(dayP)) || !!handOver() || state.sensing;
+  const homeward = ['evening', 'night'].includes(partOfDay(dayP)) || !!handOver() || state.sensing || trek.active;
   homeShown = state.started && hd > 22 && homeward && state.sleeping <= 0 && state.collapsed <= 0;
   $('homeEdge').style.display = homeShown ? 'flex' : 'none';
   if (hd > 22) {
@@ -1229,7 +1233,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { W: { FORD, LAKE, depth, riverZ }, walk: (x, z) => { walkTo = { x, z, fn() {}, reach: 0.8 }; }, stopWalk: () => { walkTo = null; }, get walking() { return !!walkTo; }, KNAP, chips, knapStart, axeStart, vultures, FLOCKS, butterflies, body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
+window.__game = { trek, W: { FORD, LAKE, depth, riverZ }, walk: (x, z) => { walkTo = { x, z, fn() {}, reach: 0.8 }; }, stopWalk: () => { walkTo = null; }, get walking() { return !!walkTo; }, KNAP, chips, knapStart, axeStart, vultures, FLOCKS, butterflies, body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, beast, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, setSneak, still: () => stillT,
   setCam: (y, p, d) => { cam.yaw = y; cam.pitch = p; if (d) cam.dist = d; }, setZoom: C.setZoom, zoom: () => cam.dist, C, jump, sound, world, weather, menu, closeCard, clockT: () => clock.elapsedTime, actionContext, actionOptions, heard, tasteAt, bodyTap, prim: () => prim, alts: () => alts,
   lookFrom: (pos, look) => { cam.override = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },

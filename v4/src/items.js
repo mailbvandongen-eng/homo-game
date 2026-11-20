@@ -370,6 +370,7 @@ export function placeItems(scene, A, area) {
     });
     for (let i = 0; i < area.outcrop.n; i++) { const a = i * 2.4 + 0.6, d = 6.5 + (i % 3) * 1.6; stones.push([ox + Math.cos(a) * d, oz + Math.sin(a) * d, type]); }
   }
+  for (const c of area.camps || []) stones.push(...(c.stones || []));   // keien bij de andere kampplekken
   // en overal in het land ligt hier en daar een losse kei: je hoeft er nooit ver voor te lopen
   const fixed = stones.length, SR = rng(431), kinds = area.riverRock || ['lava', 'sand', 'quartz', 'sand'];
   for (let n = 0, tries = 0; n < 64 && tries < 4000; tries++) {

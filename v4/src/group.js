@@ -53,6 +53,7 @@ export class Group {
     this.list = []; this.away = false; this.t = 0;
     this.forT = 25;      // tot de volgende zelf eten gaat zoeken
     this.point = null;   // { m, x, z }: dit groepslid wijst naar die plek (zie systems/missions.js)
+    this.trek = null;    // { path, i, wait, line }: de groep loopt naar een nieuw kamp (zie systems/trek.js)
     for (const w of WHO) {
       // hetzelfde model als de hoofdpersoon, met een eigen lijf: een vrouw heeft smallere schouders en geen baard.
       // Het kind is een eigen model (een echt kinderlijf) aan hetzelfde skelet, zodat het alles kan wat de groten kunnen.
@@ -82,9 +83,10 @@ export class Group {
   }
   // De slaapplekken liggen vast. Eén houdt de wacht en zit rechtop; de anderen liggen op hun zij, het kind tegen een volwassene aan.
   // Is er een vuurplaats, dan liggen ze in een boog om het vuur, met de buik naar de warmte. Anders liggen ze bij de stam of op de open plek.
-  beds() {
+  beds(h) {
     const L = this.list, guard = L[1], child = L.find((m) => m.child), lie = L.filter((m) => m !== guard && m !== child);
-    const F = AREA.fire && { x: AREA.fire.hearth[0], z: AREA.fire.hearth[1] };
+    if (h) this.hearth = { x: h[0], z: h[1] };   // de vuurplaats verhuist mee met het kamp (zie systems/trek.js)
+    const F = this.hearth || (AREA.fire && { x: AREA.fire.hearth[0], z: AREA.fire.hearth[1] });
     const trunk = !F && blockers.find((b) => !b.beast && dist(b, HOME) < 1.2);
     const dir = (a) => [Math.sin(a), Math.cos(a)];
     const plan = (a) => {
@@ -134,6 +136,25 @@ export class Group {
     if (!m || !game.dryPath(m, k)) return;
     k.fetch = m; m.state = 'out'; m.job = { x: k.x, z: k.z, kill: k }; m.t = 100;
   }
+  // De groep breekt op en loopt in een rij naar het volgende kamp. Wie goed kan lopen gaat voorop, dan het kind, dan de oudste.
+  // path: de punten waarlangs ze lopen (het laatste is het nieuwe kamp); fire: de voorste draagt gloeiend hout mee.
+  startTrek(path, wait, fire, done) {
+    const line = [...this.list].sort((a, b) => (a.able ? 0 : a.child ? 1 : 2) - (b.able ? 0 : b.child ? 1 : 2));
+    for (const m of this.list) { if (m.job && m.job.kill && m.job.kill.fetch === m) m.job.kill.fetch = null; this.setCarry(m, null); m.own = false; m.state = 'trek'; m.busy = 0; }
+    if (fire) this.setCarry(line[0], 'torch');
+    this.trek = { path, i: 0, wait, wait0: wait, line, done }; this.away = false;
+  }
+  // iedereen staat meteen op zijn plek in het kamp (verdergaan na bewaren, of de groep die je na dagen terugvindt)
+  settle() {
+    this.trek = null; this.away = false;
+    for (const m of this.list) { if (m.state === 'trek') this.setCarry(m, null); m.x = HOME.x + m.spot[0]; m.z = HOME.z + m.spot[1]; m.yaw = Math.atan2(-m.spot[0], -m.spot[1]) + Math.PI; m.speed = 0; m.state = 'idle'; m.t = 3; }
+  }
+  endTrek() {
+    const T = this.trek; if (!T) return;
+    this.trek = null; this.away = false;
+    for (const m of this.list) { this.setCarry(m, null); m.state = 'toSpot'; }
+    if (T.done) T.done();
+  }
   helper(p) { const k = this.list[1]; return k.state === 'follow' && !k.carry && dist(k, p) < 9 ? k : null; }
 
   // Iets aan de groep geven. Geeft terug hoeveel de groep ervan opknapt (of null als ze het niet willen).
@@ -171,7 +192,8 @@ export class Group {
     this.t += dt;
     // kom je van ver terug, dan rent de kleinste je tegemoet
     if (dHome > 32) this.away = true;
-    const greet = this.away && dHome < 17 && night < 0.6;
+    const T = this.trek; if (T) { T.wait -= dt; this.forT = 20; }
+    const greet = !T && this.away && dHome < 17 && night < 0.6;
     if (greet) { this.away = false; game.event('home'); }
     // overdag zoekt wie kan lopen zelf eten in de buurt: om de beurt gaat er één op pad
     this.forT -= dt;
@@ -199,13 +221,27 @@ export class Group {
       if (m.sick > 0) { m.sick -= dt; if (m.sick <= 0) game.murmur(`${m.name} is weer opgeknapt. Maar het duurde lang…`, 5); }
       let tx = 0, tz = 0, spd = 0, face = null;
       // wijzen doet hij als je bij hem staat, en alleen naar iets dat niet al voor je voeten ligt
-      const P = this.point, pt = P && P.m === m && m.state === 'idle' && m.busy <= 0 && m.sick <= 0 && d < 8 && Math.hypot(P.x - p.x, P.z - p.z) > 3 ? P : null;
+      const P = this.point; let pt = P && P.m === m && m.state === 'idle' && m.busy <= 0 && m.sick <= 0 && d < 8 && Math.hypot(P.x - p.x, P.z - p.z) > 3 ? P : null;
       const sleepy = night > 0.6, eating = m.busy > 0 || m.eatT > 0;
       // waar hij nu hoort te liggen of te zitten: 's nachts op zijn slaapplek, ziek op zijn eigen plek
       const B = sleepy ? m.bed : m.sick > 0 ? m.seat : null;
-      if (m.carry && dist(m, HOME) < (m.own ? 5 : 11)) { game.event(m.own ? 'gift' : 'kemgift', m.carry); this.setCarry(m, null); m.own = false; }
+      if (m.carry && m.state !== 'trek' && dist(m, HOME) < (m.own ? 5 : 11)) { game.event(m.own ? 'gift' : 'kemgift', m.carry); this.setCarry(m, null); m.own = false; }
       if (greet && m.child && m.sick <= 0 && !DOWN.includes(m.state)) { m.state = 'greet'; m.t = 8; }
       switch (m.state) {
+        case 'trek': {
+          const n = T.line.indexOf(m), end = T.path[T.path.length - 1];
+          if (T.wait > 0) { face = { x: end[0], z: end[1] }; if (!n && T.wait < T.wait0 - 1.2) pt = face; break; }   // nog even: ze kijken waar ze heen gaan, en de voorste wijst de weg
+          if (!n) {
+            // de voorste loopt de punten af, en houdt in als de rij uit elkaar valt
+            const q = T.path[T.i], gd = Math.hypot(q[0] - m.x, q[1] - m.z), last = T.line[T.line.length - 1];
+            if (gd < (T.i === T.path.length - 1 ? 3 : 2.2)) { if (++T.i >= T.path.length) { this.endTrek(); break; } }
+            else { tx = (q[0] - m.x) / gd; tz = (q[1] - m.z) / gd; spd = dist(m, last) > 5 + T.line.length * 2.6 ? 0.7 : 1.85; }
+          } else {
+            const a = T.line[n - 1], gd = dist(m, a) || 0.01;
+            if (gd > 2.1) { tx = (a.x - m.x) / gd; tz = (a.z - m.z) / gd; spd = Math.min(3.2, 0.5 + (gd - 2.1) * 1.6); } else face = { x: end[0], z: end[1] };
+          }
+          break;
+        }
         case 'idle':
           if (B && !eating) { m.state = 'toSpot'; break; }
           if (d < 6 || eating || (m.calling && d < 30)) face = p;
@@ -267,6 +303,8 @@ export class Group {
       if (spd > 0) m.yaw = turn(m.yaw, Math.atan2(tx, tz), dt * 5);
       else if (face) m.yaw = turn(m.yaw, Math.atan2(face.x - m.x, face.z - m.z), dt * 3);
       m.x += Math.sin(m.yaw) * m.speed * dt; m.z += Math.cos(m.yaw) * m.speed * dt;
+      // onderweg lopen ze om bomen en keien heen
+      if (m.state === 'trek') for (const b of blockers) { const bd = Math.hypot(m.x - b.x, m.z - b.z), r = b.r + 0.45; if (b.r > 0 && bd < r && bd > 0.001) { m.x = b.x + (m.x - b.x) / bd * r; m.z = b.z + (m.z - b.z) / bd * r; } }
       // Wie ligt, ligt met zijn hele lijf op de grond: op een helling helt hij mee.
       const A = m.at, lw = m.state === 'rest' ? 1 : m.state === 'down' ? 1 - Math.max(0, m.t) / m.len : m.state === 'up' ? Math.max(0, m.t) / m.len : 0;
       m.lieW = lw;
@@ -280,7 +318,7 @@ export class Group {
       if (m.calling === 'shiver' && m.speed < 0.2 && !lw) m.g.rotateZ(Math.sin(performance.now() * 0.046) * 0.018);
       if (m.state === 'down' || m.state === 'up') { /* de beweging is gestart bij de overgang en loopt één keer */ }
       else if (m.state === 'rest') R.play(A.pose.loop, { fade: 0.8, speed: A.pose.slow });
-      else if (m.speed > 2) R.play('Jog_Fwd_Loop', { fade: 0.25, speed: m.speed / (3 * m.k) });
+      else if (m.speed > 2 * Math.min(1, m.k * 1.3)) R.play('Jog_Fwd_Loop', { fade: 0.25, speed: m.speed / (3 * m.k) });
       else if (m.speed > 0.2) R.play('Walk_Loop', { fade: 0.3, speed: m.speed / (1.25 * m.k) });
       else if (m.busy > 0 || m.state === 'gather') R.play('Interact', { fade: 0.25 });
       else if (m.eatT > 0) R.play('Consume', { fade: 0.3 });   // hij eet wat hij kreeg

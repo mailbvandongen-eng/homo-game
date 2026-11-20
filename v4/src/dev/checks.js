@@ -50,6 +50,18 @@ function checkConfig(out) {
       if (area.ma > s.ma[0] || area.ma < s.ma[1]) add('fout', w + `${s.name} (${s.latin}) leefde ${s.ma.join('–')} miljoen jaar geleden, niet ${area.ma}`);
       if (!s.regions.includes(area.region)) add('fout', w + `${s.name} (${s.latin}) kwam niet voor in ${area.region}`);
     }
+    // kampplekken: de groep trekt rond, dus elke plek moet compleet zijn
+    const camps = area.camps || [];
+    if (camps.length < 2) add('let op', w + 'maar één kampplek: de groep trekt hier niet rond');
+    camps.forEach((c, i) => {
+      const cw = w + `kampplek '${c.id || i}': `;
+      if (!c.id || !c.name || !c.intro || !c.go) add('fout', cw + 'id, naam, intro of opbreektekst ontbreekt');
+      if (i && !pair(c.at)) add('fout', cw + 'geen plek (at)');
+      if (i && !(c.look && c.look.name && c.look.look)) add('fout', cw + 'geen tekst voor als je naar het kamp kijkt (look)');
+      if (c.say && c.say.length !== 5) add('fout', cw + "'say' moet vijf vormen hebben");
+      if (i && pair(c.at) && camps.some((d, j) => j < i && Math.hypot((j ? d.at[0] : area.home.x) - c.at[0], (j ? d.at[1] : area.home.z) - c.at[1]) < 80)) add('let op', cw + 'ligt dichter dan 80 m bij een andere kampplek');
+      for (const q of c.via || []) if (!pair(q)) add('fout', cw + "'via' klopt niet");
+    });
     if (area.next && !allAreas().some((x) => x.area.id === area.next)) add('fout', w + `volgend gebied '${area.next}' bestaat niet`);
     if (area.next && !allAreas().some((x) => x.area.id === area.next && x.area.playable)) add('let op', w + `volgend gebied '${area.next}' is nog niet speelbaar`);
     const ms = missionsOf(area);

@@ -14,7 +14,8 @@ const lam = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const ORDER = ['gazelle', 'nest', 'snake', 'bees', 'nest', 'strangers', 'bees'];   // nesten en bijen komen het vaakst langs
 const FOOD = ['meat', 'honey', 'egg', 'bone'];   // wat vreemden van de grond willen oprapen
-const AVOID = [[HOME.x, HOME.z, 38], [...AREA.sabres.lair, 30], [...AREA.leopard.tree, 25], [AREA.carcass.x, AREA.carcass.z, 22]];   // slaapboom, katten, luipaard, karkas
+const FIXED = [[...AREA.sabres.lair, 30], [...AREA.leopard.tree, 25], [AREA.carcass.x, AREA.carcass.z, 22]];   // katten, luipaard, karkas
+const avoid = () => [[HOME.x, HOME.z, 38], ...FIXED];   // en het kamp, waar dat nu ook ligt
 
 function haloTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 64;
@@ -40,7 +41,7 @@ export class Encounters {
     const lim = WALK - 15;
     if (Math.abs(x) > lim || Math.abs(z) > lim) return false;
     if (!water && riverDist(x, z) < 12) return false;
-    for (const [ax, az, r] of AVOID) if (Math.hypot(x - ax, z - az) < r) return false;
+    for (const [ax, az, r] of avoid()) if (Math.hypot(x - ax, z - az) < r) return false;
     for (const b of blockers) if (Math.hypot(x - b.x, z - b.z) < b.r + 1.5) return false;
     return true;
   }

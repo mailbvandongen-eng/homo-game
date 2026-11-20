@@ -5,7 +5,11 @@ export const $ = (id) => document.getElementById(id);
 document.body.classList.add('era-' + ERA.id);   // de vensters volgen het tijdperk (zie index.html)
 // Een later tijdperk heeft een andere groep: namen uit oudere teksten worden hier vervangen (zie 'words' in het tijdperkbestand).
 // Een gebied kan daar zijn eigen woorden bij zetten (het kamp ligt niet overal onder een boom).
-const WORDS = [...(ERA.words || []), ...(AREA.words || [])].map(([a, b]) => [new RegExp('\\b' + a + '\\b', 'g'), b]);
+// De groep trekt rond (zie systems/trek.js): elk kamp kan zijn eigen woorden hebben. Die gaan dan voor die van het gebied.
+const rx = (list) => (list || []).map(([a, b]) => [new RegExp('\\b' + a + '\\b', 'g'), b]);
+const NAMES = rx(ERA.words);
+let WORDS = [...NAMES, ...rx(AREA.words)];
+export function placeWords(list) { WORDS = [...NAMES, ...rx(list || AREA.words)]; }
 export const say = (s) => (s ? WORDS.reduce((t, [a, b]) => t.replace(a, b), s) : s);
 
 let signT = 0;

@@ -24,6 +24,27 @@ export const hoog = {
     sky: { tint: [0.92, 0.98, 1.06] },
   },
   textures: ['aerial_grass_rock_diff', 'grass_ground_diff', 'mossy_rock_diff'],
+  // De groep trekt rond (zie systems/trek.js en de uitleg in savanne.js): van de bult naar de voet van de heuvel, dan naar de zwarte rotsen. Het vuur gaat mee.
+  camps: [
+    { id: 'bult', name: 'De bult in het gras', intro: 'De bult met de rij keien en de kromme jeneverbes. Na de regen staat alles weer vol.',
+      go: 'Bij de zwarte rotsen is het gras kaal gegeten. Oru wijst terug naar het westen, naar de bult met de oude jeneverbes.', via: [[40, -30], [-40, -44]] },
+    { id: 'heuvel', name: 'Onder de heuvel', at: [-52, -112],
+      look: { name: 'Het kamp', look: 'Een kom in het gras aan de voet van de heuvel. Aan de kant van de wind liggen keien, erachter staan jeneverbessen. Hier slaapt de groep nu.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
+      intro: 'Een kom aan de voet van de heuvel, uit de wind. De gazellen grazen hier vlakbij.',
+      go: 'Rond de bult is niets meer te vinden. Oru wikkelt het gloeiende hout in bladeren en wijst naar de heuvel. Aan de voet ligt een kom uit de wind, dicht bij de gazellen.',
+      stones: [[-49, -116, 'sand'], [-56, -108, 'sand'], [-54, -118, 'sand']],
+      site: {
+        rocks: [[-42, -117.5, 1.9], [-40.6, -113, 2.3], [-41.2, -108, 2.1], [-43.4, -103.6, 1.7]],
+        flora: [{ model: 'juniper_w', n: 0, tall: [5, 9], block: 0.5, twigs: true, home: 0, at: [[-58.5, -119, 7.6], [-61, -112.5, 6.6], [-59, -105.5, 8.2]] }] } },
+    { id: 'glas', name: 'De zwarte rotsen', at: [120, 40],
+      look: { name: 'Het kamp', look: 'Een vlakke plek in het gras, een steenworp van de zwarte rotsen. Het glas glimt in de zon. Hier slaapt de groep nu.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
+      intro: 'Het kamp ligt nu vlak bij het zwarte glas. Goede steen is hier geen dag lopen meer.',
+      go: 'Ook onder de heuvel raakt het land leeg. De groep trekt ver naar het oosten, langs de rivier. Bij de zwarte rotsen ligt de beste steen van het land.',
+      stones: [[124, 36, 'sand'], [116, 45, 'sand'], [125, 46, 'sand']],
+      site: {
+        rocks: [[129.5, 34.5, 2], [130.8, 39.5, 2.4], [130, 44.5, 1.9]],
+        flora: [{ model: 'juniper_w', n: 0, tall: [5, 9], block: 0.5, twigs: true, home: 0, at: [[113.5, 34.5, 7.2], [111.5, 44, 6.4]] }] } },
+  ],
   // het reliëf van dit gebied (zie relief.js): een breuktrap in het zuiden en een rotskop in het noordoosten
   weather: { wind: 0.42 },   // op de hoge vlakte waait het altijd
   relief: [
@@ -51,7 +72,7 @@ export const hoog = {
   },
   models: ['oldtree', 'lengai', 'handaxe', 'juniper_w', 'quiver_tree_02', 'grass_medium_02', 'rock_moss_set_01'],
   // het vuur is meegedragen: het gloeit in een stuk hout bij het kamp. De kring van stenen moet je zelf leggen.
-  fire: { source: [-95.5, -29.5], carried: true, hearth: [-95, -22], build: 6, wood: [[-112, -44], [-74, -30], [-118, -6]], volcano: [330, -330], quiet: true },
+  fire: { source: [-95.5, -29.5], carried: true, hearth: [-95, -22], build: 6, wood: [[-112, -44], [-74, -30], [-118, -6], [-66, -122], [-46, -96], [108, 52], [134, 28]], volcano: [330, -330], quiet: true },
   // De zwarte rotsen: een oude lavastroom van vulkanisch glas, ver naar het oosten langs de rivier.
   outcrop: { at: [132, 58], type: 'obsidian', n: 7 },
   // Wat hier voor het oprapen ligt is korrelig en zacht. Goede steen moet van ver komen.
@@ -69,7 +90,7 @@ export const hoog = {
   tubers: [[-80, -52], [-124, -30], [-60, -30], [-108, 2], [-130, -10], [-20, -40]],
   berries: [[-122, -58], [-72, -58], [-66, 2, 4], [-130, -20], [-10, -70, 5], [44, 16, 6], [90, -40]],
   leaves: [-120, -40, 30],
-  words: [['bij de boom', 'in het kamp'], ['naar de boom', 'naar het kamp'], ['onder de boom', 'in het kamp']],
+  words: [['bij de boom', 'in het kamp'], ['naar de boom', 'naar het kamp'], ['onder de boom', 'in het kamp'], ['rond de boom', 'rond het kamp']],
   looks: {
     tree: { name: 'Het kamp', look: 'Een bult in het gras. Aan de kant van de wind ligt een rij grote keien, en erachter staat een oude, kromme jeneverbes. Hier slaapt de groep.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
     gazelle: { name: 'Gazellen', look: 'Slanke antilopen met gebogen hoorns. Ze rennen veel harder dan jij. Maar na een stuk rennen staan ze stil en hijgen.', hint: 'Zij raken hun warmte kwijt door te hijgen. Jij zweet, en loopt gewoon door.' },

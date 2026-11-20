@@ -25,8 +25,28 @@ export const water = {
   },
   textures: ['coast_sand_01_diff', 'mud_cracked_dry_03_diff'],
   look: { ground: [1.06, 0.99, 0.86], fog: [55, 260] },
-  words: [['de slaapboom', 'de palmen'], ['De slaapboom', 'De palmen'], ['bij de boom', 'bij de palmen'], ['naar de boom', 'naar de palmen'], ['onder de boom', 'onder de palmen']],
+  words: [['de slaapboom', 'de palmen'], ['De slaapboom', 'De palmen'], ['bij de boom', 'bij de palmen'], ['naar de boom', 'naar de palmen'], ['onder de boom', 'onder de palmen'], ['rond de boom', 'rond de palmen']],
   looks: { tree: { name: 'De palmen', look: 'Een groepje palmen op een rug van zand. Je ziet het meer liggen en hoort het riet. Hier slaapt je groep nu.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' } },
+  // De groep trekt rond (zie systems/trek.js en de uitleg in savanne.js): van de palmen naar de rotskop in het droge land, dan naar de grote vijg aan de westoever.
+  camps: [
+    { id: 'palmen', name: 'De palmen', intro: 'De zandrug tussen de palmen, met het meer voor je. Na de regen is hier weer van alles te vinden.',
+      go: 'Rond de vijg is de grond omgewoeld en leeg. Tor wijst langs het water terug, naar de palmen op de zandrug.' },
+    { id: 'rotskop', name: 'De rotskop', at: [-110, -123], via: [[-45, -60]],
+      say: ['de rotskop', 'bij de rotsen', 'naar de rotsen', 'tussen de rotsen', 'rond de rotsen'],
+      look: { name: 'De rotskop', look: 'Een bult van grijze rotsen in het droge land. Het meer is hier ver weg, maar je ziet alles aankomen. Hier slaapt je groep nu.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
+      intro: 'Grijze rotsen op een bult, ver van het meer. Water is hier een eind lopen. Eten ligt er nog genoeg.',
+      go: 'Rond de palmen is de grond leeg gegraven. Tor wijst weg van het meer, het droge land in. Daar ligt een bult van grijze rotsen waar nog niemand gezocht heeft.',
+      stones: [[-106, -118, 'lava'], [-115, -119, 'quartz'], [-112, -129, 'sand']] },
+    { id: 'vijg', name: 'De grote vijg', at: [-132, 36],
+      say: ['de grote vijg', 'bij de vijg', 'naar de vijg', 'onder de vijg', 'rond de vijg'],
+      look: { name: 'De grote vijg', look: 'Een brede vijgenboom met een paar palmen erachter, vlak bij het water. De grond eronder is koel. Hier slaapt je groep nu.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
+      intro: 'Een oude vijgenboom aan de westkant van het meer. Schaduw, en water op een steenworp.',
+      go: 'Bij de rotsen is het droog en de dorst wordt erger. De groep loopt terug naar het meer, maar nu naar de westkant. Daar staat een grote vijgenboom vlak bij het water.',
+      stones: [[-127, 40, 'lava'], [-136, 41, 'sand'], [-128, 31, 'quartz']],
+      site: { flora: [
+        { model: 'calfan21', n: 0, tall: [3.4, 5.4], block: 0.45, tint: 0xa4bc80, home: 0, at: [[-141, 37, 5.2], [-139.5, 42.5, 4.4]] },
+        { model: 'canary31', n: 0, tall: [2.2, 3.6], block: 0.5, cover: 1.3, tint: 0xa8c088, home: 0, at: [[-143, 31, 3.2], [-125, 44, 2.6]] }] } },
+  ],
   // het reliëf van dit gebied (zie relief.js): de zandrug van het kamp, een breuktrap langs de westrand en een rotskop in het zuidwesten
   relief: [
     { kind: 'rug', at: [-6, 30], r: 21, h: 1.7 },
@@ -63,7 +83,7 @@ export const water = {
   branches: [[-3, 35.5], [32, -8], [-48, -17], [72, -47], [-88, 33], [108, 12], [12, -78]],   // rechte takken onder de acacia's
   redBerries: [[40, 12]],
   // wat het land zelf geeft: vruchtbomen [x, z, soort], oude karkassen met merg in de botten, knolplanten (graven met een stok)
-  fruitTrees: [[-34, 27, 'fig'], [40, 50, 'fig'], [20, -44, 'baobab'], [-70, -44, 'baobab'], [96, -58, 'baobab']],
+  fruitTrees: [[-34, 27, 'fig'], [40, 50, 'fig'], [20, -44, 'baobab'], [-70, -44, 'baobab'], [96, -58, 'baobab'], [-137, 34, 'fig', 1.4]],
   oldCarcasses: [[52, -64], [-112, -34]],
   berries: [[-62, -30, 4], [92, -92, 5], [22, -84, 4]],   // het land is droog: struiken alleen nog ver weg
   leaves: [[68, { river: 24 }], [73, { river: 28 }]],     // bitterblad groeit alleen nog op de zandbank
@@ -98,7 +118,7 @@ export const water = {
           { t: 'Neem een kei mee en loop naar de zandbank in het meer', ok: () => g.carries('leaf') || near(g.player, 70, 60, 26) },
           { t: 'Waad erheen tussen het riet, waar het ondiep is. Let op wat drijft', ok: () => g.carries('leaf') || near(g.player, 70, 93, 9) },
           { t: 'Pluk bitterblad', find: 'leaf', ok: () => g.carries('leaf') },
-          { t: 'Breng het blad naar het kamp bij de palmen', ok: () => tor().sick <= 0 }] },
+          { t: 'Breng het blad naar de slaapboom', ok: () => tor().sick <= 0 }] },
     ];
   },
 };
