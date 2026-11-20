@@ -13,7 +13,8 @@ export const habilis = {
   body: { height: 1.35, speed: 1, shape: 'habilis' },
   zeker: {
     vast: ['afslagen en kernen van keien (Oldowan)', 'snijsporen op botten: vlees van grote dieren', 'botten gekraakt voor merg', 'grote katten, hyena\'s, zebra-achtigen en de reuzenolifant Palaeoloxodon recki in hetzelfde landschap'],
-    aannemelijk: ['aas halen bij de prooi van grote katten', 'eten delen in een kleine groep', 'stenen gooien om roofdieren op afstand te houden', 'honing, eieren, bessen en bladeren als voedsel', 'knollen opgraven met een aangepunte stok (hout blijft zelden bewaard)', 'vis grijpen in opdrogende poelen (meervalresten met snijsporen, Koobi Fora)', 'slapen in of bij bomen'],
+    aannemelijk: ['de sterrenhemel: elke ster is teruggerekend naar deze tijd uit zijn plaats, afstand en snelheid van nu. De sterrenbeelden van nu bestonden nog niet; de Melkweg en het draaien van de hemel waren hetzelfde',
+      'aas halen bij de prooi van grote katten', 'eten delen in een kleine groep', 'stenen gooien om roofdieren op afstand te houden', 'honing, eieren, bessen en bladeren als voedsel', 'knollen opgraven met een aangepunte stok (hout blijft zelden bewaard)', 'vis grijpen in opdrogende poelen (meervalresten met snijsporen, Koobi Fora)', 'slapen in of bij bomen'],
     onzeker: ['wie de Oldowan-werktuigen maakte: Homo habilis is de gangbare kandidaat, maar de oudste werktuigen zijn ouder dan de soort', 'een huid als draagvel (huiden vergaan; dragen is niet te bewijzen)', 'een huid om de schouders tegen de kou', 'water meedragen in de maag van een dier (zo\'n zak vergaat; dragen is niet te bewijzen)', 'bitterblad als geneesmiddel (mensapen doen het; bij vroege mensen is het niet aangetoond)'],
     artistiek: ['namen en vaste rollen in de groep', 'huidskleur, beharing, gezicht en stem', 'de kleuren en strepen van uitgestorven dieren', 'het precieze landschap: het is een beeld van de Riftvallei, geen kaart van één vindplaats'],
   },

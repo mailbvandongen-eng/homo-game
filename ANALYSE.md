@@ -565,3 +565,18 @@ gebiedsbestanden (de controles in de testmodus gebruiken ze), maar het spel toon
 
 Testen: `v4trek.js [gebied] [snel]` (opbreken, wijzen, lopen, aankomen, vuur, slaapplekken, nacht, bewaren, kwijtraken).
 
+## 24. De sterrenhemel van toen (20-11-2026)
+
+Bob merkte op dat mensen in de steentijd de hemel goed kenden en er hun nederzettingen naar richtten. Dat klopt voor de late steentijd. Voor dit spel (1,8 tot 1,4 miljoen jaar geleden) geldt iets anders: sterren bewegen, en in die tijd zijn de heldere sterren gemiddeld ruim twintig graden verschoven. De sterrenbeelden van nu bestonden dus nog niet. Wat wel hetzelfde was: de Melkweg, het draaien van de hemel, en opkomen in het oosten en ondergaan in het westen.
+
+Gebouwd:
+- `stars.py` rekent elke ster uit de HYG-catalogus terug: plaats min snelheid maal tijd, helderheid uit de nieuwe afstand. Controle: Canopus was toen de helderste ster en Ascella stond rond 1,4 miljoen jaar geleden vlakbij; dat past bij wat sterrenkundigen daarover schrijven.
+- `stars.js` tekent de sterren als punten (grootte en kleur per ster) en de Melkweg als foto op een bol. De bol draait één keer per dag om de pool; de pool staat zo hoog als de breedtegraad van het gebied (Olduvai −3°, Turkana 4°, Melka Kunture 9°).
+- Sterren komen in de schemer één voor één: de helderste eerst. Wolken doven ze.
+
+Niet gedaan / eerlijk:
+- De stand van de aardas (precessie, 26.000 jaar) is voor die tijd niet te weten; de pool staat waar hij nu staat.
+- Sterren zonder gemeten afstand staan stil. Sterren die toen nog niet bestonden of feller waren, zijn niet gecorrigeerd.
+- De sterren schijnen door dunne wolkenslierten heen. Er is geen maan aan de hemel getekend en er zijn geen planeten.
+- De groep doet nog niets met de sterren.
+

@@ -165,3 +165,9 @@ Alle tekens in het spel (knoppen, voorwerpen in je hand en je tas, de tekens voo
 # Vensters
 
 `tex/hide_inner.webp`: de binnenkant van een huid, gemaakt uit de textuur [Leather White](https://polyhaven.com/a/leather_white) van Poly Haven (CC0): de nerf belicht en in de kleur van een gedroogde huid gezet. De grond achter de vensters van *Homo habilis* is `tex/dry_ground_01_diff.webp`, dezelfde grond als in het spel.
+
+# Sterrenhemel
+
+`stars/stars_<duizenden jaren>.bin`: de sterren van toen, uitgerekend uit de [HYG-catalogus v4.1](https://github.com/astronexus/HYG-Database) van David Nash ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)). Elke ster is in een rechte lijn teruggezet met zijn eigen snelheid; de helderheid volgt uit de nieuwe afstand (script `stars.py`). Sterren zonder gemeten afstand staan waar ze nu staan. Van sterren zonder gemeten snelheid naar ons toe of van ons af telt alleen de beweging opzij. De bestanden vallen onder dezelfde licentie.
+
+`stars/milkyway.jpg`: de Melkweg zonder losse sterren, uit [Deep Star Maps 2020](https://svs.gsfc.nasa.gov/4851) van NASA/Goddard Space Flight Center Scientific Visualization Studio (vrij te gebruiken). De Melkweg is die van nu: in anderhalf miljoen jaar verandert hij niet zichtbaar.

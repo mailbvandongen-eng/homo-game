@@ -7,6 +7,7 @@ export const berg = {
   intro: 'Veel later. Een andere groep, met langere benen.',
   home: { x: 10, z: -26 },                 // het kamp: de groep slaapt op de grond, in de luwte van een donkere rotswand
   start: [14, -20],
+  stars: { years: 1500000, lat: 4, turn: 0 },   // de sterrenhemel van toen, gezien vanaf Turkana (zie stars.js)
   ford: -60,                               // op deze x kun je de rivier doorwaden; overal elders is hij te diep
   // Dit land: ruw en donker. Zwarte lavagrond met as, kandelaarbomen en kokerbomen, kale stammen en overal donkere keien.
   land: {

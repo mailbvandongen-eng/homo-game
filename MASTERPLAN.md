@@ -153,6 +153,8 @@ Twee uitgangspunten, die voor alles gelden wat nog komt:
 | 2 | **Trekken binnen een gebied.** De groep blijft niet het hele seizoen op één plek: als het eten of het water opraakt, breekt ze op naar een volgende kampplek verderop | **klaar** (19-11): drie kampplekken per gebied, de groep loopt er in een rij heen, het vuur gaat mee, zonder woorden (zie hieronder) |
 | 3 | **Missies sturen je het land in.** Al in de eerste minuten weg van het kamp, naar wat dit gebied bijzonder maakt | |
 
+Tussendoor (20-11, op verzoek van Bob): **de sterrenhemel van toen**. Echte sterren, per gebied teruggerekend naar zijn tijd, met de Melkweg; de hemel draait om het noorden (`v4/src/stars.js`, ANALYSE §24). Klaar en live.
+
 Hoe de vier gebieden nu van elkaar verschillen (stap 1, land):
 
 | Gebied | Kamp | Land | Planten en keien |

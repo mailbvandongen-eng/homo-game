@@ -7,6 +7,7 @@ export const hoog = {
   intro: 'Dagen lopen, steeds hoger. Het vuur ging mee.',
   home: { x: -100, z: -26 },               // het nieuwe kamp: een bult in het gras, met een rij keien tegen de wind en een oude jeneverbes
   start: [-96, -20],
+  stars: { years: 1400000, lat: 9, turn: 0 },   // de sterrenhemel van toen, gezien vanaf Melka Kunture (zie stars.js)
   ford: 20,                               // op deze x kun je de rivier doorwaden; overal elders is hij te diep
   // Dit land: hoog en groen. Steile ruggen, bosjes jeneverbes, pollen gras en keien met mos. De rozetten op een stam staan voor de reuzenlobelia.
   land: {

@@ -9,6 +9,7 @@ export const water = {
   intro: 'Het meer zakt. Wat achterblijft, is van wie het vindt.',
   home: { x: -6, z: 32 },                  // het kamp: een zandrug tussen de palmen, met het meer voor je
   start: [-4, 36],
+  stars: { years: 1800000, lat: -3, turn: 0 },   // de sterrenhemel van toen, gezien vanaf Olduvai (zie stars.js)
   // Dit land: vlak en zanderig, met palmen langs het water, grijze lavakeien en gebarsten modder op het strand.
   // De waaierpalm staat hier voor de doumpalm, de jonge dadelpalm voor de wilde dadelpalm (zie assets/CREDITS.md).
   land: {
