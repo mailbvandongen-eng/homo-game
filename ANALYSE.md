@@ -611,3 +611,57 @@ en `v4steen.js`.
 Het dier heeft bij de start al een lang spoor van afdrukken achter zich (hoge vlakte: het begint op zo'n 30 m van het kamp en loopt
 200 m door tot de giraffen). Wie het vroeg wijst naar de dichtstbijzijnde afdruk; daarna volg je de afdrukken zelf. Een pijl onderweg
 is er niet. Met 'voelen' lichten de afdrukken op.
+
+## 26. Openstaande punten opgeruimd en het spel sneller (20-11-2026)
+
+Opdracht van Bob: "Los die openstaande punten op en maak het spel sneller."
+
+**Bessen.** Een struik had twaalf bollen van 9 cm. Nu 42 bessen van ruim 2 cm in veertien trosjes, op punten van het struikmodel zelf
+(`items.js`). Het aantal zakt mee als je plukt en met het seizoen.
+
+**Het oude karkas.** De bruine schijf met getekende ribben is weg. Er ligt een gescand skelet op zijn zij (`carcass()` in `actors.js`,
+`skeleton.glb`), en het bot dat je oppakt is een gescand bot (`legbone.glb`). Eerlijk: het skelet is van een paard en het bot van een
+koe; modellen van de dieren van toen bestaan niet. In `CREDITS.md` staan ze als vervanger.
+
+**De maan** (`v4/src/moon.js`, tekenen in `stars.js`, licht in `world.js`). Een maand duurt 29,5 speldagen. De maan loopt dezelfde
+baan als de zon en loopt elke dag een stuk achter: de volle maan komt op als de zon ondergaat, de halve maan staat dan al hoog, de
+nieuwe maan zie je niet. De schijngestalte wordt uitgerekend uit de hoek met de zon; de lichte kant wijst dus altijd naar de zon.
+De kaart is die van NASA. Het nachtlicht hangt van de maan af: bij volle maan zie je het land en werpen dingen een schaduw vanaf de
+kant van de maan, bij nieuwe maan is het donker en zie je de meeste sterren. De maan dooft de sterren om zich heen. Het spel begint
+een paar dagen voor volle maan. Eerlijk: de maan is acht keer zo groot getekend als in het echt.
+
+**Wolken.** Sterren, Melkweg en maan rekenen nu dezelfde wolken uit als de lucht. Achter een wolk zie je ze niet meer; de maan
+schemert er vaag doorheen.
+
+**Platte stenen in hoog gras.** Binnen anderhalve meter van een platte steen groeit geen gras meer (`scatter` in `world.js`). Larven en
+schorpioen zijn nu in elk gebied te zien. `v4steen.js` draait nu ook in het berggebied.
+
+**Onderweg naar het dier.** Wie de missie gaf, wees alleen bij het kamp. Nu schittert er een afdruk zolang de missie loopt
+(`Beast.lead()`, `Glints.lead()`): sta je ver van het spoor, dan de dichtstbijzijnde; sta je op het spoor, dan de verste verse afdruk
+binnen 34 m. Zo trekt het lichtje je steeds een stuk verder, tot je het dier ziet. Geen pijl en geen streep. Met de zintuigen aan is
+het lichtje weg: dan lichten de afdrukken zelf op. Test: `v4volg.js` loopt alleen het lichtje achterna en moet bij het dier uitkomen.
+
+**Tests.** `v4erectus.js` zocht nog tekst op de eindkaart; hij kijkt nu naar de gezichten en knoppen. `v4quest.js` hing af van wie er
+toevallig eten ging zoeken; de groep blijft nu bij het kamp tijdens de test.
+
+**Sneller.** Gemeten met het nieuwe `v4prof.js`: wat de videokaart per beeld echt tekent (beeld plus schaduwronde), bij de start, op
+de middag. Vóór = de versie die live stond (`40f2259`).
+
+| Gebied | Driehoeken vóór | Driehoeken na | Verschil | Tekenopdrachten vóór → na |
+|---|---|---|---|---|
+| De savanne | 847.000 | 694.000 | −18% | 287 → 357 |
+| Bij het water | 876.000 | 749.000 | −15% | 426 → 446 |
+| Onder de rokende berg | 960.000 | 771.000 | −20% | 423 → 452 |
+| De hoge vlakte | 866.000 | 570.000 | −34% | 387 → 379 |
+
+Wat er veranderd is, zonder dat het beeld verandert:
+1. **Het land in 64 stukken.** Het hele land (131.000 driehoeken) werd elk beeld getekend, ook wat achter je lag. Nu tekent de kaart
+   alleen de stukken die in beeld zijn (ongeveer 50.000).
+2. **Planten en keien in kleinere groepen** (cellen van 55 m in plaats van 220 m). Een groep die niet in beeld of in de schaduwkaart
+   valt, wordt overgeslagen. Dit scheelt vooral in de schaduwronde.
+3. **Het kind.** Het lijf had 26.800 driehoeken, vijf keer zoveel als een volwassene. Nu 10.700. Op foto's van dichtbij zie je geen verschil.
+
+De prijs: meer tekenopdrachten in de savanne (+70). Eerlijk: dit is gemeten in driehoeken en opdrachten op de testcomputer, niet in
+beelden per seconde op een echte telefoon. Wat nu het zwaarst weegt: de dieren en mensen met een skelet bij het kamp (gazellen 5.000
+driehoeken per stuk, ook in de schaduwronde), de kandelaarbomen en de haarkaarten van de hyena's.
+

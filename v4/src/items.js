@@ -311,7 +311,7 @@ function twig(burn) {
 function bush(scene, x, z, berryColor, leafColor = 0xffffff, n = 3) {
   const g = new THREE.Group();
   const v = SHRUBS[Math.abs(Math.round(x * 7 + z * 3)) % SHRUBS.length];
-  const k = 1.15 / v.size.y, rad = Math.max(v.size.x, v.size.z) * k * 0.35;
+  const k = 1.15 / v.size.y;
   const mats = [];
   for (const part of v.parts) {
     const mat = part.mat.clone(); mat.color = new THREE.Color(leafColor); mats.push(mat);
@@ -321,11 +321,19 @@ function bush(scene, x, z, berryColor, leafColor = 0xffffff, n = 3) {
   if (berryColor) {
     // alle bessen in één keer tekenen; minder tonen = de struik raakt leeg
     const bm = new THREE.MeshStandardMaterial({ color: berryColor, roughness: 0.25, emissive: berryColor, emissiveIntensity: 0.15 });
-    berries = new THREE.InstancedMesh(new THREE.SphereGeometry(0.045, 8, 6), bm, 14);
-    const d = new THREE.Object3D();
-    for (let i = 0; i < 14; i++) {
-      const a = i * 2.4, r = rad * (0.85 + (i % 3) * 0.12);
-      d.position.set(Math.cos(a) * r, 0.35 + (i % 4) * 0.16, Math.sin(a) * r); d.updateMatrix();
+    // kleine bessen (2 cm) in trosjes van drie; elk trosje hangt aan een echt punt van de struik (een blad of takje), niet in de lucht
+    berries = new THREE.InstancedMesh(new THREE.SphereGeometry(0.011, 7, 5), bm, 42);
+    const d = new THREE.Object3D(), pos = v.parts.map((q) => q.geo.attributes.position), total = pos.reduce((a, q) => a + q.count, 0), spots = [];
+    for (let c = 0, tries = 0; c < 14 && tries < 600; tries++) {
+      let n = Math.floor(((Math.sin((tries + 1) * 12.9898 + x * 3.1 + z * 1.7) * 43758.5453) % 1 + 1) % 1 * total), a = 0;
+      while (n >= pos[a].count) n -= pos[a++].count;
+      const px = pos[a].getX(n) * k, py = pos[a].getY(n) * k, pz = pos[a].getZ(n) * k;
+      if (py < 0.25 || (tries < 500 && spots.some((q) => Math.hypot(q[0] - px, q[1] - py, q[2] - pz) < 0.14))) continue;
+      spots.push([px, py, pz]); c++;
+    }
+    for (let i = 0; i < 42; i++) {
+      const q = spots[Math.floor(i / 3) % Math.max(1, spots.length)] || [0, 0.5, 0], j = i % 3;
+      d.position.set(q[0] + (j - 1) * 0.017, q[1] - (j === 1 ? 0.016 : 0), q[2] + (j === 1 ? 0.012 : 0)); d.updateMatrix();
       berries.setMatrixAt(i, d.matrix);
     }
     g.add(berries);
@@ -335,12 +343,16 @@ function bush(scene, x, z, berryColor, leafColor = 0xffffff, n = 3) {
   return { g, berries, left: n, max: n, mats, green: new THREE.Color(leafColor), dry: 0 };
 }
 
-// een groot bot zoals het in het gras ligt
+// een groot bot (gescand pijpbeen, zie CREDITS); de lange kant langs de y-as, het midden in de oorsprong
+let BONEV = null;
+function boneModel(len) {
+  const g = new THREE.Group(), k = len / BONEV.size.y;
+  for (const p of BONEV.parts) { const m = new THREE.Mesh(p.geo, p.mat); m.scale.setScalar(k); m.position.y = -len / 2; m.castShadow = true; g.add(m); }
+  return g;
+}
+// zoals het in het gras ligt
 export function boneMesh() {
-  const m = new THREE.Group(), boneMat = lam(0xe8dcc0);
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.6, 6), boneMat); shaft.rotation.z = Math.PI / 2; m.add(shaft);
-  for (const s of [-1, 1]) { const k = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 4), boneMat); k.position.x = s * 0.32; m.add(k); }
-  m.traverse((o) => { o.castShadow = true; });
+  const m = new THREE.Group(), b = boneModel(0.6); b.rotation.z = Math.PI / 2; m.add(b);
   return m;
 }
 export function placeItems(scene, A, area) {
@@ -350,6 +362,7 @@ export function placeItems(scene, A, area) {
 
   // losse keien bij de start en verderop
   if (A.models.handaxe) AXEV = axeGeo(variantsOf(A.models.handaxe)[0]);
+  BONEV = variantsOf(A.models.legbone)[0];
   ROCKV = [A.models.namaqualand_boulder_02, A.models.namaqualand_boulder_05, A.models.namaqualand_rocks_01].map((m) => variantsOf(m)[0]);
   const stones = area.stones.map((s) => [...s]);
   // langs de rivier liggen rolstenen: van alles door elkaar
@@ -434,13 +447,7 @@ function axeGeo(v) {
 export function heldMesh(item, rock) {
   if (!item) return null;
   const c = new THREE.Color(ITEMS[item].color);
-  if (item === 'bone') {
-    const g = new THREE.Group(), m = lam(c);
-    const s = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.45, 6), m); g.add(s);
-    for (const k of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), m); e.position.y = k * 0.24; g.add(e); }
-    g.rotation.x = Math.PI / 2;
-    return g;
-  }
+  if (item === 'bone') { const g = boneModel(0.5); g.rotation.x = Math.PI / 2; return g; }
   if (item === 'meat') {
     const m = new THREE.Mesh(new THREE.SphereGeometry(0.11, 7, 5), lam(c)); m.scale.set(1.25, 0.5, 0.8);
     const fat = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), lam(new THREE.Color('#e8d0b8'))); fat.scale.set(1.3, 0.4, 0.6); fat.position.set(0.05, 0.035, 0.03);
@@ -513,6 +520,7 @@ export function heldMesh(item, rock) {
   }
   if (item === 'leaf') { const m = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.22, 4), lam(c)); m.scale.z = 0.3; return m; }
   const g = new THREE.Group(), m = lam(c);
-  for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 4), m); b.position.set((i % 2) * 0.06 - 0.03, Math.floor(i / 2) * 0.06, 0); g.add(b); }
+  // een trosje van zeven kleine bessen
+  for (let i = 0; i < 7; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 4), m), a = i * 2.4, r = i ? 0.02 : 0; b.position.set(Math.cos(a) * r, (i % 3) * 0.012, Math.sin(a) * r); g.add(b); }
   return g;
 }

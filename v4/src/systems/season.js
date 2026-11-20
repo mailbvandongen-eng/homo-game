@@ -13,7 +13,7 @@ export function initSeason(G) {
   const DRY_COLOR = new THREE.Color(0x8a6a3a);
   function setBush(t, n, dry) {
     const b = t.bush; b.left = n; b.dry = dry;
-    if (b.berries) b.berries.count = Math.ceil(14 * n / b.max);
+    if (b.berries) b.berries.count = Math.ceil(42 * n / b.max);
     if (t.item === 'leaf') b.g.scale.y = 0.6 + 0.8 * n / b.max;
     for (const m of b.mats) m.color.copy(b.green).lerp(DRY_COLOR, dry * 0.8);
   }

@@ -30,6 +30,17 @@ export class Glints {
     scene.add(glint, halo);
     this.items.push({ t, glint, halo, phase: this.items.length * 1.7 });
   }
+  // volg je een spoor, dan schittert de afdruk waar je heen moet: van ver te zien, en steeds een stuk verder het spoor op
+  lead(scene, t, s, player, senses) {
+    if (!this.trail) { this.trail = new THREE.Sprite(new THREE.SpriteMaterial({ map: STAR, color: 0xfff4d0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); scene.add(this.trail); }
+    const g = this.trail, d = s ? Math.hypot(s.x - player.pos.x, s.z - player.pos.z) : 0;
+    g.visible = !!s && !senses && d > 3 && d < 260;
+    if (!g.visible) return;
+    const tw = 0.5 + 0.5 * Math.sin(t * 2.4);
+    g.position.set(s.x, height(s.x, s.z) + 0.35 + Math.min(1.6, d * 0.02), s.z);
+    g.scale.setScalar((0.55 + tw * 0.45) * (1 + Math.min(16, d / 5)));
+    g.material.opacity = 0.6 + tw * 0.4;
+  }
   update(t, player, senses, known, k = 1) {
     for (const g of this.items) {
       const th = g.t, gone = th.gone || (th.bush && th.bush.left <= 0);

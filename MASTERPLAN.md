@@ -157,6 +157,8 @@ Tussendoor (20-11, na de telefoonproef van Bob): de rotswand onder de rokende be
 
 Tussendoor (20-11, op verzoek van Bob): **de sterrenhemel van toen**. Echte sterren, per gebied teruggerekend naar zijn tijd, met de Melkweg; de hemel draait om het noorden (`v4/src/stars.js`, ANALYSE §24). Klaar en live.
 
+Tussendoor (20-11, op verzoek van Bob): **openstaande punten en snelheid** (ANALYSE §26). Kleine bessen in trosjes; een echt skelet en een echt bot in plaats van de bruine vlek; de maan met schijngestalten en maanlicht; sterren en maan verdwijnen achter wolken; geen gras meer rond platte stenen; een schitterende afdruk leidt je over het spoor naar het dier; het spel tekent 15 tot 34% minder driehoeken per beeld. Nog niet gemeten op een echte telefoon.
+
 Hoe de vier gebieden nu van elkaar verschillen (stap 1, land):
 
 | Gebied | Kamp | Land | Planten en keien |

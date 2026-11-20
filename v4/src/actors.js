@@ -1,4 +1,5 @@
 import * as THREE from '../lib/three.module.js';
+import { variantsOf } from './assets.js';
 import { height, blockers, WALK, riverDist, awayZ, tallGrassAt, rng, mergeStatic } from './world.js';
 import { rimify } from './hominin.js';
 import { Rig } from './rig.js';
@@ -212,20 +213,14 @@ export class Herd {
 }
 
 
-// Een karkas van een zebra: alleen nog botten en wat vel
-export function carcass(scene, x, z) {
-  const g = new THREE.Group(), bone = lam(0xe8dcc0), hide = lam(0x6a4a34);
-  const spine = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 1.4, 2, 5), bone); spine.rotation.z = Math.PI / 2; spine.position.y = 0.35; g.add(spine);
-  for (let i = 0; i < 7; i++) {
-    for (const s of [-1, 1]) {
-      const rib = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.025, 4, 8, Math.PI * 0.8), bone);
-      rib.position.set(-0.5 + i * 0.16, 0.32, 0); rib.rotation.set(0, Math.PI / 2, s > 0 ? 0.2 : Math.PI - 0.2); g.add(rib);
-    }
-  }
-  const skull = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.4, 3, 6), bone); skull.rotation.z = Math.PI / 2 - 0.3; skull.position.set(1.05, 0.15, 0.1); g.add(skull);
-  const skin = new THREE.Mesh(new THREE.CircleGeometry(0.9, 7), hide); skin.rotation.x = -Math.PI / 2; skin.position.set(0.2, 0.03, 0.5); g.add(skin);
-  const m = mergeStatic(g);
-  m.position.set(x, height(x, z), z); m.rotation.y = 0.6;
-  scene.add(m);
-  return m;
+// Een oud karkas: het skelet van een paardachtige (echte gescande botten, zie CREDITS), op zijn zij in het gras
+export function carcass(scene, x, z, A) {
+  const v = variantsOf(A.models.skeleton)[0], k = 1.6 / v.size.y, g = new THREE.Group(), tip = new THREE.Group();
+  const mat = v.parts[0].mat.clone(); mat.color.set(0xa89c80); mat.roughness = 0.95;
+  for (const p of v.parts) { const m = new THREE.Mesh(p.geo, mat); m.castShadow = true; m.receiveShadow = true; tip.add(m); }
+  // het model staat rechtop: op zijn zij leggen, de ribben net in de grond gezakt
+  tip.scale.setScalar(k); tip.rotation.z = Math.PI / 2 - 0.06; tip.position.set(v.size.y * k * 0.5, v.size.x * k * 0.5 - 0.05, 0);
+  g.add(tip); g.position.set(x, height(x, z), z); g.rotation.y = 0.6;
+  scene.add(g);
+  return g;
 }

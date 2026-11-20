@@ -94,7 +94,7 @@ export class Forage {
 
     // ---------- oude karkassen ----------
     for (const [x, z] of AREA.oldCarcasses || []) {
-      const c = carcass(scene, x, z); c.rotation.y = x * 0.9;
+      const c = carcass(scene, x, z, A); c.rotation.y = x * 0.9;
       this.vultures.push(new Vultures(scene, x, z, A, 2));
       for (const [dx, dz] of [[1.3, 0.7], [-0.9, 1.4]]) { const m = boneMesh(); m.rotation.y = x + dx; lay('bone', x + dx, z + dz, m, 'Pak het bot').mesh.position.y += 0.02; }
       this.old.push({ look: 'oldcarcass', x, z });

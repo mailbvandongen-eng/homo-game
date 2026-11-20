@@ -66,6 +66,12 @@ Bewerkt met gltf-transform (vereenvoudigd, texturen verkleind naar webp). De gra
 
 Aanpassingen: vereenvoudigd en texturen verkleind (gltf-transform). Bij de mensaap is de tong weggelaten. Bij de hyena zijn de losse vachtkaartjes, het binnenste van de bek, de tanden en de tong weggelaten om hem licht genoeg te maken voor een telefoon.
 
+`models/skeleton.glb`: het oude karkas onder de gieren. ["Horse Skeleton"](https://sketchfab.com/3d-models/horse-skeleton-eaca504567604e879b8ab2cf2763025e) door diegoluga (CC BY 4.0). **Vervanger:** het is een paard, geen zebra-achtige uit de tijd van het spel; een skelet van een uitgestorven paardachtige is er niet. Aangepast: op zijn zij gelegd, minder vlakken, donkerder gemaakt (script `botten.mjs`).
+
+`models/legbone.glb`: het bot dat je oppakt en kraakt. ["Cow Leg Bone"](https://sketchfab.com/3d-models/cow-leg-bone-13f71128a0c847ce98be9ba9f1e772cb) door necrophob30 (CC BY 4.0). **Vervanger:** een koeienbot. Aangepast: minder vlakken.
+
+`models/child.glb` (20-11): het lijf heeft nu 10.700 driehoeken in plaats van 26.800 (script `kidslim.mjs`). Hoofdhaar, wenkbrauwen, wimpers en kleding zijn niet veranderd.
+
 # Bewegingen van de staande gier
 
 `anims/griffon.json`: het giermodel heeft geen eigen bewegingen. Ze zijn **overgezet van andere vogels** op de botten van de gier
@@ -174,3 +180,5 @@ Alle tekens in het spel (knoppen, voorwerpen in je hand en je tas, de tekens voo
 `stars/stars_<duizenden jaren>.bin`: de sterren van toen, uitgerekend uit de [HYG-catalogus v4.1](https://github.com/astronexus/HYG-Database) van David Nash ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)). Elke ster is in een rechte lijn teruggezet met zijn eigen snelheid; de helderheid volgt uit de nieuwe afstand (script `stars.py`). Sterren zonder gemeten afstand staan waar ze nu staan. Van sterren zonder gemeten snelheid naar ons toe of van ons af telt alleen de beweging opzij. De bestanden vallen onder dezelfde licentie.
 
 `stars/milkyway.jpg`: de Melkweg zonder losse sterren, uit [Deep Star Maps 2020](https://svs.gsfc.nasa.gov/4851) van NASA/Goddard Space Flight Center Scientific Visualization Studio (vrij te gebruiken). De Melkweg is die van nu: in anderhalf miljoen jaar verandert hij niet zichtbaar.
+
+`stars/moon.jpg`: de kaart van de maan, verkleind uit de [CGI Moon Kit](https://svs.gsfc.nasa.gov/4720) van NASA's Scientific Visualization Studio (opnamen van de Lunar Reconnaissance Orbiter; vrij te gebruiken). De maan is in het spel groter dan in het echt (straal 2° in plaats van een kwart graad), anders zie je de schijngestalte niet op een telefoon.

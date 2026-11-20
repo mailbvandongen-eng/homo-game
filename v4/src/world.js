@@ -1,4 +1,5 @@
 import * as THREE from '../lib/three.module.js';
+import { moonAt } from './moon.js';
 import { variantsOf } from './assets.js';
 import { AREA } from './eras/index.js';
 import { shape } from './relief.js';
@@ -222,12 +223,12 @@ export function buildWorld(scene, A) {
     side: THREE.BackSide, depthWrite: false, fog: false,
     uniforms: {
       top: { value: new THREE.Color(0x6f9cc8) }, mid: { value: new THREE.Color(0xf2d39a) }, low: { value: new THREE.Color(0xe8b47a) },
-      sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color(0xfff0d0) }, cloud: { value: new THREE.Color(0xffffff) }, uTime: { value: 0 }, cover: { value: 0 },
+      sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color(0xfff0d0) }, cloud: { value: new THREE.Color(0xffffff) }, uTime: { value: 0 }, cover: { value: 0 }, disc: { value: 1 },
       tSky: { value: A.sky }, skyMix: { value: 1 }, skyTint: { value: new THREE.Color(1, 1, 1) },
     },
     vertexShader: 'varying vec3 vp; void main(){ vp = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     // verloop van de lucht, een zon met gloed en wolkenslierten
-    fragmentShader: `uniform vec3 top, mid, low, sunCol, cloud, sunDir, skyTint; uniform float uTime, skyMix, cover; uniform sampler2D tSky; varying vec3 vp;
+    fragmentShader: `uniform vec3 top, mid, low, sunCol, cloud, sunDir, skyTint; uniform float uTime, skyMix, cover, disc; uniform sampler2D tSky; varying vec3 vp;
       float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }
       float fbm(vec2 p){ float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { s += a * n(p); p *= 2.03; a *= 0.5; } return s; }
@@ -235,7 +236,7 @@ export function buildWorld(scene, A) {
         float y = vp.y;
         vec3 c = y > 0.0 ? mix(mid, top, pow(clamp(y*2.2,0.0,1.0), 0.7)) : low;
         float sd = max(dot(normalize(vp), normalize(sunDir)), 0.0);
-        c += sunCol * (pow(sd, 8.0) * 0.35 + pow(sd, 90.0) * 0.6 + smoothstep(0.9993, 0.9997, sd) * 2.0);
+        c += sunCol * (pow(sd, 8.0) * 0.35 + pow(sd, 90.0) * 0.6 + smoothstep(0.9993, 0.9997, sd) * 2.0 * disc);
         if (y > 0.0) {
           vec2 uv = vp.xz / (y + 0.12) * 1.6 + vec2(uTime * 0.004, uTime * 0.002);
           float cl = smoothstep(0.52 - cover * 0.5, 0.8 - cover * 0.42, fbm(uv)) * smoothstep(0.0, 0.25 - cover * 0.2, y);
@@ -252,7 +253,8 @@ export function buildWorld(scene, A) {
         #include <colorspace_fragment>
       }`,
   });
-  scene.add(new THREE.Mesh(skyGeo, skyMat));
+  const skyMesh = new THREE.Mesh(skyGeo, skyMat);
+  scene.add(skyMesh);
   scene.fog = new THREE.Fog(0xe9cf9c, FOG[0], FOG[1]);
   scene.environment = A.env;   // licht en weerspiegeling uit de luchtfoto
 
@@ -328,8 +330,16 @@ export function buildWorld(scene, A) {
       // Oost-Afrikaanse grond is warmer en roder dan deze foto's
       diffuseColor.rgb *= g * vec3(${(LK.ground || [1.12, 0.93, 0.74]).map((v) => v.toFixed(2)).join(', ')});`);
   };
-  const ground = new THREE.Mesh(geo, gmat);
-  ground.receiveShadow = true;
+  // het land in 8 × 8 stukken (ze delen dezelfde punten): wat buiten beeld ligt, wordt niet getekend
+  const ground = new THREE.Group(), CH = 8, per = SEG / CH, quads = geo.index.array, gv = new THREE.Vector3();
+  for (let cy = 0; cy < CH; cy++) for (let cx = 0; cx < CH; cx++) {
+    const part = new THREE.BufferGeometry(), idx = new Uint32Array(per * per * 6), box = new THREE.Box3();
+    for (const k in geo.attributes) part.setAttribute(k, geo.attributes[k]);
+    for (let j = 0; j < per; j++) { const o = ((cy * per + j) * SEG + cx * per) * 6; idx.set(quads.subarray(o, o + per * 6), j * per * 6); }
+    for (let i = 0; i < idx.length; i++) box.expandByPoint(gv.fromBufferAttribute(pos, idx[i]));
+    part.setIndex(new THREE.BufferAttribute(idx, 1)); part.boundingSphere = box.getBoundingSphere(new THREE.Sphere());
+    const m = new THREE.Mesh(part, gmat); m.receiveShadow = true; ground.add(m);
+  }
   scene.add(ground);
 
   // ---------- water ----------
@@ -452,7 +462,7 @@ export function buildWorld(scene, A) {
   const SITES = (AREA.camps || []).map((c) => c.site || {});
   for (const [x, z, sz] of [...(LAND.rocksAt || []), ...SITES.flatMap((s) => s.rocks || [])]) rock(x, z, sz, RK, FAM);
   const dm = new THREE.Object3D();
-  function instance(v, spots, shadow = true, CELL = 220) {
+  function instance(v, spots, shadow = true, CELL = 55) {
     for (const part of v.parts) for (const cell of perCell(spots, CELL)) {
       const im = new THREE.InstancedMesh(part.geo, part.mat, cell.length);
       cell.forEach(([x, z, k, ry, sink = 0.1], i) => { dm.position.set(x, height(x, z) - sink * k * v.size.y, z); dm.rotation.set(0, ry, 0); dm.scale.setScalar(k); dm.updateMatrix(); im.setMatrixAt(i, dm.matrix); });
@@ -593,12 +603,14 @@ export function buildWorld(scene, A) {
     return m;
   }
   const dummy = new THREE.Object3D(), tint = new THREE.Color();
+  const STONES = AREA.flatStones || [];
   function scatter(mat, count, tiles, place) {
     const all = [];
     let n = 0, tries = 0;
     while (n < count && tries++ < count * 6) {
       const p = place(); if (!p) continue;
       const [x, z, s] = p;
+      if (STONES.some((q) => Math.hypot(q[0] - x, q[1] - z) < 1.5)) continue;   // rond een platte steen is de grond kaal: je ziet wat eronder zat
       all.push([x, z, s, R() * 6.28, tiles[Math.floor(R() * tiles.length)], (R() - 0.5) * 0.04, (R() - 0.5) * 0.1, (R() - 0.5) * 0.12]); n++;
     }
     for (const cell of perCell(all, 110)) {
@@ -638,9 +650,9 @@ export function buildWorld(scene, A) {
 
   const fogBase = new THREE.Color(), GREY = new THREE.Color(), sky = { cloud: 0, rain: 0, wind: 0.25 };
   return {
-    sun, uniforms, water, hemi, sky,
+    sun, uniforms, water, hemi, sky, skyMesh,
     // p: moment van de dag (0 = dageraad, 0,4 = middag, 0,75 = zonsondergang, 0,9 = nacht)
-    update(t, focus, p, senses) {
+    update(t, focus, p, senses, dayN) {
       uniforms.uTime.value = t;
       for (const im of shadowCells) { const c = im.boundingSphere.center; im.castShadow = Math.hypot(c.x - focus.x, c.z - focus.z) < im.boundingSphere.radius + 36; }
       const k = dayLook(p);
@@ -656,7 +668,11 @@ export function buildWorld(scene, A) {
         k.sun.lerp(GREY.setRGB(0.85, 0.88, 0.92), cl * 0.6); k.sunI *= 1 - cl * 0.72; k.hemiI *= 1 + cl * 0.12 - wet * 0.18;
       }
       skyMat.uniforms.top.value.copy(k.top); skyMat.uniforms.mid.value.copy(k.mid); skyMat.uniforms.low.value.copy(k.low);
-      skyMat.uniforms.sunCol.value.copy(k.sun).multiplyScalar(Math.min(1, k.sunI / 2));
+      // 's nachts komt het licht van de maan: fel bij volle maan, bijna niets bij nieuwe maan of als ze onder is
+      const day = p < 0.8, moon = moonAt(dayN || 1, p), deep = THREE.MathUtils.smoothstep(p, 0.8, 0.86) * (1 - THREE.MathUtils.smoothstep(p, 0.95, 1));
+      k.sunI *= 1 - deep * (1 - (0.3 + 1.1 * moon.glow)); k.hemiI *= 1 - deep * (0.12 - 0.3 * moon.glow);
+      skyMat.uniforms.sunCol.value.copy(k.sun).multiplyScalar(Math.min(1, k.sunI / 2) * (day ? 1 : moon.glow));
+      skyMat.uniforms.disc.value = day ? 1 : 0;   // de maan zelf tekent stars.js
       skyMat.uniforms.cloud.value.copy(k.mid).lerp(k.top, 0.2).offsetHSL(0, -0.1, 0.08);
       skyMat.uniforms.uTime.value = t;
       const dayK = p < 0.1 ? THREE.MathUtils.smoothstep(p, 0.02, 0.1) : p < 0.62 ? 1 : 1 - THREE.MathUtils.smoothstep(p, 0.62, 0.74);
@@ -672,9 +688,14 @@ export function buildWorld(scene, A) {
       sun.color.copy(k.sun); sun.intensity = k.sunI * (senses ? 0.45 : 1);
       hemi.color.copy(k.hemiSky); hemi.groundColor.copy(k.hemiGround); hemi.intensity = k.hemiI * (senses ? 0.6 : 1);
       // de zon komt op in het oosten (+x) en gaat onder in het westen; 's nachts schijnt de maan
-      const day = p < 0.8, a = day ? p / 0.8 : (p - 0.8) / 0.2;
-      const elev = Math.max(0.12, Math.sin(a * Math.PI)) * (day ? 1 : 0.8), az = a * Math.PI;
-      sun.userData.offset.set(Math.cos(az) * 80 * Math.cos(elev), Math.sin(elev) * 80 + 6, -30);
+      if (day) {
+        const a = p / 0.8, elev = Math.max(0.12, Math.sin(a * Math.PI)), az = a * Math.PI;
+        sun.userData.offset.set(Math.cos(az) * 80 * Math.cos(elev), Math.sin(elev) * 80 + 6, -30);
+      } else {
+        // is de maan onder, dan valt het zwakke licht van de sterren recht van boven
+        MOONV.copy(moon.dir); MOONV.y = Math.max(MOONV.y, 0.14);
+        sun.userData.offset.set(0.12, 1, -0.25).normalize().lerp(MOONV.normalize(), moon.up).normalize().multiplyScalar(86);
+      }
       sun.position.copy(focus).add(sun.userData.offset); sun.target.position.copy(focus);
       skyMat.uniforms.sunDir.value.copy(sun.userData.offset).normalize();
       water.material.color.copy(k.water).offsetHSL(0, 0, Math.sin(t * 0.7) * 0.01);
@@ -743,6 +764,7 @@ const DAY = [
   { p: 0.96, top: C(0x1a2244), mid: C(0x3a3a5a), low: C(0x2a2a3a), fog: C(0x3a3a50), sun: C(0x9ab0e8), sunI: 0.5, hemiSky: C(0x6a70a8), hemiGround: C(0x302830), hemiI: 0.5, water: C(0x2e3a50) },
   { p: 1.00, top: C(0x3a4a78), mid: C(0xe8a07a), low: C(0x8a6a5a), fog: C(0xc8988a), sun: C(0xffb080), sunI: 1.2, hemiSky: C(0x9aa8d8), hemiGround: C(0x6a4a3a), hemiI: 0.7, water: C(0x5a6a8a) },
 ];
+const MOONV = new THREE.Vector3();
 const LOOK = { top: C(0), mid: C(0), low: C(0), fog: C(0), sun: C(0), hemiSky: C(0), hemiGround: C(0), water: C(0), sunI: 0, hemiI: 0 };
 function dayLook(p) {
   let i = 0; while (i < DAY.length - 2 && DAY[i + 1].p <= p) i++;

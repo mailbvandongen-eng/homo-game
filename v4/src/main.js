@@ -73,7 +73,7 @@ const HERD_NAME = AREA.herd.species === 'impala' ? 'impala\'s' : 'gazellen';
 const herd = new Herd(scene, AREA.herd.at[0], AREA.herd.at[1], AREA.herd.n, A, { persist: !!AREA.herd.persist, species: AREA.herd.species });
 const CARCASS = AREA.carcass;
 const vultures = new Vultures(scene, CARCASS.x, CARCASS.z, A);
-carcass(scene, CARCASS.x, CARCASS.z);
+carcass(scene, CARCASS.x, CARCASS.z, A);
 const things = placeItems(scene, A, AREA);
 const forage = new Forage(scene, A, things);   // vruchtbomen, takken onder de bomen, oude karkassen, knollen
 const glints = new Glints(scene, things);
@@ -323,8 +323,9 @@ function turnStone(t) {
 }
 // De wereld wijst de weg: waar is het dichtstbijzijnde van wat een missiestap vraagt? Wie de missie gaf wijst erheen,
 // en het ding zelf schittert van verder weg. Geen pijl, geen streep op de grond.
-let wanted = null;
+let wanted = null, leading = false;
 function spotOf(kind) {
+  leading = kind === 'track' || kind === 'beast';
   if (wanted) wanted.wanted = false;
   wanted = null;
   const p = player.pos, pts = (l) => l.map((q) => ({ x: q[0], z: q[1] }));
@@ -346,7 +347,7 @@ function spotOf(kind) {
 function take(t) {
   if (t.kind === 'pick') { t.gone = true; scene.remove(t.mesh); return; }
   const b = t.bush; b.left--;
-  if (b.berries) b.berries.count = Math.ceil(14 * b.left / b.max);
+  if (b.berries) b.berries.count = Math.ceil(42 * b.left / b.max);
   if (t.item === 'leaf') b.g.scale.y = 0.6 + 0.8 * b.left / b.max;
 }
 function available(t) { return !t.gone && !(t.bush && t.bush.left <= 0); }
@@ -1058,8 +1059,8 @@ function update(dt) {
 
   const sky = weather.update(dt, t, { day: state.day, rainDay: state.rainDay, p: dayP, night, cam: camera.position, wind: WIND });
   world.sky.cloud = sky.cloud; world.sky.rain = sky.rain; world.sky.wind = sky.wind;
-  world.update(t, player.pos, dayP, state.sensing);
-  stars.update(t, camera.position, dayP, night, sky.cloud, renderer.getPixelRatio());
+  world.update(t, player.pos, dayP, state.sensing, state.day);
+  stars.update(t, dayP, night, sky.cloud, renderer.getPixelRatio(), state.day);
   renderer.toneMappingExposure = 1.05 - 0.12 * senseK + night * 0.25;
   const part = partOfDay(dayP);
   if (state.started && part !== lastPart && lastPart) {
@@ -1072,6 +1073,7 @@ function update(dt) {
 
   const tall = tallGrassAt(player.pos.x, player.pos.z);
   glints.update(t, player, state.sensing, verdict, senseK);
+  glints.lead(scene, t, leading && mission.cur && !mission.cur.done() && !beast.dead ? beast.lead(player.pos) : null, player, state.sensing);
   motes.update(dt, t, player.pos, night);
   birds.update(dt, t, player, sound);
   butterflies.update(t, night, player.pos);
@@ -1198,6 +1200,7 @@ function frame() {
   }
   try { update(dt); } catch (e) { console.error(e); if (devFlags.onError) devFlags.onError(e); }
   rigDetail(camera.position);
+  world.skyMesh.position.copy(camera.position); stars.follow(camera.position);   // de lucht hangt altijd om het oog: zon, maan, sterren en wolken staan dan waar ze horen
   renderer.render(scene, camera);
 }
 
@@ -1230,7 +1233,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { trek, stars, flat, W: { FORD, LAKE, depth, riverZ }, walk: (x, z) => { walkTo = { x, z, fn() {}, reach: 0.8 }; }, stopWalk: () => { walkTo = null; }, get walking() { return !!walkTo; }, KNAP, chips, knapStart, axeStart, vultures, FLOCKS, butterflies, body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
+window.__game = { trek, stars, flat, glints, W: { FORD, LAKE, depth, riverZ }, walk: (x, z) => { walkTo = { x, z, fn() {}, reach: 0.8 }; }, stopWalk: () => { walkTo = null; }, get walking() { return !!walkTo; }, KNAP, chips, knapStart, axeStart, vultures, FLOCKS, butterflies, body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, beast, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, setSneak, still: () => stillT,
   setCam: (y, p, d) => { cam.yaw = y; cam.pitch = p; if (d) cam.dist = d; }, setZoom: C.setZoom, zoom: () => cam.dist, C, jump, sound, world, weather, menu, closeCard, clockT: () => clock.elapsedTime, actionContext, actionOptions, heard, tasteAt, bodyTap, prim: () => prim, alts: () => alts,
   lookFrom: (pos, look) => { cam.override = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },

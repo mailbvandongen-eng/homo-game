@@ -156,7 +156,7 @@ export class Beast {
       const i = this.pn++ % P.print.n;
       this.dummy.position.set(px, y + 0.05, pz); this.dummy.rotation.set(0, m.yaw, 0); this.dummy.scale.set(m.size, 1, 1.15 * m.size); this.dummy.updateMatrix();
       this.prints.setMatrixAt(i, this.dummy.matrix); this.prints.count = Math.min(this.pn, P.print.n); this.prints.instanceMatrix.needsUpdate = true;
-      this.spots[i] = { x: px, z: pz };
+      this.spots[i] = { x: px, z: pz, n: this.pn };
     }
   }
   // de volgers houden hun plek naast en achter de voorste; in het water heeft elk zijn eigen ligplek
@@ -492,6 +492,17 @@ export class Beast {
   }
 
   // ---------- wat de rest van het spel wil weten ----------
+  // het spoor volgen: de verste verse afdruk die je van hier kunt zien. Sta je nog ver van het spoor, dan de dichtstbijzijnde.
+  lead(p) {
+    let best = null, near = null, nd = 1e9;
+    for (const s of this.spots) {
+      if (!s) continue;
+      const d = dist(s, p);
+      if (d < nd) { nd = d; near = s; }
+      if (d > 5 && d < 34 && (!best || s.n > best.n)) best = s;
+    }
+    return nd < 34 ? best : near;
+  }
   lookTargets(p) {
     const out = [], L = this.P.looks;
     if (this.dead) out.push({ look: L.dead, carcass: true, x: this.body.x, z: this.body.z, high: height(this.body.x, this.body.z) + 1.2 });
