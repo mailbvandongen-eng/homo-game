@@ -2,6 +2,7 @@
 // Alles wat dit gebied maakt tot wat het is staat hier als gegevens: waar de groep slaapt, wat er groeit en ligt,
 // welke dieren er leven (zie species.js voor hun tijd en plaats) en wat de groep van je vraagt.
 // De motor bouwt hier de wereld van. Plekken zijn [x, z] in meters; 'river' is de afstand tot het midden van de rivier.
+import { trackMission } from './track.js';
 export const savanne = {
   id: 'savanne', name: 'De savanne', terrain: 'rift', ma: 1.8, region: 'Oost-Afrika', playable: true, next: 'water',
   home: { x: -8, z: -14 },                 // de slaapboom
@@ -81,6 +82,9 @@ export const savanne = {
     { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', find: 'kill', ok: () => g.carries('hide') || (g.carries('flake') && g.sabres.kill && Math.hypot(g.sabres.kill.x - g.player.pos.x, g.sabres.kill.z - g.player.pos.z) < 14) },
     { t: 'Wacht tot de roofdieren weg zijn en snijd: eerst vlees, dan de huid', ok: () => g.carries('hide') },
     { t: 'Houd huid en snijsteen vast, tik op de huid en kies het draagvel', ok: () => !!g.state.bag }] },
+  trackMission(g, { who: 'tor', kind: 'giant', near: 30, title: 'Volg het spoor van de reus', follow: 'Volg de afdrukken tot je de reus ziet. Blijf op afstand',
+    ask: 'Tor wijst naar grote ronde afdrukken in het stof. Dan naar de verte.', end: 'Tor luistert met grote ogen. Nu weet de groep waar de reus loopt.',
+    why: 'Waar de reus eet, vallen vruchten. En waar hij loopt, blijven de katten weg.' }),
   { id: 'cloak', who: 'tor', shiver: true, ask: 'Tor zit ineengedoken. Hij rilt.', end: 'Tor voelt aan het vel om je schouders en knikt.', tag: 'hide', title: 'Een vel om je schouders', why: 'De nachten worden koud, en kou vreet energie.', needs: 'flake', done: () => g.state.cloak, steps: [
     { t: 'Neem een snijsteen mee', ok: () => g.carries('flake') || g.carries('hide') },
     { t: 'Zoek een vers gedood dier: let op zebra\'s die wegstuiven', find: 'kill', ok: () => g.carries('hide') || (g.carries('flake') && g.sabres.kill && Math.hypot(g.sabres.kill.x - g.player.pos.x, g.sabres.kill.z - g.player.pos.z) < 14) },

@@ -580,3 +580,34 @@ Niet gedaan / eerlijk:
 - De sterren schijnen door dunne wolkenslierten heen. Er is geen maan aan de hemel getekend en er zijn geen planeten.
 - De groep doet nog niets met de sterren.
 
+
+## 25. Rotswand, platte stenen en fase 5c stap 3 — volg het spoor (20-11-2026)
+
+**Rotswand onder de rokende berg.** Bob zag op zijn telefoon "een vloerkleed dat omhoog loopt". Oorzaak: `rock_face_01` is een
+dunne gescande plaat zonder achterkant, en de grote wand (`namaqualand_cliff_02`) is van achteren hol. Opgelost in `areas/berg.js`:
+een breuktrap in het terrein achter de wand (`relief`, soort `breuk`), zodat je er niet meer achter kunt kijken, en de platen zijn
+vervangen door grote gescande keien aan de voet van de trap. `rock_face_01` en `mountainside` (ook een platte, donkere plaat) worden niet meer gebruikt en zijn verwijderd.
+
+**Platte stenen** (`v4/src/stones.js`). Vroeger: een getekende schijf, en het resultaat was alleen een (onzichtbare) tekstmelding.
+Nu: een gescande kei, platgedrukt. Hij kantelt van je af. Eronder liggen vijf larven (echt model) die kronkelen; je bukt en eet ze
+één voor één (eetgeluid, teken, 'hm'). Of er zit een schorpioen (echt model met botten): hij steekt, je krijgt de rode flits, en hij
+loopt weg. 's Ochtends (`newDay`) kantelt elke steen terug en zit er weer iets onder: 72% larven, 28% schorpioen. Een vondst ligt er
+maar één keer. Larven en schorpioen zijn groter dan in het echt (17 en 30 cm), omdat je ze anders vanuit de hoge camera niet ziet.
+
+**Volg het spoor** (`v4/src/areas/track.js`). De eerste missies speelden zich rond het kamp af. Nu is er in elk gebied vanaf de
+start een missie die je het land in stuurt, naar het grote dier dat het gebied bijzonder maakt:
+
+| Gebied | Wie vraagt | Dier | Zo dichtbij |
+|---|---|---|---|
+| De savanne | Tor | de reuzenolifant | 30 m |
+| Bij het water | Tor | de nijlpaarden | 42 m |
+| Onder de rokende berg | Bala | de neushoorn | 34 m |
+| De hoge vlakte | Sen | de giraffen | 55 m |
+
+Stappen: de afdrukken vinden, het dier zien, terug naar wie het vroeg. Die wijst bij het kamp de goede kant op. Wie het dier al
+eerder zag, hoeft niet opnieuw (`watch`). Het teken is een hoefafdruk (game-icons, `track`). Getest met `/root/tools/pw/v4spoor.js`
+en `v4steen.js`.
+
+Het dier heeft bij de start al een lang spoor van afdrukken achter zich (hoge vlakte: het begint op zo'n 30 m van het kamp en loopt
+200 m door tot de giraffen). Wie het vroeg wijst naar de dichtstbijzijnde afdruk; daarna volg je de afdrukken zelf. Een pijl onderweg
+is er niet. Met 'voelen' lichten de afdrukken op.

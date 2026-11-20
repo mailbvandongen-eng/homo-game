@@ -2,6 +2,7 @@
 // Dezelfde Riftvallei als die van Homo habilis, honderdduizenden jaren later. De krokodil van toen is er niet meer,
 // de sabeltandkat nog wel. Nieuw: een plek waar het na een blikseminslag blijft smeulen,
 // dode bomen om hout van te hakken en een kring van stenen bij het kamp waar het vuur moet komen.
+import { trackMission } from './track.js';
 export const berg = {
   id: 'berg', name: 'Onder de rokende berg', terrain: 'rift', ma: 1.5, region: 'Oost-Afrika', playable: true,
   intro: 'Veel later. Een andere groep, met langere benen.',
@@ -20,11 +21,12 @@ export const berg = {
       { model: 'dead_quiver_trunk', n: 26, tall: [1.5, 2.8], block: 0.25, gap: 5 },
     ],
     rocks: { tint: 0x6a6462, n: 90, big: 2.0 },
-    // de wand achter het kamp: de wind komt uit het oosten, de rots staat in het westen en houdt de warmte van het vuur vast
+    // de wand achter het kamp: de wind komt uit het oosten, de rots staat in het westen en houdt de warmte van het vuur vast.
+    // De wand is een gescande rotswand zonder achterkant: hij staat daarom tegen een breuktrap aan (zie relief), zodat je hem nooit van achteren ziet.
     props: [
-      { model: 'namaqualand_cliff_02', at: [-2, -27], tall: 6.2, ry: Math.PI / 2 + 0.12, tint: 0x6e6866 },
-      { model: 'rock_face_01', at: [2.5, -39.5], tall: 4.4, ry: 0.9, tint: 0x6e6866 },
-      { model: 'mountainside', at: [-0.5, -13.5], tall: 5.2, ry: -1.9, tint: 0x6e6866 },
+      { model: 'namaqualand_cliff_02', at: [-3.5, -27], tall: 6.2, ry: Math.PI / 2 + 0.12, tint: 0x6e6866 },
+      { model: 'namaqualand_boulder_02', at: [-2.5, -41], tall: 3.2, ry: 0.7, sink: 0.2, tint: 0x6e6866 },
+      { model: 'namaqualand_boulder_05', at: [-3, -14], tall: 2.6, ry: -1.9, sink: 0.2, tint: 0x6e6866 },
     ],
     bush: { n: 35, tint: 0xb4aa94 },
     ground: { bare: 'burned_ground_01', rock: 'dark_rock', grass: 0.42, greenK: 0.5, wall: [0.6, 0.52, 0.5, 0.49] },
@@ -45,7 +47,7 @@ export const berg = {
       go: 'Rond de wand is het land kaal. Oru schept de gloed in een stuk schors en wijst naar het westen, waar de grond openscheurt. Aan de rand van die kloof is een goede plek.',
       stones: [[-95, -40, 'lava'], [-104, -31, 'quartz'], [-97, -28, 'lava']],
       site: {
-        props: [{ model: 'rock_face_01', at: [-107.5, -37.5], tall: 4.2, ry: 1.75, tint: 0x6e6866 }],
+        props: [{ model: 'namaqualand_boulder_02', at: [-107.5, -37.5], tall: 3.6, ry: 2.6, sink: 0.2, tint: 0x6e6866 }],
         flora: [{ model: 'cand21', n: 0, tall: [3.6, 7], block: 0.6, home: 0, at: [[-104, -46.5, 6.4], [-109, -27.5, 5.2]] }] } },
     { id: 'kop', name: 'De rotskop', at: [-122, -128],
       look: { name: 'Het kamp', look: 'Een vlakke plek onder een bult van zwarte keien, met een paar kokerbomen ervoor. Vanaf hier zie je de berg roken. Hier slaapt de groep nu.', hint: 'Breng eten mee, en kom terug voor het donker wordt.' },
@@ -54,8 +56,9 @@ export const berg = {
       stones: [[-117, -124, 'lava'], [-126, -122, 'quartz'], [-118, -133, 'lava']],
       site: { flora: [{ model: 'quiver_tree_01', n: 0, tall: [3, 5], block: 0.4, twigs: true, home: 0, at: [[-114, -136, 4.6], [-128.5, -121, 3.8], [-112.5, -121.5, 4.2]] }] } },
   ],
-  // het reliëf van dit gebied (zie relief.js): een diepe kloof naar de rivier en een rotskop in het noordwesten
+  // het reliëf van dit gebied (zie relief.js): de breuktrap achter het kamp, een diepe kloof naar de rivier en een rotskop in het noordwesten
   relief: [
+    { kind: 'breuk', path: [[-7, -46], [-7, -8]], h: 5.2, up: 1, back: 24 },
     { kind: 'geul', path: [[-155, -60], [-132, -40], [-124, -12]], w: 4.5, d: 4.6, lift: 3.4 },
     { kind: 'kop', at: [-135, -140], r: 12, h: 3, rocks: 7 },
   ],
@@ -75,12 +78,12 @@ export const berg = {
     route: [[-24, -62, 'eat'], [-10, -100, 'eat'], [30, -110, 'eat'], [60, -70, 'eat'], [70, -20, 'pass'], [105, { river: -13 }, 'drink'], [110, -20, 'eat'], [40, -60, 'pass']],
   },
   // vuur: waar het smeult, waar het moet branden, waar dood hout ligt en de berg aan de horizon
-  models: ['oldtree', 'lengai', 'handaxe', 'cand1', 'cand21', 'cand6', 'quiver_tree_01', 'dead_quiver_trunk', 'namaqualand_cliff_02', 'rock_face_01', 'mountainside'],   // dode boom, de vulkaan aan de horizon, een echte vuistbijl uit Olduvai
-  fire: { source: [-56, -94], hearth: [15, -21], wood: [[-3, -42], [-38, -70], [40, -16], [-88, -47], [-112, -22], [-108, -118], [-134, -118]], volcano: [-290, -390] },
+  models: ['oldtree', 'lengai', 'handaxe', 'cand1', 'cand21', 'cand6', 'quiver_tree_01', 'dead_quiver_trunk', 'namaqualand_cliff_02'],   // dode boom, de vulkaan aan de horizon, een echte vuistbijl uit Olduvai
+  fire: { source: [-56, -94], hearth: [15, -21], wood: [[8, -47], [-38, -70], [40, -16], [-88, -47], [-112, -22], [-108, -118], [-134, -118]], volcano: [-290, -390] },
   // grondstoffen
   stones: [[16, -31, 'lava'], [6, -20, 'quartz'], [21, -15, 'sand'], [8, -36, 'lava'], [-20, -40, 'lava'], [40, -52, 'quartz'], [-48, -82, 'lava'], [-64, -98, 'lava'], [62, 10, 'sand'], [-30, 30, 'quartz']],
   riverStones: [-130, -95, -60, -28, 12, 48, 85, 120],
-  flatStones: [[13, -35, 'grubs'], [30, -20, 'scorpion'], [-16, -30, 'grubs'], [70, -60, 'grubs'], [-44, -50, 'scorpion'], [50, 20, 'grubs']],
+  flatStones: [[13, -35, 'grubs'], [30, -20, 'scorpion'], [-26, -30, 'grubs'], [70, -60, 'grubs'], [-44, -50, 'scorpion'], [50, 20, 'grubs']],
   bones: [[79.5, -69], [82, -71.5]],
   branches: [[11.5, -23], [-32, -4], [56, -38]],
   redBerries: [[23, -12], [-30, 20], [64, -50]],
@@ -122,6 +125,9 @@ export const berg = {
         why: 'Rauw vlees is taai. Boven het vuur wordt het zacht en lekker, en je hebt er langer genoeg aan.', done: () => g.state.found.has('roast'), steps: [
           { t: 'Haal vlees van een dood dier', find: 'kill', ok: () => g.state.found.has('roast') || g.carries('meat') },
           { t: 'Houd het vlees bij het vuur', ok: () => g.state.found.has('roast') }] },
+      trackMission(g, { who: 'bala', kind: 'rhino', near: 34, title: 'Volg het spoor van de neushoorn', follow: 'Volg de afdrukken tot je hem ziet grazen. Let op de wind',
+        ask: 'Bala heeft diepe afdrukken gezien. Ze wijst naar de vlakte achter de wand.', end: 'Bala luistert en kijkt naar de wind. Nu weet ze waar ze niet moet lopen.',
+        why: 'Een neushoorn ziet slecht, maar ruikt je van ver. Beter weten waar hij graast.' }),
     ];
   },
 };

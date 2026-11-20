@@ -416,14 +416,8 @@ export function placeItems(scene, A, area) {
     add({ kind: 'pick', item: 'bone', x, z, mesh: m, label: 'Pak het bot', lies: true });
   }
 
-  // platte stenen: eronder zitten larven, soms een schorpioen, en één keer de hamersteen
-  const flatMat = lam(0x9c8e7c);
-  for (const [x, z, under] of area.flatStones) {
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.5, 0.14, 7), flatMat);
-    m.position.set(x, height(x, z) + 0.04, z); m.rotation.set(0.05, x, 0.04); m.castShadow = true; m.receiveShadow = true;
-    scene.add(m);
-    add({ kind: 'turn', look: 'flatstone', x, z, mesh: m, under });
-  }
+  // platte stenen: eronder zitten larven, soms een schorpioen, en één keer de hamersteen (het model komt uit stones.js)
+  for (const [x, z, under] of area.flatStones) add({ kind: 'turn', look: 'flatstone', x, z, under });
 
   return things;
 }

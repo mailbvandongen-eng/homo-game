@@ -2,6 +2,7 @@
 // (vindplaatsen als Melka Kunture aan de Awash en Gadeb). Hoger, groener en kouder dan de vlakte onder de rokende berg.
 // De groep heeft het vuur meegedragen. Nieuw hier: zelf een vuurplaats bouwen, goede steen van ver halen
 // (zwart vulkanisch glas, obsidiaan) en een dier moe lopen in de hitte van de middag.
+import { trackMission } from './track.js';
 export const hoog = {
   id: 'hoog', name: 'De hoge vlakte', terrain: 'rift', ma: 1.4, region: 'Oost-Afrika', playable: true,
   intro: 'Dagen lopen, steeds hoger. Het vuur ging mee.',
@@ -127,6 +128,9 @@ export const hoog = {
           { t: 'Geef ze geen rust, tot er één niet meer kan', ok: () => found('run') || !!H().spent },
           { t: 'Sla toe met een kei of je vuistbijl', ok: () => found('run') },
           { t: 'Snijd het vlees los', ok: () => found('runcut') }] },
+      trackMission(g, { who: 'sen', kind: 'giraffe', near: 55, title: 'Zoek de giraffen', follow: 'Loop door tot je de lange halzen ziet. Dichtbij kom je niet',
+        ask: 'Sen wijst naar de bomen in de verte. Aan de hoge takken is gevreten.', end: 'Sen kijkt in de richting die je wijst. Wie de giraffen ziet, ziet het gevaar eerder.',
+        why: 'Giraffen zien alles. Waar zij alle drie naar kijken, loopt een roofdier.' }),
     ];
   },
 };

@@ -49,6 +49,7 @@ export function initSeason(G) {
     else hint = 'Het wordt droger. De struiken dicht bij de boom zijn verdord. Verderop hangt nog fruit.';
     if (shore) shore.newDay();
     forage.newDay(dry, rain);
+    if (G.flat) G.flat.newDay();
     const gh = beast.newDay(dry, rain, G.predGame);   // het grote dier heeft zijn eigen nieuws
     if (gh && rain) hint += ' ' + gh; else if (gh && dry !== DRY_DAYS - 1) hint = gh;
     if (rain) { sound.home(); discover('rain'); } else if (dry >= 1) discover('drought');

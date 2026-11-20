@@ -13,7 +13,7 @@ export function initMissions(G) {
   // Je kiest er zelf één, ziet de stappen, en als ze alle vier gelukt zijn trekt de groep verder.
   const has = (it) => state.hands.includes(it);
   const carries = (it) => has(it) || !!(state.bag && state.bag.some((e) => e && e.it === it));
-  const MISSIONS = AREA.missions({ state, has, carries, player, hyenas, sabres, group, night: () => G.predGame.night, dayP: () => G.dayP, fire: () => G.fire, herd: () => G.herd });
+  const MISSIONS = AREA.missions({ state, has, carries, player, hyenas, sabres, group, night: () => G.predGame.night, dayP: () => G.dayP, fire: () => G.fire, herd: () => G.herd, beast: () => G.beast });
   // waar het hierna heen gaat: een volgend gebied, of een volgend tijdperk
   const NEXT_ERA = ERAS.find((e) => e.playable && e.areas.some((a) => a.id === AREA.next && a.playable)) || ERA;
   const NEXT = NEXT_ERA.areas.find((a) => a.id === AREA.next && a.playable) || null;
@@ -52,7 +52,7 @@ export function initMissions(G) {
     if (mission.done.size === MISSIONS.length) mission.endT = 7;
   }
   // wat de vrager wil hebben, als teken
-  const WANT = { flake: 'flake', hyena: 'hyena', bag: 'pouch', cloak: 'hide', water: 'waterbag', stick: 'stick', fish: 'fish', sick: 'leaf', axe: 'axe', fire: 'fire', keep: 'fire', camp: 'fire', roast: 'roast', glass: 'flake', run: 'run' };
+  const WANT = { flake: 'flake', hyena: 'hyena', bag: 'pouch', cloak: 'hide', water: 'waterbag', stick: 'stick', fish: 'fish', sick: 'leaf', track: 'track', axe: 'axe', fire: 'fire', keep: 'fire', camp: 'fire', roast: 'roast', glass: 'flake', run: 'run' };
   const face = initPortrait(G);
   // een missie begint of is klaar: het gezicht van wie het vroeg en het teken van wat hij wil (of een vinkje), zonder woorden
   function show(m, g, mark) { sign(`<img alt="" src="${face(g)}">${ICON[WANT[m.id]] || ''}${mark ? ICON[mark] : ''}`, 4, mark ? 'good' : ''); }
@@ -115,6 +115,7 @@ export function initMissions(G) {
   }
   function questTick(dt) {
     if (!state.started) return;
+    for (const m of MISSIONS) if (m.watch && !mission.done.has(m.id)) m.watch();   // wat je onderweg al zag, telt
     if (mission.over) {
       // wie nog even bleef: Tor wenkt tot je meegaat
       const tor = group.list.find((g) => g.id === 'tor'), go = NEXT && G.predGame.night < 0.6;

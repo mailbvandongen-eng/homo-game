@@ -13,7 +13,7 @@ Alle modellen, texturen en de luchtfoto komen van [Poly Haven](https://polyhaven
 | models/quiver_tree_01.glb, quiver_tree_02.glb, dead_quiver_trunk.glb | quiver_tree_01, quiver_tree_02, dead_quiver_trunk | kokerbomen en een dode stam. Onder de rokende berg staan ze als boomaloë; op de hoge vlakte staat de kleine rozet op een stam voor de reuzenlobelia (**vervanger**) |
 | models/moon_rock_01.glb, moon_rock_03.glb | moon_rock_01, moon_rock_03 | lichte keien aan het grote water |
 | models/rock_moss_set_01.glb | rock_moss_set_01 | keien met mos op de hoge vlakte |
-| models/namaqualand_cliff_02.glb, rock_face_01.glb, mountainside.glb | namaqualand_cliff_02, rock_face_01, mountainside | de rotswand achter het kamp onder de rokende berg (donker getint als lavasteen: **aangepast**) |
+| models/namaqualand_cliff_02.glb | namaqualand_cliff_02 | de rotswand achter het kamp onder de rokende berg (donker getint als lavasteen: **aangepast**) |
 | models/grass_medium_02.glb | grass_medium_02 | graspollen op de hoge vlakte |
 | tex/coast_sand_01_diff.webp, mud_cracked_dry_03_diff.webp | coast_sand_01, mud_cracked_dry_03 | zand en gebarsten modder aan het grote water |
 | tex/burned_ground_01_diff.webp, dark_rock_diff.webp | burned_ground_01, dark_rock | de donkere grond en rots onder de rokende berg |
@@ -39,6 +39,8 @@ Bewerkt met gltf-transform (vereenvoudigd, texturen verkleind naar webp). De gra
 | models/rhino.glb | [Animated Rhinoceros Walking Animal Loop](https://sketchfab.com/3d-models/animated-rhinoceros-walking-animal-loop-32abc12d4fe44bd0b116b294194d9615) en [Animated 3D Grey Rhino Running Loop](https://sketchfab.com/3d-models/animated-3d-grey-rhino-running-loop-2345603eec5e4e54a293c39833684525) (samengevoegd tot één model met lopen en rennen; grazen en opkijken bewegen we zelf; staat voor *Ceratotherium*: **verwant**) | LasquetiSpice | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 | models/giraffe.glb | [Reticulated Giraffe - Rigged & Animated](https://sketchfab.com/3d-models/reticulated-giraffe-rigged-animated-b8a7cf34d2614b8c93e76d5300f9aaaa) (staat voor *Giraffa jumae*: **verwant**) | animalanimator | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 | models/cobra.glb | [Snake attack Animations (Multiple)](https://sketchfab.com/3d-models/snake-attack-animations-multiple-83c4290cd4b648fd942d4bbc2280a3f6) (de slang; alleen de bruine slang behouden, de animatie in drie stukken geknipt; in het spel omgevormd tot pofadder: kort, dik, brede kop, en met de huid `tex/puffadder.webp`, die wij uit de kleurtextuur van dit model hebben afgeleid) | [Imagigoo](https://sketchfab.com/Imagigoo) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
+| models/scorpion.glb | [Scorpion](https://sketchfab.com/3d-models/scorpion-4c0fd62d33ab4d2592ee0a1d985a480d) (de schorpioen onder een platte steen; minder vlakken, alleen de bewegingen 'Defend' en 'Walk' behouden: **aangepast**; in het spel groter dan echt, anders zie je hem niet) | anthonyvanoo | CC BY 4.0 |
+| models/grub.glb | [Hercules Beetle Grub/Larvae](https://sketchfab.com/3d-models/hercules-beetle-grublarvae-free-download-233e753c7f48405d94388521ec3ef37d) (de larven onder een platte steen; minder vlakken, kleinere foto's: **aangepast**. Het is de larve van een Amerikaanse kever: **vervanger** voor een Afrikaanse keverlarve; in het spel groter dan echt) | Najash | CC BY 4.0 |
 | models/croc.glb | [crocodile high quality](https://sketchfab.com/3d-models/crocodile-high-quality-a242e4634a234d3fb909c54b2c39d7b8) (de krokodil; vereenvoudigd tot 7750 vlakken, de staart beweegt in het spel) | [Beerus](https://sketchfab.com/beerusu798) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
 | models/catfish.glb | [CC0 アリアケギバチ Ariake Stream Catfish, Animation](https://sketchfab.com/3d-models/cc0-ariake-stream-catfis-animation-51e0cc7840c54790bfd674d70dfb6bab) (de meerval; vereenvoudigd tot 10.000 vlakken) | [ffish.asia / floraZia.com](https://sketchfab.com/ffishAsia-and-floraZia) | [CC0](http://creativecommons.org/publicdomain/zero/1.0/) |
 | models/vulture.glb | [Buitre del Himalaya, animado, low poly, smooth.](https://sketchfab.com/3d-models/buitre-del-himalaya-animado-low-poly-smooth-53d5cff4f1494baca841fa1fe21a6367) (de gieren in de lucht, met vleugelslag) | [@x_y_es](https://sketchfab.com/estadisticas) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
@@ -153,6 +155,7 @@ Alle tekens in het spel (knoppen, voorwerpen in je hand en je tas, de tekens voo
 | voordoen hoe je stuurt | click | Skoll |
 | dit mist nog | interdiction | Lorc |
 | meetrekken | footsteps | Skoll |
+| een spoor volgen | deer-track | Delapouite |
 | wond verzorgen | arm-bandage | Delapouite |
 | gieren | vulture | Lorc |
 | hyena | hyena-head | Caro Asercion |

@@ -151,7 +151,9 @@ Twee uitgangspunten, die voor alles gelden wat nog komt:
 |---|---|---|
 | 1 | **Elk gebied een eigen land.** Eigen vorm van het terrein, eigen kampplek (niet steeds een slaapboom), eigen bomen en planten, eigen grond, licht en lucht, eigen dieren en eigen blikvanger. Op één schermfoto bij het kamp zie je welk gebied het is | **land klaar** (18-11): elk gebied heeft een eigen terrein, rivierloop, kampplek, planten, keien, grond en licht (zie hieronder). **Dieren klaar** (18-11): elk gebied heeft zijn eigen grote dier met een eigen les (zie hieronder) |
 | 2 | **Trekken binnen een gebied.** De groep blijft niet het hele seizoen op één plek: als het eten of het water opraakt, breekt ze op naar een volgende kampplek verderop | **klaar** (19-11): drie kampplekken per gebied, de groep loopt er in een rij heen, het vuur gaat mee, zonder woorden (zie hieronder) |
-| 3 | **Missies sturen je het land in.** Al in de eerste minuten weg van het kamp, naar wat dit gebied bijzonder maakt | |
+| 3 | **Missies sturen je het land in.** Al in de eerste minuten weg van het kamp, naar wat dit gebied bijzonder maakt | **klaar** (20-11): in elk gebied is er vanaf de start de missie 'volg het spoor' naar het grote dier van dat gebied (`v4/src/areas/track.js`, ANALYSE §25) |
+
+Tussendoor (20-11, na de telefoonproef van Bob): de rotswand onder de rokende berg staat nu tegen een breuktrap met echte gescande keien aan de voet (de dunne platen die op een vloerkleed leken zijn weg); de platte stenen laten zien wat eronder zit en liggen elke ochtend terug (`v4/src/stones.js`).
 
 Tussendoor (20-11, op verzoek van Bob): **de sterrenhemel van toen**. Echte sterren, per gebied teruggerekend naar zijn tijd, met de Melkweg; de hemel draait om het noorden (`v4/src/stars.js`, ANALYSE §24). Klaar en live.
 

@@ -4,6 +4,7 @@
 // Plekken zijn [x, z] in meters; 'river' is de afstand tot de waterlijn (positief = het meer in).
 const near = (p, x, z, r) => Math.hypot(p.pos.x - x, p.pos.z - z) < r;
 const POOLS = [[18, 58, 6], [-34, 42, 5.5], [52, 56, 6]];
+import { trackMission } from './track.js';
 export const water = {
   id: 'water', name: 'Bij het water', terrain: 'lake', ma: 1.8, region: 'Oost-Afrika', playable: true, next: 'berg',
   intro: 'Het meer zakt. Wat achterblijft, is van wie het vindt.',
@@ -120,6 +121,9 @@ export const water = {
           { t: 'Waad erheen tussen het riet, waar het ondiep is. Let op wat drijft', ok: () => g.carries('leaf') || near(g.player, 70, 93, 9) },
           { t: 'Pluk bitterblad', find: 'leaf', ok: () => g.carries('leaf') },
           { t: 'Breng het blad naar de slaapboom', ok: () => tor().sick <= 0 }] },
+      trackMission(g, { who: 'tor', kind: 'hippo', near: 42, title: 'Zoek wat er brult in het meer', follow: 'Loop langs de oever tot je ze ziet liggen. Blijf uit het water',
+        ask: 'Tor wijst naar het meer. Vannacht klonk daar gebrul.', end: 'Tor knikt langzaam. Daar gaat de groep niet drinken.',
+        why: 'Wie weet waar de nijlpaarden liggen, weet waar hij niet moet drinken.' }),
     ];
   },
 };

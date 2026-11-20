@@ -14,6 +14,7 @@ import { Glints, Motes, Birds, Butterflies, Senses } from './life.js';
 import { Sound } from './audio.js';
 import { loadAssets } from './assets.js';
 import { loadStars } from './stars.js';
+import { FlatStones } from './stones.js';
 import { ICON } from './icons.js';
 import { Encounters } from './encounters.js';
 import { Beast } from './beast.js';
@@ -298,35 +299,26 @@ function groupTake(job) {
   const t = job.t; if (!available(t) || (t.bush && t.bush.left <= 1)) return null;
   take(t); return t.item;
 }
-// een platte steen omdraaien: hij kantelt over zijn rand en valt ondersteboven naast zijn kuil
-const turning = [];
-function turnTick(dt) {
-  for (let i = turning.length - 1; i >= 0; i--) {
-    const q = turning[i], m = q.m, r = 0.46; q.t = Math.min(1, q.t + dt / 0.9);
-    const a = Math.PI * (q.t < 0.5 ? 0.9 * q.t : 0.45 + 2.2 * (q.t - 0.5) ** 2), yaw = m.rotation.y;   // traag optillen, dan valt hij
-    const k = r * (Math.cos(a) - 1);
-    m.position.x = q.x + Math.cos(yaw) * k; m.position.z = q.z - Math.sin(yaw) * k;
-    m.position.y = height(m.position.x, m.position.z) + 0.04 + r * Math.sin(a);
-    m.rotation.z = 0.04 + a;
-    if (q.t >= 1) { turning.splice(i, 1); sound.thud?.(); }
-  }
-}
+// een platte steen omdraaien: stones.js laat zien wat eronder zit, hier staat wat het met je doet
+const flat = new FlatStones(scene, A, {
+  thud: (t) => { if (Math.hypot(t.x - player.pos.x, t.z - player.pos.z) < 30) sound.thud(); },
+  grub: (t, first, last) => {
+    if (first) player.playOnce('PickUp_Table', { speed: 1.2 });
+    state.food = Math.min(100, state.food + 2.5); sound.eat(); player.action = 0.4;
+    if (last) { heal('grubs'); discover('grubs'); sign(ICON.mouth, 1.6, 'good'); setTimeout(() => sound.voice('hm'), 500); }
+  },
+  sting: (t) => { if (Math.hypot(t.x - player.pos.x, t.z - player.pos.z) < 3) { hurt(6); sound.bad(); } },
+});
+for (const t of things) if (t.kind === 'turn') { t.mesh = flat.mesh(t.x, t.z); flat.add(t); }
+G.flat = flat;
 function turnStone(t) {
   if (t.gone) return;
   did.turn = true;
   t.gone = true; player.action = 0.5; sound.pick();
-  turning.push({ m: t.mesh, x: t.mesh.position.x, z: t.mesh.position.z, t: 0 });
-  if (t.under === 'grubs') {
-    state.food = Math.min(100, state.food + 10); heal('grubs'); sound.eat();
-    toast('Larven! Dikke witte larven onder de steen. Je eet ze op: knapperig en voedzaam.', 5);
-    discover('grubs');
-  } else if (t.under === 'scorpion') {
-    hurt(6); sound.bad();
-    toast('Au! Een schorpioen steekt je in je hand. Dat doet pijn, maar het zakt weer.', 5);
-  } else if (FINDS[t.under]) {
+  flat.turn(t, player.pos);
+  if (FINDS[t.under]) {
     state.finds.add(t.under); sound.discover();
-    const f = FINDS[t.under];
-    found(f);
+    found(FINDS[t.under]);
   }
 }
 // De wereld wijst de weg: waar is het dichtstbijzijnde van wat een missiestap vraagt? Wie de missie gaf wijst erheen,
@@ -345,6 +337,8 @@ function spotOf(kind) {
   if (kind === 'kill') return near([sabres.kill, herd.kill].filter((k) => k && k.meat > 0));
   if (kind === 'pool') return near(pts(AREA.pools || []));
   if (kind === 'herd') return near(herd.members);
+  if (kind === 'beast') return near(beast.members);
+  if (kind === 'track') return near(beast.spots.filter(Boolean)) || near(beast.members);
   if (kind === 'outcrop') return AREA.outcrop ? { x: AREA.outcrop.at[0], z: AREA.outcrop.at[1] } : null;
   return null;
 }
@@ -1034,7 +1028,7 @@ function update(dt) {
   const pred = !devFlags.noPred;
   if (pred) hyenas.update(dt, predGame);
   if (pred) leopard.update(dt, predGame, camera);
-  throws.update(dt); chips.update(dt); knapTick(dt); turnTick(dt); hintTick(dt); questTick(dt); saveTick(dt); trackTargets(dt); aimTick(dt);
+  throws.update(dt); chips.update(dt); knapTick(dt); flat.update(dt, t); hintTick(dt); questTick(dt); saveTick(dt); trackTargets(dt); aimTick(dt);
   zebras.update(dt, predGame);
   if (pred) sabres.update(dt, predGame);
   group.update(dt, predGame); trek.update(dt);
@@ -1236,7 +1230,7 @@ frame();
 begin();
 
 // voor testen
-window.__game = { trek, stars, W: { FORD, LAKE, depth, riverZ }, walk: (x, z) => { walkTo = { x, z, fn() {}, reach: 0.8 }; }, stopWalk: () => { walkTo = null; }, get walking() { return !!walkTo; }, KNAP, chips, knapStart, axeStart, vultures, FLOCKS, butterflies, body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
+window.__game = { trek, stars, flat, W: { FORD, LAKE, depth, riverZ }, walk: (x, z) => { walkTo = { x, z, fn() {}, reach: 0.8 }; }, stopWalk: () => { walkTo = null; }, get walking() { return !!walkTo; }, KNAP, chips, knapStart, axeStart, vultures, FLOCKS, butterflies, body: () => ({ breath, winded, guard, sinceHit }), setBreath: (v) => { breath = v; }, collapse, hurt, bite, scene, giveHand, eat, crackFruit, forage, thirst, journal, knowledge, shore, fire, knapAxe, knapAt: knap, hitTarget, endCard, travel, NEXT, AREA, dayP: () => dayP, makeStick, begin, bestTarget, renderBag, stow, unstow, makeBag, wearHide, mission, MISSIONS, Save, snapshot, restore, ERA, ERAS, killLook, accept, complete, offerOf, missionInfo, missions: G.missions, title, screenOf: (o) => { const q = targetPos({ member: o }); v3.set(q.x, q.y, q.z).project(camera); return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight]; }, camYaw: () => cam.yaw, aim: () => aim, aimStart, aimMove, aimRelease, quickThrow, hints: () => [hints.cur && hints.cur.id, [...hints.seen]], actionContext,
   state, player, herd, hyenas, leopard, zebras, sabres, group, enc, beast, game: predGame, HOME, give, sleep, cutKill, season, newDay, hunt: () => sabres.startHunt(predGame), danger: () => danger, things, camera, renderer, discover, throwAt, turnStone, knap: () => { renderHands(); const i = state.hands.indexOf('stone'); if (state.rock[i]) state.rock[i].hits = 9; knap(i); }, renderHands, cutMeat, tapAt, pickUp, openRadial, lookAt, blockers, cover, setSneak, still: () => stillT,
   setCam: (y, p, d) => { cam.yaw = y; cam.pitch = p; if (d) cam.dist = d; }, setZoom: C.setZoom, zoom: () => cam.dist, C, jump, sound, world, weather, menu, closeCard, clockT: () => clock.elapsedTime, actionContext, actionOptions, heard, tasteAt, bodyTap, prim: () => prim, alts: () => alts,
   lookFrom: (pos, look) => { cam.override = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) } : null; },
