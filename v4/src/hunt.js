@@ -2,15 +2,18 @@ import * as THREE from '../lib/three.module.js';
 import { height, WALK, riverDist, rng } from './world.js';
 import { step, sense } from './animal.js';
 import { Rig } from './rig.js';
+import { Herd, antelope } from './actors.js';
 
 const R = rng(91);
 const clampWalk = (o) => { const lim = WALK - 10; o.x = THREE.MathUtils.clamp(o.x, -lim, lim); o.z = THREE.MathUtils.clamp(o.z, -lim, lim); };
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+const pose = Herd.prototype.pose;
 
-// ---------- zebra's ----------
-// Een groepje op de open vlakte. Ze grazen, kijken op en galopperen weg als jij of een roofdier te dichtbij komt.
+// ---------- zebra's en antilopen ----------
+// Een gemengde kudde op de open vlakte, zoals je die in Afrika nog ziet: zebra's met een paar antilopen ertussen.
+// Ze grazen, kijken op en galopperen weg als jij of een roofdier te dichtbij komt. De katten pakken een antilope.
 export class Zebras {
-  constructor(scene, cx, cz, A) {
+  constructor(scene, cx, cz, A, species = 'impala') {
     this.center = { x: cx, z: cz }; this.list = []; this.alarm = 0;
     for (let i = 0; i < 5; i++) {
       // model met animaties (NoaSeller, CC BY 4.0)
@@ -19,7 +22,13 @@ export class Zebras {
       const z = { kind: 'zebra', g: rig.root, rig, x: cx + Math.cos(a) * r, z: cz + Math.sin(a) * r, yaw: R() * 6, speed: 0, state: 'graze', t: R() * 6, goal: null, slow: 1 };
       scene.add(rig.root); this.list.push(z);
     }
+    for (let i = 0; i < 4; i++) {
+      const a = i * 1.6 + 0.7, r = 5 + R() * 6;
+      const z = { ...antelope(A, species, false, i === 0, R), kind: 'antelope', x: cx + Math.cos(a) * r, z: cz + Math.sin(a) * r, yaw: R() * 6, speed: 0, state: 'graze', t: R() * 6, goal: null, slow: 1, phase: R() * 6, look: 0 };
+      scene.add(z.g); this.list.push(z);
+    }
   }
+  get antelopes() { return this.list.filter((z) => z.kind === 'antelope' && z.state !== 'dead'); }
   get alive() { return this.list.filter((z) => z.state !== 'dead'); }
 
   // iedereen vlucht weg van een punt
@@ -51,6 +60,12 @@ export class Zebras {
         z.state = 'walk'; z.t = 8; z.goal = { x: this.center.x + (R() - 0.5) * 22, z: this.center.z + (R() - 0.5) * 22 };
       }
       step(z, tx, tz, spd, dt, 4, spd > 5 ? 5 : 2.5); clampWalk(z);
+      if (z.kind === 'antelope') {
+        // de antilope beweegt haar poten zelf (zie Herd.pose); kop omhoog als ze opkijkt
+        if (z.state === 'graze' && R() < dt * 0.15) z.up = !z.up;
+        z.look += ((z.state === 'flee' ? 0.6 : z.up ? 1 : 0) - z.look) * (1 - Math.exp(-dt * 6));
+        pose(z, dt); continue;
+      }
       z.g.position.set(z.x, height(z.x, z.z), z.z); z.g.rotation.set(0, z.yaw, 0);
       if (z.speed > 5) z.rig.play('Gallop', { fade: 0.2, speed: z.speed / 12 });
       else if (z.speed > 0.3) z.rig.play('Trot', { fade: 0.3, speed: Math.max(0.35, z.speed / 4) });
@@ -62,7 +77,7 @@ export class Zebras {
 }
 
 // ---------- sabeltandkatten en hun prooi ----------
-// Twee grote katten liggen overdag in het hoge gras. Af en toe jagen ze op de zebra's.
+// Twee grote katten liggen overdag in het hoge gras. Af en toe jagen ze op de kudde: ze pakken een antilope.
 // Na de jacht eten ze, en dan lopen ze verzadigd weg: dan ligt er vers vlees. Maar jij bent niet de enige die dat weet.
 export class Sabres {
   constructor(scene, lair, zebras, A) {
@@ -86,9 +101,9 @@ export class Sabres {
     return d;
   }
 
-  // de jacht begint: sluipen naar de zebra's
+  // de jacht begint: sluipen naar de kudde
   startHunt(game) {
-    if (this.phase !== 'rest' || this.zebras.alive.length < 3) return false;
+    if (this.phase !== 'rest' || !this.zebras.antelopes.length) return false;
     this.phase = 'stalk'; this.victim = null;
     for (const c of this.list) { c.state = 'stalk'; }
     return true;
@@ -113,12 +128,12 @@ export class Sabres {
     if (this.phase === 'stalk') {
       const zc = Z.center, lead = this.list[0];
       if (dist(lead, zc) < 20 || Z.alarm > 0) {
-        // de aanval: de zebra's stuiven weg, de traagste wordt gepakt
+        // de aanval: de kudde stuift weg, de dichtstbijzijnde antilope wordt gepakt
         this.phase = 'chase';
-        this.victim = Z.alive.reduce((a, b) => (dist(a, lead) < dist(b, lead) ? a : b));
+        this.victim = Z.antelopes.reduce((a, b) => (dist(a, lead) < dist(b, lead) ? a : b));
         Z.scare(lead, 14); this.victim.slow = 0.62;
         for (const c of this.list) c.state = 'chase';
-        game.sound.from(this.list[0]).roar(0.5); game.sound.from(this.victim).bray();
+        game.sound.from(this.list[0]).roar(0.5); game.sound.from(this.victim).flee();
         game.event('hunt', this.victim);
       }
     }
@@ -127,12 +142,11 @@ export class Sabres {
       if (this.list.some((c) => dist(c, v) < 1.8)) {
         // gepakt
         v.state = 'dead'; v.slow = 1; v.speed = 0;
-        v.g.rotation.set(0, v.yaw, Math.PI / 2); v.g.position.y = height(v.x, v.z) + 0.28;
-        v.rig.freeze('Idle01', 0.1);
-        this.kill = { x: v.x, z: v.z, zebra: v, meat: 4, hide: 2, age: 0, open: false, hyenaT: 45, eatT: 0 };
+        v.g.rotation.set(0, v.yaw, Math.PI / 2 * 0.94); v.g.position.y = height(v.x, v.z) + 0.2;
+        this.kill = { x: v.x, z: v.z, body: v, meat: 4, hide: 2, age: 0, open: false, hyenaT: 45, eatT: 0 };
         this.phase = 'feed'; this.feedT = 75;
         for (const c of this.list) c.state = 'feed';
-        game.sound.from(this.kill).bray(); game.event('kill', this.kill);
+        game.event('kill', this.kill);
       }
     }
     const k = this.kill;
@@ -226,10 +240,10 @@ export class Sabres {
     }
   }
 
-  // er is niets meer van over: de zebra komt later als "nieuwe" terug bij de groep
+  // er is niets meer van over: de antilope komt later als "nieuwe" terug bij de kudde
   clearKill(game) {
-    const v = this.kill.zebra, Z = this.zebras;
-    v.state = 'graze'; v.t = 3; v.x = Z.center.x + 14; v.z = Z.center.z + 10; v.rig.mixer.stopAllAction(); v.rig.current = null;
+    const v = this.kill.body, Z = this.zebras;
+    v.state = 'graze'; v.t = 3; v.x = Z.center.x + 14; v.z = Z.center.z + 10; v.g.rotation.set(0, v.yaw, 0);
     this.kill = null; game.event('cleared');
   }
 }

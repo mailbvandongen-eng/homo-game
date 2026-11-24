@@ -69,7 +69,7 @@ export const ITEMS = {
   },
   meat: {
     name: 'Rauw vlees', color: '#a83a32',
-    look: 'Een flinke lap vers vlees van een zebra. Het ruikt sterk. Jij bent niet de enige die dat ruikt…',
+    look: 'Een flinke lap vers vlees van een antilope. Het ruikt sterk. Jij bent niet de enige die dat ruikt…',
     unknown: 'Dit is veel meer eten dan bessen. Opeten, of naar de groep brengen?',
     known: 'Vlees vult enorm. Maar hyena\'s ruiken het van ver en komen erop af.',
   },
@@ -86,7 +86,7 @@ export const ITEMS = {
     known: 'Het zoetste en krachtigste eten dat er is. De groep is er dol op.',
   },
   hide: {
-    name: 'Zebrahuid', color: '#d8cdb8',
+    name: 'Antilopevel', color: '#b9814f',
     look: 'Een stuk huid, zwaar en nog warm. De haren zijn stug, de binnenkant is glad.',
     unknown: 'Eten kun je het niet. Maar het is groot, taai en zacht tegelijk…',
     known: 'Op een huid lig je zachter en warmer dan op de kale grond. Breng hem naar de slaapboom.',
@@ -239,9 +239,9 @@ export const LOOKS = {
   leopard: { name: 'Luipaard', look: 'Hij ligt lui op een tak. Overdag slaapt hij; in de schemering gaat hij jagen.', hint: 'In de grot van Swartkrans ligt een schedel van een jonge mensachtige met twee gaatjes erin: precies de tanden van een luipaard.' },
   flatstone: { name: 'Platte steen', look: 'Een platte steen, half in de grond. Wat zou eronder zitten?', hint: 'Dubbeltik om hem om te draaien.' },
   gazelle: { name: 'Gazellen', look: 'Slanke antilopen met gebogen hoorns. Ze grazen in een groep en kijken steeds op.', hint: 'Ze zijn snel en schichtig. Te voet haal je ze nooit in.' },
-  zebra: { name: 'Zebra\'s', look: 'Gestreepte paarden van de vlakte. Ze grazen samen: veel ogen zien meer dan twee.', hint: 'Voor jou zijn ze te snel en te sterk. Maar er zijn jagers die ze wel aankunnen…' },
+  zebra: { name: 'Zebra\'s', look: 'Gestreepte paarden van de vlakte. Ze grazen samen: veel ogen zien meer dan twee.', hint: 'Voor jou zijn ze te snel en te sterk. Tussen hen grazen antilopen: daar loeren de grote katten op.' },
   sabre: { name: 'Sabeltandkat', look: 'Een zware kat met hoektanden als messen. Overdag ligt hij in het hoge gras; soms gaat hij op jacht.', hint: 'Met die tanden kan hij niet alles van de botten krijgen. Er blijft altijd iets over.' },
-  kill: { name: 'Verse prooi', look: 'Een zebra, net gedood. De buik is open, het vlees is nog warm.', hint: 'Met je handen krijg je de taaie huid niet open. Je hebt iets scherps nodig.' },
+  kill: { name: 'Verse prooi', look: 'Een antilope, net gedood. De buik is open, het vlees is nog warm.', hint: 'Met je handen krijg je de taaie huid niet open. Je hebt iets scherps nodig.' },
   wounded: { name: 'Gewonde gazelle', look: 'Ze loopt alleen en trekt met een achterpoot. De kudde heeft haar achtergelaten.', hint: 'Ze is nog steeds sneller dan jij. Maar voor hoe lang?' },
   prey: { name: 'Gazelle', look: 'Ze ligt stil in het gras. Dit is meer vlees dan je in dagen hebt gezien.', hint: 'Zonder iets scherps krijg je de huid niet open. En de geur verspreidt zich al.' },
   bird: { name: 'Trap', look: 'Een zware loopvogel, bijna zo hoog als je heup. Ze broedt op de grond.', hint: 'Ze valt alles aan wat bij haar nest komt. Een steen maakt indruk.' },
@@ -345,6 +345,7 @@ function bush(scene, x, z, berryColor, leafColor = 0xffffff, n = 3) {
 
 // een groot bot (gescand pijpbeen, zie CREDITS); de lange kant langs de y-as, het midden in de oorsprong
 let BONEV = null;
+let FUR = null;   // de vacht van de antilope: de tekening van het model zelf
 function boneModel(len) {
   const g = new THREE.Group(), k = len / BONEV.size.y;
   for (const p of BONEV.parts) { const m = new THREE.Mesh(p.geo, p.mat); m.scale.setScalar(k); m.position.y = -len / 2; m.castShadow = true; g.add(m); }
@@ -363,6 +364,7 @@ export function placeItems(scene, A, area) {
   // losse keien bij de start en verderop
   if (A.models.handaxe) AXEV = axeGeo(variantsOf(A.models.handaxe)[0]);
   BONEV = variantsOf(A.models.legbone)[0];
+  A.models.gazelle.traverse((o) => { if (o.isMesh && o.material.map) FUR = o.material.map; });
   ROCKV = [A.models.namaqualand_boulder_02, A.models.namaqualand_boulder_05, A.models.namaqualand_rocks_01].map((m) => variantsOf(m)[0]);
   const stones = area.stones.map((s) => [...s]);
   // langs de rivier liggen rolstenen: van alles door elkaar
@@ -465,9 +467,13 @@ export function heldMesh(item, rock) {
     return g;
   }
   if (item === 'hide') {
-    // een opgerolde lap huid: licht, met donkere strepen
-    const g = new THREE.Group(), roll = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.3, 8), lam(c)); roll.rotation.z = Math.PI / 2; g.add(roll);
-    for (const x of [-0.1, -0.03, 0.04, 0.11]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.073, 0.073, 0.03, 8), lam(new THREE.Color('#2a2420'))); b.rotation.z = Math.PI / 2; b.position.x = x; g.add(b); }
+    // een opgerolde lap huid: de vacht (van het antilopemodel zelf, zie CREDITS) naar buiten, de kale binnenkant zie je aan de uiteinden
+    const g = new THREE.Group(), fur = FUR ? new THREE.MeshLambertMaterial({ map: FUR }) : lam(c);
+    const geo = new THREE.CylinderGeometry(0.07, 0.07, 0.3, 10, 1, true), uv = geo.attributes.uv;
+    // het stuk rug en flank uit de tekening van het dier
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, (120 + uv.getY(i) * 330) / 1024, (150 + uv.getX(i) * 240) / 1024);
+    const roll = new THREE.Mesh(geo, fur); roll.rotation.z = Math.PI / 2; g.add(roll);
+    for (const x of [-0.15, 0.15]) { const e = new THREE.Mesh(new THREE.CircleGeometry(0.07, 10), lam(new THREE.Color('#b08a6c'))); e.rotation.y = Math.sign(x) * Math.PI / 2; e.position.x = x; g.add(e); }
     return g;
   }
   if (item === 'honey') { const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.12), new THREE.MeshLambertMaterial({ color: c, emissive: 0x4a2c00, flatShading: true })); return m; }

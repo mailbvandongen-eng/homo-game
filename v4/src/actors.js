@@ -34,6 +34,22 @@ export function legParts(color, upLen, loLen, thick) {
   return { hip, knee };
 }
 
+// Eén antilope: echt model (kenchoo, CC BY 4.0); het kan alleen stilstaan, de poten laten we zelf bewegen.
+// Een impala is groter dan een gazelle; alleen de ram draagt hoorns (liervormig). Een jong is kleiner en heeft geen hoorns.
+export function antelope(A, species, young, ram, R) {
+  const impala = species === 'impala';
+  const shape = young ? 'hornless' : impala ? (ram ? 'impala' : 'hornless') : null;
+  const rig = new Rig(A, 'gazelle', { scale: (impala ? 0.27 : 0.21) * (young ? 0.62 : ram ? 1.04 : 0.92 + R() * 0.12), shape });
+  const b = (n) => rig.bone(n);
+  rig.play('Animation', { fade: 0 }); rig.action('Animation').time = R() * 10;
+  return {
+    g: rig.root, rig, side: new THREE.Vector3(), grz: 0, young, ram,
+    neckB: b('Neck_'), neck2B: b('Neck.001'),
+    legs: [['FrontLeg.L', 'FrontLowLeg.L', 0], ['FrontLeg.R', 'FrontLowLeg.R', 0], ['BackLeg.L', 'BackLowLeg.L', 1], ['BackLeg.R', 'BackLowLeg.R', 1]]
+      .map(([t, l, hind]) => ({ top: b(t), low: b(l), hind })),
+  };
+}
+
 export class Herd {
   // persist: deze kudde kun je moe lopen. Een antilope raakt haar warmte alleen kwijt door stil te staan en te hijgen;
   // wie haar in de middaghitte steeds weer opjaagt, krijgt haar op den duur tot stilstand.
@@ -48,19 +64,7 @@ export class Herd {
     this.fleeing = 0;         // seconden dat de kudde nog vlucht
     this.home = new THREE.Vector2(cx, cz);
     for (let i = 0; i < n; i++) {
-      // echt model (kenchoo, CC BY 4.0); het kan alleen stilstaan, de poten laten we zelf bewegen.
-      // Een impala is groter dan een gazelle; alleen de ram draagt hoorns (liervormig). Het laatste dier is een jong.
-      const impala = species === 'impala', young = i === n - 1, ram = i % 3 === 0 && !young;
-      const shape = young ? 'hornless' : impala ? (ram ? 'impala' : 'hornless') : null;
-      const rig = new Rig(A, 'gazelle', { scale: (impala ? 0.27 : 0.21) * (young ? 0.62 : ram ? 1.04 : 0.92 + R() * 0.12), shape });
-      const b = (n) => rig.bone(n);
-      const m = {
-        g: rig.root, rig, side: new THREE.Vector3(), grz: 0, young, ram,
-        neckB: b('Neck_'), neck2B: b('Neck.001'),
-        legs: [['FrontLeg.L', 'FrontLowLeg.L', 0], ['FrontLeg.R', 'FrontLowLeg.R', 0], ['BackLeg.L', 'BackLowLeg.L', 1], ['BackLeg.R', 'BackLowLeg.R', 1]]
-          .map(([t, l, hind]) => ({ top: b(t), low: b(l), hind })),
-      };
-      rig.play('Animation', { fade: 0 }); rig.action('Animation').time = R() * 10;
+      const m = antelope(A, species, i === n - 1, i % 3 === 0 && i !== n - 1, R);
       const a = R() * 6.28, d = R() * 9;
       const it = {
         ...m, x: cx + Math.cos(a) * d, z: cz + Math.sin(a) * d, yaw: R() * 6.28, speed: 0,

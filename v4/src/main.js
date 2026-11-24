@@ -87,7 +87,7 @@ const hyenas = new Hyenas(scene, CARCASS, A);
 const leopard = new Leopard(scene, { x: AREA.leopard.tree[0], z: AREA.leopard.tree[1], branchY: AREA.leopard.branchY }, A);
 const throws = new Throws(scene);
 const chips = new Chips(scene);
-const zebras = new Zebras(scene, AREA.zebras.at[0], AREA.zebras.at[1], A);
+const zebras = new Zebras(scene, AREA.zebras.at[0], AREA.zebras.at[1], A, AREA.herd.species || 'gazelle');
 const sabres = new Sabres(scene, { x: AREA.sabres.lair[0], z: AREA.sabres.lair[1] }, zebras, A);
 const group = new Group(scene, A);
 const enc = new Encounters(scene, A);   // wat je onderweg tegenkomt
@@ -132,7 +132,7 @@ function discover(id) {
 // ---------- wat de onderdelen van elkaar mogen weten ----------
 // Systemen (systems/) krijgen dit ene object mee. Wat pas verderop in dit bestand ontstaat, wordt op het moment van gebruik opgehaald.
 const G = {
-  state, player, scene, renderer, things, hyenas, sabres, group, beast, shore, forage, fire, herd, sound, closeRadial, openRadial, dropAt, act, sharp, discover, carcassNear, hiveNear, spotOf,
+  state, player, scene, A, renderer, things, hyenas, sabres, group, beast, shore, forage, fire, herd, sound, closeRadial, openRadial, dropAt, act, sharp, discover, carcassNear, hiveNear, spotOf,
   get predGame() { return predGame; }, get dayP() { return dayP; }, set dayP(v) { dayP = v; }, get danger() { return danger; }, get aim() { return aim; },
   chips(type, big, dust) { const at = player.knapPoint(); chips.burst(at, new THREE.Vector3(-Math.cos(player.yaw), 0, Math.sin(player.yaw)), type, big, dust); },
   get camYaw() { return cam.yaw; }, get camera() { return camera; }, set camTurn(v) { cam.turnTo = v; }, get clock() { return clock; }, stopWalk() { walkTo = null; }, get walking() { return !!walkTo; },
@@ -204,11 +204,11 @@ const POOL_TEX = blotTex('rgba(52,7,5,0.9)', 'rgba(58,9,6,0.6)', 7), WOUND_TEX =
 function killLook(k) {
   if (killMesh) { scene.remove(killMesh); killMesh = null; }
   if (!k) return;
-  const g = new THREE.Group(), yaw = k.zebra ? k.zebra.yaw : 0;
+  const g = new THREE.Group(), yaw = k.body ? k.body.yaw : 0;
   // het dier ligt op zijn zij naast de plek waar het stond: de wond hoort op de flank, niet erboven
   let cx = k.x, cz = k.z, top = 0.34;
-  if (k.zebra) {
-    k.zebra.g.updateMatrixWorld(true); const box = new THREE.Box3().setFromObject(k.zebra.g), c = box.getCenter(new THREE.Vector3());
+  if (k.body) {
+    k.body.g.updateMatrixWorld(true); const box = new THREE.Box3().setFromObject(k.body.g), c = box.getCenter(new THREE.Vector3());
     cx = c.x; cz = c.z; top = THREE.MathUtils.clamp(box.max.y - height(cx, cz), 0.2, 0.5);
   }
   // bloed: een donkere, grillige vlek die in de grond trekt, half onder het lijf
@@ -224,6 +224,8 @@ function killLook(k) {
     const r = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.012, 5, 10, Math.PI), bone);
     r.rotation.y = Math.PI / 2 + (i - 1.5) * 0.07; r.position.set((-0.2 + i * 0.13) * open, top - 0.045, 0); r.scale.set(1, 0.38, 1); g.add(r);
   }
+  // een antilope is kleiner dan het paard waar dit voor gemaakt is
+  if (k.body) { const s = THREE.MathUtils.clamp(top / 0.34, 0.6, 1); g.scale.set(s, 1, s); }
   g.position.set(cx, height(cx, cz), cz); g.rotation.y = yaw + Math.PI / 2; scene.add(g); killMesh = g;
 }
 // iets aan de groep geven: het beste wat je in je handen hebt
@@ -595,7 +597,7 @@ function event(name, k) {
     return;
   }
   const far = k ? Math.hypot(k.x - player.pos.x, k.z - player.pos.z) : 0;
-  if (name === 'hunt') { sound.sting(); murmur(far < 60 ? 'De zebra\'s stuiven uit elkaar. Iets jaagt op ze!' : 'In de verte stuiven zebra\'s weg in een stofwolk. Iets jaagt daar…', 5, 'hide'); }
+  if (name === 'hunt') { sound.sting(); murmur(far < 60 ? 'De kudde stuift uit elkaar. Iets jaagt op ze!' : 'In de verte stuift de kudde weg in een stofwolk. Iets jaagt daar…', 5, 'hide'); }
   if (name === 'kill') {
     vultures.center.set(k.x, height(k.x, k.z), k.z); vultures.source = k; LOOK_TARGETS.push({ look: 'kill', x: k.x, z: k.z, kill: k }); killLook(k);
     setTimeout(() => murmur('De gieren draaien al boven een nieuwe plek. Daar ligt vers vlees. Maar van wie is het nu nog?', 6, 'hide'), 9000);
@@ -635,7 +637,7 @@ function tapAt(sx, sy, reach = 56) {
   const wasOpen = !!radial;
   const cands = [...things.filter(available), ...LOOK_TARGETS, ...herd.members.map((m) => ({ look: 'gazelle', member: m })),
     ...hyenas.list.map((h) => ({ look: 'hyena', member: h })), { look: 'leopard', member: leopard },
-    ...zebras.alive.map((m) => ({ look: 'zebra', member: m })), ...sabres.list.map((m) => ({ look: 'sabre', member: m })), ...group.list.map((m) => ({ look: m.id, member: m })), ...enc.lookTargets(), ...beast.lookTargets(player.pos), ...(shore ? shore.lookTargets() : []), ...forage.lookTargets(), ...(fire ? fire.lookTargets() : [])];
+    ...zebras.alive.map((m) => ({ look: m.kind === 'zebra' ? 'zebra' : 'gazelle', member: m })), ...sabres.list.map((m) => ({ look: 'sabre', member: m })), ...group.list.map((m) => ({ look: m.id, member: m })), ...enc.lookTargets(), ...beast.lookTargets(player.pos), ...(shore ? shore.lookTargets() : []), ...forage.lookTargets(), ...(fire ? fire.lookTargets() : [])];
   let best = null, bd = reach;
   for (const c of cands) {
     const p = targetPos(c);
@@ -793,7 +795,7 @@ function hitTarget(t, how = 'throw') {
   else if (t.kind === 'leopard') leopard.hit(predGame);
   else if (t.kind === 'vulture') t.m.flock.hit(t.m);
   else if (t.kind === 'sabre') sabres.hit(t.m, predGame);
-  else if (t.kind === 'zebra') { if (zebras.alarm <= 0) { zebras.scare(player.pos, 8); sound.flee(); sound.bray(); toast('Raak! De zebra\'s galopperen weg. Zo vang je er nooit een.'); } }
+  else if (t.kind === 'zebra') { if (zebras.alarm <= 0) { zebras.scare(player.pos, 8); sound.flee(); sound.bray(); toast('Raak! De kudde galoppeert weg. Zo vang je er nooit een.'); } }
   else if (t.m === herd.spent) strikeSpent(t.m, how);
   else if (herd.fleeing <= 0) { herd.fleeing = 7; sound.flee(); toast(herd.persist ? 'Raak! De gazellen stuiven weg. Erachteraan!' : `Raak! Maar de ${HERD_NAME} zijn veel sneller dan jij.`); }
 }

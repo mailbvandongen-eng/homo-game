@@ -665,3 +665,43 @@ De prijs: meer tekenopdrachten in de savanne (+70). Eerlijk: dit is gemeten in d
 beelden per seconde op een echte telefoon. Wat nu het zwaarst weegt: de dieren en mensen met een skelet bij het kamp (gazellen 5.000
 driehoeken per stuk, ook in de schaduwronde), de kandelaarbomen en de haarkaarten van de hyena's.
 
+## 27. Het vel om de schouders en de eerste prooi (24-11-2026)
+
+Aanleiding: de omslag leek op "een colbert zonder mouwen", en het zwart-wit van de zebra paste niet bij de rest.
+
+**Wat we weten over de eerste kleding**
+- Kleding vergaat. Van *Homo habilis* en *Homo erectus* is geen enkel kledingstuk of direct bewijs gevonden. Een vel om de schouders
+  in dit spel blijft dus een aanname (zie ook MASTERPLAN, kanttekeningen).
+- Luizen: de kleerluis splitste zich ongeveer 170.000 jaar geleden af van de hoofdluis. Vanaf toen droegen mensen vermoedelijk
+  geregeld kleding. [Live Science](https://www.livescience.com/archaeology/when-did-humans-start-wearing-clothes)
+- Het oudste tastbare spoor: benen werktuigen om huid en bont te bewerken uit de Contrebandiers-grot in Marokko, 120.000 tot
+  90.000 jaar oud. [Smithsonian](https://www.smithsonianmag.com/science-nature/evidence-of-fur-and-leather-clothing-among-worlds-oldest-found-in-moroccan-cave-180978689/),
+  [Max-Planck-Instituut](https://www.shh.mpg.de/2047560/bone-tools-clothing)
+- Stenen schrabbers met sporen van huid zijn ouder. De eerste "kleding" was vermoedelijk een huid die je omslaat, als een cape.
+  [PBS Eons](https://www.pbs.org/video/when-did-we-stop-being-naked-swxoun/)
+
+**Hoe zo'n vel eruitziet** (bij volken die het tot kort geleden droegen)
+- De kaross in zuidelijk Afrika: een mantel van huid met het haar er nog aan, zonder mouwen, vaak één hele antilopehuid.
+  [Wikipedia](https://en.wikipedia.org/wiki/Kaross), [Material Intelligence](https://www.materialintelligencemag.org/leather-collection/a-bangwato-kaross)
+- Een mantel van de Hadza (Tanzania) in het Horniman Museum: een nauwelijks bewerkte huid met de staart er nog aan.
+  [Horniman](https://www.horniman.ac.uk/object/11.7.66/61)
+- Zulke vellen worden omgeslagen en geknoopt, niet genaaid of op maat gesneden.
+
+**Wat we ervan gemaakt hebben** (`v4/src/systems/cloak.js`)
+- Eén heel vel, haar naar buiten: bruin op de rug, lichter naar de randen (dat is de buik van het dier), grillige rand.
+- Het ligt over de schouders en hangt recht over de rug tot op de dijen, met onderaan twee flappen (de achterpoten) en een staartpunt.
+- De voorpoten lopen als twee smalle repen over de borst en zijn daar geknoopt. De armen en de borst blijven vrij.
+- Het vel is gesneden uit het lijf van de drager zelf en hangt aan hetzelfde skelet. Daardoor past het bij man, vrouw, *habilis* en
+  *erectus*, en beweegt het mee. Bij de benen volgt het bijna alleen het bekken: het hangt, het zit niet om de dijen.
+- De tekening is de vacht van het antilopemodel (kenchoo, CC BY 4.0), niets zelf getekend.
+
+Eerlijk: dat het met de voorpoten geknoopt is, is een keuze van ons; zo wordt het bij capes van geitenvel gedaan, maar voor 1,8 miljoen
+jaar geleden weet niemand het. Het vel is ook geen stof die los wappert: het beweegt mee met het lijf, zonder eigen zwaaien.
+
+**De prooi: een antilope in plaats van een zebra** (`v4/src/hunt.js`)
+- Op de vlakte graast nu een gemengde kudde: vijf zebra's met vier antilopen ertussen. Dat zie je in Afrika nog steeds; samen zien
+  ze meer. De sabeltandkatten pakken de dichtstbijzijnde antilope, de zebra's vluchten mee.
+- In de savanne, bij het water en in de bergen zijn het impala's; op de hoge vlakte gazellen (dezelfde soort als de kudde daar).
+- De huid, de rol in je hand en het vel om je schouders zijn dus bruin, van hetzelfde dier dat je ziet liggen.
+- De zebra's blijven in het spel als dier om naar te kijken; ze worden niet meer gepakt.
+

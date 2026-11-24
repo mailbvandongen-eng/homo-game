@@ -1,11 +1,11 @@
-import * as THREE from '../../lib/three.module.js';
 import { ROCKS, heldMesh } from '../items.js';
 import { ICON, ITEM_ICON } from '../icons.js';
 import { $, toast, note } from '../engine/ui.js';
+import { makeCloak } from './cloak.js';
 
 // Wat je draagt: twee handen, het draagvel en de huid om je schouders.
 export function initCarry(G) {
-  const { state, player, scene, sound, discover } = G;
+  const { state, player, sound, discover } = G;
   // Elke kei heeft een soort en onthoudt hoe vaak erop geslagen is: state.rock loopt gelijk met state.hands.
   const C = { nextRock: null, lastRock: null, bagOpen: false };
   function renderHands() {
@@ -68,23 +68,15 @@ export function initCarry(G) {
     toast('Je slaat de huid om je schouders en knoopt de poten voor je borst. Warm. Zo houd je het vol in de kou.', 7);
     putCloak();
   }
+  // het vel: zie cloak.js. De vacht komt van het antilopemodel zelf.
   function putCloak() {
-    if (cloakMesh) return;
-    const c = document.createElement('canvas'); c.width = 64; c.height = 64; const x = c.getContext('2d');
-    x.fillStyle = '#e4dac6'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#2a2420';
-    for (let n = 0; n < 7; n++) { x.beginPath(); x.moveTo(n * 10 + 2, 0); x.quadraticCurveTo(n * 10 + 9, 32, n * 10 + 1, 64); x.lineTo(n * 10 + 5, 64); x.quadraticCurveTo(n * 10 + 13, 32, n * 10 + 6, 0); x.fill(); }
-    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-    cloakMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.21, 0.4, 12, 1, true, Math.PI - 2.2, 4.4), new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }));
-    cloakMesh.castShadow = true; scene.add(cloakMesh);
+    if (cloakMesh || !player.rig) return;
+    let fur = null; G.A.models.gazelle.traverse((o) => { if (o.isMesh && o.material.map) fur = o.material.map; });
+    cloakMesh = makeCloak(player.rig, fur);
   }
-  const cloakAt = new THREE.Vector3();
-  function cloakTick() {
-    if (!cloakMesh || !player.rig) return;
-    player.rig.bone('spine_02').getWorldPosition(cloakAt);
-    cloakMesh.position.copy(cloakAt); cloakMesh.position.y += 0.13; cloakMesh.rotation.set(player.sneaking ? 0.5 : 0.08, player.yaw, 0, 'YXZ');
-  }
+  function cloakTick() { if (state.cloak && !cloakMesh) putCloak(); }
   $('bagBtn').onclick = () => { C.bagOpen = !C.bagOpen; G.closeRadial(); renderBag(); };
-  function dropCloak() { if (cloakMesh) { scene.remove(cloakMesh); cloakMesh = null; } }
+  function dropCloak() { if (cloakMesh) { cloakMesh.removeFromParent(); cloakMesh.geometry.dispose(); cloakMesh = null; } }
   // een vrije hand vullen (false als je handen vol zijn)
   function giveHand(it) { const h = freeHand(); if (h < 0) { handsFull(); return false; } state.hands[h] = it; renderHands(); return true; }
   return Object.assign(C, { renderHands, freeHand, handsFull, giveHand, renderBag, stow, unstow, makeBag, wearHide, putCloak, dropCloak, cloakTick });

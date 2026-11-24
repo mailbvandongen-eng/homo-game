@@ -159,6 +159,8 @@ Tussendoor (20-11, op verzoek van Bob): **de sterrenhemel van toen**. Echte ster
 
 Tussendoor (20-11, op verzoek van Bob): **openstaande punten en snelheid** (ANALYSE §26). Kleine bessen in trosjes; een echt skelet en een echt bot in plaats van de bruine vlek; de maan met schijngestalten en maanlicht; sterren en maan verdwijnen achter wolken; geen gras meer rond platte stenen; een schitterende afdruk leidt je over het spoor naar het dier; het spel tekent 15 tot 34% minder driehoeken per beeld. Nog niet gemeten op een echte telefoon.
 
+Tussendoor (24-11, op verzoek van Bob): **het vel om de schouders en de prooi** (ANALYSE §27). De omslag is nu één heel antilopevel dat over de rug hangt en op de borst geknoopt is (`v4/src/systems/cloak.js`), naar de kaross en de Hadza-mantel; de oude koker ("colbert zonder mouwen") is weg. De kudde op de vlakte is gemengd: zebra's met antilopen ertussen. De sabeltandkatten pakken een antilope, dus de eerste huid is bruin en niet zwart-wit.
+
 Hoe de vier gebieden nu van elkaar verschillen (stap 1, land):
 
 | Gebied | Kamp | Land | Planten en keien |
