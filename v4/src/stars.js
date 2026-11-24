@@ -1,5 +1,6 @@
 import * as THREE from '../lib/three.module.js';
 import { moonAt } from './moon.js';
+import { retry } from './assets.js';
 
 // De sterrenhemel van toen. De sterren komen uit de HYG-catalogus: van elke ster is de plaats, de afstand en de snelheid
 // teruggerekend naar de tijd van dit gebied (zie assets/CREDITS.md). De sterrenbeelden van nu bestonden nog niet;
@@ -22,9 +23,9 @@ const CLOUDS = `uniform float uTime, uCover;
 // cfg: { years: hoe lang geleden, lat: breedtegraad van het gebied, turn: welk deel van de hemel 's nachts boven staat (0..1) }
 export async function loadStars(scene, cfg) {
   const file = `./assets/stars/stars_${Math.round(cfg.years / 1000)}.bin`;
-  const tex = (f) => new THREE.TextureLoader().loadAsync(f + Q).catch(() => { throw new Error('Kan ' + f + ' niet laden'); });
+  const tex = (f) => retry(() => new THREE.TextureLoader().loadAsync(f + Q)).catch(() => { throw new Error('Kan ' + f + ' niet laden'); });
   const [buf, band, moon] = await Promise.all([
-    fetch(file + Q).then((r) => { if (!r.ok) throw new Error('Kan ' + file + ' niet laden'); return r.arrayBuffer(); }),
+    retry(() => fetch(file + Q).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.arrayBuffer(); })).catch(() => { throw new Error('Kan ' + file + ' niet laden'); }),
     tex('./assets/stars/milkyway.jpg'), tex('./assets/stars/moon.jpg'),
   ]);
   return new Stars(scene, cfg, new Int16Array(buf), band, moon);
