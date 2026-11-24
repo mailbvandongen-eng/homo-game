@@ -3,8 +3,7 @@ import { height, WALK, riverZ, riverDist, blockers } from './world.js';
 import { Herd } from './actors.js';
 import { turn, step, sense } from './animal.js';
 import { Rig } from './rig.js';
-import { HOME } from './group.js';
-import { BODY } from './hominin.js';
+import { HOME, person } from './group.js';
 import { AREA } from './eras/index.js';
 
 // Ontmoetingen onderweg: ver van de slaapboom ligt er steeds iets op je pad.
@@ -368,8 +367,8 @@ export class Encounters {
   mk_strangers(x, z) {
     const list = [];
     for (let i = 0; i < 2; i++) {
-      const k = i ? 0.93 : 1.02, rig = new Rig(this.A, 'hominin', { scale: BODY.height / 162 * k, shape: BODY.shape, tall: BODY.height * k });
-      rig.model.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); if (!/beard|hair|transparency/i.test(o.material.name)) o.material.color.multiply(new THREE.Color(i ? 0xc8a488 : 0xb89478)); } });
+      // een man en een vrouw van een andere groep
+      const rig = person(this.A, i ? { k: 0.93, body: 'woman_young', tint: 0xcdb09a } : { k: 1.02, tint: 0xb89478, dark: true });
       const sx = x + (i ? 1.6 : -1.2), sz = z + (i ? 0.8 : -0.6);
       const m = { kind: 'stranger', rig, g: rig.root, x: sx, z: sz, sx, sz, yaw: 0, speed: 0, once: 0 };
       this.scene.add(rig.root); list.push(m);

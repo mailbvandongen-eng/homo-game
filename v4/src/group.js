@@ -9,10 +9,34 @@ import { heldMesh } from './items.js';
 // De slaapplek: hier wacht je groep. Overdag scharrelen ze er rond, 's nachts slapen ze er dicht bij elkaar.
 export const HOME = AREA.home;   // de slaapboom van dit gebied
 const WHO = ERA.group || [
-  { id: 'tor', name: 'Tor', k: 0.99, spot: [2.6, 1.2], grey: true },
-  { id: 'kem', name: 'Kem', k: 0.92, spot: [-2.2, 2.4], tint: 0xe8d2c0 },
+  { id: 'tor', name: 'Tor', k: 0.99, spot: [2.6, 1.2], grey: true, body: 'man_old' },
+  { id: 'kem', name: 'Kem', k: 0.92, spot: [-2.2, 2.4], tint: 0xd8c0aa, build: 'heavy', dark: true },
   { id: 'ibo', name: 'Ibo', k: 0.6, spot: [0.9, -2.8], child: true },
+  { id: 'sen', name: 'Ama', k: 0.93, spot: [-3.0, -1.2], woman: true, body: 'woman_old', silver: true },
+  { id: 'bala', name: 'Nuru', k: 0.9, spot: [3.3, -1.5], woman: true, body: 'woman_young', tint: 0xe6d2c2 },
 ];
+// Een mens voor de groep of voor vreemden. Wie een eigen lijf heeft (body, of het kind) is een eigen model aan hetzelfde
+// skelet: een echte vrouw, een echte oude man, een echt kind. De anderen zijn het model van de hoofdpersoon, met een
+// eigen bouw, huid en haarkleur.
+export function person(A, w) {
+  const name = w.child ? 'child' : w.body || 'hominin';
+  const shape = BODY.shape && BODY.shape + (name !== 'hominin' ? '_own' : w.build ? '_' + w.build : '');
+  const rig = new Rig(A, name, { scale: BODY.height / 162 * w.k, shape, tall: BODY.height * w.k });
+  rig.model.traverse((o) => {
+    if (!o.isMesh) return;
+    const n = o.material.name, hair = /beard|hair|transparency|short02|brow|lash/i.test(n);
+    o.material = o.material.clone();
+    if (name !== 'hominin') {
+      if (/KidBody/.test(n)) { o.material.color.setRGB(1.3, 1.22, 1.2); if (w.tint) o.material.color.multiply(new THREE.Color(w.tint)); }   // de huid bij die van de hoofdpersoon laten passen
+      else if (/wrap/.test(n)) o.material.color.setRGB(0.72, 0.66, 0.6);   // de omslag is oud leer
+      else if (/hair|short02/i.test(n) && (w.grey || w.silver)) o.material.color.setRGB(...(w.grey ? [3.4, 3.4, 3.5] : [1.3, 1.3, 1.34]));
+    } else if (hair && w.grey) o.material.color.setRGB(2.4, 2.4, 2.5);
+    else if (hair && w.dark) o.material.color.setRGB(0.45, 0.42, 0.4);
+    else if (!hair && w.tint) o.material.color.multiply(new THREE.Color(w.tint));
+    else if (!hair && w.grey) o.material.color.multiplyScalar(0.86);
+  });
+  return rig;
+}
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const RAD = Math.PI / 180, UP = new THREE.Vector3(0, 1, 0), tQ = new THREE.Quaternion(), tN = new THREE.Vector3();
 // Liggen en zitten zijn opgenomen bewegingen van echte mensen (zie assets/CREDITS.md). Elke houding heeft drie delen:
@@ -55,20 +79,7 @@ export class Group {
     this.point = null;   // { m, x, z }: dit groepslid wijst naar die plek (zie systems/missions.js)
     this.trek = null;    // { path, i, wait, line }: de groep loopt naar een nieuw kamp (zie systems/trek.js)
     for (const w of WHO) {
-      // hetzelfde model als de hoofdpersoon, met een eigen lijf: een vrouw heeft smallere schouders en geen baard.
-      // Het kind is een eigen model (een echt kinderlijf) aan hetzelfde skelet, zodat het alles kan wat de groten kunnen.
-      const shape = BODY.shape && BODY.shape + (w.child ? '_child' : w.woman ? '_woman' : '');
-      const rig = new Rig(A, w.child ? 'child' : 'hominin', { scale: BODY.height / 162 * w.k, shape, tall: BODY.height * w.k });
-      rig.model.traverse((o) => {
-        if (!o.isMesh) return;
-        const hair = /beard|hair|transparency|short02|brow|lash/i.test(o.material.name);
-        o.material = o.material.clone();
-        if (hair && w.woman && /beard/i.test(o.material.name)) o.visible = false;
-        else if (w.child) { if (/KidBody/.test(o.material.name)) o.material.color.setRGB(1.3, 1.22, 1.2); else if (/wrap/.test(o.material.name)) o.material.color.setRGB(0.72, 0.66, 0.6); }   // de huid van het kind bij die van de groten laten passen; de omslag is oud leer
-        else if (hair && w.grey) o.material.color.setRGB(2.4, 2.4, 2.5);
-        else if (!hair && w.tint) o.material.color.multiply(new THREE.Color(w.tint));
-        else if (!hair && w.grey) o.material.color.multiplyScalar(0.86);
-      });
+      const rig = person(A, w);
       const m = { ...w, kind: 'member', rig, g: rig.root, x: HOME.x + w.spot[0], z: HOME.z + w.spot[1], yaw: Math.atan2(-w.spot[0], -w.spot[1]) + Math.PI, speed: 0, state: 'idle', t: 2 + this.list.length * 3, sick: 0, busy: 0, eatT: 0, lieW: 0, pointW: 0, able: !w.child && !w.grey };
       // wat hij draagt, zie je in zijn hand
       rig.root.updateMatrixWorld(true);

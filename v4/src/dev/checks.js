@@ -67,7 +67,7 @@ function checkConfig(out) {
     const ms = missionsOf(area);
     if (!ms) { add('fout', w + 'de missielijst geeft een fout'); continue; }
     if (!ms.length) add('fout', w + 'geen missies');
-    const who = new Set((era.group || [{ id: 'tor' }, { id: 'kem' }, { id: 'ibo' }]).map((g) => g.id)), mids = new Set(ms.map((m) => m.id));
+    const who = new Set((era.group || [{ id: 'tor' }, { id: 'kem' }, { id: 'ibo' }, { id: 'sen' }, { id: 'bala' }]).map((g) => g.id)), mids = new Set(ms.map((m) => m.id));
     if (mids.size !== ms.length) add('fout', w + 'twee missies met hetzelfde id');
     for (const m of ms) {
       for (const k of ['id', 'who', 'title', 'ask', 'end', 'why']) if (typeof m[k] !== 'string' || !m[k]) add('fout', w + `missie '${m.id}': '${k}' ontbreekt`);

@@ -1,9 +1,9 @@
 // De vormen: hoe een model wordt omgevormd naar een soort, een jong of een ander lijf (zie shape.js).
 // Assen: x = opzij, y = omhoog, z = naar voren, in de maten van het model zelf.
 const LEG = { hip: /^pelvis/, foot: /^ball_l/ };
-// Een vrouw: smallere schouders, bredere heupen. Het kind is een eigen model (assets/models/child.glb) aan hetzelfde skelet:
-// het krijgt alleen de botmaten van de soort mee.
-const WOMAN = [[/^clavicle/, [0.9, 1, 1]], [/^spine_03/, [0.93, 1, 0.95]], [/^spine_01|^pelvis/, [1.05, 1, 1.03]]];
+// De vrouwen, de oude man en het kind zijn eigen modellen (assets/models) aan hetzelfde skelet: zij krijgen alleen de
+// botmaten van de soort mee. Een zware man: bredere schouders en een dikkere romp.
+const HEAVY = [[/^clavicle/, [1.06, 1, 1]], [/^spine_0[23]/, [1.07, 1, 1.08]], [/^upperarm|^thigh/, [1.06, 1, 1.06]]];
 
 // Homo habilis: klein, korte benen, lange armen, een kleine hersenpan en een gezicht dat naar voren steekt.
 const HABILIS = {
@@ -31,7 +31,7 @@ const ERECTUS = {
   ],
 };
 const kind = (key, base, ...extra) => ({ key, bones: [...base.bones, ...extra.flat()], sculpt: base.sculpt, ground: LEG });
-const child = (key, base) => ({ key, bones: base.bones, ground: LEG });
+const own = (key, base) => ({ key, bones: base.bones, ground: LEG });
 
 // De reuzenolifant Palaeoloxodon recki, omgevormd uit een Afrikaanse olifant: hogere poten, een hoge schedel
 // met een wal over het voorhoofd, kleinere oren en lange, vrijwel rechte slagtanden.
@@ -68,6 +68,6 @@ export const SHAPES = {
   puffadder: PUFFADDER,
   impala: IMPALA, hornless: HORNLESS,
   recki: RECKI,
-  habilis: kind('habilis', HABILIS), habilis_woman: kind('habilis_woman', HABILIS, WOMAN), habilis_child: child('habilis_child', HABILIS),
-  erectus: kind('erectus', ERECTUS), erectus_woman: kind('erectus_woman', ERECTUS, WOMAN), erectus_child: child('erectus_child', ERECTUS),
+  habilis: kind('habilis', HABILIS), habilis_heavy: kind('habilis_heavy', HABILIS, HEAVY), habilis_own: own('habilis_own', HABILIS),
+  erectus: kind('erectus', ERECTUS), erectus_heavy: kind('erectus_heavy', ERECTUS, HEAVY), erectus_own: own('erectus_own', ERECTUS),
 };

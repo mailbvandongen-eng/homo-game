@@ -18,6 +18,6 @@ export const habilis = {
     onzeker: ['wie de Oldowan-werktuigen maakte: Homo habilis is de gangbare kandidaat, maar de oudste werktuigen zijn ouder dan de soort', 'een huid als draagvel (huiden vergaan; dragen is niet te bewijzen)', 'een huid om de schouders tegen de kou', 'water meedragen in de maag van een dier (zo\'n zak vergaat; dragen is niet te bewijzen)', 'bitterblad als geneesmiddel (mensapen doen het; bij vroege mensen is het niet aangetoond)'],
     artistiek: ['namen en vaste rollen in de groep', 'huidskleur, beharing, gezicht en stem', 'de kleuren en strepen van uitgestorven dieren', 'het precieze landschap: het is een beeld van de Riftvallei, geen kaart van één vindplaats'],
   },
-  beeld: { past: 'aangepast', note: 'Er bestaat geen vrij model van Homo habilis. Het lichaam is een model van een neanderthaler dat is omgevormd: kortere benen, langere armen, een kleinere hersenpan en een gezicht dat naar voren steekt. Huid, haar en gezichtstrekken blijven een invulling.' },
+  beeld: { past: 'aangepast', note: 'Er bestaat geen vrij model van Homo habilis. Het lichaam is een model van een neanderthaler dat is omgevormd: kortere benen, langere armen, een kleinere hersenpan en een gezicht dat naar voren steekt. De vrouwen, de oude man en het kind zijn lijven van moderne mensen (MakeHuman) met dezelfde botmaten; hun gezicht en gladde huid kloppen niet met de soort. Huid, haar en gezichtstrekken blijven een invulling.' },
   areas: [savanne, water],
 };

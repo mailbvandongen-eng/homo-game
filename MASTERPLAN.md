@@ -161,6 +161,8 @@ Tussendoor (20-11, op verzoek van Bob): **openstaande punten en snelheid** (ANAL
 
 Tussendoor (24-11, op verzoek van Bob): **het vel om de schouders en de prooi** (ANALYSE §27). De omslag is nu één heel antilopevel dat over de rug hangt en op de borst geknoopt is (`v4/src/systems/cloak.js`), naar de kaross en de Hadza-mantel; de oude koker ("colbert zonder mouwen") is weg. De kudde op de vlakte is gemengd: zebra's met antilopen ertussen. De sabeltandkatten pakken een antilope, dus de eerste huid is bruin en niet zwart-wit.
 
+Tussendoor (24-11, op verzoek van Bob): **echte vrouwen en mensen die verschillen** (ANALYSE §28). Iedereen was één mannenmodel. Nu drie nieuwe lijven (oudere vrouw, jonge vrouw, oude man; MakeHuman, CC0) aan hetzelfde skelet. De groep is in beide tijdperken vijf mensen; de vreemden zijn een man en een vrouw. Eerlijk: het zijn lijven van moderne mensen met de botmaten van de soort.
+
 Hoe de vier gebieden nu van elkaar verschillen (stap 1, land):
 
 | Gebied | Kamp | Land | Planten en keien |

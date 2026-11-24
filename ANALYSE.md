@@ -705,3 +705,34 @@ jaar geleden weet niemand het. Het vel is ook geen stof die los wappert: het bew
 - De huid, de rol in je hand en het vel om je schouders zijn dus bruin, van hetzelfde dier dat je ziet liggen.
 - De zebra's blijven in het spel als dier om naar te kijken; ze worden niet meer gepakt.
 
+## 28. Echte vrouwen en mensen die van elkaar verschillen (24-11-2026)
+
+**Wat er was.** Bob: "Waarom lopen er alleen maar mannen rond die op elkaar lijken? Waar zijn de vrouwen?" Dat klopte.
+Er is één vrij model van een vroege mens: een mannelijke neanderthaler. Iedereen in de groep was dat ene model. Een
+"vrouw" was hetzelfde mannenlijf met iets smallere schouders en zonder baard. De groep van *Homo habilis* had helemaal
+geen vrouw. Wie verschilde, verschilde alleen in lengte en een tintje huid.
+
+**Wat er nu is.**
+- **Drie nieuwe lijven**: een oudere vrouw (`woman_old.glb`), een jonge, gespierde vrouw (`woman_young.glb`) en een
+  oude man (`man_old.glb`). Gemaakt met de gegevens van MakeHuman (CC0), op dezelfde manier als het kind:
+  `person_build.py` (geslacht, leeftijd, spieren, gewicht, eigen gezicht, haar, wenkbrauwen, omslag van leer),
+  `kid_bind.py` (aan het skelet van `hominin.glb`), `glbrest.mjs`, `kidslim.mjs`; samen in `scripts/person.sh`.
+  Zo doen ze alle bewegingen van de groep.
+- **De groep** bestaat in beide tijdperken uit vijf mensen: een oude man, een zware man met donker haar (het
+  neanderthalermodel, bredere schouders en romp: vorm `*_heavy`), een kind, een oudere vrouw en een jonge vrouw.
+  *Homo habilis* had er drie; Ama en Nuru zijn nieuw.
+- **De vreemden bij het water** zijn een man en een vrouw.
+- Eén functie `person()` in `group.js` maakt een mens (groep en vreemden).
+
+**Eerlijk.**
+- De vrouwen, de oude man en het kind zijn lijven van **moderne mensen**. Ze krijgen alleen de botmaten van de soort
+  (korte benen en lange armen bij habilis, lange benen bij erectus). Hun gezicht is modern: hoog voorhoofd, kin.
+  Een proef met een lager voorhoofd en een mond naar voren (vormen van MakeHuman) gaf een tuitmond en is niet gebruikt.
+- De man van het neanderthalermodel is behaard en naakt; de nieuwe mensen zijn glad en dragen een omslag om de heupen.
+  Dat verschil in stijl zie je.
+- Het haar is haar van moderne kapsels (kort, afro). Hoe het haar van deze mensen zat, weet niemand.
+- Hoe groot het verschil tussen man en vrouw was, is bij *Homo habilis* onzeker; in het spel zijn de vrouwen een
+  beetje kleiner.
+
+Testen: `v4mens.js <gebied> <tag>` (de groep op een rij, van voren, van achteren en elk gezicht).
+
